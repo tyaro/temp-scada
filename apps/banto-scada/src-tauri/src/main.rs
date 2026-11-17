@@ -296,6 +296,8 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             alarm::alarm_ack,
             alarm::alarm_buzzer_silence,
             alarm::alarm_history,
+            alarm::alarm_settings_get,
+            alarm::alarm_settings_set,
             auth::auth_status,
             auth::auth_phase,
             auth::auth_setup,

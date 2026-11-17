@@ -12,6 +12,13 @@ use sqlx::{Connection, Row, SqliteConnection};
 
 use crate::durable;
 
+mod alarm_settings;
+
+use alarm_settings::StoredAlarm;
+pub use alarm_settings::{
+    AlarmSettings, AlarmSettingsWarning, RereadSettings, RetentionKind, RetentionSettings,
+};
+
 const SETTINGS_FILE: &str = "alarm-terminal.json";
 const LOCK_FILE: &str = "alarm-terminal.lock";
 const VERSION: u32 = 1;
@@ -40,6 +47,13 @@ struct Settings {
     pending_generation: Option<u64>,
     monitored: Option<MonitoredProject>,
     switching: Option<PendingSwitch>,
+    /// Read separately on open (`StoredAlarm`) so out-of-range values reset
+    /// instead of making the file `Corrupt`.
+    #[serde(skip_deserializing)]
+    alarm: AlarmSettings,
+    /// Groups reset to defaults on open; cleared by the next alarm settings save.
+    #[serde(skip)]
+    alarm_warnings: Vec<AlarmSettingsWarning>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -50,6 +64,8 @@ pub enum TerminalError {
     Lost,
     Save,
     Exhausted,
+    /// `set_alarm` was given a value outside its range or relation.
+    InvalidSettings,
 }
 
 /// One process owns alarm monitoring for this data directory until dropped.
@@ -117,8 +133,7 @@ impl AlarmTerminal {
         let max_generation = max_db_generation(data_dir).await?;
         let settings = match durable::read_optional(&path).map_err(|_| TerminalError::Unreadable)? {
             Some(bytes) => {
-                let settings: Settings =
-                    serde_json::from_slice(&bytes).map_err(|_| TerminalError::Corrupt)?;
+                let settings = parse_settings(&bytes)?;
                 if settings.version != VERSION {
                     return Err(TerminalError::Corrupt);
                 }
@@ -134,6 +149,8 @@ impl AlarmTerminal {
                 pending_generation: None,
                 monitored: None,
                 switching: None,
+                alarm: AlarmSettings::default(),
+                alarm_warnings: Vec::new(),
             },
         };
         Ok(Self {
@@ -252,6 +269,28 @@ impl AlarmTerminal {
         })
     }
 
+    /// The alarm settings in use and the groups reset to defaults on open.
+    pub fn alarm_settings(
+        &self,
+    ) -> Result<(AlarmSettings, Vec<AlarmSettingsWarning>), TerminalError> {
+        let settings = self.settings.lock().map_err(|_| TerminalError::Corrupt)?;
+        Ok((settings.alarm, settings.alarm_warnings.clone()))
+    }
+
+    /// Save the alarm settings, refused unless every value is within its
+    /// range and relation. It replaces the whole file under the generation
+    /// lock, so neither write loses the other. This performs a synchronous
+    /// durable write; async callers run it on a blocking thread.
+    pub fn set_alarm(&self, alarm: AlarmSettings) -> Result<(), TerminalError> {
+        if !alarm.is_valid() {
+            return Err(TerminalError::InvalidSettings);
+        }
+        self.save(|next| {
+            next.alarm = alarm;
+            next.alarm_warnings.clear();
+        })
+    }
+
     fn save(&self, update: impl FnOnce(&mut Settings)) -> Result<(), TerminalError> {
         let mut settings = self.settings.lock().map_err(|_| TerminalError::Corrupt)?;
         let mut next = settings.clone();
@@ -263,6 +302,24 @@ impl AlarmTerminal {
         *settings = next;
         Ok(())
     }
+}
+
+/// A JSON or type error is `Corrupt`; out-of-range alarm values are reset.
+fn parse_settings(bytes: &[u8]) -> Result<Settings, TerminalError> {
+    let mut value: serde_json::Value =
+        serde_json::from_slice(bytes).map_err(|_| TerminalError::Corrupt)?;
+    let stored = value
+        .as_object_mut()
+        .ok_or(TerminalError::Corrupt)?
+        .remove("alarm");
+    let mut settings: Settings =
+        serde_json::from_value(value).map_err(|_| TerminalError::Corrupt)?;
+    let stored: StoredAlarm = match stored {
+        Some(stored) => serde_json::from_value(stored).map_err(|_| TerminalError::Corrupt)?,
+        None => StoredAlarm::default(),
+    };
+    (settings.alarm, settings.alarm_warnings) = stored.normalize();
+    Ok(settings)
 }
 
 async fn max_db_generation(data_dir: &Path) -> Result<Option<u64>, TerminalError> {
@@ -580,6 +637,124 @@ mod tests {
         let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
         assert_eq!(terminal.monitored().unwrap(), Some(monitored.clone()));
         assert!(terminal.switching().unwrap().is_none());
+        drop(terminal);
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    fn write_settings(dir: &Path, alarm: Option<serde_json::Value>) {
+        let mut json = serde_json::json!({
+            "version": VERSION,
+            "lastGeneration": 4,
+            "monitored": null,
+            "switching": null,
+        });
+        if let Some(alarm) = alarm {
+            json["alarm"] = alarm;
+        }
+        fs::write(dir.join(SETTINGS_FILE), serde_json::to_vec(&json).unwrap()).unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_file_without_the_alarm_field_reads_the_defaults() {
+        let dir = temp_dir();
+        write_settings(&dir, None);
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        assert_eq!(
+            terminal.alarm_settings().unwrap(),
+            (AlarmSettings::default(), vec![])
+        );
+        assert_eq!(terminal.reserve_generation().unwrap(), 5);
+        drop(terminal);
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn out_of_range_alarm_values_reset_with_warnings_but_wrong_types_are_corrupt() {
+        let dir = temp_dir();
+        write_settings(
+            &dir,
+            Some(serde_json::json!({
+                "retention": {"kind": "count", "days": 0, "count": 50_000},
+                "reread": {"intervalSec": 2, "timeoutSec": 0, "failureLimitSec": 30, "reconnectFailures": 3},
+            })),
+        );
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let (alarm, warnings) = terminal.alarm_settings().unwrap();
+        assert_eq!(
+            alarm.retention,
+            RetentionSettings {
+                kind: RetentionKind::Count,
+                days: 365,
+                count: 50_000,
+            }
+        );
+        assert_eq!(alarm.reread, RereadSettings::default());
+        assert_eq!(
+            warnings,
+            vec![
+                AlarmSettingsWarning::RetentionDays,
+                AlarmSettingsWarning::Reread
+            ]
+        );
+        // A valid save clears the warnings and writes the reset values.
+        terminal.set_alarm(alarm).unwrap();
+        assert_eq!(terminal.alarm_settings().unwrap(), (alarm, vec![]));
+        drop(terminal);
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        assert_eq!(terminal.alarm_settings().unwrap(), (alarm, vec![]));
+        drop(terminal);
+        for alarm in [
+            serde_json::json!({"reread": {"intervalSec": "10"}}),
+            serde_json::json!({"unknown": 1}),
+            serde_json::json!(null),
+        ] {
+            write_settings(&dir, Some(alarm));
+            assert!(matches!(
+                AlarmTerminal::open(&dir).await,
+                Err(TerminalError::Corrupt)
+            ));
+        }
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn invalid_alarm_settings_are_not_saved() {
+        let dir = temp_dir();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        let mut alarm = AlarmSettings::default();
+        alarm.reread.timeout_sec = alarm.reread.interval_sec + 1;
+        assert_eq!(
+            terminal.set_alarm(alarm),
+            Err(TerminalError::InvalidSettings)
+        );
+        assert!(!dir.join(SETTINGS_FILE).exists());
+        assert_eq!(
+            terminal.alarm_settings().unwrap().0,
+            AlarmSettings::default()
+        );
+        drop(terminal);
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn generations_and_alarm_settings_do_not_overwrite_each_other() {
+        let dir = temp_dir();
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        assert_eq!(terminal.reserve_generation().unwrap(), 1);
+        let mut alarm = AlarmSettings::default();
+        alarm.retention.kind = RetentionKind::Count;
+        alarm.reread = RereadSettings {
+            interval_sec: 20,
+            timeout_sec: 10,
+            failure_limit_sec: 60,
+            reconnect_failures: 5,
+        };
+        terminal.set_alarm(alarm).unwrap();
+        assert_eq!(terminal.reserve_generation().unwrap(), 2);
+        drop(terminal);
+        let terminal = AlarmTerminal::open(&dir).await.unwrap();
+        assert_eq!(terminal.alarm_settings().unwrap(), (alarm, vec![]));
+        assert_eq!(terminal.reserve_generation().unwrap(), 3);
         drop(terminal);
         fs::remove_dir_all(dir).unwrap();
     }

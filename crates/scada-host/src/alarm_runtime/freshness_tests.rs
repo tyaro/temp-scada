@@ -111,6 +111,57 @@ async fn reread_failures_beyond_the_limit_mean_receive_lost_until_one_succeeds()
 }
 
 #[tokio::test]
+async fn saved_reread_values_apply_to_the_running_engine() {
+    let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
+    let (dir, _terminal, _db, _applied, _definitions, _session, evaluator) =
+        outage_fixture("alarm-reread-reconfigure").await;
+    let slow = FreshnessConfig {
+        reread_interval: Duration::from_secs(60),
+        failure_limit: Duration::from_secs(3600),
+        ..fast()
+    };
+    let runtime = AlarmRuntime::start_with_config(evaluator, hub.clients(), slow)
+        .await
+        .unwrap();
+    let mut report = runtime.reread_failure();
+    wait_engine(&runtime, "the subscribed value", active).await;
+    hub.rest_fail.store(true, Ordering::SeqCst);
+    tokio::time::sleep(Duration::from_millis(400)).await;
+    assert!(report.borrow().is_none(), "no reread is due within 60 s");
+    // A shorter interval applies now: the next reread is one interval away.
+    runtime
+        .reconfigure(FreshnessConfig {
+            reread_interval: Duration::from_millis(100),
+            ..slow
+        })
+        .await
+        .unwrap();
+    let streak = tokio::time::timeout(
+        Duration::from_secs(10),
+        report.wait_for(|failure| failure.is_some_and(|failure| failure.failures >= 4)),
+    )
+    .await
+    .expect("rereads at the new interval")
+    .unwrap()
+    .unwrap();
+    assert!(runtime.snapshot().await.unwrap().unavailable().is_none());
+    // The streak is kept and judged again: it is already past the new
+    // failure limit, so ReceiveLost begins with the reconfiguration.
+    runtime.reconfigure(fast()).await.unwrap();
+    assert_eq!(
+        runtime.snapshot().await.unwrap().unavailable(),
+        Some(EngineUnavailable::ReceiveLost)
+    );
+    let kept = report.borrow().unwrap();
+    assert_eq!(kept.since_wall_ms, streak.since_wall_ms);
+    assert!(kept.failures >= streak.failures);
+    hub.rest_fail.store(false, Ordering::SeqCst);
+    wait_engine(&runtime, "recovery", active).await;
+    runtime.stop().await.unwrap();
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[tokio::test]
 async fn resubscription_failures_mean_receive_lost_until_one_succeeds() {
     let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
     let (dir, _terminal, _db, _applied, _definitions, _session, evaluator) =

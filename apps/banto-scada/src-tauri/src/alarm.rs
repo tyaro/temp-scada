@@ -4,9 +4,10 @@ use std::sync::Arc;
 
 use scada_host::alarm_db::{EventRead, UnackedOccurrence};
 use scada_host::alarm_service::{
-    AlarmService, AlarmServiceError, AlarmSnapshot, AppliedSummary, ApplyMode, ApplyResult,
-    HubClients,
+    AlarmService, AlarmServiceError, AlarmSettingsView, AlarmSnapshot, AppliedSummary, ApplyMode,
+    ApplyResult, HubClients,
 };
+use scada_host::alarm_terminal::AlarmSettings;
 use scada_host::auth::BantoError;
 use scada_host::desktop_auth::CommandError;
 use scada_host::CredentialIdentity;
@@ -63,6 +64,7 @@ fn reason(error: &AlarmServiceError) -> String {
         AlarmServiceError::NoMonitoredProject => "notApplied",
         AlarmServiceError::EngineStopped => "engineStopped",
         AlarmServiceError::ConfirmationRequired(_) => "confirmationRequired",
+        AlarmServiceError::InvalidSettings => "invalidSettings",
     }
     .into()
 }
@@ -133,6 +135,15 @@ async fn authorized_ack_user(auth: &AuthState) -> Result<String, String> {
         .await
         .map_err(refusal)?;
     applied_user(auth).await
+}
+
+async fn authorize_alarm_settings(auth: &AuthState) -> Result<(), String> {
+    verify_alarm_phase(auth).await?;
+    auth.get()
+        .map_err(refusal)?
+        .authorize_alarm_settings()
+        .await
+        .map_err(refusal)
 }
 
 fn hub_context(host: &NativeHost) -> Result<(String, HubClients), String> {
@@ -419,6 +430,33 @@ pub async fn alarm_history(
         .map_err(|error| reason(&error))
 }
 
+/// The alarm terminal settings (terminal settings design §6). No
+/// authorization; `terminalUnavailable` when the terminal settings could not
+/// be opened.
+#[tauri::command]
+pub fn alarm_settings_get(alarm: State<'_, AlarmState>) -> Result<AlarmSettingsView, String> {
+    alarm
+        .get()?
+        .alarm_settings()
+        .map_err(|error| reason(&error))
+}
+
+/// Save the retention and reread values. Admin only, with the same phase
+/// check as ACK; refused while the terminal settings are unavailable.
+#[tauri::command]
+pub async fn alarm_settings_set(
+    alarm: State<'_, AlarmState>,
+    auth: State<'_, AuthState>,
+    settings: AlarmSettings,
+) -> Result<AlarmSettingsView, String> {
+    let service = alarm.get()?.clone();
+    authorize_alarm_settings(&auth).await?;
+    service
+        .set_alarm_settings(settings)
+        .await
+        .map_err(|error| reason(&error))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -429,5 +467,27 @@ mod tests {
         let error = AlarmServiceError::Terminal(TerminalError::Unreadable);
         assert_eq!(reason(&error), "terminalUnavailable");
         assert_eq!(apply_failure_reason(&error), "terminalStateFailed");
+    }
+
+    #[test]
+    fn settings_are_refused_while_the_terminal_is_unavailable_and_checked_by_the_host() {
+        let state = AlarmState {
+            service: Err(reason(&AlarmServiceError::Terminal(
+                TerminalError::Unreadable,
+            ))),
+            credential: tokio::sync::Mutex::new(None),
+        };
+        assert_eq!(state.get().err().as_deref(), Some("terminalUnavailable"));
+        assert_eq!(
+            reason(&AlarmServiceError::from(TerminalError::InvalidSettings)),
+            "invalidSettings"
+        );
+        // The command argument uses the design's camelCase names.
+        let settings: AlarmSettings = serde_json::from_value(serde_json::json!({
+            "retention": {"kind": "count", "days": 365, "count": 20000},
+            "reread": {"intervalSec": 10, "timeoutSec": 5, "failureLimitSec": 30, "reconnectFailures": 3},
+        }))
+        .unwrap();
+        assert!(settings.is_valid());
     }
 }

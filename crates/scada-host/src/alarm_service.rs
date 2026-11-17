@@ -20,7 +20,10 @@ use crate::alarm_project::{AlarmProjectError, SavedAlarmProject};
 use crate::alarm_runtime::{
     AlarmChange, AlarmEvaluator, AlarmRuntime, AlarmRuntimeError, AlarmRuntimeStatus,
 };
-use crate::alarm_terminal::{AlarmTerminal, MonitoredProject, PendingSwitch, TerminalError};
+use crate::alarm_terminal::{
+    AlarmSettings, AlarmSettingsWarning, AlarmTerminal, MonitoredProject, PendingSwitch,
+    TerminalError,
+};
 
 #[derive(Debug)]
 pub enum AlarmServiceError {
@@ -33,6 +36,8 @@ pub enum AlarmServiceError {
     NoMonitoredProject,
     EngineStopped,
     ConfirmationRequired(Vec<UnackedOccurrence>),
+    /// An alarm terminal setting is outside its range or relation.
+    InvalidSettings,
 }
 
 impl From<AlarmDbError> for AlarmServiceError {
@@ -45,7 +50,10 @@ impl From<AlarmDbError> for AlarmServiceError {
 }
 impl From<TerminalError> for AlarmServiceError {
     fn from(error: TerminalError) -> Self {
-        Self::Terminal(error)
+        match error {
+            TerminalError::InvalidSettings => Self::InvalidSettings,
+            other => Self::Terminal(other),
+        }
     }
 }
 impl From<AlarmProjectError> for AlarmServiceError {
@@ -62,6 +70,17 @@ impl From<AlarmRuntimeError> for AlarmServiceError {
             other => Self::Runtime(other),
         }
     }
+}
+
+/// `alarm_settings_get` (terminal settings design §6). The retention status
+/// comes with T1b and the sound with T2.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AlarmSettingsView {
+    #[serde(flatten)]
+    pub settings: AlarmSettings,
+    /// Groups reset to defaults when the terminal settings were read.
+    pub warnings: Vec<AlarmSettingsWarning>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -378,7 +397,9 @@ impl AlarmService {
         .map_err(|_| AlarmServiceError::Project(AlarmProjectError::InvalidFile))?;
         let engine = db.start_session_plan(plan, at_ms).await?;
         let evaluator = AlarmEvaluator::new(db.clone(), applied, engine).await?;
-        let runtime = AlarmRuntime::start(evaluator, client).await?;
+        let (settings, _) = self.terminal.alarm_settings()?;
+        let runtime =
+            AlarmRuntime::start_with_config(evaluator, client, settings.reread.freshness()).await?;
         self.attach(active, runtime, db, monitored.project_id);
         Ok(())
     }
@@ -971,6 +992,40 @@ impl AlarmService {
         }
     }
 
+    /// The alarm terminal settings (terminal settings design §6). Needs no
+    /// authorization.
+    pub fn alarm_settings(&self) -> Result<AlarmSettingsView, AlarmServiceError> {
+        let (settings, warnings) = self.terminal.alarm_settings()?;
+        Ok(AlarmSettingsView { settings, warnings })
+    }
+
+    /// Save the alarm terminal settings; the caller has authorized the
+    /// change. Saved reread values apply to a running Engine at once (§4);
+    /// otherwise the next session starts with them. Viewers refetch.
+    pub async fn set_alarm_settings(
+        &self,
+        settings: AlarmSettings,
+    ) -> Result<AlarmSettingsView, AlarmServiceError> {
+        if !settings.is_valid() {
+            return Err(AlarmServiceError::InvalidSettings);
+        }
+        // Held across the save so a session starting meanwhile cannot
+        // read the old values after the running one was reconfigured.
+        let active = self.active.lock().await;
+        let terminal = self.terminal.clone();
+        tokio::task::spawn_blocking(move || terminal.set_alarm(settings))
+            .await
+            .map_err(|_| AlarmServiceError::Terminal(TerminalError::Save))??;
+        if let Some(runtime) = active.runtime.as_ref() {
+            // A stopped or failing Engine reports through its status; the
+            // saved values are used by its next session.
+            let _ = runtime.reconfigure(settings.reread.freshness()).await;
+        }
+        drop(active);
+        let _ = self.lagged.send(());
+        self.alarm_settings()
+    }
+
     /// Silence this terminal's buzzer (design §6). Not an ACK, and needs no
     /// authorization or Engine lock: a new or reoccurred unacked occurrence
     /// sounds again.
@@ -1019,6 +1074,7 @@ fn stopped_reason(error: &AlarmServiceError) -> &'static str {
         AlarmServiceError::NoMonitoredProject => "notApplied",
         AlarmServiceError::EngineStopped => "engineStopped",
         AlarmServiceError::ConfirmationRequired(_) => "confirmationRequired",
+        AlarmServiceError::InvalidSettings => "invalidSettings",
     }
 }
 
@@ -1604,6 +1660,66 @@ mod tests {
         service.stop().await.unwrap();
         drop(service);
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn alarm_settings_are_read_checked_saved_and_applied_to_the_engine() {
+        let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
+        let dir = std::env::temp_dir().join(format!("alarm-settings-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("a.json");
+        let value = project(&uuid::Uuid::now_v7().to_string(), "a");
+        std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+        let service = AlarmService::open(&dir).await.unwrap();
+        assert_eq!(
+            serde_json::to_value(service.alarm_settings().unwrap()).unwrap(),
+            json!({
+                "retention": {"kind": "days", "days": 365, "count": 1_000_000},
+                "reread": {
+                    "intervalSec": 10,
+                    "timeoutSec": 5,
+                    "failureLimitSec": 30,
+                    "reconnectFailures": 3,
+                },
+                "warnings": [],
+            })
+        );
+        assert!(matches!(
+            service
+                .apply(
+                    &path,
+                    &hub.url,
+                    hub.clients(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
+                .await
+                .unwrap(),
+            ApplyResult::Applied { .. }
+        ));
+        let mut lagged = service.lagged();
+        let mut settings = AlarmSettings::default();
+        settings.reread.failure_limit_sec = settings.reread.interval_sec * 2 - 1;
+        assert!(matches!(
+            service.set_alarm_settings(settings).await,
+            Err(AlarmServiceError::InvalidSettings)
+        ));
+        assert!(lagged.try_recv().is_err());
+        settings.reread.interval_sec = 5;
+        settings.reread.failure_limit_sec = 10;
+        settings.retention.kind = crate::alarm_terminal::RetentionKind::Count;
+        let view = service.set_alarm_settings(settings).await.unwrap();
+        assert_eq!(view.settings, settings);
+        assert!(view.warnings.is_empty());
+        lagged.try_recv().unwrap();
+        assert_eq!(service.snapshot().await.unwrap().status, "running");
+        service.stop().await.unwrap();
+        drop(service);
+        let service = AlarmService::open(&dir).await.unwrap();
+        assert_eq!(service.alarm_settings().unwrap().settings, settings);
+        drop(service);
+        let _ = std::fs::remove_dir_all(dir);
     }
 
     #[tokio::test]
