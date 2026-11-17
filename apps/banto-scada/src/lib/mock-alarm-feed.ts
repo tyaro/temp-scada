@@ -1,4 +1,9 @@
 import type { AlarmChange, AlarmSnapshot } from "./alarm-mirror";
+import {
+  ALARM_SETTINGS_DEFAULTS,
+  type AlarmSettings,
+  type AlarmSettingsView,
+} from "./alarm-settings";
 import type {
   AlarmAckResult,
   AlarmEventRead,
@@ -37,6 +42,26 @@ export interface AlarmMockControl {
   releaseHistory(): void;
   /** 受けた `alarm_buzzer_silence` の回数。 */
   silenceRequests(): number;
+  /** `alarm_settings_get` が返す端末設定を差し替える（警告・現況・代替の理由を含む）。 */
+  setAlarmSettings(view: AlarmSettingsView): void;
+  /** 以後の変更（set・import・reset）を拒む理由（unauthorized など）。null で解く。 */
+  refuseAlarmSettings(reason: string | null): void;
+  /**
+   * 次の `alarm_sound_import` の結果。`{ name }` は取り込み、null は取り消し、
+   * `{ reason }` は拒否（`invalidSound:notWav` など）。
+   */
+  nextSoundImport(result: { name: string } | { reason: string } | null): void;
+  /** 受けた `alarm_settings_set` の値（呼ばれた順）。 */
+  alarmSettingsRequests(): AlarmSettings[];
+  /** 受け付けた `alarm_sound_test` の回数。 */
+  soundTests(): number;
+  /**
+   * 以後の `alarm_settings_get` を 1 回ずつ待たせる（開き直しの競合を作る）。
+   * 応答は呼ばれた時点の値。
+   */
+  holdAlarmSettingsReads(): void;
+  /** 待たせた `alarm_settings_get` のうち `index` 番目（呼ばれた順、0 から）を返す。 */
+  releaseAlarmSettingsRead(index: number): void;
 }
 
 const STOPPED: AlarmSnapshot = {
@@ -62,6 +87,42 @@ export function createMockAlarmFeed(): {
   const acks: UnackedOccurrence[][] = [];
   const queries: AlarmHistoryQuery[] = [];
   let silences = 0;
+  let settings: AlarmSettingsView = {
+    ...structuredClone(ALARM_SETTINGS_DEFAULTS),
+    sound: { kind: "default" },
+    soundFallback: null,
+    warnings: [],
+    retentionStatus: null,
+  };
+  let settingsRefusal: string | null = null;
+  let soundImport: { name: string } | { reason: string } | null = null;
+  const settingsRequests: AlarmSettings[] = [];
+  let soundTests = 0;
+  let holdReads = false;
+  const heldReads: (() => void)[] = [];
+  const RANGES = { days: [1, 3650], count: [10_000, 10_000_000] } as const;
+  /** host と同じ範囲と相互の関係（§2）。 */
+  function validSettings({ retention, reread }: AlarmSettings): boolean {
+    const within = (value: number, min: number, max: number) =>
+      Number.isInteger(value) && value >= min && value <= max;
+    return (
+      ["days", "count"].includes(retention.kind) &&
+      within(retention.days, ...RANGES.days) &&
+      within(retention.count, ...RANGES.count) &&
+      within(reread.intervalSec, 2, 300) &&
+      within(reread.timeoutSec, 1, reread.intervalSec) &&
+      within(reread.failureLimitSec, reread.intervalSec * 2, 3600) &&
+      within(reread.reconnectFailures, 1, 10)
+    );
+  }
+  /** 音の変更を snapshot の `buzzerSound` にも映し、画面に取り直させる。 */
+  function soundChanged() {
+    current.buzzerSound = {
+      kind: settings.sound.kind,
+      fallback: settings.soundFallback,
+    };
+    notify();
+  }
   let held: Promise<void> | null = null;
   let release: (() => void) | null = null;
   const subscribers = new Set<{
@@ -126,6 +187,61 @@ export function createMockAlarmFeed(): {
         }
         return current.buzzer ?? "quiet";
       },
+      async alarmSettings() {
+        const answer = structuredClone(settings);
+        if (holdReads) {
+          await new Promise<void>((resolve) => heldReads.push(resolve));
+        }
+        return answer;
+      },
+      async setAlarmSettings(next) {
+        settingsRequests.push(structuredClone(next));
+        if (settingsRefusal) throw new Error(settingsRefusal);
+        if (!validSettings(next)) throw new Error("invalidSettings");
+        settings = {
+          ...settings,
+          retention: structuredClone(next.retention),
+          reread: structuredClone(next.reread),
+          warnings: [],
+        };
+        notify();
+        return structuredClone(settings);
+      },
+      async importAlarmSound() {
+        if (settingsRefusal) throw new Error(settingsRefusal);
+        const result = soundImport;
+        soundImport = null;
+        if (!result) return null;
+        if ("reason" in result) throw new Error(result.reason);
+        settings = {
+          ...settings,
+          sound: {
+            kind: "custom",
+            name: result.name,
+            size: 1024,
+            hash: "0".repeat(64),
+          },
+          soundFallback: null,
+        };
+        soundChanged();
+        return structuredClone(settings);
+      },
+      async resetAlarmSound() {
+        if (settingsRefusal) throw new Error(settingsRefusal);
+        settings = {
+          ...settings,
+          sound: { kind: "default" },
+          soundFallback: null,
+        };
+        soundChanged();
+        return structuredClone(settings);
+      },
+      async testAlarmSound() {
+        // host と同じく、鳴っている間は拒む（権限は要らない）。
+        if (current.engine && current.buzzer === "ringing")
+          throw new Error("buzzerRinging");
+        soundTests += 1;
+      },
       async history(query) {
         queries.push(structuredClone(query));
         if (held) await held;
@@ -167,6 +283,23 @@ export function createMockAlarmFeed(): {
       ackRequests: () => structuredClone(acks),
       historyQueries: () => structuredClone(queries),
       silenceRequests: () => silences,
+      setAlarmSettings(view) {
+        settings = structuredClone(view);
+      },
+      refuseAlarmSettings(reason) {
+        settingsRefusal = reason;
+      },
+      nextSoundImport(result) {
+        soundImport = structuredClone(result);
+      },
+      alarmSettingsRequests: () => structuredClone(settingsRequests),
+      soundTests: () => soundTests,
+      holdAlarmSettingsReads() {
+        holdReads = true;
+      },
+      releaseAlarmSettingsRead(index) {
+        heldReads[index]?.();
+      },
     },
   };
 }

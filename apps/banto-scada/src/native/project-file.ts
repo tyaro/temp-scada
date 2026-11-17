@@ -10,6 +10,7 @@ import type {
   AlarmChange,
   AlarmSnapshot,
 } from "../lib/alarm-mirror";
+import type { AlarmSettingsView } from "../lib/alarm-settings";
 import { listen } from "@tauri-apps/api/event";
 
 /** `invoke` of `@tauri-apps/api/core` with a raw body, passed in so tests can
@@ -113,6 +114,23 @@ export function nativeProjectFiles(invoke: RawInvoke): ProjectFileService {
         (await invoke("alarm_buzzer_silence").catch(
           refusal,
         )) as AlarmBuzzerStatus,
+      alarmSettings: async () =>
+        (await invoke("alarm_settings_get").catch(
+          refusal,
+        )) as AlarmSettingsView,
+      setAlarmSettings: async (settings) =>
+        (await invoke("alarm_settings_set", { settings }).catch(
+          refusal,
+        )) as AlarmSettingsView,
+      importAlarmSound: async () =>
+        (await invoke("alarm_sound_import").catch(
+          refusal,
+        )) as AlarmSettingsView | null,
+      resetAlarmSound: async () =>
+        (await invoke("alarm_sound_reset").catch(refusal)) as AlarmSettingsView,
+      testAlarmSound: async () => {
+        await invoke("alarm_sound_test").catch(refusal);
+      },
       async subscribe(change, lagged) {
         const offChange = await listen<AlarmChange>("alarm_changed", (event) =>
           change(event.payload),

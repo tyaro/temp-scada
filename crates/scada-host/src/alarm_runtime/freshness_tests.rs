@@ -149,6 +149,11 @@ async fn saved_reread_values_apply_to_the_running_engine() {
     .unwrap()
     .unwrap();
     assert!(runtime.snapshot().await.unwrap().unavailable().is_none());
+    // Make sure the streak is well past the new 300 ms limit before the
+    // reconfiguration (four failures 100 ms apart can be just under it on a
+    // slow runner); the old one-hour limit keeps the Engine available.
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert!(runtime.snapshot().await.unwrap().unavailable().is_none());
     // The streak is kept and judged again: it is already past the new
     // failure limit, so ReceiveLost begins with the reconfiguration.
     runtime.reconfigure(fast(), RETENTION).await.unwrap();

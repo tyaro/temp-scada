@@ -203,6 +203,7 @@
   } | null>(null);
   let historyOpen = $state(false);
   let alarmListOpen = $state(false);
+  let alarmSettingsOpen = $state(false);
   let recordingOperationsOpen = $state.raw<object | null>(null);
   function openRecordingOperations() {
     if (!menuBlocked) recordingOperationsOpen = Object.freeze({});
@@ -430,6 +431,11 @@
   import PreviewPopups from "./lib/designer/PreviewPopups.svelte";
   import OperatorView from "./lib/operator/OperatorView.svelte";
   import AlarmListWindow from "./lib/alarm-list/AlarmListWindow.svelte";
+  import AlarmSettingsWindow from "./lib/alarm-list/AlarmSettingsWindow.svelte";
+  import {
+    alarmSettingsEntryReason,
+    alarmSoundFallbackNotice,
+  } from "./lib/alarm-settings";
   import { operatorStartScreen } from "./lib/operator/operator-layout";
   import ArrayCopyDialog from "./lib/designer/ArrayCopyDialog.svelte";
   import { createArrayCopyController } from "./lib/designer/controllers/array-copy.svelte";
@@ -952,6 +958,7 @@
       operatorStart !== null ||
       historyOpen ||
       alarmListOpen ||
+      alarmSettingsOpen ||
       recordingManagementOpen ||
       recordingOperationsOpen ||
       trendRequest ||
@@ -1864,6 +1871,18 @@
       );
   }
   const alarmFeed = $derived(alarmFeedProp ?? projectFileService?.alarmFeed);
+  // Terminal settings (terminal settings design §7): the File menu and the
+  // alarm list window. Not a Project setting; the browser has no host.
+  let alarmSettingsOpener: Element | null = null;
+  const alarmSettingsReason = $derived(alarmSettingsEntryReason(alarmFeed));
+  const alarmSoundNotice = $derived(
+    alarmSoundFallbackNotice(alarmSnapshot?.buzzerSound),
+  );
+  function openAlarmSettings() {
+    if (alarmSettingsOpen || alarmSettingsReason) return;
+    alarmSettingsOpener = document.activeElement;
+    alarmSettingsOpen = true;
+  }
   // 小札などの画面側の表示へ配る（編集・プレビュー・運転表示で同じ状態）。
   $effect(() => setAlarmViewSnapshot(alarmSnapshot));
   $effect(() => setAlarmViewProject(project));
@@ -3471,6 +3490,7 @@
       floatingPanels.gesturing ||
       historyOpen ||
       alarmListOpen ||
+      alarmSettingsOpen ||
       !!recordingManagementOpen ||
       !!recordingOperationsOpen ||
       !!trendRequest ||
@@ -3632,6 +3652,10 @@
       openScreenViewDialog,
       openTrendDefinitions,
       openRecordingPlan,
+      openAlarmSettings,
+      get alarmSettingsReason() {
+        return alarmSettingsReason;
+      },
       add,
     },
     view: {
@@ -3967,6 +3991,9 @@
           : "warning"}
         label={alarmLabel}
       />
+      {#if alarmSoundNotice}<span data-alarm-sound-fallback
+          ><StatusBadge variant="warning" label={alarmSoundNotice} /></span
+        >{/if}
     {/if}
     {#if !headerExtension}{@render browserHubStatus()}{/if}
   </div>
@@ -4914,6 +4941,7 @@
     projectRevision={project.manifest.projectRevision}
     onclose={() => (alarmListOpen = false)}
     onrefresh={refreshAlarm}
+    onopensettings={openAlarmSettings}
     focusFallback={() => {
       const opener = alarmListOpener;
       alarmListOpener = null;
@@ -4926,6 +4954,25 @@
         opener.focus();
         return;
       }
+      return document.querySelector<HTMLButtonElement>("[data-permanent-menu]");
+    }}
+  />
+  <AlarmSettingsWindow
+    open={alarmSettingsOpen}
+    feed={alarmFeed}
+    snapshot={alarmSnapshot}
+    onclose={() => (alarmSettingsOpen = false)}
+    onrefresh={refreshAlarm}
+    focusFallback={() => {
+      const opener = alarmSettingsOpener;
+      alarmSettingsOpener = null;
+      if (
+        opener instanceof HTMLElement &&
+        opener.isConnected &&
+        !opener.closest("[inert]") &&
+        opener.getClientRects().length
+      )
+        return opener;
       return document.querySelector<HTMLButtonElement>("[data-permanent-menu]");
     }}
   />
