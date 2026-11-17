@@ -37,6 +37,14 @@
 | `RecordingSessionIssuer`   | `HostAuth`だけが保持                 | root作成時に一つだけ返す非Clone capability。これを持つ者だけが製品sessionを発行できる             |
 | `RecordingRegistrySession` | `HostAuth`の現在session表            | 既存。認証済みdesktop sessionごとにroleを分けて発行し、wire・UIへ渡さない                         |
 
+### 2.1 認証DBのmigrationと更新
+
+認証DBのschemaは、Banto admin-templateのSQLite migrationのうちSCADAが使うものを`crates/scada-host/migrations-sqlite/`へそのままコピーし、`HostAuth::open`が起動のたびに未適用のものを当てる（2026-11-17時点で0002〜0005・0007・0008・0010。itemsの0001・0009と添付の0006は使わない）。
+
+- **戻せない**: migrationを当てた後は、`_sqlx_migrations`に新しい番号が残る。旧版のbuildはその番号を知らないので、起動時のmigration検証で認証DBを拒否する。依存やアプリを戻すだけでは旧版へ戻れない。
+- **更新前の退避**: migrationが増える更新（Bantoの版上げを含む）を運用中のPCへ入れる前に、アプリを止めて、data dirの`scada-auth.sqlite3`を`-wal`・`-shm`と一緒に別名へ複写して残す。旧版へ戻すときもアプリを止めてから、旧版のアプリと、この複写を一緒に戻す。DB本体と`-wal`・`-shm`は同じ複写の組で置き換え、別の時点のものを混ぜない（複写に`-wal`・`-shm`が無ければ、残っている`-wal`・`-shm`は消す）。複写の後に記録された利用者・設定・監査の変更は失われる。
+- **試験**: 旧版の形のDB（0008まで）に監査行を入れてから開き、行が残ることと、0010の`recordResource`・`recordId`の絞り込みを確かめる（`crates/scada-host/src/auth/tests.rs`の`opening_a_v7_0_db_keeps_its_audit_rows_and_scopes_them_by_record`）。
+
 Vite単体起動のオフライン編集は従来どおりログイン不要のまま残し、記録変更の入口を持たない。`localFileAuth`は認証済みsessionを捏造しない現行のまま維持する。
 
 ## 3. 製品session issuer
