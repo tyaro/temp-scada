@@ -339,7 +339,10 @@ pub(crate) mod tests {
         let dir = std::env::temp_dir().join(format!("alarm-sound-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let bytes = wav(16, 1, 8_000, 200);
-        let setting = custom_setting(r"C:\sounds\bell.wav", &bytes);
+        let setting = custom_setting(
+            &Path::new("sounds").join("bell.wav").to_string_lossy(),
+            &bytes,
+        );
         assert!(setting.is_valid());
         assert!(matches!(&setting, SoundSetting::Custom { name, .. } if name == "bell.wav"));
         assert_eq!(

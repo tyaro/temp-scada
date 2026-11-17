@@ -248,6 +248,10 @@ pub struct AlarmService {
     /// The sound handed to the buzzer; set together with the player so the
     /// snapshot names what plays.
     buzzer_sound: std::sync::Mutex<BuzzerSound>,
+    /// Serializes a whole sound change (persisting and handing the sound to
+    /// the player), so an earlier change cannot reinstall its sound after a
+    /// later one.
+    sound_change: Mutex<()>,
 }
 
 impl AlarmService {
@@ -290,6 +294,7 @@ impl AlarmService {
             lagged,
             buzzer,
             buzzer_sound: std::sync::Mutex::new(BuzzerSound::from(&sound)),
+            sound_change: Mutex::new(()),
         };
         if service.recover_switch().await.is_err() {
             service.active.lock().await.reason = "switchRecoveryFailed".into();
@@ -1124,10 +1129,12 @@ impl AlarmService {
         &self,
         change: impl FnOnce() -> Result<ResolvedSound, TerminalError> + Send + 'static,
     ) -> Result<AlarmSettingsView, AlarmServiceError> {
+        let serial = self.sound_change.lock().await;
         let sound = tokio::task::spawn_blocking(change)
             .await
             .map_err(|_| AlarmServiceError::Terminal(TerminalError::Save))??;
         self.use_sound(&sound);
+        drop(serial);
         let _ = self.lagged.send(());
         self.alarm_settings().await
     }
