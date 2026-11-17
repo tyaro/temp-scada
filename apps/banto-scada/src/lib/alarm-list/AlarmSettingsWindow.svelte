@@ -80,6 +80,16 @@
     form = alarmSettingsForm(next);
   }
 
+  /** 種類を切り替えたら、隠れる側の値が範囲外のとき最後に読んだ値へ戻す。
+   * host は両方の値を検査するので残す必要があるが、見えない誤りで「保存」を
+   * 押せなくしない。 */
+  function switchedKind() {
+    const hidden = form.kind === "days" ? "count" : "days";
+    if (errors[hidden]) {
+      form[hidden] = alarmSettingsForm(view ?? ALARM_SETTINGS_DEFAULTS)[hidden];
+    }
+  }
+
   async function load() {
     const read = feed?.alarmSettings;
     if (!read) return;
@@ -210,6 +220,7 @@
             name="kind"
             value="days"
             bind:group={form.kind}
+            onchange={switchedKind}
             disabled={!canChange}
           /> 日数で残す</label
         >
@@ -219,6 +230,7 @@
             name="kind"
             value="count"
             bind:group={form.kind}
+            onchange={switchedKind}
             disabled={!canChange}
           /> 件数で残す</label
         >

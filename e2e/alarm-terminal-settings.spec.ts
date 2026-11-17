@@ -158,6 +158,16 @@ test("the File menu opens the terminal settings, saves retention and reread toge
       },
     },
   ]);
+
+  // 範囲外の値を残したまま種類を切り替えると、隠れる側は最後に読んだ値へ戻り、
+  // 見えない誤りで保存を押せなくならない。
+  await dialog.getByRole("radio", { name: "日数で残す" }).check();
+  await dialog.getByLabel("保持の日数（日）").fill("0");
+  await expect(save).toBeDisabled();
+  await dialog.getByRole("radio", { name: "件数で残す" }).check();
+  await expect(save).toBeEnabled();
+  await dialog.getByRole("radio", { name: "日数で残す" }).check();
+  await expect(dialog.getByLabel("保持の日数（日）")).toHaveValue("30");
   // 保存した値で表示し直す（警告は消える）。
   await expect(dialog.locator("[data-alarm-settings-warning]")).toHaveCount(0);
 
