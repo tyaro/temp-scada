@@ -75,6 +75,48 @@ for (const [width, height, minimum] of [
   });
 }
 
+test("a fitted canvas in a fractional-pixel area keeps its scrollbars still", async ({
+  page,
+}) => {
+  await open(page, 1280, 800);
+  // clientWidth / clientHeight round 0.5px up. Sizing the fitted world from
+  // them overflowed by half a pixel, so a scrollbar came and went every frame.
+  await page.evaluate(() => {
+    const workspace = document.querySelector<HTMLElement>(".canvas-workspace")!;
+    workspace.style.flex = "none";
+    workspace.style.width = "700.5px";
+    workspace.style.height = "400.5px";
+  });
+  // Headless Chromium hides scrollbars, so check the cause directly: the
+  // fitted world never exceeds the area's real (fractional) inner size.
+  await expect
+    .poll(() =>
+      viewport(page).evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        const inner = {
+          width:
+            box.width -
+            parseFloat(style.borderLeftWidth) -
+            parseFloat(style.borderRightWidth),
+          height:
+            box.height -
+            parseFloat(style.borderTopWidth) -
+            parseFloat(style.borderBottomWidth),
+        };
+        const world = element
+          .querySelector(":scope > .world")!
+          .getBoundingClientRect();
+        return (
+          inner.width % 1 !== 0 &&
+          world.width <= inner.width &&
+          world.height <= inner.height
+        );
+      }),
+    )
+    .toBe(true);
+});
+
 test("the overlaid dock and minimap stay usable and do not block canvas wheel", async ({
   page,
 }) => {

@@ -234,6 +234,38 @@
     const center = palettePoint(event);
     if (center) ondropPart(event.dataTransfer.getData(PALETTE_MIME), center);
   }
+  /**
+   * The viewport's inner area without borders and scrollbars, rounded down.
+   * clientWidth/clientHeight round to the nearest pixel, so a 751.5px area
+   * reports 752; a world sized from that overflows by half a pixel, shows a
+   * scrollbar, shrinks the area and refits, and the scrollbar keeps flickering.
+   */
+  function innerSize(element: HTMLElement) {
+    const box = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    const borderX =
+      parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+    const borderY =
+      parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+    const scrollbarX = Math.max(
+      0,
+      element.offsetWidth - element.clientWidth - borderX,
+    );
+    const scrollbarY = Math.max(
+      0,
+      element.offsetHeight - element.clientHeight - borderY,
+    );
+    return {
+      width: Math.min(
+        element.clientWidth,
+        Math.floor(box.width - borderX - scrollbarX),
+      ),
+      height: Math.min(
+        element.clientHeight,
+        Math.floor(box.height - borderY - scrollbarY),
+      ),
+    };
+  }
   let size = $state({ width: 800, height: 500 });
   let views = $state<Record<string, ViewState>>({});
   let centerRooms = $state<Record<string, boolean>>({});
@@ -320,8 +352,8 @@
     const element = viewport;
     if (!element) return;
     const update = () => {
-      if (element.clientWidth && element.clientHeight)
-        size = { width: element.clientWidth, height: element.clientHeight };
+      const measured = innerSize(element);
+      if (measured.width && measured.height) size = measured;
     };
     const observer = new ResizeObserver(update);
     observer.observe(element);
@@ -394,10 +426,7 @@
       return false;
     const target = selectionTarget(screen, selectedIds);
     if (!target.bounds) return false;
-    let measured = {
-      width: viewport.clientWidth,
-      height: viewport.clientHeight,
-    };
+    let measured = innerSize(viewport);
     let state = selectionView(screen, measured, target.bounds);
     resizeAnchor = null;
     dropPoint = null;
@@ -407,11 +436,12 @@
       views[screen.id] = state;
     });
     // Center-room margins can introduce scrollbars. Settle once using their real client area.
+    const settled = innerSize(viewport);
     if (
-      viewport.clientWidth !== measured.width ||
-      viewport.clientHeight !== measured.height
+      settled.width !== measured.width ||
+      settled.height !== measured.height
     ) {
-      measured = { width: viewport.clientWidth, height: viewport.clientHeight };
+      measured = settled;
       state = selectionView(screen, measured, target.bounds);
       flushSync(() => {
         size = measured;

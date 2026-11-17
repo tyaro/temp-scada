@@ -5351,7 +5351,8 @@
   .header-status {
     display: flex;
     flex: 0 1 auto;
-    justify-content: flex-end;
+    /* 幅が足りないとき、中身を左へこぼして表示モードやメニューに重ねない。 */
+    justify-content: safe flex-end;
     align-items: center;
     gap: 6px;
     min-width: 0;
@@ -5366,6 +5367,9 @@
   .recording-status {
     display: inline-flex;
     flex-shrink: 0;
+    /* 全体の button の幅指定で状態表示の幅いっぱいに伸び、警報の札を押し出していた。 */
+    width: auto;
+    margin: 0;
     padding: 0;
     border: 0;
     border-radius: 999px;
@@ -5423,8 +5427,10 @@
   }
   .app-header {
     display: flex;
+    /* Tauri の認証・Hub・記録・警報の札で1行に入らないときは、状態表示を2行目へ回す。 */
+    flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: 4px 12px;
     padding: 4px 12px;
     min-height: 40px;
     flex-shrink: 0;

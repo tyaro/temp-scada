@@ -199,3 +199,48 @@ test("the header row holds mode and save state so the 1440px toolbar stays on on
     clip: { x: 0, y: 0, width: 1440, height: 120 },
   });
 });
+
+test("a crowded header wraps its status to a second row instead of overlapping the mode and menus", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1100, height: 800 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  // The desktop shell adds auth / Hub badges before the menus and recording /
+  // alarm badges to the status; stand-ins of the same widths crowd the row.
+  await page.evaluate(() => {
+    const header = document.querySelector(".app-header")!;
+    const extension = document.createElement("div");
+    extension.style.cssText = "flex-shrink:0;width:260px;height:28px";
+    header.prepend(extension);
+    const badges = document.createElement("span");
+    badges.style.cssText = "flex-shrink:0;width:250px;height:24px";
+    document.querySelector(".header-status")!.append(badges);
+  });
+  const boxes = await page.evaluate(() => {
+    const box = (element: Element) => {
+      const r = element.getBoundingClientRect();
+      return { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+    };
+    return {
+      fixed: [".mode-tools", '[role="menubar"]'].map((selector) =>
+        box(document.querySelector(selector)!),
+      ),
+      status: [...document.querySelector(".header-status")!.children].map(box),
+      header: box(document.querySelector(".app-header")!),
+    };
+  });
+  for (const a of boxes.fixed)
+    for (const b of boxes.status)
+      expect(
+        a.right <= b.left ||
+          b.right <= a.left ||
+          a.bottom <= b.top ||
+          b.bottom <= a.top,
+      ).toBe(true);
+  for (const b of boxes.status) {
+    expect(b.left).toBeGreaterThanOrEqual(boxes.header.left);
+    expect(b.right).toBeLessThanOrEqual(boxes.header.right);
+  }
+  await expect(page.getByRole("group", { name: "表示モード" })).toBeVisible();
+});
