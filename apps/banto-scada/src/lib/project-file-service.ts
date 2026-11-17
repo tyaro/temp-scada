@@ -90,6 +90,21 @@ export interface AlarmFeed {
   /** `alarm_buzzer_silence`: stop this terminal's buzzer. Not an ACK and
    * needs no login; resolves to the buzzer status after silencing. */
   silenceBuzzer?(): Promise<import("./alarm-mirror").AlarmBuzzerStatus>;
+  /** `alarm_settings_get`: the terminal settings (terminal settings design §6). No login. */
+  alarmSettings?(): Promise<import("./alarm-settings").AlarmSettingsView>;
+  /** `alarm_settings_set`: retention and reread only. Rejects with the reason
+   * (invalidSettings, unauthorized, ...). */
+  setAlarmSettings?(
+    settings: import("./alarm-settings").AlarmSettings,
+  ): Promise<import("./alarm-settings").AlarmSettingsView>;
+  /** `alarm_sound_import`: the host's dialog; null when cancelled. */
+  importAlarmSound?(): Promise<
+    import("./alarm-settings").AlarmSettingsView | null
+  >;
+  /** `alarm_sound_reset`: back to the bundled beep. */
+  resetAlarmSound?(): Promise<import("./alarm-settings").AlarmSettingsView>;
+  /** `alarm_sound_test`: play the current sound once (`buzzerRinging` while ringing). No login. */
+  testAlarmSound?(): Promise<void>;
 }
 
 /** `alarm_ack`'s result of one item (`src-tauri/src/alarm.rs` `AckResult`). */

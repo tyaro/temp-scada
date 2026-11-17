@@ -85,6 +85,10 @@ export interface DesignerActionsHost {
     openScreenViewDialog(): void;
     openTrendDefinitions(): void;
     openRecordingPlan(): void;
+    /** 警報の端末設定の窓（terminal settings design §7）。 */
+    openAlarmSettings(): void;
+    /** 端末設定を開けない理由（host の無いブラウザ版）。開けるときは null。 */
+    readonly alarmSettingsReason: string | null;
     add(kind: AddKind): void;
   };
   view: {
@@ -735,6 +739,13 @@ export function createDesignerActions(host: DesignerActionsHost) {
             label: "プロジェクト名を変更",
             disabled: host.editing.editBlocked,
             run: host.files.focusProjectName,
+          },
+          {
+            label: host.files.alarmSettingsReason
+              ? "警報の端末設定…（デスクトップ版のみ）"
+              : "警報の端末設定…",
+            disabled: host.view.menuBlocked || !!host.files.alarmSettingsReason,
+            run: host.files.openAlarmSettings,
           },
           {
             label: "工程図サンプルを開く",

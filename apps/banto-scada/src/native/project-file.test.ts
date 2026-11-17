@@ -64,6 +64,45 @@ describe("nativeProjectFiles", () => {
     ]);
   });
 
+  it("names the terminal settings commands as the host reads them", async () => {
+    const calls: { command: string; args: unknown }[] = [];
+    const invoke: RawInvoke = async (command, args) => {
+      calls.push({ command, args });
+      return command === "alarm_sound_import" ? null : {};
+    };
+    const feed = nativeProjectFiles(invoke).alarmFeed!;
+    const settings = {
+      retention: { kind: "count" as const, days: 30, count: 20_000 },
+      reread: {
+        intervalSec: 10,
+        timeoutSec: 5,
+        failureLimitSec: 30,
+        reconnectFailures: 3,
+      },
+    };
+    await feed.alarmSettings!();
+    await feed.setAlarmSettings!(settings);
+    expect(await feed.importAlarmSound!()).toBeNull();
+    await feed.resetAlarmSound!();
+    await feed.testAlarmSound!();
+    expect(calls).toEqual([
+      { command: "alarm_settings_get", args: undefined },
+      { command: "alarm_settings_set", args: { settings } },
+      { command: "alarm_sound_import", args: undefined },
+      { command: "alarm_sound_reset", args: undefined },
+      { command: "alarm_sound_test", args: undefined },
+    ]);
+  });
+
+  it("turns a terminal settings refusal into the host's reason", async () => {
+    const invoke: RawInvoke = async () => {
+      throw "invalidSound:notWav";
+    };
+    await expect(
+      nativeProjectFiles(invoke).alarmFeed!.importAlarmSound!(),
+    ).rejects.toMatchObject({ reason: "invalidSound:notWav" });
+  });
+
   it("turns an ACK refusal into the host's reason", async () => {
     const invoke: RawInvoke = async () => {
       throw "forbidden";

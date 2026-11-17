@@ -19,6 +19,10 @@
     type AlarmListRow,
   } from "../alarm-list";
   import {
+    alarmSettingsEntryReason,
+    alarmSoundFallbackNotice,
+  } from "../alarm-settings";
+  import {
     ProjectFileError,
     type AlarmAckResult,
     type AlarmFeed,
@@ -39,6 +43,7 @@
     onclose,
     onrefresh,
     focusFallback,
+    onopensettings,
   }: {
     open: boolean;
     snapshot: AlarmSnapshot | null;
@@ -50,7 +55,11 @@
     /** ACK の後に snapshot を取り直させる（「別の回」を最新にする）。 */
     onrefresh: () => void;
     focusFallback?: () => HTMLElement | null | undefined;
+    /** 「端末設定」（警報の端末設定の窓を開く）。host が無ければ押せない。 */
+    onopensettings?: () => void;
   } = $props();
+  const settingsReason = $derived(alarmSettingsEntryReason(feed));
+  const soundNotice = $derived(alarmSoundFallbackNotice(snapshot?.buzzerSound));
 
   let tab = $state<"current" | "history">("current");
   let filter = $state<AlarmListFilter>("all");
@@ -258,7 +267,19 @@
         disabled={!feed?.silenceBuzzer}
         onclick={silenceBuzzer}>ブザー停止</button
       >
+      <button
+        type="button"
+        class="settings"
+        disabled={!!settingsReason || !onopensettings}
+        title={settingsReason ?? undefined}
+        onclick={() => onopensettings?.()}>端末設定</button
+      >
+      {#if settingsReason}<span class="settings-reason">{settingsReason}</span
+        >{/if}
     </div>
+    {#if soundNotice}<p class="notice" role="status" data-alarm-sound-fallback>
+        {soundNotice}
+      </p>{/if}
     {#if buzzerIssue}<p class="notice" role="alert">{buzzerIssue}</p>{/if}
     <div
       role="tablist"
@@ -519,6 +540,13 @@
     flex-wrap: wrap;
     align-items: end;
     gap: 0.5rem;
+  }
+  .toolbar .settings {
+    margin-left: auto;
+  }
+  .settings-reason {
+    font-size: 0.85em;
+    color: var(--banto-text-muted, inherit);
   }
   .toolbar.buzzer {
     align-items: center;
