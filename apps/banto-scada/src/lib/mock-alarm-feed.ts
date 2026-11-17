@@ -55,6 +55,13 @@ export interface AlarmMockControl {
   alarmSettingsRequests(): AlarmSettings[];
   /** 受け付けた `alarm_sound_test` の回数。 */
   soundTests(): number;
+  /**
+   * 以後の `alarm_settings_get` を 1 回ずつ待たせる（開き直しの競合を作る）。
+   * 応答は呼ばれた時点の値。
+   */
+  holdAlarmSettingsReads(): void;
+  /** 待たせた `alarm_settings_get` のうち `index` 番目（呼ばれた順、0 から）を返す。 */
+  releaseAlarmSettingsRead(index: number): void;
 }
 
 const STOPPED: AlarmSnapshot = {
@@ -91,6 +98,8 @@ export function createMockAlarmFeed(): {
   let soundImport: { name: string } | { reason: string } | null = null;
   const settingsRequests: AlarmSettings[] = [];
   let soundTests = 0;
+  let holdReads = false;
+  const heldReads: (() => void)[] = [];
   const RANGES = { days: [1, 3650], count: [10_000, 10_000_000] } as const;
   /** host と同じ範囲と相互の関係（§2）。 */
   function validSettings({ retention, reread }: AlarmSettings): boolean {
@@ -178,7 +187,13 @@ export function createMockAlarmFeed(): {
         }
         return current.buzzer ?? "quiet";
       },
-      alarmSettings: async () => structuredClone(settings),
+      async alarmSettings() {
+        const answer = structuredClone(settings);
+        if (holdReads) {
+          await new Promise<void>((resolve) => heldReads.push(resolve));
+        }
+        return answer;
+      },
       async setAlarmSettings(next) {
         settingsRequests.push(structuredClone(next));
         if (settingsRefusal) throw new Error(settingsRefusal);
@@ -279,6 +294,12 @@ export function createMockAlarmFeed(): {
       },
       alarmSettingsRequests: () => structuredClone(settingsRequests),
       soundTests: () => soundTests,
+      holdAlarmSettingsReads() {
+        holdReads = true;
+      },
+      releaseAlarmSettingsRead(index) {
+        heldReads[index]?.();
+      },
     },
   };
 }

@@ -90,23 +90,36 @@
     }
   }
 
+  /** 開閉のたびに進める。前に開いていたときの操作の結果（成功・失敗・
+   * 終わり）は、いまの窓の入力や busy を変えない。host の操作は取り消さない。 */
+  let generation = 0;
+
   async function load() {
     const read = feed?.alarmSettings;
     if (!read) return;
+    const current = generation;
     busy = true;
     try {
-      show(await read());
+      const next = await read();
+      if (current === generation) show(next);
     } catch (error) {
-      loadIssue = alarmSettingsReasonText(reasonOf(error));
+      if (current === generation) {
+        loadIssue = alarmSettingsReasonText(reasonOf(error));
+      }
     } finally {
-      busy = false;
+      if (current === generation) busy = false;
     }
   }
 
-  // 開くたびに前の結果を捨てて読み直す。
+  // 開くたびに前の結果を捨てて読み直す。閉じたら前の操作の結果を捨てる。
   $effect(() => {
-    if (!open) return;
+    if (!open) {
+      generation += 1;
+      return;
+    }
     untrack(() => {
+      generation += 1;
+      busy = false;
       view = null;
       loadIssue = null;
       saveIssue = saveDone = soundIssue = soundDone = null;
@@ -122,16 +135,20 @@
     event.preventDefault();
     const write = feed?.setAlarmSettings;
     if (!write || !validation.ok || !canChange) return;
+    const current = generation;
     busy = true;
     saveIssue = saveDone = null;
     try {
-      show(await write(validation.settings));
-      saveDone =
-        "保存しました。読み直しの値はすぐに使われ、保持の上限は次の整理から使われます。";
+      const next = await write(validation.settings);
+      if (current === generation) {
+        show(next);
+        saveDone =
+          "保存しました。読み直しの値はすぐに使われ、保持の上限は次の整理から使われます。";
+      }
     } catch (error) {
-      saveIssue = refused(error);
+      if (current === generation) saveIssue = refused(error);
     } finally {
-      busy = false;
+      if (current === generation) busy = false;
       onrefresh();
     }
   }
@@ -140,18 +157,21 @@
     action: "import" | "reset" | "test",
   ): Promise<void> {
     if (!feed) return;
+    const current = generation;
     busy = true;
     soundIssue = soundDone = null;
     try {
       if (action === "test") {
         await feed.testAlarmSound?.();
-        soundDone = "いまの設定の音を一度鳴らしました。";
+        if (current === generation) {
+          soundDone = "いまの設定の音を一度鳴らしました。";
+        }
       } else {
         const next =
           action === "import"
             ? await feed.importAlarmSound?.()
             : await feed.resetAlarmSound?.();
-        if (next) {
+        if (next && current === generation) {
           // 音の変更では保持・読み直しの入力中の値を残す。
           view = next;
           soundDone =
@@ -161,9 +181,9 @@
         }
       }
     } catch (error) {
-      soundIssue = refused(error);
+      if (current === generation) soundIssue = refused(error);
     } finally {
-      busy = false;
+      if (current === generation) busy = false;
       if (action !== "test") onrefresh();
     }
   }

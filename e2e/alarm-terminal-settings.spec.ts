@@ -315,3 +315,42 @@ test("the browser version cannot open the terminal settings and says why", async
   ).toBeDisabled();
   await expect(list).toContainText("端末設定はデスクトップ版だけで扱えます");
 });
+
+test("a reply from before the window was closed does not touch the reopened form or its busy state", async ({
+  page,
+}) => {
+  await mockAlarmEntry(page);
+  await openSample(page);
+  const days = () => settings(page).getByLabel("保持の日数（日）");
+  await mock(page, "setAlarmSettings(arg)", {
+    ...VIEW,
+    retention: { ...VIEW.retention, days: 100 },
+  });
+  await mock(page, "holdAlarmSettingsReads()");
+
+  // 読込み A を待たせたまま閉じ、開き直した読込み B も待たせる。
+  await openFromMenu(page);
+  await page.keyboard.press("Escape");
+  await expect(settings(page)).toBeHidden();
+  await mock(page, "setAlarmSettings(arg)", {
+    ...VIEW,
+    retention: { ...VIEW.retention, days: 200 },
+  });
+  await openFromMenu(page);
+
+  // 古い A の終わりは、読込み中の B の busy を解かない。
+  await mock(page, "releaseAlarmSettingsRead(0)");
+  await expect(days()).toBeDisabled();
+  await expect(days()).not.toHaveValue("100");
+
+  // B が返ってから入力した値は、そのあとで何が来ても残る。
+  await mock(page, "releaseAlarmSettingsRead(1)");
+  await expect(days()).toHaveValue("200");
+  await expect(days()).toBeEnabled();
+  await days().fill("250");
+  await mock(page, "releaseAlarmSettingsRead(0)");
+  await expect(days()).toHaveValue("250");
+  await expect(
+    settings(page).getByRole("button", { name: "保存", exact: true }),
+  ).toBeEnabled();
+});
