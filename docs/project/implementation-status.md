@@ -521,7 +521,11 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 段階3-C2b（警報）は、専用の TagClient SDK 購読から値・接続状態を評価し、タイマー満了・ACK を同じ処理列に入れた。状態とイベントを警報 DB に確定してから Engine を進める。ループバック Hub と隔離 DB で発生・ACK・停止、未解決タグ、接続世代の変更、DB 失敗時の停止を検証済み。実 Hub・Tauri 実機は未確認。[設計](../design/runtime/alarm-stage3-design.md)§5。
 
-段階3-C2c（警報）は、host が `ProjectFiles::path(fileId)` から保存済み `.json`／`.bantoscada` を読み直して定義を展開し、ファイル hash と評価 hash を記録する。保存成功後の `project_save.apply` は書込み結果と別に返し、別 Project の保存では監視を切り替えない。明示 `alarm_apply` は未確認の回の列を確かめ、同じ Project・接続先なら session を保って定義を更新し、別 Project では切替中の記録、旧 session 停止、新 Project の適用、旧 Project の終端、新 session 開始の順に進める。起動時は適用済み定義から復元し、切替中の記録も照合する。`alarm_snapshot`・`alarm_changed`・`alarm_ack`・`alarm_history` を Tauri に接続し、画面は世代番号と変更連番で通知を突き合わせる。3-C2c のPR内で検証中であり、Tauri 実機・実 Hub はオーナー確認待ち。[設計](../design/runtime/alarm-stage3-design.md)§5・§10。
+段階3-C2c（警報）は、host が `ProjectFiles::path(fileId)` から保存済み `.json`／`.bantoscada` を読み直して定義を展開し、ファイル hash と評価 hash を記録する。保存成功後の `project_save.apply` は書込み結果と別に返し、別 Project の保存では監視を切り替えない。明示 `alarm_apply` は未確認の回の列を確かめ、同じ Project・接続先なら session を保って定義を更新し、別 Project では切替中の記録、旧 session 停止、新 Project の適用、旧 Project の終端、新 session 開始の順に進める。起動時は適用済み定義から復元し、切替中の記録も照合する。`alarm_snapshot`・`alarm_changed`・`alarm_ack`・`alarm_history` を Tauri に接続し、画面は世代番号と変更連番で通知を突き合わせる。Tauri 実機・実 Hub での適用・切替はオーナー確認待ち。[設計](../design/runtime/alarm-stage3-design.md)§5・§10。
+
+2026-11-16の段階3-C3a（警報）で、警報 DB への書込みが SQLite・I/O で失敗しても評価を続け、書けなかったイベントは件数だけ数えるようにした。失敗中は ACK と定義の適用を`historyUnwritable`で拒否し、5秒ごとに再試行する。回復したら`unrecordedPeriod`イベントと最後の状態の全件書直しを一つの transaction で行う。停止時に書き直せなければ session を停止なしで残し、次の起動の状態不明期間に任せる。snapshot の`historyWriteFailure`で、ヘッダーに「履歴に書けません」を出す。実 Hub 106タグで DB をロックし、ACK の拒否・適用の拒否・解除後の回復と`unrecordedPeriod`の記録を確認した（2026-11-16）。未記録件数が1件以上の場合と、失敗中の停止から次回起動の`unknownPeriod`は単体試験だけ。[設計](../design/runtime/alarm-stage3-design.md)§5.3。
+
+2026-11-16の段階3-C3b（警報）で、Engine が10秒ごと（期限5秒、同時に1件）に使うタグの現在値を REST で読み直す。購読の値が届かず接続の世代も変わらないのに読んだ値が受理済みの値と食い違えば、読んだ値を評価に使って購読を張り直す。読み直しの失敗が30秒続くか、張り直しが3回続けて失敗すると Engine 単位の評価不能「受信の途絶」にし、解けたら購読のいまの値から評価し直す。snapshot の`rereadFailure`で、ヘッダーに「値の読み直しに失敗（n 回）」を出す。既定値で動き、変更の画面は無い。ループバック Hub で食い違い・途絶・回復を試験した。Tauri 実機・実 Hub は未確認。購読が無言で止まり値も変わらない場合は見分けられない（上流の課題）。[設計](../design/runtime/alarm-stage3-design.md)§4.5。
 
 ## 警報の小札
 
@@ -529,7 +533,13 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 ## 最新の警報の帯
 
-2026-11-17の段階3 3-D2で、画面の直下に置く最新の警報の帯`alarmBanner`（`style`のfontSize・fontWeightだけを持ち、指す定義は無い）を追加した。純関数`alarm-banner.ts`で snapshot から、停止中（status の理由）・監視できていない（Engine単位の評価不能、選んだ1件は出さない）・別Project・警報なしを出し、監視中は未確認を先に→severityの高い順→同じ定義で上位の限界がある下位を落とす→新しい順（orderKey・時刻・id）で1件を選んで「時刻・名前・メッセージ」と件数を出す。condition単位の評価不能があれば件数と主な理由を常に添える。色は小札と同じ配色で部品に固定し、停止中などは小札の「不明」と同じ斜線、主の文字は幅に収まらなければ「…」で省略し、`aria-label`に全文を入れる。`blinkUnacked`のときだけ未確認を点滅し、「動きを減らす」では止める。schemaVersionは0.37.0のまま。[仕様](../design/graphics/alarm-banner.md)。`alarm-banner.test.ts`・`examples/alarm-banner-cases.json`（Rust・TS共通）・`e2e/alarm-banner.spec.ts`で確認。一覧の窓・ACK（3-E）と枠のヘッダーへの既定配置は未実装、Tauri実機は未確認。
+2026-11-17の段階3 3-D2で、画面の直下に置く最新の警報の帯`alarmBanner`（`style`のfontSize・fontWeightだけを持ち、指す定義は無い）を追加した。純関数`alarm-banner.ts`で snapshot から、停止中（status の理由）・監視できていない（Engine単位の評価不能、選んだ1件は出さない）・別Project・警報なしを出し、監視中は未確認を先に→severityの高い順→同じ定義で上位の限界がある下位を落とす→新しい順（orderKey・時刻・id）で1件を選んで「時刻・名前・メッセージ」と件数を出す。condition単位の評価不能があれば件数と主な理由を常に添える。色は小札と同じ配色で部品に固定し、停止中などは小札の「不明」と同じ斜線、主の文字は幅に収まらなければ「…」で省略し、`aria-label`に全文を入れる。`blinkUnacked`のときだけ未確認を点滅し、「動きを減らす」では止める。schemaVersionは0.37.0のまま。[仕様](../design/graphics/alarm-banner.md)。`alarm-banner.test.ts`・`examples/alarm-banner-cases.json`（Rust・TS共通）・`e2e/alarm-banner.spec.ts`で確認。Tauri実機は未確認。
+
+## アラーム一覧の窓とブザー
+
+2026-11-17の段階3 3-E1で、Project に保存しないアラーム一覧の窓を追加した。「現在」タブは Normal でない condition と評価不能の condition を未確認→severity→新しい順に出し、選んだ行の ACK と「すべて ACK」（最新の snapshot に出ている未確認の回だけ）を送る。結果は行ごとに出し、「別の回」は最新の回で取り直す。「履歴」タブは`alarm_history`を期間・種類で照会し、続きを読める。Engine 停止中・履歴に書けない・別 Project・revision の違いは理由を出す。入口はプレビューのツールバー、運転表示、navButton の行き先`{ kind: "alarmList" }`。[仕様](../design/graphics/alarm-list.md)。`alarm-list.test.ts`・`e2e/alarm-list.spec.ts`で確認。
+
+2026-11-17の段階3 3-E2で、ブザーを追加した。鳴らす判断は host（`alarm_buzzer.rs`）で、未確認の回があるあいだ繰り返し鳴らす定義と、発生のときに一度だけ鳴らす定義（`noneWithSound`）を区別する。「ブザー停止」（`alarm_buzzer_silence`、ログイン不要）は ACK ではなく、新しい回の発生か再発生で解ける。Engine の停止・未適用・切替では鳴らさない。再生は Windows の`PlaySoundW`でコードで生成したビープ（880Hz・0.3秒、0.2秒あけて繰り返す）で、ほかの OS はログだけ。snapshot の`buzzer`で状態を返し、一覧の窓に状態と「ブザー停止」、navButton に行き先`{ kind: "silenceBuzzer" }`を足した。工程図サンプルの運転表示のヘッダーに帯・アラーム一覧・ブザー停止を置いた。この PC で`PlaySoundW`の成功は確かめたが、実際の音・音量はオーナー確認待ち。音のファイルの変更と端末設定（読み直しの周期・期限・保持の上限・音）の画面は未実装。[設計](../design/runtime/alarm-stage3-design.md)§6。
 
 ## 時計
 
