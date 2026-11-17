@@ -1490,6 +1490,91 @@ mod tests {
         std::fs::remove_dir_all(dir).unwrap();
     }
 
+    /// Two overlapping sound changes (#234 review): the import saves first,
+    /// then the reset saves. Were a change not serialized up to `use_sound`,
+    /// the reset could reach the player while the import has yet to resume,
+    /// and the import would then install its stale sound. The import waits
+    /// for the reset to reach the player: with serialization it never does,
+    /// and the saved setting, the snapshot and the player all end on the
+    /// reset.
+    #[tokio::test]
+    async fn overlapping_sound_changes_leave_the_saved_sound_in_the_player() {
+        use crate::alarm_terminal::alarm_sound::tests::wav;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::mpsc::{channel, Sender};
+        use std::time::Duration;
+        /// Tells the import when the beep reaches the player.
+        #[derive(Default)]
+        struct Sounds {
+            set: std::sync::Mutex<Vec<Option<usize>>>,
+            beep_reached: std::sync::Mutex<Option<Sender<()>>>,
+        }
+        impl BuzzerPlayer for Sounds {
+            fn play_loop(&self) {}
+            fn play_once(&self) {}
+            fn stop(&self) {}
+            fn set_sound(&self, wav: Option<Arc<[u8]>>) {
+                if wav.is_none() {
+                    if let Some(tx) = &*self.beep_reached.lock().unwrap() {
+                        let _ = tx.send(());
+                    }
+                }
+                self.set.lock().unwrap().push(wav.map(|wav| wav.len()));
+            }
+        }
+        let dir = std::env::temp_dir().join(format!("alarm-sound-race-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let sounds = Arc::new(Sounds::default());
+        let service = AlarmService::open_with_buzzer(&dir, sounds.clone())
+            .await
+            .unwrap();
+        // Armed after opening, so the beep handed over at open does not count.
+        let (beep_tx, beep_rx) = channel::<()>();
+        *sounds.beep_reached.lock().unwrap() = Some(beep_tx);
+        // Only lets the import go on when serialization holds the reset back.
+        let wait = Duration::from_millis(500);
+        let (imported_tx, imported_rx) = channel::<()>();
+        let raced = Arc::new(AtomicBool::new(false));
+        let bytes = wav(8, 1, 8_000, 100);
+        let terminal = service.terminal.clone();
+        let import_raced = raced.clone();
+        let import = service.change_sound(move || {
+            let sound = terminal.import_sound("bell.wav", &bytes);
+            let _ = imported_tx.send(());
+            if beep_rx.recv_timeout(wait).is_ok() {
+                import_raced.store(true, Ordering::SeqCst);
+            }
+            sound
+        });
+        let terminal = service.terminal.clone();
+        let reset = service.change_sound(move || {
+            let _ = imported_rx.recv_timeout(wait);
+            terminal.reset_sound()
+        });
+        let (import, reset) = tokio::join!(import, reset);
+        assert!(
+            !raced.load(Ordering::SeqCst),
+            "the reset reached the player before the import had finished"
+        );
+        import.unwrap();
+        let view = reset.unwrap();
+        assert_eq!(view.sound, SoundSetting::Default);
+        assert_eq!(
+            service.alarm_settings().await.unwrap().sound,
+            SoundSetting::Default
+        );
+        assert_eq!(
+            service.snapshot().await.unwrap().buzzer_sound,
+            BuzzerSound {
+                kind: SoundKind::Default,
+                fallback: None,
+            }
+        );
+        assert_eq!(sounds.set.lock().unwrap().last(), Some(&None));
+        drop(service);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
     async fn wait_buzzer(service: &AlarmService, want: BuzzerStatus) {
         tokio::time::timeout(std::time::Duration::from_secs(5), async {
             while service.snapshot().await.unwrap().buzzer != want {
