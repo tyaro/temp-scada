@@ -6,7 +6,7 @@
 
 2026-11-17 時点で、フロー図目標の段階3の警報（[設計](../design/runtime/alarm-stage3-design.md)§10 の 3-A〜3-E、PR #216〜#229）を完了した。Tauri 実機・実 Hub では 3-C1 の保存操作と 3-C3a の DB 書込み失敗を確認済みで、警報の適用・切替などは未確認、ブザーの音はオーナー確認待ち。同日、警報の後続の[端末設定](../design/runtime/alarm-terminal-settings.md)（保持の上限・読み直しの値・ブザーの音と、その画面、PR #231〜#235）も完了した（Tauri 実機は未確認）。次の候補は、C6 の連続運用とリリース判断（下記）と、上流の書込み契約の成立後の段階3の操作（[差分文書](../design/editor/flow-diagram-gap-2026-11-12.md)§3 の 9）で、順序はユーザーが選ぶ。
 
-2026-11-11時点で実Hub・S7接続のC0〜C5は完了した（[C5受入記録](real-hub-c5-acceptance.md)）。次はC6の連続運用とリリース判断である。C6で実装済みなのはobservation attemptの回収（PR #160）だけで、対象タグ数・周期・運転時間の確定、保存量と台帳上限の評価、実媒体・時計異常・容量不足・復旧・保持の検証、配布・更新・停止手順は残っている。
+2026-11-11時点で実Hub・S7接続のC0〜C5は完了した（[C5受入記録](real-hub-c5-acceptance.md)）。次はC6の連続運用とリリース判断である。C6で実装済みなのはobservation attemptの回収（PR #160）だけで、対象タグ数・周期・運転時間の確定、保存量と台帳上限の評価、実媒体・時計異常・容量不足・復旧・保持の検証、配布・更新・停止手順は残っている。C6の試験・実装・手順書の区切りは[C6計画（提案・未承認）](real-hub-c6-plan.md)にまとめた。
 
 C4 native registry adapter（PR #105〜#118、2026-11-06〜07）は、一workflowの各段階を実`RecordingOperationsOwner`へ一回ずつ配送するところまで統合済み。保存済み実handleのObservationと、preflight〜apply〜Observationの同一handle chainでの完走と、受理後notDispatchedの観測（設計§7受入1）、元cancel call（受入3）、複数read retryを追加した。経緯は[実装履歴](../history/implementation-history.md)、現在の契約は[採用設計](../design/runtime/historian-recording-native-registry-adapter.md)と[実装状況](implementation-status.md)を参照する。
 
