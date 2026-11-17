@@ -214,7 +214,7 @@ docs/
 ### 運用・追加構想
 
 - [開発・運用フェーズとログイン](design/runtime/access-policy.md)
-- [実Hub・S7接続 C6 連続運用とリリース判断の計画](project/real-hub-c6-plan.md)：提案・未承認
+- [実Hub・S7接続 C6 連続運用とリリース判断の計画](project/real-hub-c6-plan.md)：承認済み（2026-11-17）
 - [機器登録・図面からの機器化・画面再利用の詳細検討](design/proposals/equipment-authoring-detail-proposal.md)
 - [SCADA 作成支援・機器定義・プラント運用の追加検討](design/proposals/scada-authoring-plant-operations-proposal.md)
 - [画像・描画表現・Faceplate・画面展開・kioskの拡張検討](design/proposals/scada-graphics-runtime-extension-design.md)
