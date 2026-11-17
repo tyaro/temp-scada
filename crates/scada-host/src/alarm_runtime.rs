@@ -452,10 +452,28 @@ struct ApplyCommand {
     reply: oneshot::Sender<Result<(), AlarmRuntimeError>>,
 }
 
+/// A weak `AlarmRuntime::snapshot` for tasks that must not outlive the runtime.
+pub struct RuntimeSnapshots(mpsc::WeakSender<Control>);
+
+impl RuntimeSnapshots {
+    pub async fn snapshot(&self) -> Result<Engine, AlarmRuntimeError> {
+        let control = self.0.upgrade().ok_or(AlarmRuntimeError::Closed)?;
+        let (reply, rx) = oneshot::channel();
+        control
+            .send(Control::Snapshot(reply))
+            .await
+            .map_err(|_| AlarmRuntimeError::Closed)?;
+        drop(control);
+        rx.await.map_err(|_| AlarmRuntimeError::Closed)
+    }
+}
+
 /// One owner for the dedicated SDK connection and serialized Engine inputs.
 pub struct AlarmRuntime {
     control: mpsc::Sender<Control>,
     changes: broadcast::Sender<AlarmChange>,
+    /// Subscribed before the evaluation task starts; handed to the first `changes()`.
+    first_changes: std::sync::Mutex<Option<broadcast::Receiver<AlarmChange>>>,
     status: watch::Receiver<AlarmRuntimeStatus>,
     history: watch::Receiver<Option<HistoryWriteFailure>>,
     reread: watch::Receiver<Option<RereadFailure>>,
@@ -498,7 +516,7 @@ impl AlarmRuntime {
             }
         };
         let (control, control_rx) = mpsc::channel(32);
-        let (changes, _) = broadcast::channel(256);
+        let (changes, first) = broadcast::channel(256);
         let change_tx = changes.clone();
         let (status_tx, status) = watch::channel(AlarmRuntimeStatus::Running);
         let history = evaluator.history.subscribe();
@@ -510,6 +528,7 @@ impl AlarmRuntime {
         Ok(Self {
             control,
             changes,
+            first_changes: std::sync::Mutex::new(Some(first)),
             status,
             history,
             reread,
@@ -519,8 +538,15 @@ impl AlarmRuntime {
 
     /// A lagged receiver must discard its diffs and call `snapshot()` again.
     /// The same rule applies to a gap in `seq` within one session generation.
+    /// The first call receives every change since the evaluation started (the
+    /// receiver was subscribed before the task), so a one-shot sound evaluated
+    /// before the host attached is not lost. Later calls subscribe from now.
     pub fn changes(&self) -> broadcast::Receiver<AlarmChange> {
-        self.changes.subscribe()
+        self.first_changes
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .take()
+            .unwrap_or_else(|| self.changes.subscribe())
     }
 
     pub fn status(&self) -> watch::Receiver<AlarmRuntimeStatus> {
@@ -556,6 +582,11 @@ impl AlarmRuntime {
             .await
             .map_err(|_| AlarmRuntimeError::Closed)?;
         rx.await.map_err(|_| AlarmRuntimeError::Closed)?
+    }
+
+    /// A snapshot handle that does not keep the runtime alive (the buzzer pump).
+    pub fn snapshots(&self) -> RuntimeSnapshots {
+        RuntimeSnapshots(self.control.downgrade())
     }
 
     pub async fn snapshot(&self) -> Result<Engine, AlarmRuntimeError> {
@@ -2084,6 +2115,8 @@ mod tests {
         );
         let before = runtime.snapshot().await.unwrap();
         let mut changed = runtime.changes();
+        // The first receiver holds every change since start; skip those.
+        while changed.try_recv().is_ok() {}
         let mut renamed = applied.clone();
         renamed.project_revision = 2;
         renamed.file_hash = "saved-again".into();

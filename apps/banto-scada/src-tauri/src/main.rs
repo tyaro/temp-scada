@@ -1,6 +1,7 @@
 //! One embedded read-only host. Hub services and PLC connections stay external.
 mod alarm;
 mod auth;
+mod buzzer;
 mod close;
 mod control;
 mod history;
@@ -293,6 +294,7 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             alarm::alarm_apply,
             alarm::alarm_snapshot,
             alarm::alarm_ack,
+            alarm::alarm_buzzer_silence,
             alarm::alarm_history,
             auth::auth_status,
             auth::auth_phase,

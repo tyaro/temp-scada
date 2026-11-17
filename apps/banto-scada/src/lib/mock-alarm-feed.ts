@@ -31,6 +31,12 @@ export interface AlarmMockControl {
   ackRequests(): UnackedOccurrence[][];
   /** 受けた `alarm_history` の条件（呼ばれた順）。 */
   historyQueries(): AlarmHistoryQuery[];
+  /** 以後の `alarm_history` の応答を `releaseHistory` まで待たせる（照会中の競合を作る）。 */
+  holdHistory(): void;
+  /** 待たせた `alarm_history` の応答を返し、以後は待たせない。 */
+  releaseHistory(): void;
+  /** 受けた `alarm_buzzer_silence` の回数。 */
+  silenceRequests(): number;
 }
 
 const STOPPED: AlarmSnapshot = {
@@ -55,6 +61,9 @@ export function createMockAlarmFeed(): {
   let refusal: string | null = null;
   const acks: UnackedOccurrence[][] = [];
   const queries: AlarmHistoryQuery[] = [];
+  let silences = 0;
+  let held: Promise<void> | null = null;
+  let release: (() => void) | null = null;
   const subscribers = new Set<{
     change: (event: AlarmChange) => void;
     lagged: () => void;
@@ -108,8 +117,18 @@ export function createMockAlarmFeed(): {
         if (results.some((row) => row.result.kind === "accepted")) notify();
         return results;
       },
+      async silenceBuzzer() {
+        silences += 1;
+        // host と同じく、鳴っているときだけ「停止中」にする（ACK ではない）。
+        if (current.buzzer === "ringing") {
+          current.buzzer = "silenced";
+          notify();
+        }
+        return current.buzzer ?? "quiet";
+      },
       async history(query) {
         queries.push(structuredClone(query));
+        if (held) await held;
         return events
           .filter(
             (row) =>
@@ -124,6 +143,14 @@ export function createMockAlarmFeed(): {
       },
     },
     control: {
+      holdHistory() {
+        held ??= new Promise((resolve) => (release = resolve));
+      },
+      releaseHistory() {
+        release?.();
+        held = null;
+        release = null;
+      },
       setSnapshot(snapshot, options) {
         current = structuredClone(snapshot) as Mutable<AlarmSnapshot>;
         if (options?.notify !== false) notify();
@@ -139,6 +166,7 @@ export function createMockAlarmFeed(): {
       },
       ackRequests: () => structuredClone(acks),
       historyQueries: () => structuredClone(queries),
+      silenceRequests: () => silences,
     },
   };
 }

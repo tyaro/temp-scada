@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { Modal } from "@banto/ui";
   import type { AlarmSnapshot } from "../alarm-mirror";
   import {
@@ -7,11 +8,15 @@
     alarmAckRefusalText,
     alarmAckResultText,
     alarmAckTargets,
+    alarmBuzzerText,
     alarmHistoryQuery,
     alarmHistoryRow,
     alarmListCurrent,
+    alarmRowSelected,
+    type AlarmAckSelection,
     type AlarmHistoryRow,
     type AlarmListFilter,
+    type AlarmListRow,
   } from "../alarm-list";
   import {
     ProjectFileError,
@@ -49,7 +54,8 @@
 
   let tab = $state<"current" | "history">("current");
   let filter = $state<AlarmListFilter>("all");
-  let selected = $state.raw<ReadonlySet<string>>(new Set());
+  /** 選んだ行の回。表示中の回と違えば選んでいない扱い（§6 見ている回を指す）。 */
+  let selected = $state.raw<AlarmAckSelection>(new Map());
   let acking = $state(false);
   /** 最後の ACK の結果（condition id ごと。送った時の名前を持つ）。 */
   let results = $state.raw<
@@ -59,6 +65,7 @@
     >
   >(new Map());
   let ackIssue = $state<string | null>(null);
+  let buzzerIssue = $state<string | null>(null);
 
   let historyFrom = $state(""),
     historyTo = $state(""),
@@ -71,6 +78,41 @@
   /** 表示中の行を取った照会の条件。「続きを読む」はこれを使う。 */
   let historySubmitted: { from: string; to: string; kind: string } | null =
     null;
+  /**
+   * 表示中の履歴の照会先（feed と監視中の Project）。host は監視中の Project の DB を
+   * 照会するので、照会先が変われば行・カーソルを捨て、古い照会の応答も採らない。
+   */
+  type HistoryOwner = { feed: AlarmFeed | undefined; projectId: string | null };
+  let historyOwner: HistoryOwner | null = null;
+  const currentOwner = $derived<HistoryOwner>({
+    feed,
+    projectId: snapshot?.monitored?.projectId ?? null,
+  });
+  function sameOwner(a: HistoryOwner | null, b: HistoryOwner): boolean {
+    return !!a && a.feed === b.feed && a.projectId === b.projectId;
+  }
+  // 照会先が変わったら表示中の行・カーソルを捨てる（取り直しは下の effect）。
+  $effect(() => {
+    const owner = currentOwner;
+    if (!historyLoaded || sameOwner(historyOwner, owner)) return;
+    historyRows = [];
+    historyMore = false;
+    historyLoaded = false;
+    historySubmitted = null;
+    historyOwner = null;
+  });
+  /** 自動で照会した照会先。照会先ごとに 1 回だけ自動で照会する（失敗で繰り返さない）。 */
+  let historyAutoOwner: HistoryOwner | null = null;
+  // 「履歴」タブを開いていて、まだ行の無い照会先なら照会する。前の照会先の照会が
+  // 終わるのを待ってから始める（historyBusy が下りると再評価される）。窓を閉じて
+  // いる間に照会先が変わった場合も、履歴タブのまま開き直したときに照会する。
+  $effect(() => {
+    const owner = currentOwner;
+    if (!open || tab !== "history" || historyLoaded || historyBusy) return;
+    if (sameOwner(historyAutoOwner, owner)) return;
+    historyAutoOwner = owner;
+    untrack(() => void loadHistory(false));
+  });
 
   const current = $derived(
     alarmListCurrent(
@@ -86,15 +128,19 @@
   // 開くたびに前の選択・結果を捨てる。
   $effect(() => {
     if (!open) return;
-    selected = new Set();
+    selected = new Map();
     results = new Map();
     ackIssue = null;
   });
 
-  function toggle(id: string, checked: boolean) {
-    const next = new Set(selected);
-    if (checked) next.add(id);
-    else next.delete(id);
+  function toggle(row: AlarmListRow, checked: boolean) {
+    const next = new Map(selected);
+    if (checked && row.occurrence !== null)
+      next.set(row.conditionId, {
+        occurrence: row.occurrence,
+        recurrence: row.recurrence,
+      });
+    else next.delete(row.conditionId);
     selected = next;
   }
 
@@ -124,7 +170,7 @@
           },
         ]),
       );
-      selected = new Set();
+      selected = new Map();
     } catch (error) {
       ackIssue = alarmAckRefusalText(reasonOf(error));
     } finally {
@@ -147,25 +193,46 @@
       historyIssue = built.issue;
       return;
     }
+    // 続きは同じ照会先でだけ取る（ほかの Project の DB へカーソルを送らない）。
+    const owner = currentOwner;
+    if (more && !sameOwner(historyOwner, owner)) return;
     historyBusy = true;
     historyIssue = null;
     try {
       const answer = await feed.history(built.query);
+      // 照会の間に照会先が変わったら、応答は採らない（新しい照会先で取り直す）。
+      if (!sameOwner(owner, currentOwner)) return;
+      // 照会先が変わる前に取った行の続きは、捨てた行には足さない。
+      if (more && !sameOwner(historyOwner, owner)) return;
       const rows = answer.map(alarmHistoryRow);
       historyRows = more ? [...historyRows, ...rows] : rows;
       historySubmitted = filters;
+      historyOwner = owner;
       historyMore = answer.length >= ALARM_HISTORY_PAGE;
       historyLoaded = true;
     } catch (error) {
-      historyIssue = `履歴を取得できません（${reasonOf(error)}）`;
+      if (sameOwner(owner, currentOwner))
+        historyIssue = `履歴を取得できません（${reasonOf(error)}）`;
     } finally {
       historyBusy = false;
     }
   }
 
+  /** ブザー停止（§6）。ACK ではないので、ACK の可否・ログインに関わらず押せる。 */
+  async function silenceBuzzer() {
+    if (!feed?.silenceBuzzer) return;
+    buzzerIssue = null;
+    try {
+      await feed.silenceBuzzer();
+    } catch (error) {
+      buzzerIssue = `ブザーを止められませんでした（${reasonOf(error)}）`;
+    } finally {
+      onrefresh();
+    }
+  }
+
   function showTab(next: "current" | "history") {
     tab = next;
-    if (next === "history" && !historyLoaded) void loadHistory(false);
   }
   function tabKey(event: KeyboardEvent) {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -182,6 +249,17 @@
 
 <Modal {open} title="アラーム一覧" width="1100px" {onclose} {focusFallback}>
   <div class="alarm-list" data-alarm-list>
+    <div class="toolbar buzzer">
+      <span role="status" data-alarm-buzzer
+        >{alarmBuzzerText(snapshot, !!feed?.silenceBuzzer)}</span
+      >
+      <button
+        type="button"
+        disabled={!feed?.silenceBuzzer}
+        onclick={silenceBuzzer}>ブザー停止</button
+      >
+    </div>
+    {#if buzzerIssue}<p class="notice" role="alert">{buzzerIssue}</p>{/if}
     <div
       role="tablist"
       aria-label="アラーム一覧の表示"
@@ -280,9 +358,9 @@
                     type="checkbox"
                     aria-label={`${row.name} を選ぶ`}
                     disabled={!row.unacked || !canAck}
-                    checked={selected.has(row.conditionId)}
+                    checked={alarmRowSelected(row, selected)}
                     onchange={(event) =>
-                      toggle(row.conditionId, event.currentTarget.checked)}
+                      toggle(row, event.currentTarget.checked)}
                   /></td
                 >
                 <td class="state">{row.stateText}</td>
@@ -441,6 +519,10 @@
     flex-wrap: wrap;
     align-items: end;
     gap: 0.5rem;
+  }
+  .toolbar.buzzer {
+    align-items: center;
+    justify-content: space-between;
   }
   .notice {
     margin: 0;

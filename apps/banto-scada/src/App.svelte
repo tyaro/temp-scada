@@ -1853,6 +1853,16 @@
   function refreshAlarm() {
     alarmRefreshQueue?.refresh();
   }
+  /** ブザー停止（設計§6）。ACK ではなく、ログインも要らない。状態は host から取り直す。 */
+  function silenceBuzzer() {
+    const feed = alarmFeed;
+    if (!feed?.silenceBuzzer) return;
+    feed
+      .silenceBuzzer()
+      .then(refreshAlarm, (error) =>
+        report("error", `ブザーを止められませんでした: ${String(error)}`),
+      );
+  }
   const alarmFeed = $derived(alarmFeedProp ?? projectFileService?.alarmFeed);
   // 小札などの画面側の表示へ配る（編集・プレビュー・運転表示で同じ状態）。
   $effect(() => setAlarmViewSnapshot(alarmSnapshot));
@@ -4477,8 +4487,10 @@
               ? (target) => {
                   if (target.kind === "screen") openScreen(target.screenId);
                   else if (target.kind === "alarmList") openAlarmList();
+                  else if (target.kind === "silenceBuzzer") silenceBuzzer();
                 }
               : undefined}
+            buzzerAvailable={!!alarmFeed?.silenceBuzzer}
             equipmentContext={readContext.equipmentContext}
             readings={readContext.readings}
             bind:this={canvasWorkspace}
@@ -5061,6 +5073,7 @@
     onopentrend={openTrendHistory}
     onretiretrend={retirePopupTrend}
     onopenalarms={openAlarmList}
+    onsilencebuzzer={alarmFeed?.silenceBuzzer ? silenceBuzzer : undefined}
     overlay={overlays}
   />
 {/if}

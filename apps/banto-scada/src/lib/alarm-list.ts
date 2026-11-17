@@ -171,20 +171,40 @@ export function alarmListCurrent(
   };
 }
 
+/** 選んだ行の回（condition id ごと）。選んだ時の回を持つ。 */
+export type AlarmAckSelection = ReadonlyMap<
+  string,
+  { readonly occurrence: string; readonly recurrence: number }
+>;
+
+/** 選んだ回が、いま表示している行の回と同じか（再発生・新しい回なら選択は外れる）。 */
+export function alarmRowSelected(
+  row: AlarmListRow,
+  selection: AlarmAckSelection,
+): boolean {
+  const chosen = selection.get(row.conditionId);
+  return (
+    !!chosen &&
+    row.occurrence === chosen.occurrence &&
+    row.recurrence === chosen.recurrence
+  );
+}
+
 /**
  * ACK で送る回（§6）。画面が持つ最新の snapshot の未確認の行だけを
- * (conditionId, occurrence, recurrence) で返す。`ids` を渡すとその行に絞る（選んで ACK）。
+ * (conditionId, occurrence, recurrence) で返す。`selection` を渡すと、選んだ時の回と
+ * 同じ行に絞る（選んで ACK）。選んだ後に再発生・新しい回になった行は送らない。
  */
 export function alarmAckTargets(
   rows: readonly AlarmListRow[],
-  ids?: ReadonlySet<string>,
+  selection?: AlarmAckSelection,
 ): UnackedOccurrence[] {
   return rows
     .filter(
       (row) =>
         row.unacked &&
         row.occurrence !== null &&
-        (!ids || ids.has(row.conditionId)),
+        (!selection || alarmRowSelected(row, selection)),
     )
     .map((row) => ({
       conditionId: row.conditionId,
@@ -228,6 +248,25 @@ export function alarmAckRefusalText(reason: string): string {
       return "認証を確かめられないため ACK できません。";
     default:
       return `ACK できませんでした（${reason}）。`;
+  }
+}
+
+/**
+ * ブザーの状態の文字（設計§6）。`feed` は警報の host がブザー停止を受けられるか
+ * （browser 版は無い）。Engine が動いていない snapshot は鳴らすものなしとして読む。
+ */
+export function alarmBuzzerText(
+  snapshot: AlarmSnapshot | null,
+  feed: boolean,
+): string {
+  if (!feed) return "ブザー: この版では鳴らしません";
+  switch (snapshot?.engine ? (snapshot.buzzer ?? "quiet") : "quiet") {
+    case "ringing":
+      return "ブザー: 鳴っています";
+    case "silenced":
+      return "ブザー: 停止中（新しい警報・再発生でまた鳴ります）";
+    default:
+      return "ブザー: 鳴らす警報はありません";
   }
 }
 

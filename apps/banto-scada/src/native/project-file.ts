@@ -5,7 +5,11 @@ import {
   type AlarmEventRead,
   type ProjectFileService,
 } from "../lib/project-file-service";
-import type { AlarmChange, AlarmSnapshot } from "../lib/alarm-mirror";
+import type {
+  AlarmBuzzerStatus,
+  AlarmChange,
+  AlarmSnapshot,
+} from "../lib/alarm-mirror";
 import { listen } from "@tauri-apps/api/event";
 
 /** `invoke` of `@tauri-apps/api/core` with a raw body, passed in so tests can
@@ -105,6 +109,10 @@ export function nativeProjectFiles(invoke: RawInvoke): ProjectFileService {
           kind,
           limit,
         }).catch(refusal)) as AlarmEventRead[],
+      silenceBuzzer: async () =>
+        (await invoke("alarm_buzzer_silence").catch(
+          refusal,
+        )) as AlarmBuzzerStatus,
       async subscribe(change, lagged) {
         const offChange = await listen<AlarmChange>("alarm_changed", (event) =>
           change(event.payload),

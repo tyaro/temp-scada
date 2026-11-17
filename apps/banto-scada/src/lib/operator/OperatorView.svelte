@@ -34,6 +34,7 @@
     onopentrend,
     onretiretrend,
     onopenalarms,
+    onsilencebuzzer,
     overlay,
   }: {
     project: Project;
@@ -51,6 +52,8 @@
     onretiretrend?: (token: object) => void;
     /** アラーム一覧の窓を開く（バーのボタンと、行き先が「アラーム一覧」の画面切替ボタン）。 */
     onopenalarms?: () => void;
+    /** ブザー停止（警報の host があるときだけ渡す。無ければボタンは押せない）。 */
+    onsilencebuzzer?: () => void;
     /** 運転表示の上に重ねる窓（履歴トレンド・アラーム一覧）。運転表示の中に描くので裏の inert を受けない。 */
     overlay?: Snippet;
   } = $props();
@@ -87,6 +90,7 @@
 
   function navigate(target: NavTarget) {
     if (target.kind === "alarmList") onopenalarms?.();
+    else if (target.kind === "silenceBuzzer") onsilencebuzzer?.();
     else if (target.kind === "back") history = goBack(history);
     else if (target.kind === "forward") history = goForward(history);
     else if (find(target.screenId))
@@ -143,6 +147,7 @@
         {equipmentContext}
         currentScreenId={currentId}
         {navHistory}
+        buzzerAvailable={!!onsilencebuzzer}
         onnavigate={navigate}
         onopenequipment={openEquipment}
         onopentrend={onopentrend

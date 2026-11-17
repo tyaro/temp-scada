@@ -1,5 +1,6 @@
 //! Native settings and protected read credential for the embedded SCADA host.
 //! Neither the Project nor the UI receives an API key.
+pub mod alarm_buzzer;
 pub mod alarm_db;
 pub mod alarm_project;
 pub mod alarm_runtime;

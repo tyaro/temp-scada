@@ -39,6 +39,7 @@
     currentScreenId,
     preview = false,
     navHistory,
+    buzzerAvailable = false,
   }: {
     object: ScreenObject;
     symbols?: SymbolDefinition[];
@@ -62,6 +63,7 @@
     preview?: boolean;
     /** 運転表示の履歴。戻る・進むのボタンを、動けるときだけ濃く描く。 */
     navHistory?: NavHistoryState;
+    buzzerAvailable?: boolean;
   } = $props();
 </script>
 
@@ -178,7 +180,12 @@
     width={object.width}
     height={object.height}
     current={navButtonIsCurrent(object.shape, currentScreenId)}
-    disabled={navButtonDisabled(object.shape, preview, navHistory)}
+    disabled={navButtonDisabled(
+      object.shape,
+      preview,
+      navHistory,
+      buzzerAvailable,
+    )}
   />
 {:else if "width" in object && object.shape.type === "alarmBadge"}
   <AlarmBadgePainting

@@ -4,6 +4,8 @@ import {
   alarmAckRefusalText,
   alarmAckResultText,
   alarmAckTargets,
+  alarmRowSelected,
+  alarmBuzzerText,
   alarmHistoryQuery,
   alarmHistoryRow,
   alarmListCurrent,
@@ -219,9 +221,28 @@ describe("alarmAckTargets", () => {
   });
 
   it("narrows to the selected rows, skipping acked and Normal ones", () => {
-    expect(alarmAckTargets(rows, new Set(["pump", "t:hh", "stale"]))).toEqual([
+    const selection = new Map([
+      ["pump", { occurrence: "occ-1", recurrence: 3 }],
+      ["t:hh", { occurrence: "occ-5", recurrence: 0 }],
+      ["stale", { occurrence: "occ-0", recurrence: 0 }],
+    ]);
+    expect(alarmAckTargets(rows, selection)).toEqual([
       { conditionId: "pump", occurrence: "occ-1", recurrence: 3 },
     ]);
+  });
+
+  it("drops a selection whose row moved to a new round", () => {
+    // Selected at recurrence 2; the row now shows the reoccurrence 3.
+    const reoccurred = new Map([
+      ["pump", { occurrence: "occ-1", recurrence: 2 }],
+    ]);
+    expect(alarmAckTargets(rows, reoccurred)).toEqual([]);
+    const pump = rows.find((row) => row.conditionId === "pump")!;
+    expect(alarmRowSelected(pump, reoccurred)).toBe(false);
+    const newOccurrence = new Map([
+      ["pump", { occurrence: "occ-0", recurrence: 3 }],
+    ]);
+    expect(alarmAckTargets(rows, newOccurrence)).toEqual([]);
   });
 });
 
@@ -354,5 +375,33 @@ describe("history", () => {
         kind: "",
       }),
     ).toEqual({ issue: "開始は終了より前にしてください。" });
+  });
+});
+
+describe("alarmBuzzerText", () => {
+  const running = (buzzer?: AlarmSnapshot["buzzer"]) =>
+    ({
+      ...snapshot({}),
+      buzzer,
+    }) as AlarmSnapshot;
+  it("reads the host's buzzer status", () => {
+    expect(alarmBuzzerText(running("ringing"), true)).toBe(
+      "ブザー: 鳴っています",
+    );
+    expect(alarmBuzzerText(running("silenced"), true)).toContain("停止中");
+    expect(alarmBuzzerText(running("quiet"), true)).toBe(
+      "ブザー: 鳴らす警報はありません",
+    );
+    expect(alarmBuzzerText(running(), true)).toBe(
+      "ブザー: 鳴らす警報はありません",
+    );
+  });
+  it("is quiet without an Engine and unsupported without a host", () => {
+    expect(alarmBuzzerText({ ...running("ringing"), engine: null }, true)).toBe(
+      "ブザー: 鳴らす警報はありません",
+    );
+    expect(alarmBuzzerText(running("ringing"), false)).toBe(
+      "ブザー: この版では鳴らしません",
+    );
   });
 });

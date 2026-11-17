@@ -108,6 +108,7 @@ function snapshot(
   {
     engineUnavailable = null as string | null,
     projectRevision = sample.manifest.projectRevision,
+    buzzer = "quiet" as "ringing" | "silenced" | "quiet",
   } = {},
 ) {
   return {
@@ -136,6 +137,7 @@ function snapshot(
     pendingDisplayChanges: false,
     historyWriteFailure: null,
     rereadFailure: null,
+    buzzer,
   };
 }
 const setSnapshot = (page: Page, value: unknown, notify = true) =>
@@ -240,6 +242,131 @@ test("the alarm list shows the current alarms and acknowledges the rounds it sho
   await expect(dialog(page).getByRole("alert")).toHaveText(
     "ACK は Admin だけが行えます。",
   );
+});
+
+test("a selected row that reoccurs is no longer selected and is not acknowledged", async ({
+  page,
+}) => {
+  await mockAlarmEntry(page);
+  await openSample(page);
+  await setSnapshot(
+    page,
+    snapshot({ [PUMP]: { active: true, acked: false, seq: 1, recurrence: 2 } }),
+  );
+  await page.getByRole("button", { name: "アラーム一覧", exact: true }).click();
+  const checkbox = row(page, PUMP).getByRole("checkbox");
+  await checkbox.check();
+  const ackSelected = dialog(page).getByRole("button", {
+    name: "選んだ警報を ACK",
+    exact: true,
+  });
+  await expect(ackSelected).toBeEnabled();
+  // 選んだ後に再発生した（recurrence 3）: 選んだ回ではないので外れ、送らない。
+  await setSnapshot(
+    page,
+    snapshot({ [PUMP]: { active: true, acked: false, seq: 1, recurrence: 3 } }),
+  );
+  await expect(checkbox).not.toBeChecked();
+  await expect(ackSelected).toBeDisabled();
+  expect(
+    await page.evaluate(() => (window as any).__bantoAlarmMock.ackRequests()),
+  ).toEqual([]);
+});
+
+test("the history is dropped when the monitored Project changes", async ({
+  page,
+}) => {
+  await mockAlarmEntry(page);
+  await openSample(page);
+  const event = (seq: number, name: string) => ({
+    seq,
+    sessionId: "session-1",
+    event: {
+      atMs: Date.UTC(2026, 10, 17, 0, 0, seq),
+      conditionId: HH,
+      kind: "occurred",
+      detail: { occurrence: "occ", recurrence: 0, judgement: null },
+    },
+    display: { ...display(name, "", "high"), limitLabel: "HH" },
+  });
+  await page.evaluate(
+    (events) => (window as any).__bantoAlarmMock.setHistory(events),
+    [event(1, "Project A の警報")],
+  );
+  await setSnapshot(page, snapshot({}));
+  await page.getByRole("button", { name: "アラーム一覧", exact: true }).click();
+  await dialog(page).getByRole("tab", { name: "履歴" }).click();
+  const history = dialog(page).getByRole("table", { name: "警報の履歴" });
+  await expect(history).toContainText("Project A の警報");
+
+  // 監視が別の Project に切り替わった: 前の行を捨て、新しい照会先で取り直す。
+  await page.evaluate(
+    (events) => (window as any).__bantoAlarmMock.setHistory(events),
+    [event(1, "Project B の警報")],
+  );
+  await setSnapshot(page, {
+    ...snapshot({}),
+    monitored: { projectId: "other-project" },
+  });
+  await expect(history).toContainText("Project B の警報");
+  await expect(history).not.toContainText("Project A の警報");
+  const queries = await page.evaluate(() =>
+    (window as any).__bantoAlarmMock.historyQueries(),
+  );
+  expect(queries.map((q: { beforeSeq: number | null }) => q.beforeSeq)).toEqual(
+    [null, null],
+  );
+
+  // 照会の途中で監視が切り替わった: 古い応答は採らず、終わってから新しい照会先で取る。
+  await page.evaluate(() => (window as any).__bantoAlarmMock.holdHistory());
+  await page.evaluate(
+    (events) => (window as any).__bantoAlarmMock.setHistory(events),
+    [event(1, "Project C の警報")],
+  );
+  await setSnapshot(page, {
+    ...snapshot({}),
+    monitored: { projectId: "third-project" },
+  });
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as any).__bantoAlarmMock.historyQueries().length,
+      ),
+    )
+    .toBe(3);
+  await setSnapshot(page, {
+    ...snapshot({}),
+    monitored: { projectId: "fourth-project" },
+  });
+  await page.evaluate(
+    (events) => (window as any).__bantoAlarmMock.setHistory(events),
+    [event(1, "Project D の警報")],
+  );
+  await page.evaluate(() => (window as any).__bantoAlarmMock.releaseHistory());
+  await expect(history).toContainText("Project D の警報");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as any).__bantoAlarmMock.historyQueries().length,
+      ),
+    )
+    .toBe(4);
+
+  // 窓を閉じている間に切り替わった: 履歴タブのまま開き直すと新しい照会先で取る。
+  await dialog(page)
+    .getByRole("button", { name: "閉じる", exact: true })
+    .click();
+  await page.evaluate(
+    (events) => (window as any).__bantoAlarmMock.setHistory(events),
+    [event(1, "Project E の警報")],
+  );
+  await setSnapshot(page, {
+    ...snapshot({}),
+    monitored: { projectId: "fifth-project" },
+  });
+  await page.getByRole("button", { name: "アラーム一覧", exact: true }).click();
+  await expect(history).toContainText("Project E の警報");
+  await expect(history).not.toContainText("Project D の警報");
 });
 
 test("the alarm list explains why it cannot monitor and filters unavailable conditions", async ({
@@ -394,4 +521,86 @@ test("a nav button and the operator view open the alarm list", async ({
   await expect(
     view.getByRole("dialog", { name: "アラーム一覧" }),
   ).toBeVisible();
+});
+
+const HEADER_BUZZER = "0199f200-0000-7000-8000-000000000217";
+const silences = (page: Page) =>
+  page.evaluate(() => (window as any).__bantoAlarmMock.silenceRequests());
+
+test("the header's buzzer button and the alarm list silence the buzzer without ACK", async ({
+  page,
+}) => {
+  await mockAlarmEntry(page);
+  await openSample(page);
+  await setSnapshot(
+    page,
+    snapshot(
+      { [PUMP]: { active: true, acked: false, seq: 1 } },
+      { buzzer: "ringing" },
+    ),
+  );
+  await page.getByRole("button", { name: "運転表示", exact: true }).click();
+  const view = page.getByRole("region", { name: "運転表示" });
+  const header = view.locator('[data-operator-region="header"]');
+  // ヘッダーの例: 最新の警報の帯と、アラーム一覧・ブザー停止のボタン。
+  await expect(header.locator("[data-alarm-banner-main]")).toContainText(
+    "ポンプ停止",
+  );
+  await header
+    .getByRole("button", { name: "ブザー停止：ブザーを止める" })
+    .click();
+  await expect.poll(() => silences(page)).toBe(1);
+
+  await header
+    .getByRole("button", { name: "アラーム一覧：アラーム一覧を開く" })
+    .click();
+  const list = view.getByRole("dialog", { name: "アラーム一覧" });
+  await expect(list.locator("[data-alarm-buzzer]")).toHaveText(
+    "ブザー: 停止中（新しい警報・再発生でまた鳴ります）",
+  );
+  // 停止は ACK ではない: 未確認の行はそのまま残る。
+  await expect(list.locator(`[data-alarm-row="${PUMP}"]`)).toContainText(
+    "未確認",
+  );
+  await setSnapshot(
+    page,
+    snapshot(
+      { [PUMP]: { active: true, acked: false, seq: 2 } },
+      { buzzer: "ringing" },
+    ),
+  );
+  await expect(list.locator("[data-alarm-buzzer]")).toHaveText(
+    "ブザー: 鳴っています",
+  );
+  await list.getByRole("button", { name: "ブザー停止", exact: true }).click();
+  await expect.poll(() => silences(page)).toBe(2);
+  await expect(list.locator("[data-alarm-buzzer]")).toContainText("停止中");
+  expect(
+    await page.evaluate(() => (window as any).__bantoAlarmMock.ackRequests()),
+  ).toEqual([]);
+});
+
+test("without an alarm host the buzzer buttons cannot be pressed", async ({
+  page,
+}) => {
+  await openSample(page);
+  await page.getByRole("button", { name: "運転表示", exact: true }).click();
+  const view = page.getByRole("region", { name: "運転表示" });
+  const header = view.locator('[data-operator-region="header"]');
+  await expect(
+    header.locator(`[data-object-id="${HEADER_BUZZER}"] [data-nav-button]`),
+  ).toHaveAttribute("data-nav-disabled", "true");
+  await expect(
+    header.getByRole("button", { name: "ブザー停止：ブザーを止める" }),
+  ).toHaveCount(0);
+  await header
+    .getByRole("button", { name: "アラーム一覧：アラーム一覧を開く" })
+    .click();
+  const list = view.getByRole("dialog", { name: "アラーム一覧" });
+  await expect(list.locator("[data-alarm-buzzer]")).toHaveText(
+    "ブザー: この版では鳴らしません",
+  );
+  await expect(
+    list.getByRole("button", { name: "ブザー停止", exact: true }),
+  ).toBeDisabled();
 });
