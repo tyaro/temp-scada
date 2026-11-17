@@ -140,7 +140,7 @@ docs/
 - [Host catalogとタグ選択（P4）](design/equipment/catalog-selection.md)
 - [Historian／Trendの契約設計（P5、実装は後続）](design/runtime/historian-trend-contract.md)
 - [段階3 警報の設計（製品hostの暫定Engine、承認済み・3-A〜3-E実装済み）](design/runtime/alarm-stage3-design.md)
-- [警報の端末設定（保持の上限・読み直しの値・音、承認済み・未実装）](design/runtime/alarm-terminal-settings.md)
+- [警報の端末設定（保持の上限・読み直しの値・音、承認済み・T1a〜T3実装済み）](design/runtime/alarm-terminal-settings.md)
 - [Historianの版付きJSON契約と共通fixture（H1）](design/runtime/historian-contract-fixtures.md)
 - [Historianの保存方式・transaction／recovery（H1、DB実装はH2）](design/runtime/historian-storage-decision.md)
 - [Historianの固定session・SQLite原子appendコア（H2a）](design/runtime/historian-atomic-store.md)

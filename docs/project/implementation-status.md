@@ -539,7 +539,18 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 2026-11-17の段階3 3-E1で、Project に保存しないアラーム一覧の窓を追加した。「現在」タブは Normal でない condition と評価不能の condition を未確認→severity→新しい順に出し、選んだ行の ACK と「すべて ACK」（最新の snapshot に出ている未確認の回だけ）を送る。結果は行ごとに出し、「別の回」は最新の回で取り直す。「履歴」タブは`alarm_history`を期間・種類で照会し、続きを読める。Engine 停止中・履歴に書けない・別 Project・revision の違いは理由を出す。入口はプレビューのツールバー、運転表示、navButton の行き先`{ kind: "alarmList" }`。[仕様](../design/graphics/alarm-list.md)。`alarm-list.test.ts`・`e2e/alarm-list.spec.ts`で確認。
 
-2026-11-17の段階3 3-E2で、ブザーを追加した。鳴らす判断は host（`alarm_buzzer.rs`）で、未確認の回があるあいだ繰り返し鳴らす定義と、発生のときに一度だけ鳴らす定義（`noneWithSound`）を区別する。「ブザー停止」（`alarm_buzzer_silence`、ログイン不要）は ACK ではなく、新しい回の発生か再発生で解ける。Engine の停止・未適用・切替では鳴らさない。再生は Windows の`PlaySoundW`でコードで生成したビープ（880Hz・0.3秒、0.2秒あけて繰り返す）で、ほかの OS はログだけ。snapshot の`buzzer`で状態を返し、一覧の窓に状態と「ブザー停止」、navButton に行き先`{ kind: "silenceBuzzer" }`を足した。工程図サンプルの運転表示のヘッダーに帯・アラーム一覧・ブザー停止を置いた。この PC で`PlaySoundW`の成功は確かめたが、実際の音・音量はオーナー確認待ち。音のファイルの変更と端末設定（読み直しの周期・期限・保持の上限・音）の画面は未実装。[設計](../design/runtime/alarm-stage3-design.md)§6。
+2026-11-17の段階3 3-E2で、ブザーを追加した。鳴らす判断は host（`alarm_buzzer.rs`）で、未確認の回があるあいだ繰り返し鳴らす定義と、発生のときに一度だけ鳴らす定義（`noneWithSound`）を区別する。「ブザー停止」（`alarm_buzzer_silence`、ログイン不要）は ACK ではなく、新しい回の発生か再発生で解ける。Engine の停止・未適用・切替では鳴らさない。再生は Windows の`PlaySoundW`でコードで生成したビープ（880Hz・0.3秒、0.2秒あけて繰り返す）で、ほかの OS はログだけ。snapshot の`buzzer`で状態を返し、一覧の窓に状態と「ブザー停止」、navButton に行き先`{ kind: "silenceBuzzer" }`を足した。工程図サンプルの運転表示のヘッダーに帯・アラーム一覧・ブザー停止を置いた。この PC で`PlaySoundW`の成功は確かめたが、実際の音・音量はオーナー確認待ち。音のファイルの変更と端末設定（読み直しの周期・期限・保持の上限・音）は、次の「警報の端末設定」で実装した。[設計](../design/runtime/alarm-stage3-design.md)§6。
+
+## 警報の端末設定
+
+2026-11-17に、警報の保持の上限・値の読み直し・ブザーの音を、Project でなく端末（host）の設定として保存・変更できるようにした（[設計](../design/runtime/alarm-terminal-settings.md)、T1a〜T3）。
+
+- 値（T1a）: 端末設定`alarm-terminal.json`の`alarm`欄に、保持（日数 1〜3650、既定 365／件数 10,000〜10,000,000、既定 1,000,000）と読み直し（周期・1回の期限・連続失敗の期限・張り直しの連続失敗）を持つ。読込み時に範囲外の値は既定値へ戻して警告を返す（読み直しの4値は1つでも外れたら4つとも）。保存した読み直しの値は動いている Engine にすぐ反映する。`alarm_settings_get`（権限不要）・`alarm_settings_set`、変更は運用ではログイン済みの Admin だけ（`authorize_alarm_settings`）。
+- 保持の削除（T1b、`alarm_db/retention.rs`）: 評価の処理列の中で、`event`表を通番の小さい順に消す。DB の最新のイベントと、各 condition の表示を持つ最新のイベントは残し、期限内のイベントに当たったら止める（履歴に穴を開けない）。1回 10,000 件まで、上限まで消した回は5秒後に続け、ふだんは1時間ごと。削除の transaction で session の所有を確かめ、書込みの失敗中は試さない。`alarm_settings_get`で件数といちばん古いイベントの時刻を返す。
+- 音（T2、`alarm_terminal/alarm_sound.rs`）: WAV（PCM 8/16 bit・1〜2 ch・1 MB・5秒まで）を host のダイアログで選んで検査し、`%LOCALAPPDATA%	emp-scadalarm-sound.wav`へ写す。読めない・hash が合わない・検査に通らないときは既定のビープで鳴らし、snapshot の`buzzerSound.fallback`で理由を返す。`alarm_sound_import`・`alarm_sound_reset`・`alarm_sound_test`（ブザーが鳴り続けている間は拒否）。音の変更は保存から player の差し替えまで直列にする。
+- 画面（T3、`AlarmSettingsWindow.svelte`・`alarm-settings.ts`）: 「ファイル」メニューの「警報の端末設定…」とアラーム一覧の窓の「端末設定」から開く窓。範囲外の値は示して保存させない。権限で拒まれたら以後は読むだけにする。ブラウザ版は入口を押せない。音を鳴らせないときはヘッダーと一覧の窓で知らせる。窓を開き直す前の応答は、開き直した窓を変えない。
+
+`cargo test -p scada-host`、src-tauri の試験、`alarm-settings.test.ts`、`e2e/alarm-terminal-settings.spec.ts`で確認。Tauri 実機（ダイアログ・音の再生・Admin での拒否）、実際の runtime での削除の間隔、1万件の削除の所要時間は未確認。
 
 ## 時計
 
