@@ -207,6 +207,25 @@ async fn opening_a_v7_0_db_keeps_its_audit_rows_and_scopes_them_by_record() {
         .await
         .unwrap();
     assert_eq!(a2.total_count, 1);
+    // The malformed-JSON row keeps its own columns and scopes to itself.
+    let settings = auth
+        .audit()
+        .list(banto_core::ListParams {
+            filters: vec![scoped("recordResource", "settings")],
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(settings.total_count, 1);
+    let row = &settings.rows[0];
+    assert_eq!(
+        (
+            row.resource.as_str(),
+            row.entity_id.as_deref(),
+            row.detail.as_deref()
+        ),
+        ("settings", None, Some("{not json"))
+    );
 }
 
 #[tokio::test]
