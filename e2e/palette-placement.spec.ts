@@ -1,4 +1,4 @@
-import { fileCommand, selectPanel } from "./helpers/designer";
+import { addScreen, fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 
@@ -274,7 +274,7 @@ test("changing targets invalidates a drag and shared definitions accept only pri
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  await page.getByRole("button", { name: "画面を追加", exact: true }).click();
+  await addScreen(page);
   await selectPanel(page, "部品");
   const stale = await beginDrag(
     page,

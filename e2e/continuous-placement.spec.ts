@@ -1,4 +1,4 @@
-import { fileCommand, selectPanel } from "./helpers/designer";
+import { addScreen, fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
@@ -176,7 +176,7 @@ test("switching target or reimporting the same Project ends placement and shared
   await start(page);
   await arm(page);
   await selectPanel(page, "プロジェクト");
-  await button(page, "画面を追加").click();
+  await addScreen(page);
   await expect(status(page)).toHaveCount(0);
   await page
     .getByRole("navigation", { name: "画面タブ" })

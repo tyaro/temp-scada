@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel } from "./helpers/designer";
+import { addScreen, selectPanel } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const map = (page: Page) => button(page, "ミニマップで表示位置を移動");
@@ -151,7 +151,7 @@ test("minimap follows screen and definition targets and mirrors scrollbar naviga
     el.scrollLeft += 200;
   });
   await expect(rect).not.toHaveAttribute("x", first!);
-  await button(page, "画面を追加").click();
+  await addScreen(page);
   await expect(
     page
       .getByRole("region", { name: "ミニマップ", exact: true })

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { selectPanel } from "./helpers/designer";
+import { addScreen, selectPanel } from "./helpers/designer";
 
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
@@ -14,8 +14,8 @@ async function start(page: Page, multiple = true) {
   await button(page, "編集").click();
   await selectPanel(page, "プロジェクト");
   if (multiple) {
-    await button(page, "画面を追加").click();
-    await button(page, "画面を追加").click();
+    await addScreen(page);
+    await addScreen(page);
   }
 }
 async function action(page: Page, name: string, command: string) {

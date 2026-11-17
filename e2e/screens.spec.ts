@@ -1,6 +1,24 @@
-import { fileCommand, selectPanel } from "./helpers/designer";
+import {
+  addScreen,
+  currentScreenAction,
+  currentScreenMenuItem,
+  fileCommand,
+  selectPanel,
+} from "./helpers/designer";
+import type { Page } from "@playwright/test";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+
+/** The active screen's context menu shows each item's limit. */
+async function expectScreenItemsDisabled(page: Page, ...names: string[]) {
+  for (const name of names) {
+    await expect(await currentScreenMenuItem(page, name)).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await page.keyboard.press("Escape");
+  }
+}
 test("screen CRUD, history fallback and multiple-screen file round-trip", async ({
   page,
 }) => {
@@ -12,9 +30,9 @@ test("screen CRUD, history fallback and multiple-screen file round-trip", async 
   const button = (name: string) =>
     page.getByRole("button", { name, exact: true });
   const screens = page.getByRole("navigation", { name: "画面一覧" });
-  await expect(button("画面を削除")).toBeDisabled();
+  await expectScreenItemsDisabled(page, "画面を削除");
   await selectPanel(page, "プロジェクト");
-  await button("画面を追加").click();
+  await addScreen(page);
   await expect(
     page
       .getByRole("img", { name: "画面 2", exact: true })
@@ -37,14 +55,14 @@ test("screen CRUD, history fallback and multiple-screen file round-trip", async 
   await button("ポンプを追加").click();
   await button("配管を追加").click();
   await selectPanel(page, "プロジェクト");
-  await button("画面を複製").click();
+  await currentScreenAction(page, "画面を複製");
   await expect(
     page
       .getByRole("img", { name: "洗浄工程 コピー", exact: true })
       .locator("[data-object-id]"),
   ).toHaveCount(2);
   const confirm = page.getByRole("dialog", { name: "画面を削除しますか" });
-  await button("画面を削除").click();
+  await currentScreenAction(page, "画面を削除");
   // 確認を開いている間は、後ろの図面への編集ショートカットを通さない。
   await confirm
     .getByRole("button", { name: "キャンセル", exact: true })
@@ -61,7 +79,7 @@ test("screen CRUD, history fallback and multiple-screen file round-trip", async 
       .getByRole("img", { name: "洗浄工程 コピー", exact: true })
       .locator("[data-object-id]"),
   ).toHaveCount(2);
-  await button("画面を削除").click();
+  await currentScreenAction(page, "画面を削除");
   await confirm.getByRole("button", { name: "削除", exact: true }).click();
   await expect(screens.locator("button[aria-pressed]")).toHaveCount(2);
   await expect(
@@ -92,5 +110,7 @@ test("screen CRUD, history fallback and multiple-screen file round-trip", async 
       page.getByRole("img", { name, exact: true }).locator("[data-object-id]"),
     ).toHaveCount(2);
   }
-  await expect(button("画面を削除")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /^操作：画面タブ：/ }),
+  ).toHaveCount(0);
 });

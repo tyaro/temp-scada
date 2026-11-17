@@ -77,3 +77,28 @@ export async function settleCanvasLayout(page: Page) {
         }),
     );
 }
+
+const screenTabs = (page: Page) =>
+  page.getByRole("navigation", { name: "画面タブ", exact: true });
+
+/** Screens are added from the screen tabs' ＋ (the sidebar screen buttons were removed in Issue #223 WT0). */
+export async function addScreen(page: Page) {
+  await page
+    .getByRole("button", { name: "画面を追加（画面タブ）", exact: true })
+    .click();
+}
+
+/** Open the active screen tab's context menu and return one of its items. */
+export async function currentScreenMenuItem(page: Page, name: string) {
+  await screenTabs(page)
+    .locator('button[aria-current="page"]')
+    .click({ button: "right" });
+  return page
+    .getByRole("menu", { name: /^画面タブ：.+ の操作$/ })
+    .getByRole("menuitem", { name, exact: true });
+}
+
+/** Duplicate, reorder or delete the active screen through its context menu. */
+export async function currentScreenAction(page: Page, name: string) {
+  await (await currentScreenMenuItem(page, name)).click();
+}

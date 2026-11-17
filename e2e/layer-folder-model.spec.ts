@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/process.project.json" with { type: "json" };
 import minimal from "../examples/minimal.project.json" with { type: "json" };
-import { selectPanel } from "./helpers/designer";
+import { currentScreenAction, selectPanel } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const canvas = (page: Page) => page.locator(".sheet > svg");
@@ -70,7 +70,7 @@ test("screen and definition duplication renew folder IDs and retain internal ref
   const project = fixture();
   await load(page, project);
   await selectPanel(page, "プロジェクト");
-  await button(page, "画面を複製").click();
+  await currentScreenAction(page, "画面を複製");
   await button(page, "定義を複製").click();
   const result = await saved(page);
   // 複製は末尾（工程図サンプルには運転表示の枠の画面もある）。

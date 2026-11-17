@@ -1,4 +1,4 @@
-import { fileCommand, selectPanel } from "./helpers/designer";
+import { addScreen, fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect, type Locator, type Page } from "@playwright/test";
 async function designDrag(
   page: Page,
@@ -157,7 +157,7 @@ test("view settings survive target and preview switches, reset on import, and ne
   });
   await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(200);
   await selectPanel(page, "プロジェクト");
-  await button("画面を追加").click();
+  await addScreen(page);
   await page.getByLabel("表示倍率", { exact: true }).selectOption("0.5");
   await page
     .getByRole("navigation", { name: "画面一覧" })
