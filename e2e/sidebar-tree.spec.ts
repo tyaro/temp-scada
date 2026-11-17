@@ -15,29 +15,41 @@ async function start(page: Page) {
   await page.goto("/");
   await button(page, "編集").click();
 }
-test("project branches keep mounted drafts and reopen invalid settings and rename targets", async ({
+test("settings branch opens the project settings work tab, reopens invalid settings and rename targets", async ({
   page,
 }) => {
   await start(page);
-  const settings = section(page, "プロジェクト設定");
+  const settings = section(page, "設定");
   const name = page.getByRole("textbox", {
     name: "プロジェクト名",
     exact: true,
   });
   const screenName = page.getByRole("textbox", { name: "画面名", exact: true });
+  // 左の「設定」は作業タブを開く行だけで、フォームは作業画面にある。
+  await expect(name).toHaveCount(0);
+  await settings
+    .getByRole("button", { name: "プロジェクト設定", exact: true })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "プロジェクト設定", exact: true }),
+  ).toBeVisible();
   await name.fill("");
-  await settings.locator("summary").click();
-  await expect(name).toBeHidden();
-  await selectPanel(page, "レイヤー");
-  await layers(page)
-    .getByRole("button", { name: "rectangle · 3", exact: true })
+  // 不正な入力は画面タブへの切替を拒否し、作業タブのプロジェクト名へ戻す（W6・W12）。
+  await page
+    .getByRole("navigation", { name: "画面タブ", exact: true })
+    .getByRole("button", { name: "プロセス画面", exact: true })
     .click();
   await expect(name).toBeVisible();
   await expect(name).toHaveValue("");
   await expect(name).toBeFocused();
   await name.fill("変更したプロジェクト");
   await button(page, "プロジェクト名を適用").click();
-  await settings.locator("summary").click();
+  await expect(page.locator("h1")).toHaveText("変更したプロジェクト");
+  await page
+    .getByRole("navigation", { name: "画面タブ", exact: true })
+    .getByRole("button", { name: "プロセス画面", exact: true })
+    .click();
+  await expect(name).toBeHidden();
   // 画面名は Inspector の画面設定にあり、名前変更はそこへフォーカスする。
   await selectPanel(page, "レイヤー");
   await layers(page)

@@ -57,24 +57,21 @@ test("dragging panel borders preserves drafts and saves widths separately from P
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
-  await selectPanel(page, "プロジェクト");
-  // 画面設定は図形の選択中は隠れるので、選択に依らないプロジェクト名の下書きで確かめる。
-  const projectName = page.getByLabel("プロジェクト名", { exact: true });
-  const originalName = await projectName.inputValue();
-  await projectName.fill("未適用の画面名");
+  // プロジェクト名は作業タブへ移ったので、左ペインの下書きはレイヤー検索で確かめる。
+  const layerSearch = page.getByLabel("レイヤーを検索", { exact: true });
+  await layerSearch.fill("rectangle");
   const saveState = await page.getByTestId("save-state").innerText();
   await drag(page, "left", 100);
   await drag(page, "right", -80);
   await expect(divider(page, "left")).toHaveAttribute("aria-valuenow", "340");
   await expect(divider(page, "right")).toHaveAttribute("aria-valuenow", "368");
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await expect(projectName).toHaveValue("未適用の画面名");
+  await expect(layerSearch).toHaveValue("rectangle");
   await expect(
     page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }),
   ).toHaveValue("#aabbcc");
   expect(await page.getByTestId("save-state").innerText()).toBe(saveState);
   await expect(button(page, "元に戻す")).toBeDisabled();
-  await projectName.fill(originalName);
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#164e63");
   const pending = page.waitForEvent("download");
   await fileCommand(page, "Project を保存");

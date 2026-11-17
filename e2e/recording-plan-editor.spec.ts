@@ -1,6 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import sample from "../examples/recording.project.json" with { type: "json" };
-import { chooseTheme, selectPanel } from "./helpers/designer";
+import {
+  chooseTheme,
+  openProjectSettings,
+  selectPanel,
+} from "./helpers/designer";
 import {
   openProject,
   downloadProject,
@@ -249,7 +253,7 @@ test("resolves pending Project form edits before capturing the recording editor 
   page,
 }) => {
   await editMode(page);
-  await selectPanel(page, "プロジェクト");
+  await openProjectSettings(page);
   const input = page
     .getByRole("form", { name: "プロジェクト情報" })
     .getByLabel("プロジェクト名", { exact: true });

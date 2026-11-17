@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { chooseMenuItem, mainCanvas, selectPanel } from "./helpers/designer";
 
-// Issue #223 WT1a: メイン領域の作業タブの基盤（docs/design/editor/main-work-tabs-design.md）。
+// Issue #223 WT1a・WT1b: メイン領域の作業タブ（docs/design/editor/main-work-tabs-design.md）。
 
 const workTabs = (page: Page) =>
   page.getByRole("navigation", { name: "作業タブ", exact: true });
@@ -159,7 +159,9 @@ test("作業画面の表示中はキャンバス向けの操作を無効にし�
   await page.keyboard.press("Escape");
 
   // ショートカットもキャンバスへ向かない。
-  await workScreen(page).getByRole("heading").focus();
+  await workScreen(page)
+    .getByRole("heading", { name: "プロジェクト設定", level: 2 })
+    .focus();
   for (const key of ["Delete", "Control+a", "Control+d", "Control+g"])
     await page.keyboard.press(key);
   await page.keyboard.press("f");
@@ -247,6 +249,24 @@ test("Symbol 定義の編集中は作業タブを隠し、戻ると並びだけ�
       page,
       "表示",
       "プロジェクト設定（Symbol 定義の編集中は使えません）",
+    ),
+  ).toBeDisabled();
+  await page.keyboard.press("Escape");
+  // W8: 左の「設定」の行と「プロジェクト名を変更」も理由を示して無効にする。
+  await expect(
+    page.getByRole("button", { name: "プロジェクト設定", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "記録希望設定", exact: true }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText("Symbol 定義の編集中は使えません。", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    await menuItem(
+      page,
+      "ファイル",
+      "プロジェクト名を変更（Symbol 定義の編集中は使えません）",
     ),
   ).toBeDisabled();
   await page.keyboard.press("Escape");
@@ -358,3 +378,71 @@ test("作業画面の表示中に左の「タグ参照一覧を開く」を押�
     page.getByRole("region", { name: "タグ参照パネル", exact: true }),
   ).toBeVisible();
 });
+
+test("左の「設定」から開いた作業画面で設定し、未適用の入力は離れるときに確定する（WT1b）", async ({
+  page,
+}) => {
+  await edit(page);
+  await selectPanel(page, "プロジェクト");
+  await page
+    .getByRole("button", { name: "プロジェクト設定", exact: true })
+    .click();
+  await expect(settingsTab(page)).toHaveAttribute("aria-current", "page");
+  await expect(
+    workScreen(page).getByRole("heading", { name: "プロジェクト設定" }),
+  ).toBeFocused();
+  const name = workScreen(page).getByLabel("プロジェクト名", { exact: true });
+  await name.fill("作業タブで変えた名前");
+  // 画面タブへ切り替えると確認なしで確定する（W2）。
+  await screenTabs(page).getByRole("button").first().click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator("h1")).toHaveText("作業タブで変えた名前");
+  await expect(workScreen(page)).toBeHidden();
+  // W3: 非選択の作業画面は破棄せず隠すだけ。
+  await expect(
+    page.locator('[data-work-screen="project-settings"] input[name="name"]'),
+  ).toHaveCount(1);
+  // メニュー「プロジェクト名を変更」は作業タブを選んでプロジェクト名へフォーカスする（W12）。
+  await chooseMenuItem(page, "ファイル", "プロジェクト名を変更");
+  await expect(settingsTab(page)).toHaveAttribute("aria-current", "page");
+  await expect(name).toBeFocused();
+  // 記録希望設定は作業画面からも既存の Modal を開く。
+  await workScreen(page)
+    .getByRole("button", { name: "記録希望設定を開く", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "記録希望設定", exact: true }),
+  ).toBeVisible();
+});
+
+for (const width of [960, 700])
+  test(`最小幅 ${width}px でも作業タブと×、作業画面の最後の操作に手が届く（WT1b）`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 640 });
+    await page.goto("/");
+    await page.getByRole("button", { name: "編集", exact: true }).click();
+    await openSettings(page);
+    // 700px 以下は全体が1列でページごと縦に流れるので、スクロールで届けばよい。
+    await settingsTab(page).scrollIntoViewIfNeeded();
+    await expect(settingsTab(page)).toBeInViewport();
+    const close = workTabs(page).getByRole("button", {
+      name: "プロジェクト設定を閉じる",
+      exact: true,
+    });
+    await close.scrollIntoViewIfNeeded();
+    await expect(close).toBeInViewport();
+    const last = workScreen(page).getByRole("button", {
+      name: "記録希望設定を開く",
+      exact: true,
+    });
+    await last.scrollIntoViewIfNeeded();
+    await expect(last).toBeInViewport();
+    await last.click();
+    await expect(
+      page.getByRole("dialog", { name: "記録希望設定", exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await close.click();
+    await expect(workTabs(page)).toHaveCount(0);
+  });

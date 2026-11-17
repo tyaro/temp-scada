@@ -138,11 +138,8 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#112233");
-  await selectPanel(page, "プロジェクト");
-  // 画面設定は図形の選択中は隠れるので、選択に依らないプロジェクト名を 2 つ目のフォームにする。
-  await page
-    .getByLabel("プロジェクト名", { exact: true })
-    .fill("変更したプロジェクト");
+  // プロジェクト名は作業タブへ移ったので、Inspector 内の別フォーム（配置名）を 2 つ目の下書きにする。
+  await page.getByLabel("配置名", { exact: true }).fill("変更した配置名");
   await button("表示プレビュー").click();
   const prompt = page.getByRole("dialog", { name: "未適用の入力があります" });
   await expect(prompt).toHaveCount(0);
@@ -150,11 +147,12 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
     "未適用の入力あり",
   );
   await button("編集").click();
-  await selectPanel(page, "レイヤー");
-  await page
-    .getByRole("navigation", { name: "図形一覧" })
-    .getByRole("button", { name: "rectangle · 3", exact: true })
-    .click();
+  // 配置名を変えた図形は選択されたまま編集へ戻る。
+  await expect(
+    page
+      .getByRole("navigation", { name: "図形一覧" })
+      .getByRole("button", { name: "変更した配置名", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   const color = page.getByLabel(/^(?:色|塗りの色)$/, { exact: true });
   await color.fill("#445566");
   const downloading = page.waitForEvent("download");
@@ -163,7 +161,7 @@ test("multiple forms are resolved before preview, and Ctrl+S in an input exports
   const saved = JSON.parse(
     await readFile((await (await downloading).path())!, "utf8"),
   );
-  expect(saved.manifest.name).toBe("変更したプロジェクト");
+  expect(saved.screens[0].objects[0].name).toBe("変更した配置名");
   expect(saved.screens[0].objects[0].shape.paint.fill.paint.color).toBe(
     "#445566",
   );
@@ -316,9 +314,9 @@ test("invalid model input preserves every dirty form before applying any command
   await button("編集").click();
   await selectPanel(page, "部品");
   await button("配管を追加").click();
-  await selectPanel(page, "プロジェクト");
-  const projectName = page.getByLabel("プロジェクト名", { exact: true });
-  await projectName.fill("未適用のプロジェクト");
+  // プロジェクト名は作業タブへ移ったので、Inspector 内の別フォーム（配置名）を併せて下書きにする。
+  const placementName = page.getByLabel("配置名", { exact: true });
+  await placementName.fill("未適用の配置名");
   await page.getByLabel("頂点", { exact: true }).fill("0,0\n0,0");
   await button("表示プレビュー").click();
   await expect(
@@ -327,7 +325,7 @@ test("invalid model input preserves every dirty form before applying any command
   await expect(page.getByTestId("project-status")).toContainText(
     "線には異なる2点が必要",
   );
-  await expect(projectName).toHaveValue("未適用のプロジェクト");
+  await expect(placementName).toHaveValue("未適用の配置名");
   await expect(page.getByLabel("頂点", { exact: true })).toHaveValue(
     "0,0\n0,0",
   );
@@ -336,7 +334,7 @@ test("invalid model input preserves every dirty form before applying any command
   ).toBeVisible();
   // 不正な頂点があると保存も止まり、書きかけは一つも適用されない。
   await fileCommand(page, "Project を保存");
-  await expect(projectName).toHaveValue("未適用のプロジェクト");
+  await expect(placementName).toHaveValue("未適用の配置名");
   await expect(page.getByLabel("頂点", { exact: true })).toHaveValue(
     "0,0\n0,0",
   );

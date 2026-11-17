@@ -41,10 +41,10 @@ for (const theme of ["light", "dark"])
       paint = page.getByLabel(/^(?:色|塗りの色)$/, { exact: true });
     await x.fill("1e");
     await paint.fill("#aabbcc");
-    await selectPanel(page, "プロジェクト");
-    await page
-      .getByLabel("プロジェクト名", { exact: true })
-      .fill("未適用の画面名");
+    // プロジェクト名は作業タブへ移ったので、左ペインの状態はレイヤー検索の値で確かめる。
+    await selectPanel(page, "レイヤー");
+    const search = page.getByLabel("レイヤーを検索", { exact: true });
+    await search.fill("rectangle");
     const ref = await x.elementHandle(),
       form = await x.evaluateHandle((el) => el.closest("form")),
       root = await panel(page).elementHandle();
@@ -74,9 +74,7 @@ for (const theme of ["light", "dark"])
     );
     await expect(x).toHaveValue("1e");
     await expect(paint).toHaveValue("#aabbcc");
-    await expect(
-      page.getByLabel("プロジェクト名", { exact: true }),
-    ).toHaveValue("未適用の画面名");
+    await expect(search).toHaveValue("rectangle");
     expect(await page.getByTestId("save-state").innerText()).toBe(dirty);
     await expect(button(page, "元に戻す")).toBeDisabled();
     await expect(page.getByRole("dialog")).toHaveCount(0);

@@ -47,11 +47,11 @@ for (const theme of ["light", "dark"])
     const search = page.getByRole("searchbox", { name: /検索/ });
     await search.fill("ポンプ");
     const searchRef = await search.elementHandle();
-    await selectPanel(page, "プロジェクト");
-    const name = page.getByLabel("プロジェクト名", { exact: true });
-    await name.fill("未適用の画面名");
+    // プロジェクト名は作業タブへ移ったので、別タブの下書きはレイヤー検索で確かめる。
+    await selectPanel(page, "レイヤー");
+    const name = page.getByLabel("レイヤーを検索", { exact: true });
+    await name.fill("rectangle");
     const input = await name.elementHandle(),
-      form = await name.evaluateHandle((el) => el.closest("form")),
       root = await panel(page).elementHandle();
     const dirty = await page.getByTestId("save-state").innerText();
     const before = await page
@@ -72,10 +72,7 @@ for (const theme of ["light", "dark"])
       true,
     );
     expect(await name.evaluate((el, old) => el === old, input)).toBe(true);
-    expect(
-      await name.evaluate((el, old) => el.closest("form") === old, form),
-    ).toBe(true);
-    await expect(name).toHaveValue("未適用の画面名");
+    await expect(name).toHaveValue("rectangle");
     await expect(x).toHaveValue("1e");
     await selectPanel(page, "部品");
     await expect(search).toHaveValue("ポンプ");
@@ -148,8 +145,9 @@ test("overlapping panels raise by pointer and focus without replacing input DOM"
     { key, inspectorKey },
   );
   await start(page);
-  await selectPanel(page, "プロジェクト");
-  const name = page.getByLabel("プロジェクト名", { exact: true }),
+  // プロジェクト名は作業タブへ移ったので、左ペインの下書きはレイヤー検索で確かめる。
+  await selectPanel(page, "レイヤー");
+  const name = page.getByLabel("レイヤーを検索", { exact: true }),
     x = page.getByLabel("X", { exact: true });
   await name.fill("未適用");
   await x.focus();
