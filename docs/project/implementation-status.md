@@ -547,7 +547,7 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 - 値（T1a）: 端末設定`alarm-terminal.json`の`alarm`欄に、保持（日数 1〜3650、既定 365／件数 10,000〜10,000,000、既定 1,000,000）と読み直し（周期・1回の期限・連続失敗の期限・張り直しの連続失敗）を持つ。読込み時に範囲外の値は既定値へ戻して警告を返す（読み直しの4値は1つでも外れたら4つとも）。保存した読み直しの値は動いている Engine にすぐ反映する。`alarm_settings_get`（権限不要）・`alarm_settings_set`、変更は運用ではログイン済みの Admin だけ（`authorize_alarm_settings`）。
 - 保持の削除（T1b、`alarm_db/retention.rs`）: 評価の処理列の中で、`event`表を通番の小さい順に消す。DB の最新のイベントと、各 condition の表示を持つ最新のイベントは残し、期限内のイベントに当たったら止める（履歴に穴を開けない）。1回 10,000 件まで、上限まで消した回は5秒後に続け、ふだんは1時間ごと。削除の transaction で session の所有を確かめ、書込みの失敗中は試さない。`alarm_settings_get`で件数といちばん古いイベントの時刻を返す。
-- 音（T2、`alarm_terminal/alarm_sound.rs`）: WAV（PCM 8/16 bit・1〜2 ch・1 MB・5秒まで）を host のダイアログで選んで検査し、`%LOCALAPPDATA%	emp-scadalarm-sound.wav`へ写す。読めない・hash が合わない・検査に通らないときは既定のビープで鳴らし、snapshot の`buzzerSound.fallback`で理由を返す。`alarm_sound_import`・`alarm_sound_reset`・`alarm_sound_test`（ブザーが鳴り続けている間は拒否）。音の変更は保存から player の差し替えまで直列にする。
+- 音（T2、`alarm_terminal/alarm_sound.rs`）: WAV（PCM 8/16 bit・1〜2 ch・1 MB・5秒まで）を host のダイアログで選んで検査し、`%LOCALAPPDATA%\temp-scada\alarm-sound.wav`へ写す。読めない・hash が合わない・検査に通らないときは既定のビープで鳴らし、snapshot の`buzzerSound.fallback`で理由を返す。`alarm_sound_import`・`alarm_sound_reset`・`alarm_sound_test`（ブザーが鳴り続けている間は拒否）。音の変更は保存から player の差し替えまで直列にする。
 - 画面（T3、`AlarmSettingsWindow.svelte`・`alarm-settings.ts`）: 「ファイル」メニューの「警報の端末設定…」とアラーム一覧の窓の「端末設定」から開く窓。範囲外の値は示して保存させない。権限で拒まれたら以後は読むだけにする。ブラウザ版は入口を押せない。音を鳴らせないときはヘッダーと一覧の窓で知らせる。窓を開き直す前の応答は、開き直した窓を変えない。
 
 `cargo test -p scada-host`、src-tauri の試験、`alarm-settings.test.ts`、`e2e/alarm-terminal-settings.spec.ts`で確認。Tauri 実機（ダイアログ・音の再生・Admin での拒否）、実際の runtime での削除の間隔、1万件の削除の所要時間は未確認。
