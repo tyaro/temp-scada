@@ -86,7 +86,16 @@ async fn open_applies_banto_migrations_once_and_starts_without_a_session() {
             .fetch_all(&db.raw().await)
             .await
             .unwrap();
-    assert_eq!(applied, [2, 3, 4, 5, 7, 8]);
+    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10]);
+    // 0010's generated record-scope columns back the audit list's
+    // `recordResource` / `recordId` filters.
+    let scope_columns: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM pragma_table_xinfo('audit_log') WHERE name IN ('record_resource', 'record_id')",
+    )
+    .fetch_one(&db.raw().await)
+    .await
+    .unwrap();
+    assert_eq!(scope_columns, 2);
     assert!(matches!(
         auth.require_role(Role::Viewer, "recording").await,
         Err(BantoError::Unauthorized)
