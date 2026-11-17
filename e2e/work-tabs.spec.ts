@@ -292,3 +292,69 @@ test("Inspector の未適用入力は作業タブを開くと確定し、不正�
   await openSettings(page);
   await expect(settingsTab(page)).toHaveAttribute("aria-current", "page");
 });
+
+test("作業画面の表示中に左の Symbol から配置すると、画面タブへ戻って表示中心に置く", async ({
+  page,
+}) => {
+  await edit(page);
+  // 共有定義を1つ作る（標準の Project には Symbol がない）。
+  await selectPanel(page, "部品");
+  await page.getByRole("button", { name: "ポンプを追加", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await toolbar(page)
+    .getByRole("button", { name: "拡大", exact: true })
+    .click();
+  await viewport(page).evaluate((el) => {
+    el.scrollLeft += 80;
+    el.scrollTop += 50;
+  });
+  const before = await center(page);
+  const placed = mainCanvas(page).locator("[data-symbol-id]");
+  const count = await placed.count();
+
+  await openSettings(page);
+  await expect(viewport(page)).toBeHidden();
+  await selectPanel(page, "プロジェクト");
+  await page
+    .getByRole("navigation", { name: "共有 Symbol 一覧" })
+    .getByRole("button", { name: /^共有定義：/ })
+    .first()
+    .click();
+  await page.getByRole("button", { name: "画面に配置", exact: true }).click();
+
+  // W10: キャンバスが見え、作業タブは残ったまま画面タブが選ばれる。
+  await expect(viewport(page)).toBeVisible();
+  await expect(settingsTab(page)).not.toHaveAttribute("aria-current", "page");
+  await expect(placed).toHaveCount(count + 1);
+  // 隠れたキャンバスではなく、戻した表示の中心へ置く。
+  const middle = await placed.nth(count).evaluate((el) => {
+    const svg = (el as SVGGraphicsElement).ownerSVGElement!;
+    const box = el.getBoundingClientRect();
+    const point = new DOMPoint(
+      box.left + box.width / 2,
+      box.top + box.height / 2,
+    ).matrixTransform(svg.getScreenCTM()!.inverse());
+    return { x: point.x, y: point.y };
+  });
+  expect(Math.hypot(middle.x - before.x, middle.y - before.y)).toBeLessThan(24);
+});
+
+test("作業画面の表示中に左の「タグ参照一覧を開く」を押すと、画面タブへ戻って一覧を出す", async ({
+  page,
+}) => {
+  await edit(page);
+  await page
+    .getByLabel("Project を開く", { exact: true })
+    .setInputFiles("examples/tag-binding.project.json");
+  await openSettings(page);
+  await expect(workScreen(page)).toBeVisible();
+  await selectPanel(page, "プロジェクト");
+  await page
+    .getByRole("button", { name: "タグ参照一覧を開く", exact: true })
+    .click();
+  await expect(viewport(page)).toBeVisible();
+  await expect(settingsTab(page)).not.toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("region", { name: "タグ参照パネル", exact: true }),
+  ).toBeVisible();
+});

@@ -1675,6 +1675,25 @@
       restoringCanvas = false;
     }
   }
+  /**
+   * W10: 画面タブを選び直し（ゲート通過済みの action の中で呼ぶ）、キャンバスが表示されて
+   * 表示位置の復元（`workTabChanging` の tick 後の `restoreEditView`、さらに tick と
+   * rAF 2回）が終わってから `action` を呼ぶ。rAF を1回多く待って復元の後に並べる。
+   */
+  function afterCanvasReturn(action: () => void) {
+    const generation = workspaceGeneration;
+    returnToCanvas();
+    void tick().then(() =>
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            if (generation !== workspaceGeneration || !canvasActive) return;
+            action();
+          }),
+        ),
+      ),
+    );
+  }
   // W10 の安全網: 画面または定義の編集対象が変わったら画面タブを選ぶ。
   $effect(() => {
     screenId;
@@ -1906,6 +1925,15 @@
           (editingSymbolId || screenId !== command.screenId)
         )
           return;
+        // W10: 作業画面の表示中は画面タブを選び、キャンバスの表示位置が戻ってから
+        // 表示中心へ配置する（隠れたキャンバスの中心は使わない）。
+        if (command.type === "place-symbol" && workScreenShown) {
+          afterCanvasReturn(() => {
+            if (!editingSymbolId && screenId === command.screenId)
+              edit(command);
+          });
+          return;
+        }
         edit(command);
       });
     } else edit(command);
@@ -4435,11 +4463,17 @@
             <button
               class="reference-link"
               disabled={!references.length}
-              onclick={() => {
-                canvasWorkspace?.preparePanelResize();
-                referencesExpanded = true;
-                setAuxPanelVisibility({ references: true }, "references");
-              }}>タグ参照一覧を開く</button
+              onclick={() =>
+                transition(() => {
+                  const open = () => {
+                    canvasWorkspace?.preparePanelResize();
+                    referencesExpanded = true;
+                    setAuxPanelVisibility({ references: true }, "references");
+                  };
+                  // W10: 作業画面の表示中は画面タブを選んでから下部の帯を開く。
+                  if (workScreenShown) afterCanvasReturn(open);
+                  else open();
+                })}>タグ参照一覧を開く</button
             >
             <p class="hint">
               {references.length
