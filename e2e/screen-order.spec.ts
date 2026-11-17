@@ -1,6 +1,24 @@
-import { fileCommand, selectPanel } from "./helpers/designer";
+import {
+  addScreen,
+  currentScreenAction,
+  currentScreenMenuItem,
+  fileCommand,
+  selectPanel,
+} from "./helpers/designer";
+import type { Page } from "@playwright/test";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+
+/** The active screen's context menu shows each item's limit. */
+async function expectScreenItemsDisabled(page: Page, ...names: string[]) {
+  for (const name of names) {
+    await expect(await currentScreenMenuItem(page, name)).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await page.keyboard.press("Escape");
+  }
+}
 
 test("screen order is explicit, applied with pending drafts and preserved by undo and file reload", async ({
   page,
@@ -10,20 +28,19 @@ test("screen order is explicit, applied with pending drafts and preserved by und
     page.getByRole("button", { name, exact: true });
   const screens = page.getByRole("navigation", { name: "画面一覧" });
   await button("編集").click();
-  await expect(button("画面を上へ")).toBeDisabled();
-  await expect(button("画面を下へ")).toBeDisabled();
+  await expectScreenItemsDisabled(page, "画面を上へ", "画面を下へ");
   await selectPanel(page, "プロジェクト");
-  await button("画面を追加").click();
-  await button("画面を追加").click();
+  await addScreen(page);
+  await addScreen(page);
   await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "プロセス画面",
     "画面 2",
     "画面 3",
   ]);
-  await expect(button("画面を下へ")).toBeDisabled();
+  await expectScreenItemsDisabled(page, "画面を下へ");
   await page.getByLabel("画面名", { exact: true }).fill("仕上工程");
   // 離れたら確定: 画面名が確認なしで適用され、そのまま並べ替わる。
-  await button("画面を上へ").click();
+  await currentScreenAction(page, "画面を上へ");
   await expect(
     page.getByRole("dialog", { name: "未適用の入力があります" }),
   ).toHaveCount(0);
@@ -42,20 +59,20 @@ test("screen order is explicit, applied with pending drafts and preserved by und
     "仕上工程",
   ]);
   await button("やり直す").click();
-  await button("画面を上へ").click();
-  await expect(button("画面を上へ")).toBeDisabled();
+  await currentScreenAction(page, "画面を上へ");
+  await expectScreenItemsDisabled(page, "画面を上へ");
   await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "仕上工程",
     "プロセス画面",
     "画面 2",
   ]);
-  await button("画面を下へ").click();
+  await currentScreenAction(page, "画面を下へ");
   await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "プロセス画面",
     "仕上工程",
     "画面 2",
   ]);
-  await button("画面を上へ").click();
+  await currentScreenAction(page, "画面を上へ");
   const downloading = page.waitForEvent("download");
   await fileCommand(page, "Project を保存");
   const json = await readFile((await (await downloading).path())!, "utf8");
@@ -78,7 +95,9 @@ test("screen order is explicit, applied with pending drafts and preserved by und
   ).toBeVisible();
   await expect(button("元に戻す")).toBeDisabled();
   await button("表示プレビュー").click();
-  await expect(button("画面を上へ")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /^操作：画面タブ：/ }),
+  ).toHaveCount(0);
   await expect(screens.locator("button[aria-pressed]")).toHaveText([
     "仕上工程",
     "プロセス画面",

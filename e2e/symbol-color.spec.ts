@@ -2,7 +2,12 @@ import { test, expect, type Page, type Locator } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/symbol-color.project.json" with { type: "json" };
 import minimal from "../examples/minimal.project.json" with { type: "json" };
-import { selectPanel, chooseTheme, fileCommand } from "./helpers/designer";
+import {
+  chooseTheme,
+  currentScreenAction,
+  fileCommand,
+  selectPanel,
+} from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const placements = sample.screens[0].objects.filter(
@@ -280,7 +285,7 @@ test("native same/cross-project clipboard and screen duplication preserve mode a
     shape: { colorMode: "definition" },
   });
   await selectPanel(page, "プロジェクト");
-  await button(page, "画面を複製").click();
+  await currentScreenAction(page, "画面を複製");
   result = await exported(page);
   expect(
     result.screens[1].objects

@@ -2712,7 +2712,7 @@
         };
     });
   }
-  /** 画面タブ・画面一覧の見出し・⋮・画面管理の「画面を追加」が共有する入口。 */
+  /** 画面タブ・画面一覧の見出しの「＋」と⋮の「画面を追加」が共有する入口。 */
   function addScreen() {
     const generation = workspaceGeneration;
     const run = () => {
@@ -4377,42 +4377,6 @@
                 oncommand={(command) => edit(command)}
                 onsubmit={submitForm}
               />
-              <h2>画面管理</h2>
-              <button
-                disabled={project.screens.length >= 100}
-                onclick={addScreen}>画面を追加</button
-              >
-              <button
-                disabled={project.screens.length >= 100}
-                onclick={() =>
-                  edit({ type: "duplicate-screen", screenId: screen.id })}
-                >画面を複製</button
-              >
-              <div class="actions" role="group" aria-label="画面の並び順">
-                <button
-                  disabled={project.screens[0].id === screen.id}
-                  onclick={() =>
-                    edit({
-                      type: "reorder-screen",
-                      screenId: screen.id,
-                      direction: "up",
-                    })}>画面を上へ</button
-                >
-                <button
-                  disabled={project.screens.at(-1)?.id === screen.id}
-                  onclick={() =>
-                    edit({
-                      type: "reorder-screen",
-                      screenId: screen.id,
-                      direction: "down",
-                    })}>画面を下へ</button
-                >
-              </div>
-              <p>画面順は JSON に保存され、読込時は先頭の画面を開きます。</p>
-              <button
-                disabled={project.screens.length === 1}
-                onclick={() => removeScreen(screen.id)}>画面を削除</button
-              >
             {/if}
           </TreeSection>
         {/if}

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/minimal.project.json" with { type: "json" };
-import { fileCommand, selectPanel } from "./helpers/designer";
+import { addScreen, fileCommand, selectPanel } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const draft = (page: Page) =>
@@ -135,7 +135,7 @@ test("F2 uses the focused screen tab instead of the active screen and reveals hi
   page,
 }) => {
   await start(page);
-  await button(page, "画面を追加").click();
+  await addScreen(page);
   await button(page, "プロパティを隠す").click();
   await expect(page.getByLabel("画面名", { exact: true })).toBeHidden();
   const tabs = page.getByRole("navigation", { name: "画面タブ", exact: true });

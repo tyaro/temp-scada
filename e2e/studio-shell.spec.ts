@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { chooseTheme } from "./helpers/designer";
+import { addScreen, chooseTheme } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const strip = (page: Page) =>
@@ -8,7 +8,7 @@ async function start(page: Page) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await page.goto("/");
   await button(page, "編集").click();
-  await button(page, "画面を追加").click();
+  await addScreen(page);
 }
 test("screen strip uses guarded switching, manual keyboard activation and existing context actions", async ({
   page,
@@ -79,7 +79,7 @@ test("overflowing screen tabs reveal active screens and keyboard targets without
 }) => {
   await start(page);
   await page.setViewportSize({ width: 1280, height: 720 });
-  for (let i = 0; i < 16; i++) await button(page, "画面を追加").click();
+  for (let i = 0; i < 16; i++) await addScreen(page);
   const last = strip(page).locator("[data-screen-tab]").last();
   await expect(last).toHaveAttribute("aria-current", "page");
   await expect

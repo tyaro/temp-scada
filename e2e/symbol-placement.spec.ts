@@ -1,4 +1,8 @@
-import { fileCommand, selectPanel } from "./helpers/designer";
+import {
+  currentScreenAction,
+  fileCommand,
+  selectPanel,
+} from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/process.project.json" with { type: "json" };
@@ -85,7 +89,7 @@ test("deep copies a definition for one placement, edits it independently and und
   await selectPanel(page, "部品");
   await button("ポンプを追加").click();
   await selectPanel(page, "プロジェクト");
-  await button("画面を複製").click();
+  await currentScreenAction(page, "画面を複製");
   const screens = page.getByRole("navigation", { name: "画面一覧" });
   const list = page.getByRole("navigation", { name: "図形一覧" });
   await selectPanel(page, "レイヤー");

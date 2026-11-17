@@ -1,4 +1,8 @@
-import { fileCommand, selectPanel } from "./helpers/designer";
+import {
+  currentScreenAction,
+  fileCommand,
+  selectPanel,
+} from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 const button = (page: Page, name: string) =>
@@ -13,7 +17,7 @@ async function start(page: Page, duplicate = false) {
   await button(page, "編集").click();
   await selectPanel(page, "プロジェクト");
   if (duplicate) {
-    await button(page, "画面を複製").click();
+    await currentScreenAction(page, "画面を複製");
     await page.getByLabel("画面名", { exact: true }).fill("予備系統");
     await button(page, "画面設定を適用").click();
   }

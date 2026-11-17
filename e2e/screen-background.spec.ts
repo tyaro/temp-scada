@@ -1,4 +1,10 @@
-import { fileCommand, chooseTheme, selectPanel } from "./helpers/designer";
+import {
+  addScreen,
+  chooseTheme,
+  currentScreenAction,
+  fileCommand,
+  selectPanel,
+} from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 const button = (page: Page, name: string) =>
@@ -68,7 +74,7 @@ test("new screens start white and screen switching applies pending background in
 }) => {
   await start(page);
   await page.getByLabel("画面の背景色", { exact: true }).fill("#fff1f2");
-  await button(page, "画面を追加").click();
+  await addScreen(page);
   // 離れたら確定: 確認なしで元の画面の背景として適用され、新しい画面へ移る。
   await expect(
     page.getByRole("dialog", { name: "未適用の入力があります" }),
@@ -147,7 +153,7 @@ test("the light process example renders on either app theme and copies its backg
   }
   await button(page, "編集").click();
   await selectPanel(page, "プロジェクト");
-  await button(page, "画面を複製").click();
+  await currentScreenAction(page, "画面を複製");
   await expect(paper(page)).toHaveAttribute("fill", "#ffffff");
   const project = await save(page);
   expect(project.screens.map((s: any) => s.background)).toEqual([

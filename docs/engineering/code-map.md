@@ -291,7 +291,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 
 - `App.svelte`の`.canvas-area`がCanvasWorkspaceと`.canvas-navigation`（`FavoritesDock`・`Minimap`）を包み、ドックとミニマップを図面の上へ重ねる。空きは`pointer-events: none`で図面へ素通しにする。
 - タグ参照の開閉はステータス行（`.status-row`）の「タグ参照 n」ボタンがAppの`referencesExpanded`で持つ。`designer/BindingReferences.svelte`は一覧本体だけで、閉じているときは隠すだけにして検索語を保つ。
-- 画面の追加はAppの`addScreen`が唯一の入口で、`ScreenTabs`の「＋」（`onadd`）、`TreeSection`の`action`（画面見出しの「＋」）、画面の⋮メニュー、画面管理のボタンから呼ぶ。
+- 画面の追加はAppの`addScreen`が唯一の入口で、`ScreenTabs`の「＋」（`onadd`）、`TreeSection`の`action`（画面見出しの「＋」）、画面の⋮メニューから呼ぶ。画面の複製・並べ替え・削除は画面一覧の行と画面タブの⋮メニュー（`screenContextItems`）だけが入口（左の「画面管理」のボタンは Issue #223 WT0 で削除）。e2e は `e2e/helpers/designer.ts` の `addScreen`・`currentScreenAction` を使う。
 - `e2e/canvas-area.spec.ts`が1280×800／1440×900の寸法・重ね・素通し・タグ参照の開閉・画面の追加・編集⇄プレビューの高さ差を確認する。
 
 ## 往復での選択と表示位置の保持（UX精査 F-1）

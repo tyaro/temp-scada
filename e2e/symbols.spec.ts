@@ -1,4 +1,8 @@
-import { fileCommand, selectPanel } from "./helpers/designer";
+import {
+  currentScreenAction,
+  fileCommand,
+  selectPanel,
+} from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 test("shared definition edits update placements across screens and survive history and JSON", async ({
@@ -11,7 +15,7 @@ test("shared definition edits update placements across screens and survive histo
   await selectPanel(page, "部品");
   await button("ポンプを追加").click();
   await selectPanel(page, "プロジェクト");
-  await button("画面を複製").click();
+  await currentScreenAction(page, "画面を複製");
   await button("定義を編集").click();
   await expect(page.getByRole("note")).toContainText("2 配置で共有");
   await expect(button("ポンプを追加")).toHaveCount(0);
