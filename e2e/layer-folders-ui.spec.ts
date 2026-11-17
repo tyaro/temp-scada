@@ -224,17 +224,23 @@ for (const theme of ["light", "dark"] as const)
     async function contrast() {
       return confirm.evaluate((element) => {
         const css = getComputedStyle(element);
+        // Banto's theme uses oklch(); a canvas resolves any CSS color to sRGB.
+        const context = document.createElement("canvas").getContext("2d", {
+          willReadFrequently: true,
+        })!;
+        const srgb = (color: string) => {
+          context.clearRect(0, 0, 1, 1);
+          context.fillStyle = color;
+          context.fillRect(0, 0, 1, 1);
+          return [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+        };
         const luminance = (color: string) => {
-          const channels = color
-            .match(/[\d.]+/g)!
-            .slice(0, 3)
-            .map(Number)
-            .map((value) => {
-              const channel = value / 255;
-              return channel <= 0.04045
-                ? channel / 12.92
-                : ((channel + 0.055) / 1.055) ** 2.4;
-            });
+          const channels = srgb(color).map((value) => {
+            const channel = value / 255;
+            return channel <= 0.04045
+              ? channel / 12.92
+              : ((channel + 0.055) / 1.055) ** 2.4;
+          });
           return (
             channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722
           );

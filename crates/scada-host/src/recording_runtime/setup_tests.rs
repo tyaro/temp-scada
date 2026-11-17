@@ -346,8 +346,22 @@ async fn the_first_setup_maps_applies_and_records_ticks() {
         .collect();
     assert_eq!(labels.len(), 2);
     assert!(labels.contains(&LEVEL.to_owned()) && labels.contains(&RUNNING.to_owned()));
-    let points = wait_points(&runtime, &project, 2).await;
-    assert_eq!(points["series"][0]["raw"][0]["quality"], "good");
+    // The first ticks may land before the fake Hub's first value and record
+    // `sourceUnavailable`; a good value must follow them.
+    let mut wanted = 2;
+    let raw = loop {
+        let points = wait_points(&runtime, &project, wanted).await;
+        let raw = points["series"][0]["raw"].as_array().unwrap().clone();
+        if raw.iter().any(|p| p["quality"] == "good") {
+            break raw;
+        }
+        wanted = raw.len() + 1;
+        assert!(wanted <= 50, "no good value after {} ticks", raw.len());
+    };
+    let first_good = raw.iter().position(|p| p["quality"] == "good").unwrap();
+    for point in &raw[..first_good] {
+        assert_eq!(point["reason"], "sourceUnavailable", "{point}");
+    }
 
     let after = inspect(&runtime, &project).await;
     let db = &after["database"];
