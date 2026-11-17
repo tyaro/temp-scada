@@ -1,5 +1,5 @@
 //! Tauri boundary for the one terminal-wide alarm owner.
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use scada_host::alarm_db::{EventRead, UnackedOccurrence};
@@ -7,12 +7,14 @@ use scada_host::alarm_service::{
     AlarmService, AlarmServiceError, AlarmSettingsView, AlarmSnapshot, AppliedSummary, ApplyMode,
     ApplyResult, HubClients,
 };
-use scada_host::alarm_terminal::AlarmSettings;
+use scada_host::alarm_terminal::alarm_sound::MAX_SOUND_BYTES;
+use scada_host::alarm_terminal::{AlarmSettings, WavRejection};
 use scada_host::auth::BantoError;
 use scada_host::desktop_auth::CommandError;
 use scada_host::CredentialIdentity;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Emitter, Manager, Runtime, State};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State, WebviewWindow};
+use tauri_plugin_dialog::DialogExt;
 
 use crate::auth::AuthState;
 use crate::project::ProjectFileState;
@@ -65,8 +67,19 @@ fn reason(error: &AlarmServiceError) -> String {
         AlarmServiceError::EngineStopped => "engineStopped",
         AlarmServiceError::ConfirmationRequired(_) => "confirmationRequired",
         AlarmServiceError::InvalidSettings => "invalidSettings",
+        AlarmServiceError::InvalidSound(rejection) => return invalid_sound(*rejection),
+        AlarmServiceError::BuzzerRinging => "buzzerRinging",
     }
     .into()
+}
+
+/// `invalidSound:<rejection>`, e.g. `invalidSound:tooLong`.
+fn invalid_sound(rejection: WavRejection) -> String {
+    let name = serde_json::to_value(rejection)
+        .ok()
+        .and_then(|value| value.as_str().map(str::to_owned))
+        .unwrap_or_default();
+    format!("invalidSound:{name}")
 }
 
 fn apply_failure_reason(error: &AlarmServiceError) -> String {
@@ -458,6 +471,97 @@ pub async fn alarm_settings_set(
         .map_err(|error| reason(&error))
 }
 
+async fn pick_wav<R: Runtime>(window: &WebviewWindow<R>) -> Option<PathBuf> {
+    let (sender, receiver) = tokio::sync::oneshot::channel();
+    window
+        .dialog()
+        .file()
+        .set_parent(window)
+        .set_title("警報の音を選ぶ")
+        .add_filter("WAV", &["wav"])
+        .pick_file(move |path| {
+            let _ = sender.send(path);
+        });
+    receiver.await.ok().flatten()?.into_path().ok()
+}
+
+/// Read the picked file and import it (terminal settings design §5). Only
+/// its file name leaves the host; a file beyond 1 MB is not read whole.
+async fn import_picked(service: &AlarmService, path: PathBuf) -> Result<AlarmSettingsView, String> {
+    let name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let bytes = tauri::async_runtime::spawn_blocking(move || {
+        use std::io::Read;
+        let file = std::fs::File::open(&path).map_err(|_| "soundUnreadable".to_owned())?;
+        let mut bytes = Vec::new();
+        file.take(MAX_SOUND_BYTES as u64 + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|_| "soundUnreadable".to_owned())?;
+        if bytes.len() > MAX_SOUND_BYTES {
+            return Err(invalid_sound(WavRejection::TooLarge));
+        }
+        Ok(bytes)
+    })
+    .await
+    .map_err(|_| "soundUnreadable".to_owned())??;
+    service
+        .import_sound(name, bytes)
+        .await
+        .map_err(|error| reason(&error))
+}
+
+/// Pick a WAV in the host's dialog and import it as the buzzer sound. Admin
+/// only like `alarm_settings_set`; refused while the terminal settings are
+/// unavailable. Cancelling changes nothing (`None`). The webview never sees
+/// the path.
+#[tauri::command]
+pub async fn alarm_sound_import<R: Runtime>(
+    window: WebviewWindow<R>,
+    alarm: State<'_, AlarmState>,
+    auth: State<'_, AuthState>,
+) -> Result<Option<AlarmSettingsView>, String> {
+    let service = alarm.get()?.clone();
+    authorize_alarm_settings(&auth).await?;
+    let Some(path) = pick_wav(&window).await else {
+        return Ok(None);
+    };
+    import_picked(&service, path).await.map(Some)
+}
+
+/// Back to the bundled beep. Admin only; refused while the terminal
+/// settings are unavailable.
+#[tauri::command]
+pub async fn alarm_sound_reset(
+    alarm: State<'_, AlarmState>,
+    auth: State<'_, AuthState>,
+) -> Result<AlarmSettingsView, String> {
+    let service = alarm.get()?.clone();
+    authorize_alarm_settings(&auth).await?;
+    service.reset_sound().await.map_err(|error| reason(&error))
+}
+
+/// Play the current sound once. No authorization; `buzzerRinging` while the
+/// buzzer rings. Without the terminal settings, the bundled beep plays.
+#[tauri::command]
+pub fn alarm_sound_test(alarm: State<'_, AlarmState>) -> Result<(), String> {
+    test_sound(&alarm, crate::buzzer::player)
+}
+
+fn test_sound(
+    alarm: &AlarmState,
+    beep: impl FnOnce() -> Arc<dyn scada_host::alarm_buzzer::BuzzerPlayer>,
+) -> Result<(), String> {
+    match alarm.get() {
+        Ok(service) => service.test_sound().map_err(|error| reason(&error)),
+        Err(_) => {
+            beep().play_once();
+            Ok(())
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -490,5 +594,79 @@ mod tests {
         }))
         .unwrap();
         assert!(settings.is_valid());
+    }
+
+    #[tokio::test]
+    async fn a_picked_wav_is_imported_and_a_bad_one_is_refused_by_name() {
+        let dir = std::env::temp_dir().join(format!(
+            "banto-scada-alarm-sound-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let service = AlarmService::open(&dir).await.unwrap();
+        let picked = dir.join("bell.wav");
+        std::fs::write(&picked, crate::buzzer::beep_wav()).unwrap();
+        let view = import_picked(&service, picked).await.unwrap();
+        let json = serde_json::to_value(&view).unwrap();
+        assert_eq!(json["sound"]["kind"], "custom");
+        assert_eq!(json["sound"]["name"], "bell.wav");
+        assert_eq!(json["soundFallback"], serde_json::Value::Null);
+        assert_eq!(
+            serde_json::to_value(service.snapshot().await.unwrap()).unwrap()["buzzerSound"],
+            serde_json::json!({"kind": "custom", "fallback": null})
+        );
+        let big = dir.join("big.wav");
+        std::fs::write(&big, vec![0u8; MAX_SOUND_BYTES + 1]).unwrap();
+        assert_eq!(
+            import_picked(&service, big).await.err().as_deref(),
+            Some("invalidSound:tooLarge")
+        );
+        let text = dir.join("note.wav");
+        std::fs::write(&text, b"hello").unwrap();
+        assert_eq!(
+            import_picked(&service, text).await.err().as_deref(),
+            Some("invalidSound:notWav")
+        );
+        assert_eq!(
+            import_picked(&service, dir.join("missing.wav"))
+                .await
+                .err()
+                .as_deref(),
+            Some("soundUnreadable")
+        );
+        let view = service.reset_sound().await.unwrap();
+        assert_eq!(
+            serde_json::to_value(&view).unwrap()["sound"]["kind"],
+            "default"
+        );
+        drop(service);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn a_test_sound_without_terminal_settings_plays_the_beep() {
+        use scada_host::alarm_buzzer::BuzzerPlayer;
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        #[derive(Default)]
+        struct Count(AtomicUsize);
+        impl BuzzerPlayer for Count {
+            fn play_loop(&self) {}
+            fn play_once(&self) {
+                self.0.fetch_add(1, Ordering::SeqCst);
+            }
+            fn stop(&self) {}
+        }
+        let count = Arc::new(Count::default());
+        let player = count.clone();
+        assert_eq!(
+            test_sound(&AlarmState::unavailable(), move || player),
+            Ok(())
+        );
+        assert_eq!(count.0.load(Ordering::SeqCst), 1);
+        assert_eq!(reason(&AlarmServiceError::BuzzerRinging), "buzzerRinging");
     }
 }

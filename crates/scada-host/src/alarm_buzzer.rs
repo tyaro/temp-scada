@@ -47,6 +47,10 @@ pub trait BuzzerPlayer: Send + Sync {
     fn play_loop(&self);
     fn play_once(&self);
     fn stop(&self);
+    /// 鳴らす音を差し替える（端末設定の設計§5）。`None` は同梱のビープ。player は
+    /// buffer を自分で持ち、鳴っている最中なら先に止めてから buffer を替える。鳴らし
+    /// 直しは呼び出し側（[`BuzzerDriver::set_sound`]）がブザーの状態に従って行う。
+    fn set_sound(&self, _wav: Option<Arc<[u8]>>) {}
 }
 
 /// 音を出さず、ログだけ残す（Windows 以外・試験）。
@@ -74,6 +78,10 @@ pub struct Buzzer {
     silenced: bool,
     looping: bool,
 }
+
+/// ブザーが鳴り続けているので試しに鳴らせない。
+#[derive(Debug, PartialEq, Eq)]
+pub struct BuzzerRinging;
 
 /// 差分が当てられない（連番の飛び・別の session）。snapshot から揃え直す。
 #[derive(Debug, PartialEq, Eq)]
@@ -276,6 +284,27 @@ impl BuzzerDriver {
     /// service が Engine を止めた。印を進め、遅れた pump の呼び出しを捨てる。
     pub fn halt(&self) {
         self.begin();
+    }
+
+    /// 鳴らす音を差し替える。player が止めて buffer を替えた後、鳴り続けの最中なら
+    /// 新しい音で鳴らし直す。状態は変えない。
+    pub fn set_sound(&self, wav: Option<Arc<[u8]>>) {
+        let inner = self.lock();
+        self.player.set_sound(wav);
+        if inner.1.looping {
+            self.player.play_loop();
+        }
+    }
+
+    /// 試しに一度鳴らす（端末設定の設計§5）。警報の状態・ブザーの状態は変えない。
+    /// 鳴り続けの最中は、試しの音が繰り返しを置き換えて止めてしまうので拒む。
+    pub fn play_test(&self) -> Result<(), BuzzerRinging> {
+        let inner = self.lock();
+        if inner.1.looping {
+            return Err(BuzzerRinging);
+        }
+        self.player.play_once();
+        Ok(())
     }
 
     /// ブザー停止（設計§6）。権限は要らない。
@@ -543,7 +572,18 @@ mod tests {
 
     #[derive(Default)]
     struct Recorder(Mutex<Vec<&'static str>>);
+    impl Recorder {
+        fn take(&self) -> Vec<&'static str> {
+            std::mem::take(&mut *self.0.lock().unwrap())
+        }
+    }
     impl BuzzerPlayer for Recorder {
+        fn set_sound(&self, wav: Option<Arc<[u8]>>) {
+            self.0
+                .lock()
+                .unwrap()
+                .push(if wav.is_some() { "sound" } else { "beep" });
+        }
         fn play_loop(&self) {
             self.0.lock().unwrap().push("loop");
         }
@@ -585,5 +625,41 @@ mod tests {
         });
         assert_eq!(driver.status(), BuzzerStatus::Quiet);
         assert_eq!(*recorder.0.lock().unwrap(), vec!["loop", "stop"]);
+    }
+
+    #[test]
+    fn buzzer_driver_replays_a_new_sound_only_while_ringing_and_refuses_a_test() {
+        let recorder = Arc::new(Recorder::default());
+        let (notify, mut notified) = broadcast::channel(16);
+        let driver = BuzzerDriver::new(recorder.clone(), notify);
+        let token = driver.begin();
+        driver.with(token, |buzzer| {
+            let none: [(&String, &ConditionState); 0] = [];
+            buzzer.sync("s1", 0, none)
+        });
+        // Quiet: the sound is swapped and not played; a test plays once.
+        driver.set_sound(Some(Arc::from(&b"wav"[..])));
+        assert_eq!(driver.play_test(), Ok(()));
+        assert_eq!(recorder.take(), vec!["sound", "once"]);
+        driver.with(token, |buzzer| {
+            buzzer
+                .apply("s1", 1, &change(&[("a", Some(unacked("o1", 0)))]), &[])
+                .unwrap()
+        });
+        assert_eq!(recorder.take(), vec!["loop"]);
+        while notified.try_recv().is_ok() {}
+        // Ringing: a test is refused, a new sound replays the loop.
+        assert_eq!(driver.play_test(), Err(BuzzerRinging));
+        driver.set_sound(None);
+        assert_eq!(recorder.take(), vec!["beep", "loop"]);
+        assert_eq!(driver.status(), BuzzerStatus::Ringing);
+        assert!(notified.try_recv().is_err(), "the status did not change");
+        // Silenced: a test is allowed again and the swap does not replay.
+        driver.silence();
+        recorder.take();
+        assert_eq!(driver.play_test(), Ok(()));
+        driver.set_sound(Some(Arc::from(&b"wav"[..])));
+        assert_eq!(recorder.take(), vec!["once", "sound"]);
+        assert_eq!(driver.status(), BuzzerStatus::Silenced);
     }
 }

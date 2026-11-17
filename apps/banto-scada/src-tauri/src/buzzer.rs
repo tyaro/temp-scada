@@ -1,5 +1,6 @@
 //! The terminal alarm buzzer (design §6, 3-E2). The host decides when to
-//! sound; this module only plays a bundled beep generated in memory, so no
+//! sound and which sound; this module plays it: the WAV the host imported
+//! (terminal settings design §5) or a bundled beep generated in memory, so no
 //! audio file ships with the app and WebView autoplay rules do not apply.
 use std::sync::{Arc, OnceLock};
 
@@ -52,7 +53,7 @@ pub fn beep_wav() -> &'static [u8] {
 pub fn player() -> Arc<dyn BuzzerPlayer> {
     #[cfg(windows)]
     {
-        Arc::new(windows::PlaySoundPlayer)
+        Arc::new(windows::PlaySoundPlayer::default())
     }
     #[cfg(not(windows))]
     {
@@ -62,23 +63,36 @@ pub fn player() -> Arc<dyn BuzzerPlayer> {
 
 #[cfg(windows)]
 pub mod windows {
+    use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+
     use super::{beep_wav, BuzzerPlayer, LogBuzzerPlayer};
     use windows_sys::Win32::Media::Audio::{
         PlaySoundW, SND_ASYNC, SND_FLAGS, SND_LOOP, SND_MEMORY, SND_NODEFAULT,
     };
 
-    /// `PlaySoundW` with `SND_MEMORY | SND_ASYNC`; the WAV is a `'static`
-    /// buffer, so it outlives the asynchronous playback.
-    pub struct PlaySoundPlayer;
+    /// `PlaySoundW` with `SND_MEMORY | SND_ASYNC`. The player owns the WAV
+    /// buffer (`None` is the `'static` beep); playback reads it after the
+    /// call returns, so a buffer is replaced or dropped only after the sound
+    /// was stopped, under the same lock as every play.
+    #[derive(Default)]
+    pub struct PlaySoundPlayer {
+        wav: Mutex<Option<Arc<[u8]>>>,
+    }
 
     impl PlaySoundPlayer {
-        pub fn play(flags: SND_FLAGS) -> bool {
-            let wav = beep_wav();
-            // SAFETY: SND_MEMORY reads a complete WAV image from a pointer that
-            // stays valid for the program's lifetime.
+        fn buffer(&self) -> MutexGuard<'_, Option<Arc<[u8]>>> {
+            self.wav.lock().unwrap_or_else(PoisonError::into_inner)
+        }
+
+        pub fn play(&self, flags: SND_FLAGS) -> bool {
+            let wav = self.buffer();
+            let bytes: &[u8] = wav.as_deref().unwrap_or(beep_wav());
+            // SAFETY: SND_MEMORY reads a complete WAV image (checked by the
+            // host, or the bundled beep) from a pointer that stays valid until
+            // `set_sound` or drop, which both stop the playback first.
             unsafe {
                 PlaySoundW(
-                    wav.as_ptr().cast(),
+                    bytes.as_ptr().cast(),
                     std::ptr::null_mut(),
                     SND_MEMORY | SND_ASYNC | SND_NODEFAULT | flags,
                 ) != 0
@@ -91,21 +105,35 @@ pub mod windows {
         }
     }
 
+    impl Drop for PlaySoundPlayer {
+        fn drop(&mut self) {
+            if self.buffer().is_some() {
+                Self::silence();
+            }
+        }
+    }
+
     impl BuzzerPlayer for PlaySoundPlayer {
         fn play_loop(&self) {
-            if !Self::play(SND_LOOP) {
+            if !self.play(SND_LOOP) {
                 eprintln!("alarm buzzer: PlaySound failed");
                 LogBuzzerPlayer.play_loop();
             }
         }
         fn play_once(&self) {
-            if !Self::play(0) {
+            if !self.play(0) {
                 eprintln!("alarm buzzer: PlaySound failed");
                 LogBuzzerPlayer.play_once();
             }
         }
         fn stop(&self) {
             Self::silence();
+        }
+        fn set_sound(&self, wav: Option<Arc<[u8]>>) {
+            let mut buffer = self.buffer();
+            // Stop first: the playing sound may read the old buffer.
+            Self::silence();
+            *buffer = wav;
         }
     }
 }
@@ -135,7 +163,8 @@ mod tests {
         use windows::PlaySoundPlayer;
         // SND_NODEFAULT: without an audio device the call fails instead of
         // playing the system default, so only a real device is asserted.
-        let played = PlaySoundPlayer::play(0);
+        let player = PlaySoundPlayer::default();
+        let played = player.play(0);
         assert!(PlaySoundPlayer::silence());
         if !played {
             eprintln!("PlaySound refused the beep (no audio device?)");
@@ -143,5 +172,19 @@ mod tests {
         if std::env::var_os("BANTO_EXPECT_AUDIO").is_some() {
             assert!(played, "PlaySound must accept the bundled beep");
         }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn a_new_sound_replaces_the_buffer_after_stopping() {
+        use windows::PlaySoundPlayer;
+        let player = PlaySoundPlayer::default();
+        let wav: Arc<[u8]> = Arc::from(beep_wav());
+        player.set_sound(Some(wav.clone()));
+        assert_eq!(Arc::strong_count(&wav), 2, "the player holds the buffer");
+        let _ = player.play(0);
+        player.set_sound(None);
+        assert_eq!(Arc::strong_count(&wav), 1, "the old buffer is released");
+        assert!(PlaySoundPlayer::silence());
     }
 }
