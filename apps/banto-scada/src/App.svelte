@@ -316,7 +316,7 @@
   function revealDraftForm(form: HTMLFormElement) {
     // W6: 作業画面のフォームはその作業タブを、Inspector・画面設定・タグの置換
     // （下部の帯）へ戻すときは先に画面タブを、ゲートなしで選ぶ（ゲートを通すと
-    // allow→apply→reveal が繰り返す）。左ペインに残るフォームは WT2・WT3 で
+    // allow→apply→reveal が繰り返す）。左ペインに残る機器のフォームは WT3 で
     // 作業画面へ移すときに書き換える。
     const workScreen = form.closest<HTMLElement>("[data-work-screen]");
     if (workScreen) {
@@ -324,9 +324,7 @@
       return;
     }
     if (
-      !["alarm-definition", "equipment", "equipment-type"].includes(
-        form.dataset.editorForm ?? "",
-      )
+      !["equipment", "equipment-type"].includes(form.dataset.editorForm ?? "")
     )
       showCanvas();
     if (form.dataset.editorForm === "binding-replacement") {
@@ -339,9 +337,7 @@
       revealScreenSettings = true;
       setInspectorVisibility(true);
     } else if (
-      ["alarm-definition", "equipment", "equipment-type"].includes(
-        form.dataset.editorForm ?? "",
-      )
+      ["equipment", "equipment-type"].includes(form.dataset.editorForm ?? "")
     ) {
       setAuxPanelVisibility({ sidebar: true });
       activePanel = "project";
@@ -4536,25 +4532,16 @@
               >
               <button
                 disabled={editBlocked || !!activeDefinition}
+                onclick={() => workTabs.open("alarm-definitions")}
+                >警報の定義</button
+              >
+              <button
+                disabled={editBlocked || !!activeDefinition}
                 onclick={openRecordingPlan}>記録希望設定</button
               >
             </div>
             {#if activeDefinition}
               <p class="hint">Symbol 定義の編集中は使えません。</p>
-            {/if}
-            {#if !activeDefinition}
-              <h2>警報の設定</h2>
-              <AlarmSettings
-                {project}
-                generation={workspaceGeneration}
-                {drafts}
-                disabled={editBlocked}
-                tagNames={catalogSelection.available
-                  ? catalogSelection.catalog.tags.map((tag) => tag.externalName)
-                  : []}
-                oncommand={(command) => edit(command)}
-                onsubmit={submitForm}
-              />
             {/if}
           </TreeSection>
         {/if}
@@ -4664,7 +4651,21 @@
           <h2 id={`work-screen-title-${kind}`} tabindex="-1">
             {workTabLabel(kind)}
           </h2>
-          {#if kind === "project-settings"}
+          {#if kind === "alarm-definitions"}
+            <div class="alarm-definitions-work">
+              <AlarmSettings
+                {project}
+                generation={workspaceGeneration}
+                {drafts}
+                disabled={editBlocked}
+                tagNames={catalogSelection.available
+                  ? catalogSelection.catalog.tags.map((tag) => tag.externalName)
+                  : []}
+                oncommand={(command) => edit(command)}
+                onsubmit={submitForm}
+              />
+            </div>
+          {:else if kind === "project-settings"}
             <div class="project-settings-work">
               {#key `${workspaceGeneration}:${project.manifest.projectId}`}
                 <form
@@ -5894,6 +5895,10 @@
   .work-screen h2 {
     margin: 0 0 12px;
     font-size: 16px;
+  }
+  /* 作業タブ「警報の定義」（§2.2）。2列の切替は AlarmSettings の container query。 */
+  .alarm-definitions-work {
+    container-type: inline-size;
   }
   /* 作業タブ「プロジェクト設定」（§2.2）。設定を縦に並べ、幅は入力に合わせて抑える。 */
   .project-settings-work {

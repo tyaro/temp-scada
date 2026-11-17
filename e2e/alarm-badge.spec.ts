@@ -1,6 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import sample from "../examples/process.project.json" with { type: "json" };
-import { mainCanvas, selectPanel } from "./helpers/designer";
+import {
+  mainCanvas,
+  openAlarmDefinitions,
+  selectPanel,
+} from "./helpers/designer";
 import { openProject } from "./helpers/project-files";
 
 // 警報の小札。仕様: docs/design/graphics/alarm-badge.md
@@ -96,7 +100,7 @@ test("a badge is unknown without the Engine, and is guarded by its definition", 
   await expect(badge(page)).toContainText("温H");
 
   // 小札が指す定義の削除は、使用中の小札を示して止める。
-  await selectPanel(page, "プロジェクト");
+  await openAlarmDefinitions(page);
   await page
     .getByRole("table", { name: "警報の定義", exact: true })
     .getByRole("button", { name: "T-01 温度 を選ぶ", exact: true })

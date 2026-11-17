@@ -58,6 +58,11 @@ export async function openProjectSettings(page: Page) {
   await chooseMenuItem(page, "表示", "プロジェクト設定");
 }
 
+/** 作業タブ「警報の定義」を表示メニューから開く（開いていれば選ぶ）。 */
+export async function openAlarmDefinitions(page: Page) {
+  await chooseMenuItem(page, "表示", "警報の定義");
+}
+
 /** File operations remain available with the menubar or sidebar hidden. */
 export async function fileCommand(page: Page, name: string) {
   await chooseMenuItem(page, "ファイル", name);
