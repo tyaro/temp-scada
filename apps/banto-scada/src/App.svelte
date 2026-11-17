@@ -283,6 +283,12 @@
   } from "./lib/designer/CanvasWorkspace.svelte";
   import Minimap from "./lib/designer/Minimap.svelte";
   import ScreenTabs from "./lib/designer/ScreenTabs.svelte";
+  import WorkTabs from "./lib/designer/WorkTabs.svelte";
+  import {
+    createWorkTabsController,
+    workTabLabel,
+    type WorkTabChange,
+  } from "./lib/designer/controllers/work-tabs.svelte";
   import CanvasControls from "./lib/designer/CanvasControls.svelte";
   import TreeSection from "./lib/designer/TreeSection.svelte";
   import { createLayerTreeController } from "./lib/designer/controllers/layer-tree.svelte";
@@ -307,6 +313,19 @@
       if (parent instanceof HTMLDetailsElement) parent.open = true;
   }
   function revealDraftForm(form: HTMLFormElement) {
+    // W6: Inspector・画面設定・タグの置換（下部の帯）へ戻すときは、先に画面タブを
+    // ゲートなしで選ぶ（ゲートを通すと allow→apply→reveal が繰り返す）。
+    // 左ペインのフォームは WT1b 以降の区切りで作業画面へ移すときに書き換える。
+    if (
+      ![
+        "project",
+        "operator-frame",
+        "alarm-definition",
+        "equipment",
+        "equipment-type",
+      ].includes(form.dataset.editorForm ?? "")
+    )
+      showCanvas();
     if (form.dataset.editorForm === "binding-replacement") {
       setAuxPanelVisibility({ references: true });
       referencesExpanded = true;
@@ -396,7 +415,12 @@
     panelWidths = { ...DEFAULT_PANEL_WIDTHS };
     finishPanelResize(true);
   }
+  let measuredStackHeight = $state(0);
   let canvasStackHeight = $state(0);
+  // W5: 高さ0（隠れている間）では下部の帯の高さ上限を再計算しない。
+  $effect(() => {
+    if (measuredStackHeight > 0) canvasStackHeight = measuredStackHeight;
+  });
   let referenceHeight = $state(getReferenceHeight());
   let referencesExpanded = $state(false);
   const canSizeReferences = $derived(
@@ -460,7 +484,7 @@
         return inspectorPanel;
       },
       get visible() {
-        return mode === "edit" && showInspector;
+        return inspectorShown;
       },
       get blocked() {
         return busy || !!drafts.pending || !!replacement || mode !== "edit";
@@ -605,6 +629,16 @@
     );
   }
   function toggleAuxPanels() {
+    if (workScreenShown) {
+      // W9: 作業画面の表示中は Inspector・タグ参照を隠しているので左ペインだけに作用する。
+      setAuxPanelVisibility({ sidebar: !showSidebar });
+      void tick().then(() =>
+        document
+          .querySelector<HTMLButtonElement>("[data-permanent-menu]")
+          ?.focus(),
+      );
+      return;
+    }
     const current = panelVisibility();
     const restore = previousPanels;
     if (restore) setAuxPanelVisibility(restore);
@@ -916,6 +950,16 @@
     try {
       const result = travelHistory(project, history, direction, mode);
       if (result.project === project) return;
+      // W11: 画面または Symbol が変わる Undo／Redo は画面タブへ戻す（travel は allow 済み）。
+      // 履歴はスナップショットから復元するので、配列の同一性ではなく内容で比べる。
+      if (
+        workScreenShown &&
+        (JSON.stringify(result.project.screens) !==
+          JSON.stringify(project.screens) ||
+          JSON.stringify(result.project.symbols) !==
+            JSON.stringify(project.symbols))
+      )
+        returnToCanvas();
       project = result.project;
       history = result.history;
       if (!project.screens.some((s) => s.id === screenId))
@@ -1009,8 +1053,7 @@
       )
         return;
       if (event.key === "F1") helpOpen = true;
-      else if (mode === "edit" && !positionPlacement)
-        renameFocused(event.target);
+      else if (canvasActive && !positionPlacement) renameFocused(event.target);
       return;
     }
     if (
@@ -1145,6 +1188,9 @@
     } else if (key === "y" && !event.shiftKey) {
       event.preventDefault();
       travel("redo");
+    } else if (!canvasActive) {
+      // W4: Ctrl+A／G／D はキャンバスの表示中だけ。Undo／Redo は上で全体に効く。
+      return;
     } else if (key === "a" && !event.shiftKey) {
       event.preventDefault();
       transition(
@@ -1323,6 +1369,8 @@
   }
   function clipboardScope(target: EventTarget | null) {
     return (
+      // W4: 作業画面の表示中はキャンバス・図形一覧へ向く操作をしない。
+      canvasActive &&
       target instanceof Element &&
       !target.closest(
         'input,textarea,select,[contenteditable],[role="menu"],[role="dialog"],[data-layer-folder]',
@@ -1531,6 +1579,7 @@
   );
   function openBinding(usage: BindingUsage) {
     transition(() => {
+      showCanvas();
       setInspectorVisibility(true);
       editingSymbolId = null;
       screenId = usage.screenId;
@@ -1550,6 +1599,107 @@
   let activeDefinition = $derived(
     project.symbols.find((s) => s.id === editingSymbolId),
   );
+  // 作業タブ（docs/design/editor/main-work-tabs-design.md §3）。並びと選択は
+  // controller が持ち、App は表示の導出とモード・定義編集・draft の接続だけを持つ。
+  const workTabs = createWorkTabsController({
+    transition,
+    changing: workTabChanging,
+  });
+  /** 作業タブの並びと作業画面を出せる（編集モード、かつ Symbol 定義の編集中でない）。 */
+  const workTabsShown = $derived(mode === "edit" && !activeDefinition);
+  /** 作業タブを選んでいて、中央に作業画面を出している。 */
+  const workScreenShown = $derived(workTabsShown && workTabs.selected !== null);
+  /** キャンバスに向く操作の可否（W4）。 */
+  const canvasActive = $derived(mode === "edit" && !workScreenShown);
+  /** W9: `showInspector`（配置の保存が使う）は書き換えず、表示だけを導出する。 */
+  const inspectorShown = $derived(showInspector && canvasActive);
+  // 作業タブを開く前のキャンバス（W5）。画面タブへ戻ったとき同じ画面なら表示位置を戻す。
+  let canvasReturn: { generation: number; screenId: string } | null = null;
+  function workTabChanging({ previous, next, cause }: WorkTabChange) {
+    if (cause === "reset") {
+      canvasReturn = null;
+      return;
+    }
+    if (previous === null && next !== null && canvasActive) {
+      // キャンバスを隠す直前（ゲート通過後の action 内）に控える。
+      stopPlacement();
+      canvasWorkspace?.cancelInteractions();
+      rememberEditView();
+      canvasReturn = { generation: workspaceGeneration, screenId: screen.id };
+    } else if (previous !== null && next === null) {
+      // 使用先へ移動などの遷移は自分で表示位置を決めるので、画面タブを選び直す
+      // 操作（タブの選択・閉じる・画面を開く・Undo）のときだけ戻す。
+      const target = cause === "now" && !restoringCanvas ? null : canvasReturn;
+      canvasReturn = null;
+      void tick().then(() => {
+        if (
+          !target ||
+          target.generation !== workspaceGeneration ||
+          target.screenId !== screen.id ||
+          !canvasActive ||
+          activeDefinition
+        )
+          return;
+        restoreEditView();
+      });
+    }
+    if (cause === "open" && next)
+      void tick().then(() =>
+        document
+          .querySelector<HTMLElement>(`[data-work-screen="${next}"] h2`)
+          ?.focus(),
+      );
+    else if (cause === "close")
+      void tick().then(() => {
+        const selected = workTabs.selected;
+        document
+          .querySelector<HTMLElement>(
+            selected
+              ? `[data-work-tab="${selected}"]`
+              : 'nav[aria-label="画面タブ"] [aria-current="page"]',
+          )
+          ?.focus({ preventScroll: true });
+      });
+  }
+  /** W6・W10: キャンバス・Inspector・下部の帯へ向かう処理の前に画面タブを選ぶ（ゲートなし）。 */
+  function showCanvas() {
+    workTabs.selectNow(null);
+  }
+  let restoringCanvas = false;
+  /** 画面タブを選び直す（同じ画面なら、作業タブを開く前の表示位置と選択を戻す）。 */
+  function returnToCanvas() {
+    restoringCanvas = true;
+    try {
+      workTabs.selectNow(null);
+    } finally {
+      restoringCanvas = false;
+    }
+  }
+  /**
+   * W10: 画面タブを選び直し（ゲート通過済みの action の中で呼ぶ）、キャンバスが表示されて
+   * 表示位置の復元（`workTabChanging` の tick 後の `restoreEditView`、さらに tick と
+   * rAF 2回）が終わってから `action` を呼ぶ。rAF を1回多く待って復元の後に並べる。
+   */
+  function afterCanvasReturn(action: () => void) {
+    const generation = workspaceGeneration;
+    returnToCanvas();
+    void tick().then(() =>
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            if (generation !== workspaceGeneration || !canvasActive) return;
+            action();
+          }),
+        ),
+      ),
+    );
+  }
+  // W10 の安全網: 画面または定義の編集対象が変わったら画面タブを選ぶ。
+  $effect(() => {
+    screenId;
+    editingSymbolId;
+    untrack(showCanvas);
+  });
   const symbolStrokeOverflow = $derived(
     activeDefinition ? strokeOverflowIds(activeDefinition).length : 0,
   );
@@ -1615,7 +1765,8 @@
   };
   let definitionReturn: string | null = null;
   function rememberEditView() {
-    if (mode !== "edit" || activeDefinition) return;
+    // W5: 隠れたキャンバスの中心で上書きしない。
+    if (!canvasActive || activeDefinition) return;
     const zoom = canvasView.zoom;
     returnViews = {
       generation: workspaceGeneration,
@@ -1670,6 +1821,8 @@
         rememberEditView();
         definitionReturn = mode === "edit" ? screen.id : null;
       }
+      // W8・W10: 定義の編集へは画面タブを選んでから入る（控えた表示位置は上書きしない）。
+      showCanvas();
       editingSymbolId = id;
       libraryId = id;
       selectedIds = [];
@@ -1728,6 +1881,7 @@
         report("info", "使用先が変更されたため移動を中止しました。");
         return;
       }
+      showCanvas();
       mode = "edit";
       editingSymbolId = null;
       screenId = usage.screenId;
@@ -1771,6 +1925,15 @@
           (editingSymbolId || screenId !== command.screenId)
         )
           return;
+        // W10: 作業画面の表示中は画面タブを選び、キャンバスの表示位置が戻ってから
+        // 表示中心へ配置する（隠れたキャンバスの中心は使わない）。
+        if (command.type === "place-symbol" && workScreenShown) {
+          afterCanvasReturn(() => {
+            if (!editingSymbolId && screenId === command.screenId)
+              edit(command);
+          });
+          return;
+        }
         edit(command);
       });
     } else edit(command);
@@ -1951,6 +2114,8 @@
     screenId = project.screens[0].id;
     editingSymbolId = null;
     selectedIds = [];
+    // W7: Project の採用では作業タブをすべて閉じる（読込の取消・失敗はここへ来ない）。
+    workTabs.reset();
     if (source === "new") mode = "edit";
     report(
       "info",
@@ -2126,6 +2291,7 @@
       return false;
     try {
       const oldEditingDefinition = editingSymbolId;
+      const oldScreenId = screenId;
       const oldIds = new Set(screen.objects.map((o) => o.id));
       const oldScreens = new Set(project.screens.map((s) => s.id));
       const oldDefinitions = new Set(project.symbols.map((s) => s.id));
@@ -2174,6 +2340,8 @@
         screenId = project.screens[0].id;
         selectedIds = [];
       }
+      // W10: 画面の追加・複製・削除で画面が変わったら画面タブを選ぶ（edit の中なのでゲートなし）。
+      if (screenId !== oldScreenId) showCanvas();
       if (
         command.type === "add" ||
         command.type === "add-symbol" ||
@@ -2672,6 +2840,8 @@
   function openScreen(id: string, rename = false) {
     const generation = workspaceGeneration;
     const run = () => {
+      if (screenId === id) returnToCanvas();
+      else showCanvas();
       if (screenId !== id || editingSymbolId) selectedIds = [];
       screenId = id;
       editingSymbolId = null;
@@ -2697,7 +2867,8 @@
       }
     };
     // Revealing the current name must not resolve or replace its pending text.
-    if (rename && screenId === id && !editingSymbolId) run();
+    // W2: ゲートを迂回するのはキャンバスを表示しているときだけ。
+    if (rename && screenId === id && !editingSymbolId && canvasActive) run();
     else withScreen(id, run);
   }
   function removeScreen(id: string) {
@@ -3223,8 +3394,10 @@
       mode = next;
       if (next === "preview") editingSymbolId = null;
       definitionReturn = null;
-      if (switching && next === "edit") restoreEditView();
-      else selectedIds = [];
+      // W5・W7: 作業画面へ戻るときはキャンバスが隠れているので、画面タブを選んだ後に戻す。
+      if (switching && next === "edit") {
+        if (canvasActive) restoreEditView();
+      } else selectedIds = [];
     });
   }
   function openSelectedEquipment(
@@ -3502,11 +3675,13 @@
   const selectionViewReason = $derived(
     mode !== "edit"
       ? "編集モードで使用できます"
-      : menuBlocked || clipboard.busy
-        ? "確認中の操作を完了してください"
-        : positionPlacement
-          ? "連続配置を終了してください"
-          : selectionViewTarget.reason,
+      : !canvasActive
+        ? "画面タブを選ぶと使えます"
+        : menuBlocked || clipboard.busy
+          ? "確認中の操作を完了してください"
+          : positionPlacement
+            ? "連続配置を終了してください"
+            : selectionViewTarget.reason,
   );
 
   const selectionLocked = $derived(
@@ -3546,6 +3721,9 @@
     editing: {
       get editBlocked() {
         return editBlocked;
+      },
+      get canvasBlocked() {
+        return !canvasActive;
       },
       get hasAlarmDefinitions() {
         return !!project.alarms?.definitions.length;
@@ -3691,6 +3869,19 @@
       get previousPanels() {
         return !!previousPanels;
       },
+      get workScreenShown() {
+        return workScreenShown;
+      },
+      get workTabReason() {
+        return mode !== "edit"
+          ? "編集モードで使えます"
+          : activeDefinition
+            ? "Symbol 定義の編集中は使えません"
+            : null;
+      },
+      openWorkTab: (kind) => {
+        if (!menuBlocked && workTabsShown) workTabs.open(kind);
+      },
       get showGrid() {
         return showGrid;
       },
@@ -3790,6 +3981,12 @@
     onchange={load}
   />
 {/key}
+{#snippet canvasOnlyNote()}
+  <!-- W4: 作業画面の表示中、レイヤー・部品は inert にして理由を示す。 -->
+  {#if !canvasActive}<p class="canvas-only-note">
+      画面タブを選ぶと使えます
+    </p>{/if}
+{/snippet}
 {#snippet browserHubStatus()}
   {#if !readSource}<StatusBadge
       variant={mode === "preview" ? "warning" : "neutral"}
@@ -4108,7 +4305,7 @@
           aria-label="キャンバスの操作"
           title="キャンバスの操作（Shift+F10）"
           aria-haspopup="menu"
-          disabled={menuBlocked}
+          disabled={menuBlocked || !canvasActive}
           onclick={(event) => {
             const rect = event.currentTarget.getBoundingClientRect();
             requestSelectionContext({
@@ -4139,6 +4336,7 @@
       </div>{/if}
     {#if mode === "edit"}
       <CanvasControls
+        disabled={!canvasActive}
         view={canvasView}
         selectionReason={selectionViewReason}
         onselection={showSelection}
@@ -4157,16 +4355,26 @@
     {/if}
   {/snippet}
 </EditToolbar>
-<ScreenTabs
-  screens={project.screens}
-  activeId={activeDefinition ? null : screen.id}
-  editable={mode === "edit"}
-  contextKey={contextScope}
-  onopen={openScreen}
-  actions={screenContextItems}
-  onadd={addScreen}
-  canAdd={project.screens.length < 100}
-/>
+<div class="tab-strip">
+  <ScreenTabs
+    screens={project.screens}
+    activeId={activeDefinition || workScreenShown ? null : screen.id}
+    editable={mode === "edit"}
+    contextKey={contextScope}
+    onopen={openScreen}
+    actions={screenContextItems}
+    onadd={addScreen}
+    canAdd={project.screens.length < 100}
+  />
+  {#if workTabsShown && workTabs.tabs.length}
+    <WorkTabs
+      tabs={workTabs.tabs}
+      selected={workTabs.selected}
+      onselect={workTabs.select}
+      onclose={workTabs.close}
+    />
+  {/if}
+</div>
 <main
   use:measureWorkspace
   data-project-revision={project.manifest.projectRevision}
@@ -4177,9 +4385,7 @@
   class:sidebar-visible={mode === "edit"
     ? showSidebar && !floatingSidebar.floating
     : !previewFullscreenActive}
-  class:inspector-visible={showInspector &&
-    mode === "edit" &&
-    !floatingInspector.floating}
+  class:inspector-visible={inspectorShown && !floatingInspector.floating}
 >
   <aside
     class="project-sidebar"
@@ -4257,11 +4463,17 @@
             <button
               class="reference-link"
               disabled={!references.length}
-              onclick={() => {
-                canvasWorkspace?.preparePanelResize();
-                referencesExpanded = true;
-                setAuxPanelVisibility({ references: true }, "references");
-              }}>タグ参照一覧を開く</button
+              onclick={() =>
+                transition(() => {
+                  const open = () => {
+                    canvasWorkspace?.preparePanelResize();
+                    referencesExpanded = true;
+                    setAuxPanelVisibility({ references: true }, "references");
+                  };
+                  // W10: 作業画面の表示中は画面タブを選んでから下部の帯を開く。
+                  if (workScreenShown) afterCanvasReturn(open);
+                  else open();
+                })}>タグ参照一覧を開く</button
             >
             <p class="hint">
               {references.length
@@ -4383,32 +4595,39 @@
       {/snippet}
       {#snippet layersPanel()}
         {#if mode === "edit"}
-          <LayerTree images={assetImages} tree={layerTreeBindings} />
+          {@render canvasOnlyNote()}
+          <div class="canvas-only" inert={!canvasActive}>
+            <LayerTree images={assetImages} tree={layerTreeBindings} />
+          </div>
         {/if}
       {/snippet}
       {#snippet partsPanel()}
         {#if mode === "edit"}
-          <PartPalette
-            images={assetImages}
-            {isFavorite}
-            {positionPlacement}
-            {isArmed}
-            onarm={armPart}
-            onimmediate={placeFavorite}
-            ontoggleFavorite={toggleFavorite}
-            contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}`}
-            onedit={openDefinition}
-            onduplicate={(id) =>
-              edit({ type: "duplicate-symbol", symbolId: id })}
-            definitions={project.symbols}
-            allowSymbols={!activeDefinition}
-            hasAlarmDefinitions={!!project.alarms?.definitions.length}
-            onadd={(kind) => choosePart({ type: "basic", kind })}
-            onstartdrag={beginPartDrag}
-            onenddrag={() => (paletteDrag = null)}
-            onbuiltin={(template) => choosePart({ type: "builtin", template })}
-            onplace={(id) => choosePart({ type: "symbol", symbolId: id })}
-          />
+          {@render canvasOnlyNote()}
+          <div class="canvas-only" inert={!canvasActive}>
+            <PartPalette
+              images={assetImages}
+              {isFavorite}
+              {positionPlacement}
+              {isArmed}
+              onarm={armPart}
+              onimmediate={placeFavorite}
+              ontoggleFavorite={toggleFavorite}
+              contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}`}
+              onedit={openDefinition}
+              onduplicate={(id) =>
+                edit({ type: "duplicate-symbol", symbolId: id })}
+              definitions={project.symbols}
+              allowSymbols={!activeDefinition}
+              hasAlarmDefinitions={!!project.alarms?.definitions.length}
+              onadd={(kind) => choosePart({ type: "basic", kind })}
+              onstartdrag={beginPartDrag}
+              onenddrag={() => (paletteDrag = null)}
+              onbuiltin={(template) =>
+                choosePart({ type: "builtin", template })}
+              onplace={(id) => choosePart({ type: "symbol", symbolId: id })}
+            />
+          </div>
         {/if}
       {/snippet}
     </DesignerSidebar>
@@ -4466,8 +4685,22 @@
         />
       {/key}
     {/if}
-    <div class="canvas-stack" bind:clientHeight={canvasStackHeight}>
-      <div class="canvas-area">
+    <div class="canvas-stack" bind:clientHeight={measuredStackHeight}>
+      {#each workTabs.tabs as kind (kind)}
+        <!-- W3: 開いている作業画面は非選択中も破棄せず hidden で保持する。 -->
+        <div
+          class="work-screen"
+          data-work-screen={kind}
+          role="region"
+          aria-labelledby={`work-screen-title-${kind}`}
+          hidden={!workScreenShown || workTabs.selected !== kind}
+        >
+          <h2 id={`work-screen-title-${kind}`} tabindex="-1">
+            {workTabLabel(kind)}
+          </h2>
+        </div>
+      {/each}
+      <div class="canvas-area" class:covered={workScreenShown}>
         {#key workspaceGeneration}
           <CanvasWorkspace
             onopentrend={(objectId) => openTrendHistory(screen.id, objectId)}
@@ -4610,7 +4843,7 @@
             />
           {/key}
         {/if}
-        {#if mode === "edit" && showReferences && references.length}
+        {#if mode === "edit" && showReferences && references.length && !workScreenShown}
           <button
             class="references-toggle"
             aria-expanded={referencesExpanded}
@@ -4629,7 +4862,7 @@
       </div>
       {#if mode === "edit"}
         <div
-          hidden={!showReferences}
+          hidden={!showReferences || workScreenShown}
           id="designer-references-panel"
           class="references-panel"
           style:height={canSizeReferences &&
@@ -4687,7 +4920,7 @@
       bind:element={inspectorPanel}
       generation={workspaceGeneration}
       {commitNumber}
-      visible={showInspector}
+      visible={inspectorShown}
       onclose={() => setInspectorVisibility(false, true)}
       {project}
       {selectedIds}
@@ -4731,7 +4964,7 @@
         canCommit={() => window.innerWidth >= 1100}
       />
     {/if}
-    {#if showInspector && !floatingInspector.floating}
+    {#if inspectorShown && !floatingInspector.floating}
       <PanelResizeHandle
         bind:this={rightResizer}
         side="right"
@@ -5090,9 +5323,7 @@
 {/if}
 <div
   class="toast-anchor"
-  style:--banto-toast-right={showInspector &&
-  mode === "edit" &&
-  !floatingInspector.floating
+  style:--banto-toast-right={inspectorShown && !floatingInspector.floating
     ? `${rightWidth + 16}px`
     : undefined}
   style:--banto-toast-bottom={mode === "edit" ? "40px" : undefined}
@@ -5612,6 +5843,42 @@
   }
   .canvas-stack {
     position: relative;
+  }
+  .canvas-area.covered {
+    display: none;
+  }
+  /* 作業画面（作業タブ設計 §2.1）。中身は後続の区切りで移す。 */
+  .work-screen {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: auto;
+  }
+  .work-screen[hidden] {
+    display: none;
+  }
+  .work-screen h2 {
+    margin: 0 0 12px;
+    font-size: 16px;
+  }
+  .canvas-only-note {
+    margin: 4px 0 8px;
+    font-size: 12px;
+    color: var(--banto-text-muted);
+  }
+  .canvas-only[inert] {
+    opacity: 0.55;
+  }
+  .tab-strip {
+    display: flex;
+    flex-shrink: 0;
+    min-width: 0;
+    background: var(--studio-chrome);
+  }
+  .tab-strip > :global(nav[aria-label="画面タブ"]) {
+    flex: 1 1 auto;
+  }
+  .tab-strip > :global(nav[aria-label="作業タブ"]) {
+    border-bottom: 1px solid var(--banto-border);
   }
   .references-panel {
     position: relative;

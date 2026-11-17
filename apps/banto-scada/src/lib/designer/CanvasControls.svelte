@@ -13,6 +13,7 @@
     onplacing,
     selectionReason,
     onselection,
+    disabled = false,
   }: {
     view: CanvasView;
     showGrid?: boolean;
@@ -25,146 +26,157 @@
     onplacing: () => void;
     selectionReason: string;
     onselection: () => void;
+    disabled?: boolean;
   } = $props();
   const selectionHelpId = $props.id();
 </script>
 
-<div class="group" role="group" aria-label="グリッドとスナップ">
-  <label class="toggle" title="グリッド表示">
-    <input aria-label="グリッド表示" type="checkbox" bind:checked={showGrid} />
-    <svg aria-hidden="true" viewBox="0 0 24 24"
-      ><path d="M3 3H21V21H3ZM3 9H21M3 15H21M9 3V21M15 3V21" /></svg
-    >
-  </label>
-  <label class="toggle" title="グリッドにスナップ（Alt で一時解除）">
-    <input
-      aria-label="グリッドにスナップ"
-      type="checkbox"
-      bind:checked={snapEnabled}
-    />
-    <svg aria-hidden="true" viewBox="0 0 24 24"
-      ><path
-        d="M4 12V4H9V12A3 3 0 0 0 15 12V4H20V12A8 8 0 0 1 4 12ZM4 8H9M15 8H20"
-      /></svg
-    >
-  </label>
-  <div class="banto-field banto-field--stacked toolbar-field">
-    <select
-      class="banto-field-control"
-      aria-label="グリッド間隔"
-      title="グリッド間隔"
-      bind:value={gridSize}
-    >
-      {#each [5, 10, 20, 50] as size}<option value={size}>{size} unit</option
-        >{/each}
-    </select>
+<!-- 作業画面の表示中（W4）は倍率・選択範囲を含むキャンバスの操作をまとめて無効にする。 -->
+<fieldset class="controls" {disabled}>
+  <div class="group" role="group" aria-label="グリッドとスナップ">
+    <label class="toggle" title="グリッド表示">
+      <input
+        aria-label="グリッド表示"
+        type="checkbox"
+        bind:checked={showGrid}
+      />
+      <svg aria-hidden="true" viewBox="0 0 24 24"
+        ><path d="M3 3H21V21H3ZM3 9H21M3 15H21M9 3V21M15 3V21" /></svg
+      >
+    </label>
+    <label class="toggle" title="グリッドにスナップ（Alt で一時解除）">
+      <input
+        aria-label="グリッドにスナップ"
+        type="checkbox"
+        bind:checked={snapEnabled}
+      />
+      <svg aria-hidden="true" viewBox="0 0 24 24"
+        ><path
+          d="M4 12V4H9V12A3 3 0 0 0 15 12V4H20V12A8 8 0 0 1 4 12ZM4 8H9M15 8H20"
+        /></svg
+      >
+    </label>
+    <div class="banto-field banto-field--stacked toolbar-field">
+      <select
+        class="banto-field-control"
+        aria-label="グリッド間隔"
+        title="グリッド間隔"
+        bind:value={gridSize}
+      >
+        {#each [5, 10, 20, 50] as size}<option value={size}>{size} unit</option
+          >{/each}
+      </select>
+    </div>
   </div>
-</div>
-<div class="group" role="group" aria-label="キャンバス表示">
-  <button
-    type="button"
-    aria-label="選択ツール"
-    title="選択ツール：空白ドラッグで範囲選択（Shiftで追加・Escで取消）"
-    aria-pressed={!view.hand && !placing}
-    onclick={() => onhand(false)}
-    ><svg aria-hidden="true" viewBox="0 0 24 24"
-      ><path d="M5 3L19 13L12 14L9 21ZM12 14L16 20" /></svg
-    ></button
-  >
-  <button
-    type="button"
-    aria-label="パンツール"
-    title="パンツール（Space / 中ボタンでもパン）"
-    aria-pressed={view.hand}
-    onclick={() => onhand(true)}
-    ><svg aria-hidden="true" viewBox="0 0 24 24"
-      ><path
-        d="M8 12V5A2 2 0 0 1 12 5V11M12 5V4A2 2 0 0 1 16 4V12M16 7A2 2 0 0 1 20 7V15C20 20 17 22 13 22C10 22 8 20 6 17L3 12A2 2 0 0 1 6 10L8 12"
-      /></svg
-    ></button
-  >
-  <button
-    type="button"
-    aria-label="連続配置ツール"
-    title="連続配置：部品を選び、キャンバスをクリック（Escで終了）"
-    aria-pressed={placing}
-    onclick={onplacing}
-    ><svg aria-hidden="true" viewBox="0 0 24 24"
-      ><path d="M8 3H16V11L19 15V18H5V15L8 11ZM4 21H20M11 6H13M12 5V7" /></svg
-    ></button
-  >
-  <button
-    type="button"
-    aria-label="縮小"
-    title="縮小"
-    disabled={view.scale <= 0.25}
-    onclick={() => onstep(-1)}
-    ><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12H19" /></svg
-    ></button
-  >
-  <div class="banto-field banto-field--stacked toolbar-field">
-    <select
-      class="banto-field-control"
-      aria-label="表示倍率"
-      title="表示倍率"
-      value={view.zoom ?? "fit"}
-      onchange={(event) =>
-        onzoom(
-          event.currentTarget.value === "fit"
-            ? null
-            : Number(event.currentTarget.value),
-        )}
+  <div class="group" role="group" aria-label="キャンバス表示">
+    <button
+      type="button"
+      aria-label="選択ツール"
+      title="選択ツール：空白ドラッグで範囲選択（Shiftで追加・Escで取消）"
+      aria-pressed={!view.hand && !placing}
+      onclick={() => onhand(false)}
+      ><svg aria-hidden="true" viewBox="0 0 24 24"
+        ><path d="M5 3L19 13L12 14L9 21ZM12 14L16 20" /></svg
+      ></button
     >
-      <option value="fit">全体 ({Math.round(view.fit * 100)}%)</option>
-      {#if view.zoom !== null && !zoomLevels.some((level) => level === view.zoom)}
-        <option value={view.zoom}>{Math.round(view.scale * 100)}%</option>
-      {/if}
-      {#each zoomLevels as level}<option value={level}>{level * 100}%</option
-        >{/each}
-    </select>
+    <button
+      type="button"
+      aria-label="パンツール"
+      title="パンツール（Space / 中ボタンでもパン）"
+      aria-pressed={view.hand}
+      onclick={() => onhand(true)}
+      ><svg aria-hidden="true" viewBox="0 0 24 24"
+        ><path
+          d="M8 12V5A2 2 0 0 1 12 5V11M12 5V4A2 2 0 0 1 16 4V12M16 7A2 2 0 0 1 20 7V15C20 20 17 22 13 22C10 22 8 20 6 17L3 12A2 2 0 0 1 6 10L8 12"
+        /></svg
+      ></button
+    >
+    <button
+      type="button"
+      aria-label="連続配置ツール"
+      title="連続配置：部品を選び、キャンバスをクリック（Escで終了）"
+      aria-pressed={placing}
+      onclick={onplacing}
+      ><svg aria-hidden="true" viewBox="0 0 24 24"
+        ><path d="M8 3H16V11L19 15V18H5V15L8 11ZM4 21H20M11 6H13M12 5V7" /></svg
+      ></button
+    >
+    <button
+      type="button"
+      aria-label="縮小"
+      title="縮小"
+      disabled={view.scale <= 0.25}
+      onclick={() => onstep(-1)}
+      ><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12H19" /></svg
+      ></button
+    >
+    <div class="banto-field banto-field--stacked toolbar-field">
+      <select
+        class="banto-field-control"
+        aria-label="表示倍率"
+        title="表示倍率"
+        value={view.zoom ?? "fit"}
+        onchange={(event) =>
+          onzoom(
+            event.currentTarget.value === "fit"
+              ? null
+              : Number(event.currentTarget.value),
+          )}
+      >
+        <option value="fit">全体 ({Math.round(view.fit * 100)}%)</option>
+        {#if view.zoom !== null && !zoomLevels.some((level) => level === view.zoom)}
+          <option value={view.zoom}>{Math.round(view.scale * 100)}%</option>
+        {/if}
+        {#each zoomLevels as level}<option value={level}>{level * 100}%</option
+          >{/each}
+      </select>
+    </div>
+    <button
+      type="button"
+      aria-label="拡大"
+      title="拡大"
+      disabled={view.scale >= 4}
+      onclick={() => onstep(1)}
+      ><svg aria-hidden="true" viewBox="0 0 24 24"
+        ><path d="M5 12H19M12 5V19" /></svg
+      ></button
+    >
+    <button
+      type="button"
+      aria-label="全体表示"
+      title="全体表示"
+      onclick={() => onzoom(null)}
+      ><svg aria-hidden="true" viewBox="0 0 24 24"
+        ><path d="M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M8 8H16V16H8Z" /></svg
+      ></button
+    >
+    <button
+      type="button"
+      aria-label="選択範囲を表示"
+      aria-describedby={selectionHelpId}
+      title={selectionReason || "選択範囲を表示（F）"}
+      disabled={!!selectionReason}
+      onpointerdown={(event) => {
+        if (event.button === 0) event.preventDefault();
+      }}
+      onclick={onselection}
+      ><svg aria-hidden="true" viewBox="0 0 24 24"
+        ><path
+          d="M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M8 9H16V15H8ZM6 12H8M16 12H18M12 6V9M12 15V18"
+        /></svg
+      ></button
+    >
+    <span id={selectionHelpId} hidden
+      >{selectionReason ||
+        "選択した図形の表示可能部分に倍率と中心を合わせます"}</span
+    >
   </div>
-  <button
-    type="button"
-    aria-label="拡大"
-    title="拡大"
-    disabled={view.scale >= 4}
-    onclick={() => onstep(1)}
-    ><svg aria-hidden="true" viewBox="0 0 24 24"
-      ><path d="M5 12H19M12 5V19" /></svg
-    ></button
-  >
-  <button
-    type="button"
-    aria-label="全体表示"
-    title="全体表示"
-    onclick={() => onzoom(null)}
-    ><svg aria-hidden="true" viewBox="0 0 24 24"
-      ><path d="M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M8 8H16V16H8Z" /></svg
-    ></button
-  >
-  <button
-    type="button"
-    aria-label="選択範囲を表示"
-    aria-describedby={selectionHelpId}
-    title={selectionReason || "選択範囲を表示（F）"}
-    disabled={!!selectionReason}
-    onpointerdown={(event) => {
-      if (event.button === 0) event.preventDefault();
-    }}
-    onclick={onselection}
-    ><svg aria-hidden="true" viewBox="0 0 24 24"
-      ><path
-        d="M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M8 9H16V15H8ZM6 12H8M16 12H18M12 6V9M12 15V18"
-      /></svg
-    ></button
-  >
-  <span id={selectionHelpId} hidden
-    >{selectionReason ||
-      "選択した図形の表示可能部分に倍率と中心を合わせます"}</span
-  >
-</div>
+</fieldset>
 
 <style>
+  .controls {
+    display: contents;
+  }
   .group {
     display: flex;
     align-items: center;

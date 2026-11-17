@@ -294,6 +294,13 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 - 画面の追加はAppの`addScreen`が唯一の入口で、`ScreenTabs`の「＋」（`onadd`）、`TreeSection`の`action`（画面見出しの「＋」）、画面の⋮メニューから呼ぶ。画面の複製・並べ替え・削除は画面一覧の行と画面タブの⋮メニュー（`screenContextItems`）だけが入口（左の「画面管理」のボタンは Issue #223 WT0 で削除）。e2e は `e2e/helpers/designer.ts` の `addScreen`・`currentScreenAction` を使う。
 - `e2e/canvas-area.spec.ts`が1280×800／1440×900の寸法・重ね・素通し・タグ参照の開閉・画面の追加・編集⇄プレビューの高さ差を確認する。
 
+## メイン領域の作業タブ（Issue #223 WT1a）
+
+- `designer/controllers/work-tabs.svelte.ts`の`createWorkTabsController`が、開いている作業タブ（「機器」「警報の定義」「プロジェクト設定」の各1枚）と選択中のタブ（`null`は画面タブ）を所有する。利用者の操作の入口`open`／`select`／`close`はAppの`transition`（`drafts.allow`）を1回だけ通し、`selectNow`はゲートを通さない同期の切替（`revealDraftForm`・Undo／Redo・`edit()`や`allow`済みactionの中だけ）。`reset`はProjectの採用（`adopt`）で全部閉じる。`changing`は書換え直前に同期で呼ぶ。
+- Appは導出値だけを持つ: `workTabsShown`（編集モード、かつSymbol定義の編集中でない）、`workScreenShown`、`canvasActive`（キャンバスに向く操作の可否）、`inspectorShown`（`showInspector && canvasActive`。`showInspector`と配置の保存は書き換えない）。`workTabChanging`がキャンバスを隠す直前の`stopPlacement`・`cancelInteractions`・`rememberEditView`と、画面タブへ戻ったときの`restoreEditView`（同じ画面で、タブの選択・閉じる・画面を開く・Undoのときだけ）とフォーカス移動を行う。`showCanvas`（`selectNow(null)`）は画面・定義の編集対象が変わる処理とInspector・画面設定・タグ置換へのrevealの前に呼ぶ。
+- 無効化はaction builderの`host.editing.canvasBlocked`で群ごと（履歴以外のtoolbar、clipboard、selection／folder context、挿入、画像を配置）、`host.view.workScreenShown`でInspector・タグ参照・ルーラーの表示項目、Appの`clipboardScope`とDelete・F・F2・Ctrl+A／G／D、`CanvasControls`の`disabled`、左の「レイヤー」「部品」の`inert`で行う。表示は`designer/WorkTabs.svelte`（`nav aria-label="作業タブ"`、×はタブの外の兄弟）と`.canvas-stack`内の`[data-work-screen]`（非選択は`hidden`で保持）。
+- 試験の入口: `controllers/work-tabs.svelte.test.ts`（開閉・切替・戻り先・ゲート・`selectNow`）と`e2e/work-tabs.spec.ts`（フォーカス、W4の無効、倍率・中心・選択とプレビューの往復、定義の編集中、Inspectorの非表示、Undoでの切替、未適用入力の確定と不正入力の拒否）。
+
 ## 往復での選択と表示位置の保持（UX精査 F-1）
 
 - 編集→表示プレビュー→編集と、画面→Symbol 定義→「画面へ戻る」の往復で、Appの`rememberEditView`／`restoreEditView`が画面ごとの選択ID・倍率・表示中心を控えて戻す。控えは`workspaceGeneration`ごとで、Project の読込で捨てる。選択と表示位置は Undo 履歴に入れない。

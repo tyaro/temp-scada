@@ -7,6 +7,7 @@ import type { EditCommand, AddKind } from "../../editor";
 import type { ScreenObject, Point } from "../../project";
 import { canFlip } from "../../flip";
 import { BUILTIN_PARTS } from "../../builtin-symbols";
+import type { WorkTabKind } from "./work-tabs.svelte";
 const FLIP_LABELS = ["左右反転", "上下反転"];
 
 interface PanelVisibility {
@@ -27,6 +28,11 @@ export interface DesignerActionsHost {
   };
   editing: {
     readonly editBlocked: boolean;
+    /**
+     * 作業タブの表示中（`canvasActive` でない）。キャンバス・レイヤー・配置を
+     * 対象にする操作を群ごと無効にする（作業タブ設計 W4）。Undo／Redo は除く。
+     */
+    readonly canvasBlocked: boolean;
     /** 警報の小札は警報の定義があるときだけ置ける。 */
     readonly hasAlarmDefinitions: boolean;
     readonly mutationBlocked: boolean;
@@ -104,6 +110,11 @@ export interface DesignerActionsHost {
     readonly showMinimap: boolean;
     readonly showMenubar: boolean;
     readonly previousPanels: boolean;
+    /** 作業タブを選んでいて作業画面を表示している（作業タブ設計 W9）。 */
+    readonly workScreenShown: boolean;
+    /** 作業タブを開けない理由（W8 の Symbol 定義の編集中など）。開けるときは null。 */
+    readonly workTabReason: string | null;
+    openWorkTab(kind: WorkTabKind): void;
     showGrid: boolean;
     snapEnabled: boolean;
     helpOpen: boolean;
@@ -133,7 +144,16 @@ export interface DesignerActionsHost {
 
 /** Pure action builders. Deferred run callbacks read current host values, never frozen IDs. */
 export function createDesignerActions(host: DesignerActionsHost) {
+  /** W4: 作業タブの表示中はキャンバス向けの群をまとめて無効にする。 */
+  function canvasGate<T extends { disabled?: boolean }>(items: T[]): T[] {
+    return host.editing.canvasBlocked
+      ? items.map((item) => ({ ...item, disabled: true }))
+      : items;
+  }
   function folderContext(): ContextAction[] {
+    return canvasGate(folderItems());
+  }
+  function folderItems(): ContextAction[] {
     return [
       {
         label: "子フォルダーを作成",
@@ -205,6 +225,13 @@ export function createDesignerActions(host: DesignerActionsHost) {
     );
   }
   function editGroups(): ToolbarGroup[] {
+    return editGroupItems().map((group) =>
+      group.id === "history"
+        ? group
+        : { ...group, items: canvasGate(group.items) },
+    );
+  }
+  function editGroupItems(): ToolbarGroup[] {
     return [
       {
         id: "history",
@@ -478,7 +505,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
     ];
   }
   function clipboardItems(): ContextAction[] {
-    return [
+    return canvasGate([
       {
         label: "切り取り",
         disabled:
@@ -500,9 +527,15 @@ export function createDesignerActions(host: DesignerActionsHost) {
         disabled: host.editing.editBlocked || host.clipboard.busy,
         run: () => host.clipboard.action("paste"),
       },
-    ];
+    ]);
   }
   function selectionContext(
+    editToolbarGroups: ToolbarGroup[],
+    clipboardItems: ContextAction[],
+  ): ContextAction[] {
+    return canvasGate(selectionItems(editToolbarGroups, clipboardItems));
+  }
+  function selectionItems(
     editToolbarGroups: ToolbarGroup[],
     clipboardItems: ContextAction[],
   ): ContextAction[] {
@@ -732,7 +765,10 @@ export function createDesignerActions(host: DesignerActionsHost) {
             : []),
           {
             label: "画像を配置",
-            disabled: host.editing.editBlocked || host.files.imageBusy,
+            disabled:
+              host.editing.editBlocked ||
+              host.editing.canvasBlocked ||
+              host.files.imageBusy,
             run: host.files.openPlacement,
           },
           {
@@ -780,8 +816,15 @@ export function createDesignerActions(host: DesignerActionsHost) {
             run: host.view.showSelection,
           },
           {
+            label: host.view.workTabReason
+              ? `プロジェクト設定（${host.view.workTabReason}）`
+              : "プロジェクト設定",
+            disabled: host.view.menuBlocked || !!host.view.workTabReason,
+            run: () => host.view.openWorkTab("project-settings"),
+          },
+          {
             label: host.view.showRulers ? "ルーラーを隠す" : "ルーラーを表示",
-            disabled: host.view.mode !== "edit",
+            disabled: host.view.mode !== "edit" || host.view.workScreenShown,
             run: host.view.toggleRulers,
           },
           {
@@ -797,7 +840,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
             label: host.view.showReferences
               ? "タグ参照一覧を隠す"
               : "タグ参照一覧を表示",
-            disabled: host.view.mode !== "edit",
+            disabled: host.view.mode !== "edit" || host.view.workScreenShown,
             run: () =>
               host.view.setAuxPanelVisibility(
                 { references: !host.view.showReferences },
@@ -805,11 +848,16 @@ export function createDesignerActions(host: DesignerActionsHost) {
               ),
           },
           {
-            label: host.view.previousPanels
-              ? "補助パネルを元の表示に戻す"
-              : Object.values(host.view.panelVisibility()).some(Boolean)
+            // W9: 作業画面の表示中は左ペインだけに作用する。
+            label: host.view.workScreenShown
+              ? host.view.showSidebar
                 ? "補助パネルをすべて隠す"
-                : "補助パネルをすべて表示",
+                : "補助パネルをすべて表示"
+              : host.view.previousPanels
+                ? "補助パネルを元の表示に戻す"
+                : Object.values(host.view.panelVisibility()).some(Boolean)
+                  ? "補助パネルをすべて隠す"
+                  : "補助パネルをすべて表示",
             disabled: host.view.mode !== "edit",
             run: host.view.toggleAuxPanels,
           },
@@ -817,7 +865,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
             label: host.view.showInspector
               ? "プロパティを隠す"
               : "プロパティを表示",
-            disabled: host.view.mode !== "edit",
+            disabled: host.view.mode !== "edit" || host.view.workScreenShown,
             run: () =>
               host.view.setInspectorVisibility(!host.view.showInspector, true),
           },
@@ -871,7 +919,8 @@ export function createDesignerActions(host: DesignerActionsHost) {
             ? [
                 {
                   label: "プロパティを前面に表示",
-                  disabled: host.editing.editBlocked,
+                  disabled:
+                    host.editing.editBlocked || host.view.workScreenShown,
                   run: () => {
                     host.view.setInspectorVisibility(true, true);
                     host.view.inspectorLayout?.front();
@@ -883,6 +932,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
                     : "プロパティを浮動にする",
                   disabled:
                     host.editing.editBlocked ||
+                    host.view.workScreenShown ||
                     (!host.view.inspectorLayout.preferredFloating &&
                       !host.view.inspectorLayout.supported),
                   run: () => host.view.inspectorLayout?.toggle(),
@@ -891,6 +941,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
                   label: "プロパティ配置を保存",
                   disabled:
                     host.editing.editBlocked ||
+                    host.view.workScreenShown ||
                     host.view.inspectorLayout.saving,
                   run: () => {
                     void host.view.inspectorLayout?.save();
@@ -900,6 +951,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
                   label: "保存したプロパティ配置に戻す",
                   disabled:
                     host.editing.editBlocked ||
+                    host.view.workScreenShown ||
                     !host.view.inspectorLayout.hasSaved,
                   run: () => {
                     host.view.inspectorLayout?.restore();
@@ -931,7 +983,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
           },
           {
             label: "タグ参照パネルの高さを標準に戻す",
-            disabled: host.view.mode !== "edit",
+            disabled: host.view.mode !== "edit" || host.view.workScreenShown,
             run: host.view.resetReferenceHeight,
           },
           {
@@ -963,7 +1015,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
       },
       {
         label: "挿入",
-        items: [
+        items: canvasGate([
           {
             label: "トレンド定義・配置",
             disabled: host.editing.editBlocked || host.selection.definition,
@@ -1010,7 +1062,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
               });
             },
           })),
-        ],
+        ]),
       },
       {
         label: "ツール",
