@@ -229,7 +229,7 @@
             "days",
             "保持の日数",
             "日",
-            `${ALARM_SETTINGS_RANGES.days[0]}〜${ALARM_SETTINGS_RANGES.days[1]} 日`,
+            `${ALARM_SETTINGS_RANGES.days[0]}〜${ALARM_SETTINGS_RANGES.days[1].toLocaleString("ja-JP")} 日`,
           )}
         {:else}
           {@render field("count", "保持の件数", "件", "10,000〜10,000,000 件")}
