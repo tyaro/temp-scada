@@ -1,7 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import sample from "../examples/read-presentation.project.json" with { type: "json" };
 import { readFile } from "node:fs/promises";
-import { selectPanel } from "./helpers/designer";
+import { openProjectSettings } from "./helpers/designer";
 import { openProject } from "./helpers/project-files";
 
 const main = sample.screens[0];
@@ -28,7 +28,7 @@ async function open(page: Page) {
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
   });
-  await selectPanel(page, "プロジェクト");
+  await openProjectSettings(page);
 }
 async function save(page: Page) {
   const downloading = page.waitForEvent("download");
@@ -39,6 +39,10 @@ async function save(page: Page) {
 }
 const form = (page: Page) =>
   page.getByRole("form", { name: "運転表示の設定", exact: true });
+const screenTab = (page: Page, name: string) =>
+  page
+    .getByRole("navigation", { name: "画面タブ", exact: true })
+    .getByRole("button", { name, exact: true });
 
 test("operator frame settings save, block screen deletion and clear", async ({
   page,
@@ -74,6 +78,7 @@ test("operator frame settings save, block screen deletion and clear", async ({
   expect((await save(page)).screens).toHaveLength(3);
 
   // 同じ画面を開始とヘッダーにはできない。
+  await openProjectSettings(page);
   await form(page).getByLabel("フッター画面", { exact: true }).selectOption({
     label: main.name,
   });
@@ -92,30 +97,33 @@ test("operator frame settings save, block screen deletion and clear", async ({
   void common;
 });
 
-test("pending operator frame selections survive an unrelated numeric edit", async ({
+test("pending operator frame selections apply when leaving the work tab and keep later edits", async ({
   page,
 }) => {
   test.setTimeout(90_000);
   await open(page);
   const target = main.objects.find((object) => object.shape.type === "text")!;
+  // 未適用の選択は、画面タブへ切り替えると確認なしで確定する（W2）。
+  await form(page).getByLabel("ヘッダー画面", { exact: true }).selectOption({
+    label: "枠用ヘッダー",
+  });
+  await screenTab(page, main.name).click();
+  await expect(
+    page.getByRole("dialog", { name: "未適用の入力があります" }),
+  ).toHaveCount(0);
+  await expect(form(page)).toBeHidden();
   await page
     .locator(`.sheet > svg [data-object-id="${target.id}"]`)
     .first()
     .click({ force: true });
   const x = page.getByLabel("X", { exact: true });
   await expect(x).toBeVisible();
-  // 未適用のまま、選択した配置の数値を Inspector で確定する。
-  await form(page).getByLabel("ヘッダー画面", { exact: true }).selectOption({
-    label: "枠用ヘッダー",
-  });
   await x.fill(String(target.x + 10));
   await x.press("Enter");
+  await openProjectSettings(page);
   await expect(
     form(page).getByLabel("ヘッダー画面", { exact: true }),
   ).toHaveValue("0199f600-0000-7000-8000-000000000a01");
-  await form(page)
-    .getByRole("button", { name: "運転表示の設定を適用", exact: true })
-    .click();
   const saved = await save(page);
   expect(saved.operatorFrame).toEqual({
     headerScreenId: "0199f600-0000-7000-8000-000000000a01",
@@ -125,7 +133,7 @@ test("pending operator frame selections survive an unrelated numeric edit", asyn
   ).toBe(target.x + 10);
 });
 
-test("invalid operator frame drafts reveal the project panel on save", async ({
+test("invalid operator frame drafts keep the work tab on switch and save", async ({
   page,
 }) => {
   test.setTimeout(90_000);
@@ -134,10 +142,12 @@ test("invalid operator frame drafts reveal the project panel on save", async ({
     await form(page).getByLabel(name, { exact: true }).selectOption({
       label: main.name,
     });
-  await selectPanel(page, "レイヤー");
+  // 不正な選択は画面タブへの切替を拒否し、作業タブのフォームを出したままにする。
+  await screenTab(page, main.name).click();
   await expect(
     form(page).getByLabel("ヘッダー画面", { exact: true }),
-  ).toBeHidden();
+  ).toBeVisible();
+  await expect(page.getByTestId("project-status")).toContainText("別の画面");
   await page.keyboard.press("Control+s");
   await expect(
     form(page).getByLabel("ヘッダー画面", { exact: true }),

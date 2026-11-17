@@ -84,7 +84,8 @@ export interface DesignerActionsHost {
     /** The desktop's "save as" (the browser has none). */
     readonly saveAs?: () => void;
     openPlacement(): void;
-    focusProjectName(): void;
+    /** 作業タブ「プロジェクト設定」を開き、プロジェクト名へフォーカスする（W12）。 */
+    renameProject(): void;
     openProcessSample(): void;
     openSymbolSample(): void;
     openPaintSample(): void;
@@ -772,9 +773,11 @@ export function createDesignerActions(host: DesignerActionsHost) {
             run: host.files.openPlacement,
           },
           {
-            label: "プロジェクト名を変更",
-            disabled: host.editing.editBlocked,
-            run: host.files.focusProjectName,
+            label: host.view.workTabReason
+              ? `プロジェクト名を変更（${host.view.workTabReason}）`
+              : "プロジェクト名を変更",
+            disabled: host.editing.editBlocked || !!host.view.workTabReason,
+            run: host.files.renameProject,
           },
           {
             label: host.files.alarmSettingsReason

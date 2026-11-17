@@ -55,6 +55,9 @@ test("Project name applies metadata only, preserves drafts, trims no-ops and rou
     buffer: Buffer.from(JSON.stringify(result)),
   });
   await expect(page.locator("h1")).toHaveText("原水供給設備");
+  // Project の採用で作業タブは閉じる（W7）。開き直すと読み込んだ名前が出る。
+  await expect(name).toHaveCount(0);
+  await fileCommand(page, "プロジェクト名を変更");
   await expect(name).toHaveValue("原水供給設備");
 });
 test("Project draft rejects invalid names on replacement and never submits IME Enter", async ({

@@ -53,6 +53,11 @@ export async function chooseMenuItem(
   }
 }
 
+/** 作業タブ「プロジェクト設定」を表示メニューから開く（開いていれば選ぶ）。 */
+export async function openProjectSettings(page: Page) {
+  await chooseMenuItem(page, "表示", "プロジェクト設定");
+}
+
 /** File operations remain available with the menubar or sidebar hidden. */
 export async function fileCommand(page: Page, name: string) {
   await chooseMenuItem(page, "ファイル", name);

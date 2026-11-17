@@ -288,6 +288,7 @@
     createWorkTabsController,
     workTabLabel,
     type WorkTabChange,
+    type WorkTabKind,
   } from "./lib/designer/controllers/work-tabs.svelte";
   import CanvasControls from "./lib/designer/CanvasControls.svelte";
   import TreeSection from "./lib/designer/TreeSection.svelte";
@@ -313,17 +314,19 @@
       if (parent instanceof HTMLDetailsElement) parent.open = true;
   }
   function revealDraftForm(form: HTMLFormElement) {
-    // W6: Inspector・画面設定・タグの置換（下部の帯）へ戻すときは、先に画面タブを
-    // ゲートなしで選ぶ（ゲートを通すと allow→apply→reveal が繰り返す）。
-    // 左ペインのフォームは WT1b 以降の区切りで作業画面へ移すときに書き換える。
+    // W6: 作業画面のフォームはその作業タブを、Inspector・画面設定・タグの置換
+    // （下部の帯）へ戻すときは先に画面タブを、ゲートなしで選ぶ（ゲートを通すと
+    // allow→apply→reveal が繰り返す）。左ペインに残るフォームは WT2・WT3 で
+    // 作業画面へ移すときに書き換える。
+    const workScreen = form.closest<HTMLElement>("[data-work-screen]");
+    if (workScreen) {
+      workTabs.selectNow(workScreen.dataset.workScreen as WorkTabKind);
+      return;
+    }
     if (
-      ![
-        "project",
-        "operator-frame",
-        "alarm-definition",
-        "equipment",
-        "equipment-type",
-      ].includes(form.dataset.editorForm ?? "")
+      !["alarm-definition", "equipment", "equipment-type"].includes(
+        form.dataset.editorForm ?? "",
+      )
     )
       showCanvas();
     if (form.dataset.editorForm === "binding-replacement") {
@@ -336,13 +339,9 @@
       revealScreenSettings = true;
       setInspectorVisibility(true);
     } else if (
-      [
-        "project",
-        "operator-frame",
-        "alarm-definition",
-        "equipment",
-        "equipment-type",
-      ].includes(form.dataset.editorForm ?? "")
+      ["alarm-definition", "equipment", "equipment-type"].includes(
+        form.dataset.editorForm ?? "",
+      )
     ) {
       setAuxPanelVisibility({ sidebar: true });
       activePanel = "project";
@@ -2405,19 +2404,34 @@
   function screenProperties(event: SubmitEvent) {
     submitForm(event);
   }
+  /**
+   * W12: 作業タブ「プロジェクト設定」を選び、部品のマウント（`tick`）を待って
+   * プロジェクト名へフォーカスする。ゲートは呼び出し側で通過済み（入力検証の
+   * 失敗からの reveal、または `renameProject`）。
+   */
   function focusProjectName() {
+    if (!workTabsShown) return;
     const generation = workspaceGeneration;
-    setAuxPanelVisibility({ sidebar: true });
-    activePanel = "project";
+    workTabs.selectNow("project-settings");
     void tick().then(() => {
-      if (generation !== workspaceGeneration || mode !== "edit") return;
+      if (
+        generation !== workspaceGeneration ||
+        !workTabsShown ||
+        workTabs.selected !== "project-settings"
+      )
+        return;
       const input = document.querySelector<HTMLInputElement>(
-        'form[data-editor-form="project"] input[name="name"]',
+        '[data-work-screen="project-settings"] form[data-editor-form="project"] input[name="name"]',
       );
-      if (input) expandTreeAncestors(input);
       input?.focus();
       input?.select();
     });
+  }
+  /** メニュー「プロジェクト名を変更」。表示が切り替わるときだけゲートを通す（W2）。 */
+  function renameProject() {
+    if (menuBlocked || !workTabsShown) return;
+    if (workTabs.selected === "project-settings") focusProjectName();
+    else transition(focusProjectName);
   }
   function renamePlacement(id: string) {
     const generation = workspaceGeneration,
@@ -3815,7 +3829,7 @@
       save: projectFiles.save,
       saveAs: projectFiles.native ? projectFiles.saveAs : undefined,
       openPlacement: imageImport.openPlacement,
-      focusProjectName,
+      renameProject,
       openProcessSample: showProcessSample,
       openSymbolSample: () =>
         projectFiles.requestReplacement(
@@ -4513,70 +4527,22 @@
                   !!activeDefinition}
               />{/key}
           </TreeSection>
-          <TreeSection label="プロジェクト設定">
-            <button
-              disabled={editBlocked || !!activeDefinition}
-              onclick={openRecordingPlan}>記録希望設定</button
-            >
-            {#key `${workspaceGeneration}:${project.manifest.projectId}`}
-              <form
-                use:drafts.track={{ name: project.manifest.name }}
-                data-editor-form="project"
-                aria-label="プロジェクト情報"
-                onsubmit={submitForm}
-                oncompositionstart={(event) =>
-                  composingForms.add(event.currentTarget)}
-                oncompositionend={(event) =>
-                  composingForms.delete(event.currentTarget)}
+          <TreeSection label="設定">
+            <div class="settings-rows">
+              <button
+                disabled={editBlocked || !!activeDefinition}
+                onclick={() => workTabs.open("project-settings")}
+                >プロジェクト設定</button
               >
-                <label class="banto-field banto-field--stacked"
-                  ><span class="banto-field-label">プロジェクト名</span><input
-                    class="banto-field-control"
-                    onkeydown={nameFormKey}
-                    name="name"
-                    required
-                    maxlength="200"
-                  /></label
-                >
-                <button type="submit">プロジェクト名を適用</button>
-              </form>
-            {/key}
+              <button
+                disabled={editBlocked || !!activeDefinition}
+                onclick={openRecordingPlan}>記録希望設定</button
+              >
+            </div>
+            {#if activeDefinition}
+              <p class="hint">Symbol 定義の編集中は使えません。</p>
+            {/if}
             {#if !activeDefinition}
-              <h2>運転表示の設定</h2>
-              <!-- 確定値は drafts.track の update で同期し、関係のない編集で未適用の選択を消さない。 -->
-              {#key `${workspaceGeneration}:${project.manifest.projectId}`}
-                <form
-                  use:drafts.track={{
-                    startScreenId: project.operatorFrame?.startScreenId ?? "",
-                    headerScreenId: project.operatorFrame?.headerScreenId ?? "",
-                    footerScreenId: project.operatorFrame?.footerScreenId ?? "",
-                  }}
-                  data-editor-form="operator-frame"
-                  aria-label="運転表示の設定"
-                  onsubmit={submitForm}
-                >
-                  {#each [["startScreenId", "開始画面"], ["headerScreenId", "ヘッダー画面"], ["footerScreenId", "フッター画面"]] as [key, label]}
-                    <label class="banto-field banto-field--stacked"
-                      ><span class="banto-field-label">{label}</span><select
-                        class="banto-field-control"
-                        name={key}
-                        aria-label={label}
-                        disabled={editBlocked}
-                        ><option value="">なし</option>
-                        {#each project.screens as target (target.id)}<option
-                            value={target.id}>{target.name}</option
-                          >{/each}</select
-                      ></label
-                    >
-                  {/each}
-                  <p class="hint">
-                    開始・ヘッダー・フッターは別の画面にします。ヘッダー・フッターの画面は画面切替ボタンの行き先にできません。
-                  </p>
-                  <button type="submit" disabled={editBlocked}
-                    >運転表示の設定を適用</button
-                  >
-                </form>
-              {/key}
               <h2>警報の設定</h2>
               <AlarmSettings
                 {project}
@@ -4698,6 +4664,74 @@
           <h2 id={`work-screen-title-${kind}`} tabindex="-1">
             {workTabLabel(kind)}
           </h2>
+          {#if kind === "project-settings"}
+            <div class="project-settings-work">
+              {#key `${workspaceGeneration}:${project.manifest.projectId}`}
+                <form
+                  use:drafts.track={{ name: project.manifest.name }}
+                  data-editor-form="project"
+                  aria-label="プロジェクト情報"
+                  onsubmit={submitForm}
+                  oncompositionstart={(event) =>
+                    composingForms.add(event.currentTarget)}
+                  oncompositionend={(event) =>
+                    composingForms.delete(event.currentTarget)}
+                >
+                  <label class="banto-field banto-field--stacked"
+                    ><span class="banto-field-label">プロジェクト名</span><input
+                      class="banto-field-control"
+                      onkeydown={nameFormKey}
+                      name="name"
+                      required
+                      maxlength="200"
+                    /></label
+                  >
+                  <button type="submit">プロジェクト名を適用</button>
+                </form>
+              {/key}
+              <h3>運転表示の設定</h3>
+              <!-- 確定値は drafts.track の update で同期し、関係のない編集で未適用の選択を消さない。 -->
+              {#key `${workspaceGeneration}:${project.manifest.projectId}`}
+                <form
+                  use:drafts.track={{
+                    startScreenId: project.operatorFrame?.startScreenId ?? "",
+                    headerScreenId: project.operatorFrame?.headerScreenId ?? "",
+                    footerScreenId: project.operatorFrame?.footerScreenId ?? "",
+                  }}
+                  data-editor-form="operator-frame"
+                  aria-label="運転表示の設定"
+                  onsubmit={submitForm}
+                >
+                  {#each [["startScreenId", "開始画面"], ["headerScreenId", "ヘッダー画面"], ["footerScreenId", "フッター画面"]] as [key, label]}
+                    <label class="banto-field banto-field--stacked"
+                      ><span class="banto-field-label">{label}</span><select
+                        class="banto-field-control"
+                        name={key}
+                        aria-label={label}
+                        disabled={editBlocked}
+                        ><option value="">なし</option>
+                        {#each project.screens as target (target.id)}<option
+                            value={target.id}>{target.name}</option
+                          >{/each}</select
+                      ></label
+                    >
+                  {/each}
+                  <p class="hint">
+                    開始・ヘッダー・フッターは別の画面にします。ヘッダー・フッターの画面は画面切替ボタンの行き先にできません。
+                  </p>
+                  <button type="submit" disabled={editBlocked}
+                    >運転表示の設定を適用</button
+                  >
+                </form>
+              {/key}
+              <h3>記録希望設定</h3>
+              <button
+                class="open-recording-plan"
+                disabled={editBlocked}
+                onclick={openRecordingPlan}>記録希望設定を開く</button
+              >
+            </div>
+          {/if}
         </div>
       {/each}
       <div class="canvas-area" class:covered={workScreenShown}>
@@ -5847,11 +5881,12 @@
   .canvas-area.covered {
     display: none;
   }
-  /* 作業画面（作業タブ設計 §2.1）。中身は後続の区切りで移す。 */
+  /* 作業画面（作業タブ設計 §2.1）。 */
   .work-screen {
     flex: 1 1 0;
     min-height: 0;
     overflow: auto;
+    padding: 16px 20px;
   }
   .work-screen[hidden] {
     display: none;
@@ -5859,6 +5894,31 @@
   .work-screen h2 {
     margin: 0 0 12px;
     font-size: 16px;
+  }
+  /* 作業タブ「プロジェクト設定」（§2.2）。設定を縦に並べ、幅は入力に合わせて抑える。 */
+  .project-settings-work {
+    max-width: 520px;
+  }
+  .project-settings-work h3 {
+    margin: 20px 0 4px;
+    font-size: 14px;
+  }
+  .project-settings-work form {
+    display: grid;
+    gap: 8px;
+    margin: 8px 0 12px;
+  }
+  .project-settings-work form label {
+    display: grid;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--banto-text-muted);
+    min-width: 0;
+  }
+  .project-settings-work form button,
+  .project-settings-work .open-recording-plan {
+    width: auto;
+    justify-self: start;
   }
   .canvas-only-note {
     margin: 4px 0 8px;
