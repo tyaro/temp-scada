@@ -1,3 +1,4 @@
+import { createRequestOwner } from "@banto/admin-core";
 import { untrack } from "svelte";
 import {
   encodeAssetClipboard,
@@ -55,8 +56,18 @@ export interface ClipboardHost {
 /** Preserve browser gesture timing while owning clipboard requests and cancellation. */
 export function createClipboardController(host: ClipboardHost) {
   const clipboardSession = crypto.randomUUID();
-  let clipboardBusy = $state(false);
-  let clipboardEpoch = 0;
+  // Two keys of one owner (Banto #436):
+  // - TARGET: taken when the gesture arrives. It goes stale when the owner
+  //   scope (screen, mode, generation, ...) changes, including while the run
+  //   waits for a draft decision. It is never busy.
+  // - RUN: the running copy / cut / paste. It is not invalidated by a scope
+  //   change: a stale run still finishes its OS clipboard work (which cannot
+  //   be rolled back), and new actions wait for it so two writes never race.
+  //   Only the TARGET check keeps the stale run from touching the model.
+  const requests = createRequestOwner();
+  const TARGET = "target";
+  const RUN = "run";
+  const clipboardBusy = () => requests.busy(RUN);
   let lastPaste: { key: string; count: number } | undefined;
   function clipboardAction(
     kind: "copy" | "cut" | "paste",
@@ -64,15 +75,14 @@ export function createClipboardController(host: ClipboardHost) {
   ) {
     if (
       host.owner.busy ||
-      clipboardBusy ||
+      clipboardBusy() ||
       host.owner.mode !== "edit" ||
       host.draft.pending ||
       host.owner.replacing
     )
       return;
     const target = host.owner.screenId,
-      generation = host.owner.generation,
-      epoch = clipboardEpoch;
+      generation = host.owner.generation;
     const pasteIntent = {
       bounds: { ...host.viewport.bounds },
       size: {
@@ -104,16 +114,18 @@ export function createClipboardController(host: ClipboardHost) {
       );
       return;
     }
+    const scope = requests.begin(TARGET);
+    scope.finish();
     const validTarget = () =>
-      epoch === clipboardEpoch &&
+      scope.isCurrent() &&
       host.owner.mode === "edit" &&
       host.owner.screenId === target &&
       host.owner.generation === generation &&
       !host.owner.busy &&
       !host.owner.replacing;
     const run = async () => {
-      if (!validTarget() || clipboardBusy) return;
-      clipboardBusy = true;
+      if (!validTarget() || clipboardBusy()) return;
+      const request = requests.begin(RUN);
       try {
         const revision = host.project.manifest.projectRevision;
         const origin = `${clipboardSession}:${generation}`;
@@ -237,7 +249,7 @@ export function createClipboardController(host: ClipboardHost) {
           `クリップボード操作に失敗しました: ${error instanceof Error ? error.message : String(error)}`,
         );
       } finally {
-        clipboardBusy = false;
+        request.finish();
       }
     };
     if (host.allow(() => void run())) void run();
@@ -248,14 +260,13 @@ export function createClipboardController(host: ClipboardHost) {
   );
   $effect(() => {
     clipboardOwnerScope;
-    untrack(() => {
-      clipboardEpoch++;
-    });
+    untrack(() => requests.invalidate(TARGET));
   });
+  $effect(() => () => requests.dispose());
 
   return {
     get busy() {
-      return clipboardBusy;
+      return clipboardBusy();
     },
     action: clipboardAction,
   };
