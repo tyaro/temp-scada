@@ -157,6 +157,7 @@
     hasVisibleMenuLayer,
     hasVisibleModalLayer,
     createShortcutDispatcher,
+    matchShortcut,
     type CommandSpec,
   } from "@banto/ui";
   import { notify, type NotificationKind } from "@banto/admin-core";
@@ -1000,20 +1001,6 @@
       if (!hasVisibleMenuLayer({ except: menu })) return menu;
     return null;
   }
-  // Ctrl+S は「Project を置き換えますか」などのモーダルの表示中も書き出す（置換の前に
-  // 書き出したファイルを確かめる流れ）。最前面のモーダル・メニューを ownerLayer に返し、
-  // どの層でも止めない。
-  function topOwnerLayer(): Element | null {
-    for (const layer of document.querySelectorAll(
-      '[aria-modal="true"],[role="menu"]',
-    ))
-      if (
-        !hasVisibleModalLayer({ except: layer }) &&
-        !hasVisibleMenuLayer({ except: layer })
-      )
-        return layer;
-    return null;
-  }
   // enabled／run は event を受け取らないので、処理中の keydown の対象を控える。
   let shortcutTarget: EventTarget | null = null;
   function editCommandsReady() {
@@ -1102,26 +1089,6 @@
       enabled: filePromptsReady,
       run: () => projectFiles.openProjectFile(),
     },
-    {
-      id: "project.save",
-      title: "保存",
-      shortcut: "Mod+S",
-      allowInEditable: true,
-      preventDefaultWhenDisabled: true,
-      ownerLayer: topOwnerLayer,
-      enabled: () => !busy,
-      run: () => projectFiles.save(),
-    },
-    {
-      id: "project.saveAs",
-      title: "名前を付けて保存",
-      shortcut: "Mod+Shift+S",
-      allowInEditable: true,
-      preventDefaultWhenDisabled: true,
-      ownerLayer: topOwnerLayer,
-      enabled: () => !busy,
-      run: () => projectFiles.saveAs(),
-    },
     // 入力欄では標準の編集・Undo を優先する。押し続けの繰り返しは元に戻す・やり直しだけ。
     {
       id: "history.undo",
@@ -1192,7 +1159,53 @@
       run: () => duplicateSelection(),
     },
   ];
-  shortcutDispatcher.register("designer", designerShortcuts);
+  // Ctrl+S・Shift+Ctrl+S は dispatcher に載せず、層（モーダル・メニュー）では止めない。
+  // 「Project を置き換えますか」の表示中に書き出してから破棄する流れがあり、また
+  // メニューとモーダルが同時に残ると（メニュー→F1）上流の判定では互いに「上」になり、
+  // ownerLayer ではどの層も選べないため。IME・先に止められたキー・押し続けでは書き出さず、
+  // 入力欄の中でも効き、ブラウザの既定（ページ保存）は常に止める（従来と同じ）。
+  const saveShortcuts: CommandSpec[] = [
+    {
+      id: "project.save",
+      title: "保存",
+      shortcut: "Mod+S",
+      enabled: () => !busy,
+      run: () => projectFiles.save(),
+    },
+    {
+      id: "project.saveAs",
+      title: "名前を付けて保存",
+      shortcut: "Mod+Shift+S",
+      enabled: () => !busy,
+      run: () => projectFiles.saveAs(),
+    },
+  ];
+  function handleSaveShortcut(event: KeyboardEvent) {
+    const command = saveShortcuts.find((command) =>
+      ["Ctrl", "Meta"].some((modifier) =>
+        matchShortcut(event, modifier + command.shortcut!.slice(3), "other"),
+      ),
+    );
+    if (!command || event.isComposing || event.keyCode === 229) return false;
+    const consumed = event.defaultPrevented;
+    event.preventDefault();
+    if (!consumed && !event.repeat && command.enabled?.() !== false)
+      void command.run();
+    return true;
+  }
+  // 従来どおり Ctrl と Cmd（Meta）のどちらでも効かせる。上流の Mod は macOS では Cmd、
+  // それ以外では Ctrl だけなので、Mod+ の操作は Ctrl+ と Meta+ の二つに分けて登録する。
+  shortcutDispatcher.register(
+    "designer",
+    designerShortcuts.flatMap((command) =>
+      command.shortcut?.startsWith("Mod+")
+        ? (["Ctrl", "Meta"] as const).map((modifier) => ({
+            ...command,
+            shortcut: modifier + command.shortcut!.slice(3),
+          }))
+        : [command],
+    ),
+  );
   // 保護で断ったときもブラウザの既定（ヘルプ・新規ウィンドウ・ページ保存など）は止める。
   function reservedBrowserKey(event: KeyboardEvent) {
     if (event.altKey) return false;
@@ -1224,6 +1237,7 @@
         event.key === "F1" ||
         event.key === "F2");
     if (!functionKey && routeBeforeCommands(event)) return;
+    if (handleSaveShortcut(event)) return;
     shortcutTarget = event.target;
     try {
       if (shortcutDispatcher.handle(event)) return;

@@ -26,10 +26,10 @@ Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v
 - #435の2段目（2026-11-18）: `App.svelte`のF・F1/F2・Delete・Ctrl+N/O/S・Shift+Ctrl+S・Ctrl+Z/Y・Shift+Ctrl+Z・Ctrl+A/G/D・Shift+Ctrl+Gを`CommandSpec`の配列にし、`createShortcutDispatcher`で処理する。`shortcutAllowed`は削除し、上流の`shouldHandleShortcut`の保護（`defaultPrevented`・`composedPath()`による入力元の解決を含む）をそのまま使う。
   - メニューで止めない約束は`ownerLayer`で保つ。F以外の操作は、モーダルの表示中なら`null`、そうでなければ上に別のメニューが無い表示中のメニューを返す（`menuOwnerLayer`）。メニューが2つ同時に見えるときは止まる。上流へ持ち込むなら、この使い方ではなく「メニューを止める対象から外す」指定として相談する。
   - 前段の`routeBeforeCommands`（ダイアログ・タグ選択の表示中、配置のEsc、レイヤーのフォルダのDelete・Ctrl+D/X/C）と、記録・警報・履歴などの作業画面を開いている間の打切りは`shortcut`に残す（F・F1/F2はこの前段より先、という従来の順も保つ）。`enabled`/`run`はeventを受け取らないので、keydownの対象を`shortcutTarget`に控える。
-  - Ctrl+S・Shift+Ctrl+Sは従来どおりモーダル・メニューの表示中も書き出す。「Project を置き換えますか」の表示中に書き出してから破棄する流れ（`e2e/image-crop.spec.ts`もこれを使う）のため、最前面のモーダル・メニューを`ownerLayer`に返す（`topOwnerLayer`）。
+  - Ctrl+S・Shift+Ctrl+Sはdispatcherに載せず、`handleSaveShortcut`で従来どおり層（モーダル・メニュー）では止めずに書き出す。「Project を置き換えますか」の表示中に書き出してから破棄する流れ（`e2e/image-crop.spec.ts`もこれを使う）があるため。最前面の層を`ownerLayer`に返す案は、メニューとモーダルが同時に残る場合（メニュー→F1）に上流の判定では互いに「上」（open popoverは常に上、モーダルはz-indexで上）となって層を選べず、保存が止まった（#254のオーナーレビュー）。IME・`keyCode 229`では何もせず、先に止められたキー・押し続けでは既定だけ止める。
   - 保護で断ったときも、F1/F2・Ctrl+N/O・Ctrl+S（Shift付きを含む）はブラウザの既定を止める（`reservedBrowserKey`、従来と同じ）。
-  - 変わった点: 先に`preventDefault`されたkeydownは操作しない。`Mod`はmacOSではCmd、それ以外ではCtrlだけ（従来はどちらでも効いた）。
-  - 試験: `e2e/history.spec.ts`の「dispatcher shortcuts …」で、`defaultPrevented`、チェックボックスからのCtrl+Z/Y、コンテキストメニュー表示中のF1/F2・Ctrl+N/O、モーダルを閉じた後の復帰、置換の確認の表示中のCtrl+Sでの書き出しを確かめる。
+  - 変わった点: 先に`preventDefault`されたkeydownは操作しない。Ctrl・Cmd（Meta）は従来どおりどちらでも効く（上流の`Mod`はmacOSではCmdだけなので、`Mod+`の操作を`Ctrl+`と`Meta+`に分けて登録する。macOSで`Control+…`を送る既存e2eのため）。
+  - 試験: `e2e/history.spec.ts`の「dispatcher shortcuts …」で、`defaultPrevented`、チェックボックスからのCtrl+Z/Y、コンテキストメニュー表示中のF1/F2・Ctrl+N/O、モーダルを閉じた後の復帰、置換の確認の表示中とメニュー・ヘルプが同時に残った状態でのCtrl+S・Shift+Ctrl+Sでの書き出し、Ctrl・Metaの両方を確かめる。
   - 移行前からの残課題: メニューを開いたままF1でヘルプを開くと、メニューがヘルプの裏で開いたまま残り、最初のEscはメニューを閉じる（ヘルプはEsc 2回で閉じる）。
   - メニュー・toolbar・コンテキストメニューの項目を同じ`CommandSpec`（id）から作る移行は、次の区切り（`designer-actions.ts`）。
 - Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらない。Banto Issueは未起票のまま。

@@ -168,6 +168,11 @@ test("dispatcher shortcuts skip consumed keys, accept checkboxes, work beside a 
   await expect(objects).toHaveCount(3);
   await page.keyboard.press("Control+y");
   await expect(objects).toHaveCount(4);
+  // Ctrl と Cmd（Meta）のどちらでも効く（従来どおり）。
+  await add.dispatchEvent("keydown", { key: "z", metaKey: true });
+  await expect(objects).toHaveCount(3);
+  await add.dispatchEvent("keydown", { key: "y", metaKey: true });
+  await expect(objects).toHaveCount(4);
   const openMenu = async () => {
     await objects.nth(1).click({ button: "right" });
     await expect(
@@ -196,6 +201,14 @@ test("dispatcher shortcuts skip consumed keys, accept checkboxes, work beside a 
   await page.keyboard.press("F1");
   const help = page.getByRole("dialog");
   await expect(help).toBeVisible();
+  // メニューとヘルプが同時に残っていても Ctrl+S・Shift+Ctrl+S で書き出せる。
+  for (const keys of ["Control+s", "Control+Shift+s"]) {
+    const download = page.waitForEvent("download");
+    await page.keyboard.press(keys);
+    await download;
+  }
+  await expect(page.getByRole("menu")).toHaveCount(1);
+  await expect(help).toBeVisible();
   // 移行前から、メニューはヘルプの裏で開いたまま残り、最初の Esc はメニューを閉じる。
   // （残課題。ここでは今の動きを固定せず、2 回の Esc の後に両方が閉じることだけを見る。）
   await page.keyboard.press("Escape");
@@ -212,6 +225,9 @@ test("dispatcher shortcuts skip consumed keys, accept checkboxes, work beside a 
   const chooser = page.waitForEvent("filechooser");
   await page.keyboard.press("Control+o");
   await chooser;
+  // 上の Ctrl+S で書き出し済みなので、置換の確認が出るよう変更を足す。
+  await add.click();
+  await expect(objects).toHaveCount(5);
   await openMenu();
   await page.keyboard.press("Control+n");
   const replacement = page.getByRole("dialog", {
