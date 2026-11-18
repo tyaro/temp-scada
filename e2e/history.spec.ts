@@ -201,20 +201,20 @@ test("dispatcher shortcuts skip consumed keys, accept checkboxes, work beside a 
   await page.keyboard.press("F1");
   const help = page.getByRole("dialog");
   await expect(help).toBeVisible();
-  // メニューとヘルプが同時に残っていても Ctrl+S・Shift+Ctrl+S で書き出せる。
+  // Banto v7.6.0（#670）から、モーダルが開くと開いていたメニューは閉じる
+  // （メニューがヘルプの裏に残る、という移行前からの残課題が解けた）。
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  // ヘルプの表示中も Ctrl+S・Shift+Ctrl+S で書き出せる。
   for (const keys of ["Control+s", "Control+Shift+s"]) {
     const download = page.waitForEvent("download");
     await page.keyboard.press(keys);
     await download;
   }
-  await expect(page.getByRole("menu")).toHaveCount(1);
   await expect(help).toBeVisible();
-  // 移行前から、メニューはヘルプの裏で開いたまま残り、最初の Esc はメニューを閉じる。
-  // （残課題。ここでは今の動きを固定せず、2 回の Esc の後に両方が閉じることだけを見る。）
+  // 最初の Esc でヘルプが閉じる（裏のメニューを先に閉じる 1 回は要らない）。
   await page.keyboard.press("Escape");
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("menu")).toHaveCount(0);
   await expect(help).toHaveCount(0);
+  await expect(page.getByRole("menu")).toHaveCount(0);
   // モーダルを閉じた後は編集のショートカットが戻る。
   await add.focus();
   await page.keyboard.press("Control+z");
