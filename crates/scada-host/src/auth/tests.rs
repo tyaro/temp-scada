@@ -86,7 +86,7 @@ async fn open_applies_banto_migrations_once_and_starts_without_a_session() {
             .fetch_all(&db.raw().await)
             .await
             .unwrap();
-    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10]);
+    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10, 12]);
     // 0010's generated record-scope columns back the audit list's
     // `recordResource` / `recordId` filters.
     let scope_columns: i64 = sqlx::query_scalar(
@@ -160,7 +160,7 @@ async fn opening_a_v7_0_db_keeps_its_audit_rows_and_scopes_them_by_record() {
             .fetch_all(&db.raw().await)
             .await
             .unwrap();
-    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10]);
+    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10, 12]);
 
     let scoped = |field: &str, value: &str| banto_core::FilterState {
         field: field.to_string(),
@@ -225,6 +225,59 @@ async fn opening_a_v7_0_db_keeps_its_audit_rows_and_scopes_them_by_record() {
             row.detail.as_deref()
         ),
         ("settings", None, Some("{not json"))
+    );
+}
+
+#[tokio::test]
+async fn opening_a_v7_2_db_keeps_its_users_and_starts_them_at_version_1() {
+    // An auth DB written by the Banto v7.2.0 build: migrations up to 0010,
+    // so `users` has no `version` column yet.
+    let db = TempDb::new();
+    {
+        let options = sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(db.path())
+            .create_if_missing(true);
+        let pool = sqlx::SqlitePool::connect_with(options).await.unwrap();
+        let mut migrator = sqlx::migrate::Migrator::new(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations-sqlite"),
+        )
+        .await
+        .unwrap();
+        let old: Vec<_> = migrator
+            .migrations
+            .iter()
+            .filter(|m| m.version <= 10)
+            .cloned()
+            .collect();
+        migrator.migrations = old.into();
+        migrator.run(&pool).await.unwrap();
+        sqlx::query(
+            "INSERT INTO users (username, password_hash, display_name, role, auth_epoch)              VALUES ('operator', 'x', 'Operator', 'editor', 3)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        pool.close().await;
+    }
+
+    let auth = HostAuth::open(db.path()).await.unwrap();
+    let applied: Vec<i64> =
+        sqlx::query_scalar("SELECT version FROM _sqlx_migrations ORDER BY version")
+            .fetch_all(&db.raw().await)
+            .await
+            .unwrap();
+    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10, 12]);
+    let users = auth.users().list_users().await.unwrap();
+    assert_eq!(users.len(), 1);
+    let user = &users[0];
+    assert_eq!(
+        (
+            user.username.as_str(),
+            user.display_name.as_str(),
+            user.role,
+            user.version
+        ),
+        ("operator", "Operator", Role::Editor, 1)
     );
 }
 

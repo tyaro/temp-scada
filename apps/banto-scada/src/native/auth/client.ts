@@ -109,6 +109,8 @@ function describeBody(body: ErrorBody): string {
       return `要求が不正です: ${body.message}`;
     case "storage":
       return `認証DBへ保存できません: ${body.message}`;
+    case "conflict":
+      return "ほかの操作で内容が変わりました。一覧を読み直してください。";
     case "other":
       return body.message;
   }
