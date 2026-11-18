@@ -234,3 +234,97 @@ describe("多角形の挿入", () => {
     expect(polygon).not.toHaveProperty("fill");
   });
 });
+
+describe("多角形の頂点の編集（update の polygonVertices）", () => {
+  const original = parseProject(JSON.stringify(minimal));
+  const screenId = original.screens[0].id;
+  const added = applyCommand(
+    original,
+    { type: "add", screenId, kind: "polygon", center: { x: 600, y: 400 } },
+    "edit",
+  );
+  const polygon = added.screens[0].objects.at(-1)!;
+  const update = (patch: Record<string, unknown>) =>
+    applyCommand(
+      added,
+      { type: "update", screenId, objectId: polygon.id, patch },
+      "edit",
+    ).screens[0].objects.at(-1)!;
+
+  it("枠を作り直して頂点を足し、保存形式の検証を通る", () => {
+    const next = update({
+      polygonVertices: [
+        { keep: 0 },
+        { keep: 1 },
+        { keep: 2 },
+        { x: -40, y: 50 },
+      ],
+    });
+    expect(next).toMatchObject({
+      x: polygon.x - 40,
+      y: polygon.y,
+      width: 200,
+      height: 100,
+      shape: {
+        points: [
+          { x: 0.6, y: 0 },
+          { x: 1, y: 1 },
+          { x: 0.2, y: 1 },
+          { x: 0, y: 0.5 },
+        ],
+      },
+    });
+    expect(() =>
+      parseProject(
+        JSON.stringify({
+          ...added,
+          screens: [
+            {
+              ...added.screens[0],
+              objects: [...added.screens[0].objects.slice(0, -1), next],
+            },
+            ...added.screens.slice(1),
+          ],
+        }),
+      ),
+    ).not.toThrow();
+  });
+
+  it("拒否した編集は Project を変えない", () => {
+    expect(() =>
+      update({
+        polygonVertices: [
+          { x: 0, y: 5 },
+          { x: 50, y: 5 },
+          { x: 100, y: 5 },
+        ],
+      }),
+    ).toThrow("1以上");
+    expect(added.screens[0].objects.at(-1)).toEqual(polygon);
+  });
+
+  it("頂点と位置・サイズを同じ確定で変えない", () => {
+    expect(() =>
+      update({
+        width: 300,
+        polygonVertices: [{ keep: 0 }, { keep: 1 }, { x: 0, y: 50 }],
+      }),
+    ).toThrow("別々に");
+  });
+
+  it("多角形以外には設定できない", () => {
+    const rect = original.screens[0].objects[0];
+    expect(() =>
+      applyCommand(
+        original,
+        {
+          type: "update",
+          screenId,
+          objectId: rect.id,
+          patch: { polygonVertices: [{ x: 0, y: 0 }] },
+        },
+        "edit",
+      ),
+    ).toThrow("多角形以外");
+  });
+});

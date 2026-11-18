@@ -8,6 +8,7 @@ import type { TrendDefinition } from "../trend-definitions";
 import type { AlarmDefinition } from "../alarms";
 import type { DesiredRecordingPlan } from "../recording-plan";
 import type { ImageFit } from "../image-fit";
+import type { PolygonVertexEdit } from "../polygon-frame";
 import type { ImageCrop } from "../image-crop";
 import type {
   EquipmentPropertyField,
@@ -87,6 +88,11 @@ export interface ObjectPatch {
   trendId?: string;
   colorMode?: "monochrome" | "definition";
   points?: Point[];
+  /**
+   * 多角形の頂点の編集（Inspector の頂点の欄）。点は今の枠の左上を原点とする実寸、
+   * `{ keep: i }` は今の頂点を触らずに残す。枠の作り直し（`reframePolygon`）を通す。
+   */
+  polygonVertices?: PolygonVertexEdit[];
   strokeWidth?: number;
   arrow?: LineArrow;
   lineStyle?: LineStyle;

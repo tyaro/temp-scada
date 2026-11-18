@@ -1,6 +1,7 @@
 import { placementColor } from "../project";
 import type { ScreenObject } from "../project";
 import { alarmBadgeConditionId } from "../alarm-badge";
+import { polygonVertexText } from "../polygon-frame";
 import {
   formatTableColors,
   formatTableFormats,
@@ -155,6 +156,8 @@ export function objectFormValues(
     values.arrow = object.shape.arrow;
     values.lineStyle = object.shape.lineStyle ?? "solid";
   }
+  if (object.shape.type === "polygon" && "width" in object)
+    values.points = polygonVertexText({ ...object, shape: object.shape });
   return values;
 }
 

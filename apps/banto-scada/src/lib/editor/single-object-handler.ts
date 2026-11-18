@@ -9,6 +9,7 @@ import {
 } from "../project";
 import { normalizeRotation, replaceRotatedVertex } from "../rotation";
 import { setFlip } from "../flip";
+import { reframePolygon } from "../polygon-frame";
 import { setLineStyle } from "../line-style";
 import { parseLineArrow } from "../line-arrow";
 import { validateLevelShape } from "../level";
@@ -143,12 +144,34 @@ export function applySingleObjectCommand(
       fontSize,
       textStyle,
       points,
+      polygonVertices,
       strokeWidth,
       lineStyle,
       arrow,
       ...geometry
     } = command.patch;
     const object = screen.objects[index];
+    if (polygonVertices !== undefined) {
+      if (!("width" in object) || object.shape.type !== "polygon")
+        throw new Error("多角形以外に多角形の頂点は設定できません");
+      // 頂点の欄は今の枠を原点に書くので、同じ確定で枠を変える入力とは組み合わせない。
+      if (
+        (["x", "y", "width", "height"] as const).some(
+          (key) => geometry[key] !== undefined && geometry[key] !== object[key],
+        )
+      )
+        throw new Error("多角形の頂点と位置・サイズは別々に適用してください。");
+      const frame = reframePolygon(
+        { ...object, shape: object.shape },
+        polygonVertices,
+      );
+      if (!frame.ok) throw new Error(frame.reason);
+      geometry.x = frame.x;
+      geometry.y = frame.y;
+      geometry.width = frame.width;
+      geometry.height = frame.height;
+      object.shape.points = frame.points;
+    }
     if (
       (object.shape.type === "image" ||
         object.shape.type === "screenView" ||

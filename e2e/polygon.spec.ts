@@ -107,11 +107,13 @@ for (const theme of ["light", "dark"] as const)
     await expect(
       added.locator(':scope > rect[stroke="var(--canvas-accent)"]'),
     ).toHaveAttribute("width", "160");
-    // Inspector は矩形・楕円と同じ塗り・枠線の欄を出し、頂点の欄は出さない。
+    // Inspector は矩形・楕円と同じ塗り・枠線の欄と、実寸の頂点の欄を出す。
     await expect(
       page.getByRole("form", { name: "塗りと枠線", exact: true }),
     ).toBeVisible();
-    await expect(page.getByLabel("頂点（x,y を1行ずつ）")).toHaveCount(0);
+    await expect(page.getByLabel("頂点", { exact: true })).toHaveValue(
+      "80,0\n160,100\n0,100",
+    );
     // ミニマップも同じ部品で描く。
     await expect(
       page.locator(".minimap [data-object-rotation] polygon"),
@@ -155,4 +157,41 @@ test("polygon hit test follows the shape, not the frame", async ({ page }) => {
     "data-selected",
     "true",
   );
+});
+
+test("polygon vertices are edited in the inspector and rejected in place", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "部品");
+  await page.getByRole("button", { name: "多角形を追加", exact: true }).click();
+  const polygon = mainCanvas(page).locator(
+    "[data-object-id] > [data-object-rotation] polygon",
+  );
+  const vertices = page.getByLabel("頂点", { exact: true });
+  const width = page.getByLabel("幅", { exact: true });
+  const x = page.getByLabel("X", { exact: true });
+  const startX = Number(await x.inputValue());
+  // 左へはみ出す頂点を足すと、外接矩形が新しい枠になり、触っていない頂点は動かない。
+  await vertices.fill("80,0\n160,100\n0,100\n-40,50");
+  await expect(page.locator("#polygon-points-error")).toHaveCount(0);
+  await page.getByRole("button", { name: "変更を適用" }).click();
+  await expect(polygon).toHaveAttribute("points", "120,0 200,100 40,100 0,50");
+  await expect(width).toHaveValue("200");
+  await expect(x).toHaveValue(String(startX - 40));
+  await expect(vertices).toHaveValue("120,0\n200,100\n40,100\n0,50");
+  // 水平に一直線の頂点は、欄の下に理由を出し、適用しても Project を変えない。
+  await vertices.fill("0,5\n50,5\n100,5");
+  await expect(page.locator("#polygon-points-error")).toContainText("1以上");
+  await expect(vertices).toHaveAttribute("aria-invalid", "true");
+  await page.getByRole("button", { name: "変更を適用" }).click();
+  await expect(page.getByTestId("project-status")).toContainText("1以上");
+  await expect(polygon).toHaveAttribute("points", "120,0 200,100 40,100 0,50");
+  // 元に戻すは頂点の編集 1 回ずつ。
+  await vertices.fill("120,0\n200,100\n40,100\n0,50");
+  await page.getByRole("button", { name: "元に戻す", exact: true }).click();
+  await expect(polygon).toHaveAttribute("points", "80,0 160,100 0,100");
+  await expect(x).toHaveValue(String(startX));
 });
