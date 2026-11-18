@@ -989,6 +989,9 @@
   // Banto #435 の保護のうち IME・押し続け・入力欄・モーダルだけを使う。上流の
   // shouldHandleShortcut はメニューの表示中も止めるが、ここではコンテキストメニューを
   // 開いたままの Ctrl+A などで選択を変え、メニューを閉じる（selection-context の約束）。
+  // 上流と同等ではない: メニュー判定のほかに、defaultPrevented の検査と composedPath()
+  // による入力元の解決（shadow DOM 内の入力欄）を持たない。dispatcher へ移すときに
+  // 同等と見なさず、差を試験で確かめる（docs/reviews/banto-contribution-handoff.md）。
   function shortcutAllowed(
     event: KeyboardEvent,
     { allowInEditable = false, allowRepeat = false } = {},

@@ -21,6 +21,8 @@ Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v
 | [#434](https://github.com/tyaro/banto/issues/434) 配置の検証・到達性         | `DockState`の`hydrate`の検証、`DockHost`の`clamp`                      | `@banto/dock-svelte`（なし）                 | `designer/floating-panel-layout.ts`                                       | 同上                                                                                               |
 
 - #435の1段目（2026-11-18）: `App.svelte`の`shortcut`のキー保護を`@banto/ui`へ寄せた。Fは`shouldHandleShortcut`、F1/F2・Delete・Ctrl+N/O・Ctrl+Z/Y/A/G/Dは`isEditableTarget`・`hasVisibleModalLayer`とIME・`repeat`の判定を組んだ`shortcutAllowed`。上流の`shouldHandleShortcut`はメニューの表示中も止めるが、SCADAはコンテキストメニューを開いたままのCtrl+Aなどで選択を変えてメニューを閉じる（`e2e/selection-context.spec.ts`・`screen-context.spec.ts`）ので、メニューでは止めない。上流へ持ち込むなら「メニューを止める対象から外す」選択肢として相談する。変わった点: 押し続けのCtrl+A/G/Dと`keyCode 229`は無視、`aria-modal="true"`の層の表示中はCtrl+Z/Y/A/G/D・Deleteも効かない、チェックボックスは入力欄に数えない。Ctrl+Sと操作定義・`createShortcutDispatcher`への移行は後の区切り。試験は`e2e/history.spec.ts`の「shared guards」。
+  - `shortcutAllowed`は上流の`shouldHandleShortcut`と同等ではない。メニューを止めないことのほかに、`event.defaultPrevented`の検査と、`composedPath()`の先頭による入力元の解決（shadow DOM内の入力欄を入力欄と判定する）を持たない（`event.target`で判定する）。`createShortcutDispatcher`へ移すときは同等と見なさず、差を試験で確かめる。
+  - 1段目のレビューで未検証と指摘された点: メニュー表示中のF1/F2・Ctrl+N/O、`defaultPrevented`の付いたkeydown、非文字入力（チェックボックス・ボタンなど）からの操作、モーダルを閉じた後の復帰。移行の区切りで試験を足す。
 - Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらない。Banto Issueは未起票のまま。
 - 置き換えの各区切りでは、既存の入力保護・資源解放・保存失敗のE2Eを通してから手元の実装を消す（[引渡しの方法](#引渡しの方法)の3）。
 - 新しい還元候補（パネルの幅・高さの保存と「標準レイアウトに戻す」、作業タブの入力保護など）は、上の採用で上流のAPIとの差が見えてから起票する。
