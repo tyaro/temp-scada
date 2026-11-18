@@ -71,7 +71,7 @@
 ## 画像と非同期の現行境界
 
 - `AssetStore`は不変原本・hash・URL・leaseを所有する。Appの`collectAssets`は現在ProjectとUndo／Redoから必要なhashを集計する。
-- `designer/controllers/image-import.svelte.ts`の`prepareImage`は仮Storeで検証し、対象が現在でも有効な場合だけ最新の共有Storeへ取込む。配置・背景・差し替えの要求条件とchooser intent、read／選択／cropのepoch、busy、scope effectを所有する。Appから必要な現在情報のgetterと操作callbackだけを受け、Project・履歴のコピーを持たない。
+- `designer/controllers/image-import.svelte.ts`の`prepareImage`は仮Storeで検証し、対象が現在でも有効な場合だけ最新の共有Storeへ取込む。配置・背景・差し替えの要求条件とchooser intent、read（`@banto/admin-core`の`createRequestOwner`。仮Storeの解放も持たせる）／選択／cropのepoch、busy、scope effectを所有する。Appから必要な現在情報のgetterと操作callbackだけを受け、Project・履歴のコピーを持たない。
 - file inputのDOMと同期clickはApp。controllerはintentを記録してchooser callbackを呼ぶ。画像pasteも同じprepareへ接続する。背景fit／opacity・同一hash assetは適用時点、配置viewportはchooser開始時点のコピーを使う。
 - 差し替えは配置ID／元asset／選択世代に加え、decode開始時のcrop世代を確認する。既存draft適用とdecode中の変更を区別する。
 - `ImagePainting`がcropとcontainの共通描画を担い、`ObjectPainting`経由で編集・ミニマップ・埋込・小窓へ使われる。
