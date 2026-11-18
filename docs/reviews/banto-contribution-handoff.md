@@ -42,6 +42,10 @@ Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v
   - 変えていない点: 壊れた値の扱い（幅・高さ・お気に入りは既定値へ丸める従来の`parse`、表示の有無は`"false"`だけを非表示）、読込み失敗の通知の文言と順序、「標準レイアウトに戻す」の5項目は通知1回。
   - 試験: `banto/ui-preference.test.ts`（まとめと順序、失敗の通知の数、壊れた値・読込み失敗）、既存e2eの`panel-widths`・`panel-height`・`inspector-floating`・`sidebar-floating`・`layout-reset`・`favorites`・`menubar`・`banto`・`palette-placement`。
   - 上流との差: SCADAはUI設定の保存先が`createLocalUiSettings`だけで、Tauriの`createTauriUiSettings`へは移していない。読込みの`'invalid'`（壊れた値）は通知しない。
+- #436の1段目（2026-11-18）: `designer/controllers/image-import.svelte.ts`の画像読込を`@banto/admin-core`の`createRequestOwner`に載せた（key `"image"`）。要求番号`imageReadRequest`と`imageBusy`を`begin`・`isCurrent`・`busy`に、画面・モード・世代などの変化（`imageScope`）での打切りを`invalidate`に置き換え、controllerの破棄で`dispose`する。仮の`AssetStore`は`hold`して`finish`で1回だけ閉じる。入力の確定待ちで適用を先送りしたときは`adopt`で先送りした適用へ渡し、適用側が閉じる（従来と同じ）。
+  - 変えていない点: 背景の切抜き・差替えの対象・差替えの切抜きのepochは、要求の種類（背景・差替え）ごとの条件なので`invalidate`にせず、`current()`の中で従来どおり比べる（背景の切抜きが変わっても配置の読込は続く）。先送りした適用が実行されないまま捨てられた場合に仮Storeが残るのは従来と同じ。
+  - 試験: `image-import.svelte.test.ts`（新しい読込による失効と古い読込がbusyを解かないこと、先送りした適用が読込の終了後も仮Storeを使えること）と、既存e2eの`image-assets`・`image-placement`・`image-replacement`・`background-image`・`background-crop`・`image-crop`・`image-paste`・`image-fit`。vitest（node）ではsvelteがサーバー向けにコンパイルされ`$effect`が動かないので、対象の変化による失効と破棄はe2eで確かめる。
+  - 次は`clipboard.svelte.ts`の`clipboardEpoch`。`catalog.svelte.ts`は1回の要求で複数のdeliveryを受ける流れで`createRequestOwner`の形に合うか先に確かめる。
 - Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらず、上流mainの`anchoredPopover.ts`の横clampも同じ式のまま。[tyaro/banto#668](https://github.com/tyaro/banto/issues/668)で報告した（2026-11-18）。
 - 置き換えの各区切りでは、既存の入力保護・資源解放・保存失敗のE2Eを通してから手元の実装を消す（[引渡しの方法](#引渡しの方法)の3）。
 - 新しい還元候補（パネルの幅・高さの保存と「標準レイアウトに戻す」、作業タブの入力保護など）は、上の採用で上流のAPIとの差が見えてから起票する。

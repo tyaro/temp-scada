@@ -1,3 +1,4 @@
+import { createRequestOwner } from "@banto/admin-core";
 import { tick, untrack } from "svelte";
 import { AssetStore } from "../../image-assets";
 import { initialImageFrame } from "../../image-frame";
@@ -36,8 +37,12 @@ export interface ImageImportHost {
 
 /** Own image requests and their temporary stores; Project/history stay in App. */
 export function createImageImportController(host: ImageImportHost) {
-  let imageReadRequest = 0;
-  let imageBusy = $state(false);
+  // One read at a time: a newer read or an owner change makes the old one stale
+  // (its result is dropped) and stops it counting as busy. The epochs below are
+  // kind-specific checks (background / replacement) layered on top of it.
+  const requests = createRequestOwner();
+  const IMAGE_READ = "image";
+  const imageBusy = () => requests.busy(IMAGE_READ);
 
   let backgroundCropEpoch = 0;
   let replacementImageEpoch = 0;
@@ -54,7 +59,7 @@ export function createImageImportController(host: ImageImportHost) {
     if (
       host.owner.mode !== "edit" ||
       host.owner.busy ||
-      imageBusy ||
+      imageBusy() ||
       host.owner.replacing ||
       host.selected?.id !== objectId ||
       host.selected.shape.type !== "image" ||
@@ -105,7 +110,7 @@ export function createImageImportController(host: ImageImportHost) {
     if (
       host.owner.mode !== "edit" ||
       host.owner.busy ||
-      imageBusy ||
+      imageBusy() ||
       host.owner.replacing
     )
       return;
@@ -176,12 +181,15 @@ export function createImageImportController(host: ImageImportHost) {
       cropEpoch: number;
     },
   ) {
-    const request = ++imageReadRequest,
-      candidate = new AssetStore();
+    const request = requests.begin(IMAGE_READ);
+    // Released once at finish() unless a deferred apply adopts it.
+    const candidate = request.hold(new AssetStore(), (store) =>
+      store.dispose(),
+    );
     const backgroundEpoch =
       !placement && !replacing ? backgroundCropEpoch : undefined;
     const current = () =>
-      request === imageReadRequest &&
+      request.isCurrent() &&
       generation === host.owner.generation &&
       owner === host.owner.screenId &&
       (!host.owner.definition || !!placement || !!replacing) &&
@@ -197,13 +205,9 @@ export function createImageImportController(host: ImageImportHost) {
           host.selected.shape.type === "image" &&
           host.selected.shape.assetId === replacing.assetId &&
           !host.selected.locked));
-    imageBusy = true;
     try {
       const metadata = await candidate.put(file, file.name);
-      if (!current()) {
-        candidate.dispose();
-        return;
-      }
+      if (!current()) return;
       const apply = () => {
         if (!current()) {
           candidate.dispose();
@@ -268,18 +272,18 @@ export function createImageImportController(host: ImageImportHost) {
           host.collectAssets();
         }
       };
-      // A pending draft decision retains this candidate until apply runs.
-      // Do not dispose it in the outer finally.
-      host.allow(apply) && apply();
+      // A pending draft decision runs apply later: the candidate goes with it
+      // and apply disposes it. The read itself ends here (not busy any more).
+      if (host.allow(apply)) apply();
+      else request.adopt(candidate);
     } catch (error) {
-      candidate.dispose();
       if (current())
         host.report(
           "error",
           `画像取込エラー: ${error instanceof Error ? error.message : String(error)}`,
         );
     } finally {
-      if (request === imageReadRequest) imageBusy = false;
+      request.finish();
     }
   }
   function removeBackground() {
@@ -307,8 +311,7 @@ export function createImageImportController(host: ImageImportHost) {
     imageScope;
     untrack(() => {
       placementIntent = null;
-      imageReadRequest++;
-      imageBusy = false;
+      requests.invalidate(IMAGE_READ);
     });
   });
 
@@ -346,9 +349,11 @@ export function createImageImportController(host: ImageImportHost) {
     });
   });
 
+  $effect(() => () => requests.dispose());
+
   return {
     get busy() {
-      return imageBusy;
+      return imageBusy();
     },
     openReplacement: openImageReplacement,
     replaceFile: replaceImageFile,
