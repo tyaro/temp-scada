@@ -36,6 +36,7 @@
     onprojectchange,
     projectFileService,
     alarmFeed: alarmFeedProp,
+    startup,
   }: {
     readSource?: ReadSource;
     catalogSource?: CatalogSource;
@@ -56,6 +57,9 @@
     /** The alarm host's snapshot and change events. Defaults to the
      * Project file host's feed; the browser e2e injects a mock (design §5.5). */
     alarmFeed?: AlarmFeed;
+    /** 起動時に開く Project と表示（Pages のデモの入口）。起動時に一度だけ読む。
+     * 無ければ最小サンプルを表示プレビューで開く。 */
+    startup?: { project: Project; view?: "edit" | "preview" | "operator" };
   } = $props();
   import type {
     AlarmFeed,
@@ -260,7 +264,7 @@
     theme = value;
     void setThemeMode(value);
   }
-  import { untrack, tick, flushSync, onDestroy } from "svelte";
+  import { untrack, tick, flushSync, onDestroy, onMount } from "svelte";
   import { createHistoryController } from "./lib/history/presentation";
   import { selectionNudge } from "./lib/keyboard-move";
   import { normalizeRotation } from "./lib/rotation";
@@ -1264,7 +1268,9 @@
     }
     return false;
   }
-  let mode = $state<"edit" | "preview">("preview");
+  let mode = $state<"edit" | "preview">(
+    untrack(() => startup?.view) === "edit" ? "edit" : "preview",
+  );
   let selectedIds = $state<string[]>([]);
   let selectedId = $derived(selectedIds.length === 1 ? selectedIds[0] : null);
   function selectObjects(
@@ -1484,7 +1490,9 @@
   }
   // Commands, history and file adoption replace the whole validated Project.
   // Track that boundary, not every field in the immutable document snapshot.
-  let project = $state.raw(parseProject(JSON.stringify(sample)));
+  let project = $state.raw(
+    parseProject(JSON.stringify(untrack(() => startup?.project) ?? sample)),
+  );
   $effect(() => {
     const next = project;
     untrack(() => onprojectchange?.(next));
@@ -1593,6 +1601,10 @@
     operatorGeneration = workspaceGeneration;
     operatorStart = start;
   }
+  // 起動時の表示が運転表示なら、最初の描画の後に一度だけ開く。
+  onMount(() => {
+    if (startup?.view === "operator") openOperatorView();
+  });
   // Alarm list (alarm design §7): opened from the preview and the operator view.
   let alarmListOpener: Element | null = null;
   function openAlarmList() {
@@ -1648,7 +1660,7 @@
       });
     });
   }
-  let screenId = $state(sample.screens[0].id);
+  let screenId = $state(untrack(() => project.screens[0].id));
   let editingSymbolId = $state<string | null>(null);
   let libraryId = $state("");
   let activeDefinition = $derived(
