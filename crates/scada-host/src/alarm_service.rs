@@ -1048,7 +1048,7 @@ impl AlarmService {
             .unwrap_or(Pending::UNKNOWN);
         // A failed read may recover without changing the file (a permission or
         // a lock coming back), so only a known result is reused.
-        *cache = (!pending.unknown).then(|| PendingCache {
+        *cache = (!pending.unknown).then_some(PendingCache {
             path,
             modified,
             len: metadata.len(),
