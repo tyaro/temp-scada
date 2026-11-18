@@ -104,9 +104,9 @@ describe("画像取込の要求（createRequestOwner）", () => {
     expect(controller.busy).toBe(true);
 
     decodes[1]();
-    await settle();
+    // decodeの後にもawaitが続くので、CIの負荷で決まった回数の待ちでは足りない。
+    await vi.waitFor(() => expect(controller.busy).toBe(false));
     expect(edits.map((edit) => edit.type)).toEqual(["set-background-image"]);
-    expect(controller.busy).toBe(false);
   });
 
   it("入力の確定待ちで先送りした適用は、読込の終わった後も一時storeを使える", async () => {
@@ -115,8 +115,7 @@ describe("画像取込の要求（createRequestOwner）", () => {
     controller.importBackground(file("a.png"));
     await untilDecoding(1);
     decodes[0]();
-    await settle();
-    expect(gate.held).toHaveLength(1);
+    await vi.waitFor(() => expect(gate.held).toHaveLength(1));
     expect(controller.busy).toBe(false);
 
     gate.held[0]();
