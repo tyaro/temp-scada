@@ -101,184 +101,193 @@
 </script>
 
 <section aria-label="機器種別の編集">
-  <label class="banto-field banto-field--stacked"
-    ><span class="banto-field-label">編集する種別</span><select
-      class="banto-field-control"
-      aria-label="編集する機器種別"
-      value={selectedId}
-      onchange={(event) => {
-        const value = event.currentTarget.value;
-        event.currentTarget.value = selectedId;
-        transition(() => (selectedId = value));
-      }}
-      ><option value="">新しい種別</option
-      >{#each project.equipmentTypes ?? [] as type (type.id)}<option
-          value={type.id}>{type.name} · {type.id.slice(-6)}</option
-        >{/each}</select
-    ></label
-  >
-  <p>
-    種別は信号の役割と型を定義します。外部名は機器ごとに割り付けます。変更しても機器割付・Symbol宣言は自動変更しません。
-  </p>
-  {#key scope}
-    <form
-      id={formId}
-      bind:this={form}
-      use:drafts.track={{ name: selected?.name ?? "", slots: savedSlots }}
-      data-editor-form="equipment-type"
-      data-explicit-apply={selected ? undefined : ""}
-      data-type-id={selected?.id ?? ""}
-      data-target-key={scope}
-      aria-label="機器種別を保存"
-      onreset={(event) => {
-        const input = event.currentTarget.querySelector<HTMLInputElement>(
-          'input[name="slots"]',
-        );
-        if (input)
-          rows = JSON.parse(input.value).map((slot: EquipmentSlot) => ({
-            ...slot,
-            key: nextKey++,
-            originalName: slot.name,
-          }));
-      }}
-      oncompositionstart={() => (composing = true)}
-      oncompositionend={() => (composing = false)}
-      onsubmit={(event) => {
-        if (composing) {
-          event.preventDefault();
-          return;
-        }
-        const before = new Set(project.equipmentTypes?.map((type) => type.id));
-        const target = event.currentTarget;
-        const owner = generation;
-        onsubmit(event);
-        if (!selected)
-          void tick().then(() => {
-            if (owner !== generation || !target.isConnected || selectedId)
-              return;
-            const created = project.equipmentTypes?.find(
-              (type) => !before.has(type.id),
-            );
-            if (created) selectedId = created.id;
-          });
-      }}
+  <!-- 作業画面の幅が足りれば、左に種別の選択、右に編集フォームを置く（§2.2）。 -->
+  <div class="list">
+    <label class="banto-field banto-field--stacked"
+      ><span class="banto-field-label">編集する種別</span><select
+        class="banto-field-control"
+        aria-label="編集する機器種別"
+        value={selectedId}
+        onchange={(event) => {
+          const value = event.currentTarget.value;
+          event.currentTarget.value = selectedId;
+          transition(() => (selectedId = value));
+        }}
+        ><option value="">新しい種別</option
+        >{#each project.equipmentTypes ?? [] as type (type.id)}<option
+            value={type.id}>{type.name} · {type.id.slice(-6)}</option
+          >{/each}</select
+      ></label
     >
-      <label class="banto-field banto-field--stacked"
-        ><span class="banto-field-label">種別名</span><input
-          class="banto-field-control"
-          name="name"
-          required
-          maxlength="200"
-          onkeydown={inputKey}
-        /></label
+    <p>
+      種別は信号の役割と型を定義します。外部名は機器ごとに割り付けます。変更しても機器割付・Symbol宣言は自動変更しません。
+    </p>
+  </div>
+  <div class="detail">
+    {#key scope}
+      <form
+        id={formId}
+        bind:this={form}
+        use:drafts.track={{ name: selected?.name ?? "", slots: savedSlots }}
+        data-editor-form="equipment-type"
+        data-explicit-apply={selected ? undefined : ""}
+        data-type-id={selected?.id ?? ""}
+        data-target-key={scope}
+        aria-label="機器種別を保存"
+        onreset={(event) => {
+          const input = event.currentTarget.querySelector<HTMLInputElement>(
+            'input[name="slots"]',
+          );
+          if (input)
+            rows = JSON.parse(input.value).map((slot: EquipmentSlot) => ({
+              ...slot,
+              key: nextKey++,
+              originalName: slot.name,
+            }));
+        }}
+        oncompositionstart={() => (composing = true)}
+        oncompositionend={() => (composing = false)}
+        onsubmit={(event) => {
+          if (composing) {
+            event.preventDefault();
+            return;
+          }
+          const before = new Set(
+            project.equipmentTypes?.map((type) => type.id),
+          );
+          const target = event.currentTarget;
+          const owner = generation;
+          onsubmit(event);
+          if (!selected)
+            void tick().then(() => {
+              if (owner !== generation || !target.isConnected || selectedId)
+                return;
+              const created = project.equipmentTypes?.find(
+                (type) => !before.has(type.id),
+              );
+              if (created) selectedId = created.id;
+            });
+        }}
       >
-      <input type="hidden" name="slots" value={serialized} />
-    </form>
-    <h4>読取slot {rows.length} / 64</h4>
-    <div
-      role="group"
-      aria-label="読取slotの構成"
-      oncompositionstart={() => (composing = true)}
-      oncompositionend={() => (composing = false)}
-    >
-      {#each rows as row (row.key)}
-        {@const count = row.originalName ? adopted(row.originalName) : 0}
-        <div class="slot" data-equipment-type-slot={row.key}>
-          <label class="banto-field banto-field--stacked"
-            ><span class="banto-field-label">slot名</span><input
-              class="banto-field-control"
-              aria-label="slot名"
-              value={row.name}
-              readonly={count > 0}
-              oninput={(event) =>
-                update(row.key, { name: event.currentTarget.value })}
-              onkeydown={inputKey}
-            /></label
-          >
-          <label class="banto-field banto-field--stacked"
-            ><span class="banto-field-label">型</span><select
-              class="banto-field-control"
-              aria-label="slot型"
-              value={row.type}
+        <label class="banto-field banto-field--stacked"
+          ><span class="banto-field-label">種別名</span><input
+            class="banto-field-control"
+            name="name"
+            required
+            maxlength="200"
+            onkeydown={inputKey}
+          /></label
+        >
+        <input type="hidden" name="slots" value={serialized} />
+      </form>
+      <h4>読取slot {rows.length} / 64</h4>
+      <div
+        role="group"
+        aria-label="読取slotの構成"
+        oncompositionstart={() => (composing = true)}
+        oncompositionend={() => (composing = false)}
+      >
+        {#each rows as row (row.key)}
+          {@const count = row.originalName ? adopted(row.originalName) : 0}
+          <div class="slot" data-equipment-type-slot={row.key}>
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">slot名</span><input
+                class="banto-field-control"
+                aria-label="slot名"
+                value={row.name}
+                readonly={count > 0}
+                oninput={(event) =>
+                  update(row.key, { name: event.currentTarget.value })}
+                onkeydown={inputKey}
+              /></label
+            >
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">型</span><select
+                class="banto-field-control"
+                aria-label="slot型"
+                value={row.type}
+                disabled={count > 0}
+                onchange={(event) =>
+                  retype(row.key, event.currentTarget.value as SlotType)}
+                ><option value="bool">bool</option><option value="number"
+                  >number</option
+                ><option value="state">state</option></select
+              ></label
+            >
+            <label class="banto-field banto-field--stacked"
+              ><span class="banto-field-label">タグ名の末尾</span><input
+                class="banto-field-control"
+                aria-label="タグ名の末尾"
+                title="割付の一覧表で機器ごとの接頭辞の後ろにつなげます（空欄なら使いません）"
+                placeholder="（なし）"
+                maxlength="1024"
+                value={row.tagSuffix ?? ""}
+                aria-invalid={tagSuffixProblem(row.tagSuffix ?? "")
+                  ? "true"
+                  : undefined}
+                oninput={(event) =>
+                  update(row.key, {
+                    tagSuffix: event.currentTarget.value || undefined,
+                  })}
+                onkeydown={inputKey}
+              /></label
+            >
+            {#if row.type !== "number"}
+              <SlotDisplayEditor
+                slot={row}
+                onchange={(patch) => update(row.key, patch)}
+                onkeydown={inputKey}
+              />
+            {/if}
+            <span>採用機器 {count}件</span>
+            <button
+              type="button"
               disabled={count > 0}
-              onchange={(event) =>
-                retype(row.key, event.currentTarget.value as SlotType)}
-              ><option value="bool">bool</option><option value="number"
-                >number</option
-              ><option value="state">state</option></select
-            ></label
-          >
-          <label class="banto-field banto-field--stacked"
-            ><span class="banto-field-label">タグ名の末尾</span><input
-              class="banto-field-control"
-              aria-label="タグ名の末尾"
-              title="割付の一覧表で機器ごとの接頭辞の後ろにつなげます（空欄なら使いません）"
-              placeholder="（なし）"
-              maxlength="1024"
-              value={row.tagSuffix ?? ""}
-              aria-invalid={tagSuffixProblem(row.tagSuffix ?? "")
-                ? "true"
-                : undefined}
-              oninput={(event) =>
-                update(row.key, {
-                  tagSuffix: event.currentTarget.value || undefined,
-                })}
-              onkeydown={inputKey}
-            /></label
-          >
-          {#if row.type !== "number"}
-            <SlotDisplayEditor
-              slot={row}
-              onchange={(patch) => update(row.key, patch)}
-              onkeydown={inputKey}
-            />
-          {/if}
-          <span>採用機器 {count}件</span>
-          <button
-            type="button"
-            disabled={count > 0}
-            title={count ? "採用中slotは削除できません" : "この読取slotを削除"}
-            onclick={() => {
-              rows = rows.filter((item) => item.key !== row.key);
-              mark();
-            }}>slotを削除</button
-          >
-          {#if count}<small
-              >未割付も採用に含みます。先に機器の採用を解除してください。</small
-            >{/if}
-        </div>
-      {/each}
-    </div>
-    <button
-      type="button"
-      disabled={rows.length >= 64}
-      onclick={() => {
-        rows = [
-          ...rows,
-          { key: nextKey++, name: "", type: "number", direction: "read" },
-        ];
-        mark();
-      }}>読取slotを追加</button
-    >
-    <button
-      type="submit"
-      form={formId}
-      disabled={!selected && (project.equipmentTypes?.length ?? 0) >= 100}
-      >{selected ? "機器種別を適用" : "機器種別を作成"}</button
-    >
-    {#if selected}
-      <p>
-        使用機器 {users.length}件。採用中slotの改名・型変更・削除を保護します。
-      </p>
+              title={count
+                ? "採用中slotは削除できません"
+                : "この読取slotを削除"}
+              onclick={() => {
+                rows = rows.filter((item) => item.key !== row.key);
+                mark();
+              }}>slotを削除</button
+            >
+            {#if count}<small
+                >未割付も採用に含みます。先に機器の採用を解除してください。</small
+              >{/if}
+          </div>
+        {/each}
+      </div>
       <button
         type="button"
-        disabled={users.length > 0}
-        onclick={() =>
-          oncommand({ type: "remove-equipment-type", typeId: selected!.id })}
-        >この機器種別を削除</button
+        disabled={rows.length >= 64}
+        onclick={() => {
+          rows = [
+            ...rows,
+            { key: nextKey++, name: "", type: "number", direction: "read" },
+          ];
+          mark();
+        }}>読取slotを追加</button
       >
-    {/if}
-  {/key}
+      <button
+        type="submit"
+        form={formId}
+        disabled={!selected && (project.equipmentTypes?.length ?? 0) >= 100}
+        >{selected ? "機器種別を適用" : "機器種別を作成"}</button
+      >
+      {#if selected}
+        <p>
+          使用機器 {users.length}件。採用中slotの改名・型変更・削除を保護します。
+        </p>
+        <button
+          type="button"
+          disabled={users.length > 0}
+          onclick={() =>
+            oncommand({ type: "remove-equipment-type", typeId: selected!.id })}
+          >この機器種別を削除</button
+        >
+      {/if}
+    {/key}
+  </div>
 </section>
 
 <style>
@@ -286,6 +295,20 @@
     display: grid;
     gap: 8px;
     font-size: 12px;
+  }
+  .list,
+  .detail {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    align-content: start;
+  }
+  /* 作業画面（container）の幅が 720px 以上なら2列にする。 */
+  @container (min-width: 720px) {
+    section {
+      grid-template-columns: minmax(240px, 2fr) minmax(320px, 3fr);
+      gap: 16px;
+    }
   }
   label {
     display: grid;

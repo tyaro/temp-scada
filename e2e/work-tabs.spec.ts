@@ -3,7 +3,7 @@ import sample from "../examples/process.project.json" with { type: "json" };
 import { chooseMenuItem, mainCanvas, selectPanel } from "./helpers/designer";
 import { openProject } from "./helpers/project-files";
 
-// Issue #223 WT1a・WT1b・WT2: メイン領域の作業タブ（docs/design/editor/main-work-tabs-design.md）。
+// Issue #223 WT1a・WT1b・WT2・WT3: メイン領域の作業タブ（docs/design/editor/main-work-tabs-design.md）。
 
 const workTabs = (page: Page) =>
   page.getByRole("navigation", { name: "作業タブ", exact: true });
@@ -262,11 +262,21 @@ test("Symbol 定義の編集中は作業タブを隠し、戻ると並びだけ�
     page.getByRole("button", { name: "警報の定義", exact: true }),
   ).toBeDisabled();
   await expect(
-    page.getByRole("button", { name: "記録希望設定", exact: true }),
+    page.getByRole("button", { name: "機器台帳を開く", exact: true }),
   ).toBeDisabled();
   await expect(
+    page.getByRole("button", {
+      name: "機器を新規登録（機器台帳）",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "記録希望設定", exact: true }),
+  ).toBeDisabled();
+  // 「機器」と「設定」の区画にそれぞれ理由を示す。
+  await expect(
     page.getByText("Symbol 定義の編集中は使えません。", { exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(2);
   await expect(
     await menuItem(
       page,
@@ -580,4 +590,124 @@ test("最小幅 700px では警報の表と詳細を1列に並べ、最後の操
     submit.boundingBox(),
   ]);
   expect(submitBox!.y).toBeGreaterThan(tableBox!.y + tableBox!.height);
+});
+
+const equipmentTab = (page: Page) =>
+  workTabs(page).getByRole("button", { name: "機器", exact: true });
+const equipmentScreen = (page: Page) =>
+  page.getByRole("region", { name: "機器", exact: true });
+
+test("左の「機器台帳を開く」と「＋」で作業タブ「機器」を開き、一覧と登録を2列に並べ、表示を保つ（WT3）", async ({
+  page,
+}) => {
+  await edit(page);
+  await selectPanel(page, "プロジェクト");
+  const add = page.getByRole("button", {
+    name: "機器を新規登録（機器台帳）",
+    exact: true,
+  });
+  // 機器種別が無いうちは新規登録できない。
+  await expect(add).toBeDisabled();
+  // 左ペインには台帳を置かない。
+  await expect(
+    page.getByRole("navigation", { name: "登録機器", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "機器台帳を開く", exact: true })
+    .click();
+  await expect(equipmentTab(page)).toHaveAttribute("aria-current", "page");
+  await expect(
+    equipmentScreen(page).getByRole("heading", { name: "機器", level: 2 }),
+  ).toBeFocused();
+  await equipmentScreen(page)
+    .getByRole("button", { name: "送風機種別を追加", exact: true })
+    .click();
+  const register = equipmentScreen(page).getByRole("form", {
+    name: "機器を登録",
+    exact: true,
+  });
+  await expect(register).toBeVisible();
+  // 作業画面が広いときは、一覧の右に登録フォームを置く。
+  const list = equipmentScreen(page).getByRole("navigation", {
+    name: "登録機器",
+    exact: true,
+  });
+  const [listBox, formBox] = await Promise.all([
+    list.boundingBox(),
+    register.boundingBox(),
+  ]);
+  expect(formBox!.x).toBeGreaterThanOrEqual(listBox!.x + listBox!.width);
+  await register.getByLabel("機器番号", { exact: true }).fill("FAN-01");
+  await register.getByLabel("機器名", { exact: true }).fill("送風機1");
+  // 新規登録は明示適用: 画面タブへ切り替える前に確認を出す（W2）。
+  await screenTabs(page).getByRole("button").first().click();
+  const dialog = page.getByRole("dialog", { name: "未適用の入力があります" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
+  await expect(equipmentTab(page)).toHaveAttribute("aria-current", "page");
+  await register
+    .getByRole("button", { name: "機器を登録", exact: true })
+    .click();
+  await expect(
+    equipmentScreen(page).getByRole("form", {
+      name: "機器情報と割付",
+      exact: true,
+    }),
+  ).toBeVisible();
+  // W3: 機器種別の表示は画面タブを挟んでも残る。
+  const types = equipmentScreen(page).getByRole("button", {
+    name: "機器種別",
+    exact: true,
+  });
+  await types.click();
+  await expect(types).toHaveAttribute("aria-pressed", "true");
+  await screenTabs(page).getByRole("button").first().click();
+  await expect(equipmentScreen(page)).toBeHidden();
+  await page
+    .getByRole("button", { name: "機器台帳を開く", exact: true })
+    .click();
+  await expect(types).toHaveAttribute("aria-pressed", "true");
+  // 左の「＋」は機器一覧の新規登録へ切り替え、最初の欄へフォーカスする（W12）。
+  await screenTabs(page).getByRole("button").first().click();
+  await add.click();
+  await expect(equipmentTab(page)).toHaveAttribute("aria-current", "page");
+  await expect(
+    equipmentScreen(page).getByRole("button", {
+      name: "機器一覧",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    register.getByRole("combobox", { name: "機器種別", exact: true }),
+  ).toBeFocused();
+});
+
+test("最小幅 700px では機器の一覧と登録を1列に並べ、最後の操作に手が届く（WT3）", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 700, height: 640 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await chooseMenuItem(page, "表示", "機器");
+  const preset = equipmentScreen(page).getByRole("button", {
+    name: "送風機種別を追加",
+    exact: true,
+  });
+  await preset.scrollIntoViewIfNeeded();
+  await preset.click();
+  const list = equipmentScreen(page).getByRole("navigation", {
+    name: "登録機器",
+    exact: true,
+  });
+  const submit = equipmentScreen(page).getByRole("button", {
+    name: "機器を登録",
+    exact: true,
+  });
+  await submit.scrollIntoViewIfNeeded();
+  await expect(submit).toBeInViewport();
+  const [listBox, submitBox] = await Promise.all([
+    list.boundingBox(),
+    submit.boundingBox(),
+  ]);
+  expect(submitBox!.y).toBeGreaterThan(listBox!.y + listBox!.height);
 });

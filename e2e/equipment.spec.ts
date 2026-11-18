@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { fileCommand } from "./helpers/designer";
+import { fileCommand, openEquipmentLedger } from "./helpers/designer";
 const sample = JSON.parse(
   readFileSync("examples/equipment.project.json", "utf8"),
 );
@@ -25,6 +25,7 @@ for (const theme of ["light", "dark"] as const) {
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(sample)),
     });
+    await openEquipmentLedger(page);
     const library = page.getByRole("region", { name: "機器台帳", exact: true });
     await library
       .getByRole("button", { name: "FAN-101 · 誘引送風機", exact: true })
@@ -88,6 +89,7 @@ test("equipment drafts guard switching, Undo and invalid duplicate codes", async
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(sample)),
   });
+  await openEquipmentLedger(page);
   const library = page.getByRole("region", { name: "機器台帳", exact: true });
   await library
     .getByRole("button", { name: "FAN-101 · 誘引送風機", exact: true })
@@ -136,6 +138,7 @@ test("preset registration has no phantom draft, prevents duplicates and ignores 
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await openEquipmentLedger(page);
   const library = page.getByRole("region", { name: "機器台帳", exact: true });
   await library
     .getByRole("button", { name: "送風機種別を追加", exact: true })
@@ -149,6 +152,7 @@ test("preset registration has no phantom draft, prevents duplicates and ignores 
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(library).toHaveCount(0);
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await openEquipmentLedger(page);
   const form = page.getByRole("form", { name: "機器を登録", exact: true });
   await form.getByLabel("機器番号", { exact: true }).fill("FAN-201");
   const name = form.getByLabel("機器名", { exact: true });
@@ -181,6 +185,7 @@ test("equipment import rejects the previous schema and retains the current proje
     "Project を読み込みました。",
   );
   await page.getByRole("button", { name: "編集", exact: true }).click();
+  await openEquipmentLedger(page);
   await expect(
     page
       .getByRole("region", { name: "機器台帳", exact: true })

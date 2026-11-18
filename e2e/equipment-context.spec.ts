@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import sample from "../examples/symbol-slots.project.json" with { type: "json" };
-import { chooseTheme, selectPanel } from "./helpers/designer";
+import { chooseTheme, returnToCanvas, selectPanel } from "./helpers/designer";
 async function start(page: Page, locked = false) {
   const project: any = structuredClone(sample);
   if (locked) project.screens[0].objects[0].locked = true;
@@ -50,6 +50,12 @@ for (const source of ["canvas", "layer-keyboard"] as const)
         .getByRole("form", { name: "機器情報と割付", exact: true })
         .getByLabel("機器番号", { exact: true }),
     ).toHaveValue(project.equipment[0].code);
+    await expect(
+      page
+        .getByRole("navigation", { name: "作業タブ", exact: true })
+        .getByRole("button", { name: "機器", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
+    await returnToCanvas(page);
     await selectPanel(page, "レイヤー");
     await open();
     await action(page, "関連機器の読取詳細を開く").click();

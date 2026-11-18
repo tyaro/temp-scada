@@ -316,17 +316,13 @@
   function revealDraftForm(form: HTMLFormElement) {
     // W6: 作業画面のフォームはその作業タブを、Inspector・画面設定・タグの置換
     // （下部の帯）へ戻すときは先に画面タブを、ゲートなしで選ぶ（ゲートを通すと
-    // allow→apply→reveal が繰り返す）。左ペインに残る機器のフォームは WT3 で
-    // 作業画面へ移すときに書き換える。
+    // allow→apply→reveal が繰り返す）。
     const workScreen = form.closest<HTMLElement>("[data-work-screen]");
     if (workScreen) {
       workTabs.selectNow(workScreen.dataset.workScreen as WorkTabKind);
       return;
     }
-    if (
-      !["equipment", "equipment-type"].includes(form.dataset.editorForm ?? "")
-    )
-      showCanvas();
+    showCanvas();
     if (form.dataset.editorForm === "binding-replacement") {
       setAuxPanelVisibility({ references: true });
       referencesExpanded = true;
@@ -336,11 +332,6 @@
     if (form.closest("#designer-inspector-panel .screen-settings")) {
       revealScreenSettings = true;
       setInspectorVisibility(true);
-    } else if (
-      ["equipment", "equipment-type"].includes(form.dataset.editorForm ?? "")
-    ) {
-      setAuxPanelVisibility({ sidebar: true });
-      activePanel = "project";
     } else setInspectorVisibility(true);
   }
   import EditToolbar from "./lib/designer/EditToolbar.svelte";
@@ -2429,6 +2420,34 @@
     if (workTabs.selected === "project-settings") focusProjectName();
     else transition(focusProjectName);
   }
+  /**
+   * 左の機器の「＋」: 作業タブ「機器」を新規登録の状態で開く（W12）。
+   * ゲートを1回通し、タブを選んで部品のマウントを待ってから新規登録にする。
+   */
+  function newEquipment() {
+    if (menuBlocked || !workTabsShown) return;
+    const generation = workspaceGeneration;
+    transition(() => {
+      if (generation !== workspaceGeneration || !workTabsShown) return;
+      workTabs.selectNow("equipment");
+      void tick()
+        .then(() =>
+          generation === workspaceGeneration &&
+          workTabs.selected === "equipment"
+            ? (equipmentLibrary?.startNew() ?? null)
+            : null,
+        )
+        .then((form) => {
+          if (
+            generation !== workspaceGeneration ||
+            workTabs.selected !== "equipment" ||
+            !form?.isConnected
+          )
+            return;
+          form.querySelector<HTMLElement>("select, input")?.focus();
+        });
+    });
+  }
   function renamePlacement(id: string) {
     const generation = workspaceGeneration,
       target = screen.id;
@@ -3434,26 +3453,31 @@
         return;
       }
       if (destination === "settings") {
-        setAuxPanelVisibility({ sidebar: true });
-        activePanel = "project";
-        const library = equipmentLibrary;
-        void library?.showEquipment(id).then((form) => {
-          if (
-            workspaceGeneration !== generation ||
-            screen.id !== ownerId ||
-            mode !== "edit" ||
-            activeDefinition ||
-            equipmentLibrary !== library ||
-            !form?.isConnected ||
-            form.dataset.equipmentId !== id
+        // W12: 作業タブ「機器」を開き、部品のマウントを待ってから対象を選ぶ。
+        // ゲートは通過済みなので selectNow を使う（W2 の例外）。
+        workTabs.selectNow("equipment");
+        void tick()
+          .then(() =>
+            workspaceGeneration === generation &&
+            workTabs.selected === "equipment"
+              ? (equipmentLibrary?.showEquipment(id) ?? null)
+              : null,
           )
-            return;
-          expandTreeAncestors(form);
-          form.scrollIntoView({ block: "nearest" });
-          const input = form.elements.namedItem("code");
-          if (input instanceof HTMLInputElement)
-            input.focus({ preventScroll: true });
-        });
+          .then((form) => {
+            if (
+              workspaceGeneration !== generation ||
+              mode !== "edit" ||
+              activeDefinition ||
+              workTabs.selected !== "equipment" ||
+              !form?.isConnected ||
+              form.dataset.equipmentId !== id
+            )
+              return;
+            form.scrollIntoView({ block: "nearest" });
+            const input = form.elements.namedItem("code");
+            if (input instanceof HTMLInputElement)
+              input.focus({ preventScroll: true });
+          });
         return;
       }
       rememberEditView();
@@ -4508,20 +4532,27 @@
             />
           </TreeSection>
           <TreeSection label="機器" count={project.equipment?.length ?? 0}>
-            {#key workspaceGeneration}<EquipmentLibrary
-                {catalogSelection}
-                bind:this={equipmentLibrary}
-                {project}
-                generation={workspaceGeneration}
-                {drafts}
-                {transition}
-                oncommand={edit}
-                onsubmit={submitForm}
-                onopenusage={openSymbolUsage}
-                onopentable={openBindingTable}
-                tableDisabled={(editBlocked && !bindingTableOpen) ||
-                  !!activeDefinition}
-              />{/key}
+            {#snippet action()}
+              <button
+                class="tree-add"
+                aria-label="機器を新規登録（機器台帳）"
+                title="機器を新規登録"
+                disabled={editBlocked ||
+                  !!activeDefinition ||
+                  !project.equipmentTypes?.length}
+                onclick={newEquipment}>＋</button
+              >
+            {/snippet}
+            <div class="settings-rows">
+              <button
+                disabled={editBlocked || !!activeDefinition}
+                onclick={() => workTabs.open("equipment")}
+                >機器台帳を開く</button
+              >
+            </div>
+            {#if activeDefinition}
+              <p class="hint">Symbol 定義の編集中は使えません。</p>
+            {/if}
           </TreeSection>
           <TreeSection label="設定">
             <div class="settings-rows">
@@ -4651,7 +4682,23 @@
           <h2 id={`work-screen-title-${kind}`} tabindex="-1">
             {workTabLabel(kind)}
           </h2>
-          {#if kind === "alarm-definitions"}
+          {#if kind === "equipment"}
+            <div class="equipment-work">
+              {#key workspaceGeneration}<EquipmentLibrary
+                  {catalogSelection}
+                  bind:this={equipmentLibrary}
+                  {project}
+                  generation={workspaceGeneration}
+                  {drafts}
+                  {transition}
+                  oncommand={edit}
+                  onsubmit={submitForm}
+                  onopenusage={openSymbolUsage}
+                  onopentable={openBindingTable}
+                  tableDisabled={editBlocked && !bindingTableOpen}
+                />{/key}
+            </div>
+          {:else if kind === "alarm-definitions"}
             <div class="alarm-definitions-work">
               <AlarmSettings
                 {project}
@@ -5897,7 +5944,8 @@
     font-size: 16px;
   }
   /* 作業タブ「警報の定義」（§2.2）。2列の切替は AlarmSettings の container query。 */
-  .alarm-definitions-work {
+  .alarm-definitions-work,
+  .equipment-work {
     container-type: inline-size;
   }
   /* 作業タブ「プロジェクト設定」（§2.2）。設定を縦に並べ、幅は入力に合わせて抑える。 */

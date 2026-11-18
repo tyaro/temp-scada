@@ -1,7 +1,13 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/symbol-slots.project.json" with { type: "json" };
-import { chooseTheme, fileCommand, selectPanel } from "./helpers/designer";
+import {
+  chooseTheme,
+  fileCommand,
+  openEquipmentLedger,
+  returnToCanvas,
+  selectPanel,
+} from "./helpers/designer";
 const entry = (page: Page) =>
   page.getByRole("button", { name: "関連機器の台帳設定を開く", exact: true });
 async function start(page: Page, locked = false) {
@@ -23,12 +29,12 @@ async function start(page: Page, locked = false) {
   return project;
 }
 for (const theme of ["light", "dark"] as const)
-  test(`locked placement opens its equipment settings, restores panels and leaves Project unchanged in ${theme}`, async ({
+  test(`locked placement opens its equipment settings in the work tab, keeps ledger state and leaves Project unchanged in ${theme}`, async ({
     page,
   }) => {
     const project = await start(page, true);
     await chooseTheme(page, theme);
-    await selectPanel(page, "プロジェクト");
+    await openEquipmentLedger(page);
     const library = page.getByRole("region", { name: "機器台帳", exact: true });
     await library
       .getByRole("searchbox", { name: "機器を検索", exact: true })
@@ -36,15 +42,17 @@ for (const theme of ["light", "dark"] as const)
     await library
       .getByRole("button", { name: "機器種別", exact: true })
       .click();
-    await page
-      .locator("summary")
-      .filter({ has: page.getByText("機器", { exact: true }) })
-      .click();
+    await returnToCanvas(page);
     await page
       .getByRole("button", { name: "左パネルを隠す", exact: true })
       .click();
     await expect(entry(page)).toBeEnabled();
     await entry(page).click();
+    await expect(
+      page
+        .getByRole("navigation", { name: "作業タブ", exact: true })
+        .getByRole("button", { name: "機器", exact: true }),
+    ).toHaveAttribute("aria-current", "page");
     const form = library.getByRole("form", {
       name: "機器情報と割付",
       exact: true,
@@ -93,7 +101,7 @@ test("settings entry protects an existing ledger draft and refuses a removed ass
   page,
 }) => {
   const project = await start(page);
-  await selectPanel(page, "プロジェクト");
+  await openEquipmentLedger(page);
   const library = page.getByRole("region", { name: "機器台帳", exact: true });
   await library
     .locator(`[data-equipment-choice="${project.equipment[1].id}"]`)
@@ -103,11 +111,16 @@ test("settings entry protects an existing ledger draft and refuses a removed ass
     exact: true,
   });
   await form.getByLabel("機器名", { exact: true }).fill("保護する入力");
+  await returnToCanvas(page);
   await selectPanel(page, "レイヤー");
+  await page
+    .locator(`button[data-layer-id="${project.screens[0].objects[0].id}"]`)
+    .click();
   await entry(page).click();
   await expect(form.getByLabel("機器番号", { exact: true })).toHaveValue(
     project.equipment[0].code,
   );
+  await returnToCanvas(page);
   await page.getByLabel("関連付ける機器", { exact: true }).selectOption("");
   await entry(page).click();
   await expect(entry(page)).toBeDisabled();

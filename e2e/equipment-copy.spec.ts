@@ -1,7 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/symbol-slots.project.json" with { type: "json" };
-import { chooseTheme, fileCommand } from "./helpers/designer";
+import {
+  chooseTheme,
+  fileCommand,
+  openEquipmentLedger,
+} from "./helpers/designer";
 async function save(page: Page) {
   const pending = page.waitForEvent("download");
   await fileCommand(page, "Project を保存");
@@ -30,6 +34,7 @@ for (const theme of ["light", "dark"] as const) {
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(project)),
     });
+    await openEquipmentLedger(page);
     const library = page.getByRole("region", { name: "機器台帳", exact: true });
     await library.locator(`[data-equipment-choice="${source.id}"]`).click();
     await library
@@ -108,6 +113,7 @@ test("copy registration protects source drafts, cancellation and unsaved candida
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
   });
+  await openEquipmentLedger(page);
   const library = page.getByRole("region", { name: "機器台帳", exact: true });
   await library.locator(`[data-equipment-choice="${source.id}"]`).click();
   const editing = page.getByRole("form", {

@@ -58,6 +58,11 @@ export async function openProjectSettings(page: Page) {
   await chooseMenuItem(page, "表示", "プロジェクト設定");
 }
 
+/** 作業タブ「機器」を表示メニューから開く（開いていれば選ぶ）。 */
+export async function openEquipmentLedger(page: Page) {
+  await chooseMenuItem(page, "表示", "機器");
+}
+
 /** 作業タブ「警報の定義」を表示メニューから開く（開いていれば選ぶ）。 */
 export async function openAlarmDefinitions(page: Page) {
   await chooseMenuItem(page, "表示", "警報の定義");
@@ -111,4 +116,13 @@ export async function currentScreenMenuItem(page: Page, name: string) {
 /** Duplicate, reorder or delete the active screen through its context menu. */
 export async function currentScreenAction(page: Page, name: string) {
   await (await currentScreenMenuItem(page, name)).click();
+}
+
+/** 作業タブから最初の画面タブへ戻り、キャンバス・Inspector・左パネルを使える状態にする。 */
+export async function returnToCanvas(page: Page) {
+  await page
+    .getByRole("navigation", { name: "画面タブ", exact: true })
+    .getByRole("button")
+    .first()
+    .click();
 }

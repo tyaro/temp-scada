@@ -1,6 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import sample from "../examples/symbol-slots.project.json" with { type: "json" };
-import { fileCommand, chooseTheme } from "./helpers/designer";
+import {
+  fileCommand,
+  chooseTheme,
+  openEquipmentLedger,
+} from "./helpers/designer";
 import { readFile } from "node:fs/promises";
 
 // A4: the state rows of an equipment-type slot are edited in the type editor.
@@ -13,6 +17,7 @@ async function start(page: Page) {
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(sample)),
   });
+  await openEquipmentLedger(page);
   const library = page.getByRole("region", { name: "機器台帳", exact: true });
   await library.getByRole("button", { name: "機器種別", exact: true }).click();
   return page.getByRole("region", { name: "機器種別の編集", exact: true });

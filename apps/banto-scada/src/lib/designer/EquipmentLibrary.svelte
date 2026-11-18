@@ -77,6 +77,23 @@
     );
     return form?.dataset.equipmentId === id ? form : null;
   }
+  /**
+   * 作業タブ「機器」を新規登録の状態にする（左の「＋」、W12）。
+   * 呼び出し側が未適用入力を解決してから呼ぶ。登録フォームを返す（種別が無ければ null）。
+   */
+  export async function startNew(): Promise<HTMLFormElement | null> {
+    const owner = generation;
+    view = "instances";
+    copySourceId = "";
+    selectedId = "";
+    await tick();
+    if (owner !== generation || selectedId !== "" || !root?.isConnected)
+      return null;
+    const form = root.querySelector<HTMLFormElement>(
+      'form[data-editor-form="equipment"]',
+    );
+    return form?.dataset.equipmentId === "" ? form : null;
+  }
   let selectedId = $state("");
   let copySourceId = $state("");
   const copySource = $derived(
@@ -258,263 +275,274 @@
       {onsubmit}
     />
   {:else}
-    <p>
-      読取機器の登録と割付。図面のSymbolへ関連付けできます。実Hub接続は後続です。
-    </p>
-    <div class="actions">
-      <button
-        disabled={hasPreset("送風機")}
-        onclick={() =>
-          oncommand({
-            type: "create-equipment-type",
-            name: "送風機",
-            slots: [
-              { name: "running", type: "bool", direction: "read" },
-              { name: "current", type: "number", direction: "read" },
-            ],
-          })}>送風機種別を追加</button
-      >
-      <button
-        disabled={hasPreset("計器")}
-        onclick={() =>
-          oncommand({
-            type: "create-equipment-type",
-            name: "計器",
-            slots: [{ name: "value", type: "number", direction: "read" }],
-          })}>計器種別を追加</button
-      >
-    </div>
-    {#if onopentable}
-      <button
-        disabled={tableDisabled || !project.equipment?.length}
-        onclick={() => transition(() => onopentable())}>割付の一覧表</button
-      >
-    {/if}
-    <div class="banto-field banto-field--stacked">
-      <input
-        class="banto-field-control"
-        type="search"
-        aria-label="機器を検索"
-        placeholder="機器を検索"
-        bind:value={search}
-      />
-    </div>
-    <p aria-live="polite">
-      {matching.length}件 / 全{project.equipment?.length ?? 0}件
-    </p>
-    <nav aria-label="登録機器">
-      {#each matching.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE) as item (item.id)}
-        <button
-          data-equipment-choice={item.id}
-          class:active={selected?.id === item.id}
-          aria-pressed={selected?.id === item.id}
-          onclick={() =>
-            transition(() => {
-              copySourceId = "";
-              selectedId = item.id;
-            })}>{item.code} · {item.name}</button
-        >
-      {/each}
-      {#if !matching.length}<p>一致する機器はありません。</p>{/if}
-      {#if matching.length > PAGE_SIZE}
-        <div class="pages" role="group" aria-label="登録機器のページ">
+    <!-- 作業画面の幅が足りれば、左に一覧、右に選んだ機器の登録／割付を置く（§2.2）。 -->
+    <div class="columns">
+      <div class="list">
+        <p>
+          読取機器の登録と割付。図面のSymbolへ関連付けできます。実Hub接続は後続です。
+        </p>
+        <div class="actions">
           <button
-            type="button"
-            disabled={currentPage === 0}
-            onclick={() => (page = currentPage - 1)}>前の機器</button
-          >
-          <span>{currentPage + 1} / {lastPage + 1}</span>
-          <button
-            type="button"
-            disabled={currentPage === lastPage}
-            onclick={() => (page = currentPage + 1)}>次の機器</button
-          >
-        </div>
-      {/if}
-      <button
-        disabled={!project.equipmentTypes?.length}
-        onclick={() =>
-          transition(() => {
-            copySourceId = "";
-            selectedId = "";
-          })}>機器を新規登録</button
-      >
-    </nav>
-    {#if selected && !matching.some((item) => item.id === selected.id)}<p>
-        編集中: {selected.code}（検索結果外）
-      </p>{/if}
-    {#if project.equipmentTypes?.length}
-      {#key `${generation}:${selected?.id ?? "new"}:${copySourceId}`}
-        <form
-          use:drafts.track={values}
-          data-editor-form="equipment"
-          data-explicit-apply={selected ? undefined : ""}
-          data-equipment-id={selected?.id ?? ""}
-          data-copy-equipment-id={copySourceId}
-          data-target-key={`${generation}:${project.manifest.projectId}`}
-          aria-label={selected ? "機器情報と割付" : "機器を登録"}
-          oncompositionstart={() => (composing = true)}
-          oncompositionend={() => (composing = false)}
-          onsubmit={(event) => {
-            if (composing) event.preventDefault();
-            else {
-              const before = new Set(project.equipment?.map((item) => item.id));
-              const owner = generation;
-              const form = event.currentTarget;
-              onsubmit(event);
-              if (!selected)
-                void tick().then(() => {
-                  if (owner !== generation || !form.isConnected) return;
-                  const created = project.equipment?.find(
-                    (item) => !before.has(item.id),
-                  );
-                  if (created)
-                    transition(() => {
-                      copySourceId = "";
-                      selectedId = created.id;
-                    });
-                });
-            }
-          }}
-        >
-          {#if selected}<p>種別: {kind?.name}</p>
-          {:else if copySourceId}
-            <strong>別の機器として登録</strong>
-            <p>
-              登録元: {copySource?.code ?? "削除済み"} · {copySource?.name ??
-                ""}
-            </p>
-            <p>
-              種別: {typeNames.get(copySource?.typeId ?? "") ?? "不明"} · 採用slot
-              {copySource?.bindings.length ?? 0}件
-            </p>
-            <p>
-              採用した信号はすべて未割付で登録します。図面の配置と外部タグの割付は引き継ぎません。
-            </p>
-          {:else}<label class="banto-field banto-field--stacked"
-              ><span class="banto-field-label">機器種別</span><select
-                class="banto-field-control"
-                name="typeId"
-                >{#each project.equipmentTypes as type}<option value={type.id}
-                    >{type.name}</option
-                  >{/each}</select
-              ></label
-            >{/if}
-          <label class="banto-field banto-field--stacked"
-            ><span class="banto-field-label">機器番号</span><input
-              class="banto-field-control"
-              onkeydown={inputKey}
-              name="code"
-              required
-              maxlength="64"
-              placeholder={copySourceId ? "新しい機器番号" : "FAN-101"}
-            /></label
-          >
-          <label class="banto-field banto-field--stacked"
-            ><span class="banto-field-label">機器名</span><input
-              class="banto-field-control"
-              onkeydown={inputKey}
-              name="name"
-              required
-              maxlength="200"
-            /></label
-          >
-          {#each kind?.slots ?? [] as slot}
-            <div class="slot">
-              <strong>{slot.name} · {slot.type} / read</strong>
-              <label class="banto-field banto-field--stacked"
-                ><span class="banto-field-label">採用・割付状態</span><select
-                  class="banto-field-control"
-                  name={`state:${slot.name}`}
-                  ><option value="unadopted">未採用</option><option
-                    value="unassigned">採用・未割付</option
-                  ><option value="assigned">外部名を割付</option></select
-                ></label
-              >
-              <label class="banto-field banto-field--stacked"
-                ><span class="banto-field-label">外部名（割付時のみ使用）</span
-                ><input
-                  class="banto-field-control"
-                  onkeydown={inputKey}
-                  name={`tag:${slot.name}`}
-                  data-explicit-apply
-                  maxlength="512"
-                  placeholder="PLC01.Fast.Fan01.Run"
-                /></label
-              >
-              {#if selected}
-                <button
-                  type="button"
-                  aria-label={`${slot.name}のタグを選択`}
-                  disabled={!catalogSelection.available}
-                  onclick={(event) =>
-                    pickSlot(event, slot.name, slotReadType(slot.type))}
-                  >タグを選択</button
-                >
-              {/if}
-            </div>
-          {/each}
-          <p>{catalogSelection.notice}</p>
-          <button type="submit"
-            >{selected ? "機器情報と割付を適用" : "機器を登録"}</button
-          >
-        </form>
-        {#if copySourceId}
-          <button
-            onclick={() => {
-              const sourceId = copySourceId,
-                owner = generation;
-              transition(() => {
-                if (
-                  owner !== generation ||
-                  !project.equipment?.some((item) => item.id === sourceId)
-                )
-                  return;
-                selectedId = sourceId;
-                copySourceId = "";
-              });
-            }}>登録元の機器へ戻る</button
-          >
-        {/if}
-        {#if selected}
-          <button
-            onclick={() => {
-              const sourceId = selectedId,
-                owner = generation;
-              transition(() => {
-                if (
-                  owner !== generation ||
-                  !project.equipment?.some((item) => item.id === sourceId)
-                )
-                  return;
-                copySourceId = sourceId;
-                selectedId = "";
-              });
-            }}>この機器を元に別の機器を登録</button
-          >
-          <section aria-label="機器の使用先">
-            <strong>図面の使用先 {usages.length} 件</strong>
-            {#each usages as usage (usage.objectId)}
-              <button
-                title={`配置ID: ${usage.objectId}`}
-                onclick={() => onopenusage(usage)}
-                >{usage.screenName} · {usage.name ?? "Symbol 配置"} · #{usage.order}
-                ({usage.x}, {usage.y}){usage.visible === false
-                  ? "（非表示）"
-                  : ""}</button
-              >
-            {/each}
-          </section>
-          <button
-            disabled={usages.length > 0}
+            disabled={hasPreset("送風機")}
             onclick={() =>
               oncommand({
-                type: "remove-equipment",
-                equipmentId: selected!.id,
-              })}>この機器を削除</button
-          >{/if}
-      {/key}
-    {/if}
+                type: "create-equipment-type",
+                name: "送風機",
+                slots: [
+                  { name: "running", type: "bool", direction: "read" },
+                  { name: "current", type: "number", direction: "read" },
+                ],
+              })}>送風機種別を追加</button
+          >
+          <button
+            disabled={hasPreset("計器")}
+            onclick={() =>
+              oncommand({
+                type: "create-equipment-type",
+                name: "計器",
+                slots: [{ name: "value", type: "number", direction: "read" }],
+              })}>計器種別を追加</button
+          >
+        </div>
+        {#if onopentable}
+          <button
+            disabled={tableDisabled || !project.equipment?.length}
+            onclick={() => transition(() => onopentable())}>割付の一覧表</button
+          >
+        {/if}
+        <div class="banto-field banto-field--stacked">
+          <input
+            class="banto-field-control"
+            type="search"
+            aria-label="機器を検索"
+            placeholder="機器を検索"
+            bind:value={search}
+          />
+        </div>
+        <p aria-live="polite">
+          {matching.length}件 / 全{project.equipment?.length ?? 0}件
+        </p>
+        <nav aria-label="登録機器">
+          {#each matching.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE) as item (item.id)}
+            <button
+              data-equipment-choice={item.id}
+              class:active={selected?.id === item.id}
+              aria-pressed={selected?.id === item.id}
+              onclick={() =>
+                transition(() => {
+                  copySourceId = "";
+                  selectedId = item.id;
+                })}>{item.code} · {item.name}</button
+            >
+          {/each}
+          {#if !matching.length}<p>一致する機器はありません。</p>{/if}
+          {#if matching.length > PAGE_SIZE}
+            <div class="pages" role="group" aria-label="登録機器のページ">
+              <button
+                type="button"
+                disabled={currentPage === 0}
+                onclick={() => (page = currentPage - 1)}>前の機器</button
+              >
+              <span>{currentPage + 1} / {lastPage + 1}</span>
+              <button
+                type="button"
+                disabled={currentPage === lastPage}
+                onclick={() => (page = currentPage + 1)}>次の機器</button
+              >
+            </div>
+          {/if}
+          <button
+            disabled={!project.equipmentTypes?.length}
+            onclick={() =>
+              transition(() => {
+                copySourceId = "";
+                selectedId = "";
+              })}>機器を新規登録</button
+          >
+        </nav>
+        {#if selected && !matching.some((item) => item.id === selected.id)}<p>
+            編集中: {selected.code}（検索結果外）
+          </p>{/if}
+      </div>
+      <div class="detail">
+        {#if project.equipmentTypes?.length}
+          {#key `${generation}:${selected?.id ?? "new"}:${copySourceId}`}
+            <form
+              use:drafts.track={values}
+              data-editor-form="equipment"
+              data-explicit-apply={selected ? undefined : ""}
+              data-equipment-id={selected?.id ?? ""}
+              data-copy-equipment-id={copySourceId}
+              data-target-key={`${generation}:${project.manifest.projectId}`}
+              aria-label={selected ? "機器情報と割付" : "機器を登録"}
+              oncompositionstart={() => (composing = true)}
+              oncompositionend={() => (composing = false)}
+              onsubmit={(event) => {
+                if (composing) event.preventDefault();
+                else {
+                  const before = new Set(
+                    project.equipment?.map((item) => item.id),
+                  );
+                  const owner = generation;
+                  const form = event.currentTarget;
+                  onsubmit(event);
+                  if (!selected)
+                    void tick().then(() => {
+                      if (owner !== generation || !form.isConnected) return;
+                      const created = project.equipment?.find(
+                        (item) => !before.has(item.id),
+                      );
+                      if (created)
+                        transition(() => {
+                          copySourceId = "";
+                          selectedId = created.id;
+                        });
+                    });
+                }
+              }}
+            >
+              {#if selected}<p>種別: {kind?.name}</p>
+              {:else if copySourceId}
+                <strong>別の機器として登録</strong>
+                <p>
+                  登録元: {copySource?.code ?? "削除済み"} · {copySource?.name ??
+                    ""}
+                </p>
+                <p>
+                  種別: {typeNames.get(copySource?.typeId ?? "") ?? "不明"} · 採用slot
+                  {copySource?.bindings.length ?? 0}件
+                </p>
+                <p>
+                  採用した信号はすべて未割付で登録します。図面の配置と外部タグの割付は引き継ぎません。
+                </p>
+              {:else}<label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">機器種別</span><select
+                    class="banto-field-control"
+                    name="typeId"
+                    >{#each project.equipmentTypes as type}<option
+                        value={type.id}>{type.name}</option
+                      >{/each}</select
+                  ></label
+                >{/if}
+              <label class="banto-field banto-field--stacked"
+                ><span class="banto-field-label">機器番号</span><input
+                  class="banto-field-control"
+                  onkeydown={inputKey}
+                  name="code"
+                  required
+                  maxlength="64"
+                  placeholder={copySourceId ? "新しい機器番号" : "FAN-101"}
+                /></label
+              >
+              <label class="banto-field banto-field--stacked"
+                ><span class="banto-field-label">機器名</span><input
+                  class="banto-field-control"
+                  onkeydown={inputKey}
+                  name="name"
+                  required
+                  maxlength="200"
+                /></label
+              >
+              {#each kind?.slots ?? [] as slot}
+                <div class="slot">
+                  <strong>{slot.name} · {slot.type} / read</strong>
+                  <label class="banto-field banto-field--stacked"
+                    ><span class="banto-field-label">採用・割付状態</span
+                    ><select
+                      class="banto-field-control"
+                      name={`state:${slot.name}`}
+                      ><option value="unadopted">未採用</option><option
+                        value="unassigned">採用・未割付</option
+                      ><option value="assigned">外部名を割付</option></select
+                    ></label
+                  >
+                  <label class="banto-field banto-field--stacked"
+                    ><span class="banto-field-label"
+                      >外部名（割付時のみ使用）</span
+                    ><input
+                      class="banto-field-control"
+                      onkeydown={inputKey}
+                      name={`tag:${slot.name}`}
+                      data-explicit-apply
+                      maxlength="512"
+                      placeholder="PLC01.Fast.Fan01.Run"
+                    /></label
+                  >
+                  {#if selected}
+                    <button
+                      type="button"
+                      aria-label={`${slot.name}のタグを選択`}
+                      disabled={!catalogSelection.available}
+                      onclick={(event) =>
+                        pickSlot(event, slot.name, slotReadType(slot.type))}
+                      >タグを選択</button
+                    >
+                  {/if}
+                </div>
+              {/each}
+              <p>{catalogSelection.notice}</p>
+              <button type="submit"
+                >{selected ? "機器情報と割付を適用" : "機器を登録"}</button
+              >
+            </form>
+            {#if copySourceId}
+              <button
+                onclick={() => {
+                  const sourceId = copySourceId,
+                    owner = generation;
+                  transition(() => {
+                    if (
+                      owner !== generation ||
+                      !project.equipment?.some((item) => item.id === sourceId)
+                    )
+                      return;
+                    selectedId = sourceId;
+                    copySourceId = "";
+                  });
+                }}>登録元の機器へ戻る</button
+              >
+            {/if}
+            {#if selected}
+              <button
+                onclick={() => {
+                  const sourceId = selectedId,
+                    owner = generation;
+                  transition(() => {
+                    if (
+                      owner !== generation ||
+                      !project.equipment?.some((item) => item.id === sourceId)
+                    )
+                      return;
+                    copySourceId = sourceId;
+                    selectedId = "";
+                  });
+                }}>この機器を元に別の機器を登録</button
+              >
+              <section aria-label="機器の使用先">
+                <strong>図面の使用先 {usages.length} 件</strong>
+                {#each usages as usage (usage.objectId)}
+                  <button
+                    title={`配置ID: ${usage.objectId}`}
+                    onclick={() => onopenusage(usage)}
+                    >{usage.screenName} · {usage.name ?? "Symbol 配置"} · #{usage.order}
+                    ({usage.x}, {usage.y}){usage.visible === false
+                      ? "（非表示）"
+                      : ""}</button
+                  >
+                {/each}
+              </section>
+              <button
+                disabled={usages.length > 0}
+                onclick={() =>
+                  oncommand({
+                    type: "remove-equipment",
+                    equipmentId: selected!.id,
+                  })}>この機器を削除</button
+              >{/if}
+          {/key}
+        {/if}
+      </div>
+    </div>
   {/if}
 </section>
 
@@ -607,5 +635,20 @@
   }
   strong {
     font-size: 12px;
+  }
+  .columns,
+  .list,
+  .detail {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    align-content: start;
+  }
+  /* 作業画面（container）の幅が 720px 以上なら2列にする。 */
+  @container (min-width: 720px) {
+    .columns {
+      grid-template-columns: minmax(240px, 2fr) minmax(320px, 3fr);
+      gap: 16px;
+    }
   }
 </style>
