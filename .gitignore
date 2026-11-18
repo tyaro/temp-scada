@@ -9,3 +9,4 @@ apps/banto-scada/src-tauri/gen/
 
 # Local handoff notes
 docs/STATUS.md
+dist-pages/

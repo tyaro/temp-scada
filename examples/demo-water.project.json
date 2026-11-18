@@ -1,0 +1,6883 @@
+{
+  "operatorFrame": {
+    "startScreenId": "0199d301-0000-7000-8000-000000000001",
+    "headerScreenId": "0199d301-0000-7000-8000-000000000004",
+    "footerScreenId": "0199d301-0000-7000-8000-000000000005"
+  },
+  "alarms": {
+    "definitions": [
+      {
+        "id": "0199d301-0000-7000-8000-00000000002b",
+        "name": "T-101 原水槽 液位",
+        "enabled": true,
+        "source": {
+          "kind": "threshold",
+          "tag": "WWT.RawTank.Level",
+          "limits": {
+            "hh": {
+              "value": 90,
+              "severity": "high",
+              "message": "原水槽 液位 異常高"
+            },
+            "h": {
+              "value": 80,
+              "severity": "medium",
+              "message": "原水槽 液位 高"
+            },
+            "l": {
+              "value": 20,
+              "severity": "low",
+              "message": "原水槽 液位 低"
+            },
+            "ll": {
+              "value": 10,
+              "severity": "high",
+              "message": "原水槽 液位 異常低"
+            }
+          },
+          "deadband": 2
+        }
+      },
+      {
+        "id": "0199d301-0000-7000-8000-00000000002c",
+        "name": "T-201 pH",
+        "enabled": true,
+        "source": {
+          "kind": "threshold",
+          "tag": "WWT.React.pH",
+          "limits": {
+            "h": {
+              "value": 8.5,
+              "severity": "medium",
+              "message": "pH 高"
+            },
+            "l": {
+              "value": 5.8,
+              "severity": "medium",
+              "message": "pH 低"
+            }
+          },
+          "deadband": 0.1
+        }
+      },
+      {
+        "id": "0199d301-0000-7000-8000-00000000002d",
+        "name": "T-301 溶存酸素",
+        "enabled": true,
+        "source": {
+          "kind": "threshold",
+          "tag": "WWT.Aer.DO",
+          "limits": {
+            "l": {
+              "value": 1.2,
+              "severity": "medium",
+              "message": "DO 低"
+            }
+          },
+          "deadband": 0.1
+        }
+      },
+      {
+        "id": "0199d301-0000-7000-8000-00000000002e",
+        "name": "P-102 故障",
+        "enabled": true,
+        "source": {
+          "kind": "bit",
+          "tag": "WWT.P102.Fault",
+          "activeWhen": true
+        },
+        "severity": "high",
+        "message": "原水ポンプ 2 号 故障"
+      }
+    ]
+  },
+  "trends": [
+    {
+      "id": "trend:raw-level",
+      "name": "原水槽 液位・送水流量",
+      "historianNamespace": "demo",
+      "pens": [
+        {
+          "id": "pen:level",
+          "seriesId": "WWT.RawTank.Level",
+          "label": "原水槽 液位 %",
+          "color": "#38bdf8"
+        },
+        {
+          "id": "pen:feed",
+          "seriesId": "WWT.Feed.Flow",
+          "label": "送水流量 m³/h",
+          "color": "#f59e0b"
+        }
+      ],
+      "windowMs": 600000,
+      "mode": "raw",
+      "maxPointsPerSeries": 600
+    },
+    {
+      "id": "trend:quality",
+      "name": "pH・溶存酸素",
+      "historianNamespace": "demo",
+      "pens": [
+        {
+          "id": "pen:ph",
+          "seriesId": "WWT.React.pH",
+          "label": "pH",
+          "color": "#c084fc"
+        },
+        {
+          "id": "pen:do",
+          "seriesId": "WWT.Aer.DO",
+          "label": "DO mg/L",
+          "color": "#2dd4bf"
+        }
+      ],
+      "windowMs": 600000,
+      "mode": "raw",
+      "maxPointsPerSeries": 600
+    },
+    {
+      "id": "trend:pump-current",
+      "name": "原水ポンプ 電流・故障",
+      "historianNamespace": "demo",
+      "pens": [
+        {
+          "id": "pen:p101",
+          "seriesId": "WWT.P101.Current",
+          "label": "P-101 電流 A",
+          "color": "#22c55e"
+        },
+        {
+          "id": "pen:p102",
+          "seriesId": "WWT.P102.Current",
+          "label": "P-102 電流 A",
+          "color": "#f59e0b"
+        },
+        {
+          "id": "pen:fault",
+          "seriesId": "WWT.P102.Fault",
+          "label": "P-102 故障",
+          "color": "#ef4444"
+        }
+      ],
+      "windowMs": 600000,
+      "mode": "minmax",
+      "maxPointsPerSeries": 300
+    }
+  ],
+  "equipmentTypes": [
+    {
+      "id": "0199d301-0000-7000-8000-000000000006",
+      "name": "ポンプ",
+      "slots": [
+        {
+          "name": "state",
+          "type": "state",
+          "direction": "read",
+          "tagSuffix": ".State",
+          "stateDisplay": {
+            "source": "value",
+            "rows": [
+              {
+                "match": 1,
+                "text": "運転",
+                "color": "#22c55e"
+              },
+              {
+                "match": 2,
+                "text": "故障",
+                "color": "#ef4444"
+              }
+            ],
+            "otherwise": {
+              "text": "停止",
+              "color": "#64748b"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "0199d301-0000-7000-8000-000000000007",
+      "name": "ブロワー",
+      "slots": [
+        {
+          "name": "state",
+          "type": "state",
+          "direction": "read",
+          "tagSuffix": ".State",
+          "stateDisplay": {
+            "source": "value",
+            "rows": [
+              {
+                "match": 1,
+                "text": "運転",
+                "color": "#22c55e"
+              },
+              {
+                "match": 2,
+                "text": "故障",
+                "color": "#ef4444"
+              }
+            ],
+            "otherwise": {
+              "text": "停止",
+              "color": "#64748b"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "0199d301-0000-7000-8000-000000000008",
+      "name": "バルブ",
+      "slots": [
+        {
+          "name": "open",
+          "type": "bool",
+          "direction": "read",
+          "tagSuffix": ".Open",
+          "boolDisplay": {
+            "true": {
+              "text": "開",
+              "color": "#22c55e"
+            },
+            "false": {
+              "text": "閉",
+              "color": "#64748b"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "equipment": [
+    {
+      "id": "0199d301-0000-7000-8000-000000000022",
+      "typeId": "0199d301-0000-7000-8000-000000000006",
+      "code": "P-101",
+      "name": "原水ポンプ 1 号",
+      "bindings": [
+        {
+          "slotName": "state",
+          "externalName": "WWT.P101.State"
+        }
+      ]
+    },
+    {
+      "id": "0199d301-0000-7000-8000-000000000023",
+      "typeId": "0199d301-0000-7000-8000-000000000006",
+      "code": "P-102",
+      "name": "原水ポンプ 2 号（予備）",
+      "bindings": [
+        {
+          "slotName": "state",
+          "externalName": "WWT.P102.State"
+        }
+      ]
+    },
+    {
+      "id": "0199d301-0000-7000-8000-000000000024",
+      "typeId": "0199d301-0000-7000-8000-000000000006",
+      "code": "P-201",
+      "name": "薬注ポンプ",
+      "bindings": [
+        {
+          "slotName": "state",
+          "externalName": "WWT.P201.State"
+        }
+      ]
+    },
+    {
+      "id": "0199d301-0000-7000-8000-000000000025",
+      "typeId": "0199d301-0000-7000-8000-000000000006",
+      "code": "P-501",
+      "name": "放流ポンプ",
+      "bindings": [
+        {
+          "slotName": "state",
+          "externalName": "WWT.P501.State"
+        }
+      ]
+    },
+    {
+      "id": "0199d301-0000-7000-8000-000000000026",
+      "typeId": "0199d301-0000-7000-8000-000000000007",
+      "code": "B-301",
+      "name": "曝気ブロワー 1 号",
+      "bindings": [
+        {
+          "slotName": "state",
+          "externalName": "WWT.B301.State"
+        }
+      ]
+    },
+    {
+      "id": "0199d301-0000-7000-8000-000000000027",
+      "typeId": "0199d301-0000-7000-8000-000000000007",
+      "code": "B-302",
+      "name": "曝気ブロワー 2 号",
+      "bindings": [
+        {
+          "slotName": "state",
+          "externalName": "WWT.B302.State"
+        }
+      ]
+    },
+    {
+      "id": "0199d301-0000-7000-8000-000000000028",
+      "typeId": "0199d301-0000-7000-8000-000000000008",
+      "code": "V-101",
+      "name": "P-101 吐出弁",
+      "bindings": [
+        {
+          "slotName": "open",
+          "externalName": "WWT.V101.Open"
+        }
+      ]
+    },
+    {
+      "id": "0199d301-0000-7000-8000-000000000029",
+      "typeId": "0199d301-0000-7000-8000-000000000008",
+      "code": "V-102",
+      "name": "P-102 吐出弁",
+      "bindings": [
+        {
+          "slotName": "open",
+          "externalName": "WWT.V102.Open"
+        }
+      ]
+    },
+    {
+      "id": "0199d301-0000-7000-8000-00000000002a",
+      "typeId": "0199d301-0000-7000-8000-000000000008",
+      "code": "V-401",
+      "name": "返送汚泥弁",
+      "bindings": [
+        {
+          "slotName": "open",
+          "externalName": "WWT.V401.Open"
+        }
+      ]
+    }
+  ],
+  "assets": [],
+  "manifest": {
+    "product": "banto-scada",
+    "schemaVersion": "0.37.0",
+    "projectId": "0199d301-0000-7000-8000-00000000002f",
+    "projectRevision": 1,
+    "minRuntimeVersion": "0.37.0",
+    "name": "デモ 排水処理設備（模擬値）"
+  },
+  "screens": [
+    {
+      "groups": [],
+      "folders": [],
+      "background": "#0b1220",
+      "lineHops": "arc",
+      "id": "0199d301-0000-7000-8000-000000000001",
+      "name": "全体フロー",
+      "width": 1600,
+      "height": 900,
+      "objects": [
+        {
+          "id": "0199d301-0000-7000-8000-000000000030",
+          "order": 0,
+          "rotation": 0,
+          "x": 30,
+          "y": 16,
+          "width": 600,
+          "height": 36,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "排水処理設備　全体フロー",
+            "style": {
+              "fontSize": 26,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000031",
+          "order": 1,
+          "rotation": 0,
+          "x": 30,
+          "y": 54,
+          "width": 700,
+          "height": 22,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "架空の設備の模擬値です。機器を押すと読取の詳細を開けます。",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000032",
+          "order": 2,
+          "rotation": 0,
+          "name": "送水の状態",
+          "x": 404,
+          "y": 440,
+          "width": 110,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "送水",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "binding": {
+              "externalName": "WWT.Feed.Flowing"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "送水中",
+                "color": "#38bdf8"
+              },
+              "false": {
+                "text": "送水停止",
+                "color": "#475569"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000033",
+          "order": 3,
+          "rotation": 0,
+          "name": "P-101 吐出の配色元",
+          "visible": false,
+          "x": 0,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "P-101",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.P101.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "送水中",
+                "color": "#38bdf8"
+              },
+              "false": {
+                "text": "送水停止",
+                "color": "#475569"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000034",
+          "order": 4,
+          "rotation": 0,
+          "name": "P-102 吐出の配色元",
+          "visible": false,
+          "x": 0,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "P-102",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.P102.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "送水中",
+                "color": "#38bdf8"
+              },
+              "false": {
+                "text": "送水停止",
+                "color": "#475569"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000035",
+          "order": 5,
+          "rotation": 0,
+          "name": "薬注の配色元",
+          "visible": false,
+          "x": 0,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "P-201",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.P201.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "注入中",
+                "color": "#c084fc"
+              },
+              "false": {
+                "text": "停止",
+                "color": "#475569"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000036",
+          "order": 6,
+          "rotation": 0,
+          "name": "B-302 送気の配色元",
+          "visible": false,
+          "x": 0,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "B-302",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.B302.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "送気中",
+                "color": "#cbd5e1"
+              },
+              "false": {
+                "text": "停止",
+                "color": "#475569"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000037",
+          "order": 7,
+          "rotation": 0,
+          "name": "返送の状態",
+          "x": 1124,
+          "y": 650,
+          "width": 78,
+          "height": 20,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "返送",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.V401.Open"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "返送中",
+                "color": "#b08968"
+              },
+              "false": {
+                "text": "返送停止",
+                "color": "#475569"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000038",
+          "order": 8,
+          "rotation": 0,
+          "name": "放流の配色元",
+          "visible": false,
+          "x": 0,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "P-501",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.P501.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "放流中",
+                "color": "#2dd4bf"
+              },
+              "false": {
+                "text": "停止",
+                "color": "#475569"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000039",
+          "order": 9,
+          "rotation": 0,
+          "x": 14,
+          "y": 282,
+          "width": 70,
+          "height": 20,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "流入",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000003a",
+          "order": 10,
+          "rotation": 0,
+          "x": 8,
+          "y": 300,
+          "width": 80,
+          "height": 20,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.Inflow.Flow"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "m³/h"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000003b",
+          "order": 11,
+          "rotation": 0,
+          "name": "流入",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 14,
+                "y": 330
+              },
+              {
+                "x": 90,
+                "y": 330
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000003c",
+          "order": 12,
+          "rotation": 0,
+          "x": 70,
+          "y": 252,
+          "width": 190,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-101 原水槽",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "center"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000003d",
+          "order": 13,
+          "rotation": 0,
+          "name": "T-101 原水槽 外形",
+          "x": 90,
+          "y": 280,
+          "width": 150,
+          "height": 320,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#94a3b8",
+                "width": 3
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000003e",
+          "order": 14,
+          "rotation": 0,
+          "name": "T-101 原水槽 液位",
+          "x": 95,
+          "y": 285,
+          "width": 140,
+          "height": 310,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "level",
+            "direction": "up",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.RawTank.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000003f",
+          "order": 15,
+          "rotation": 0,
+          "x": 90,
+          "y": 608,
+          "width": 50,
+          "height": 22,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "液位",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000040",
+          "order": 16,
+          "rotation": 0,
+          "x": 140,
+          "y": 608,
+          "width": 100,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.RawTank.Level"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000041",
+          "order": 17,
+          "rotation": 0,
+          "name": "警報の小札 HH",
+          "x": 246,
+          "y": 284,
+          "width": 40,
+          "height": 20,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002b",
+            "limit": "hh",
+            "text": "HH",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000042",
+          "order": 18,
+          "rotation": 0,
+          "name": "警報の小札 H",
+          "x": 246,
+          "y": 308,
+          "width": 40,
+          "height": 20,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002b",
+            "limit": "h",
+            "text": "H",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000043",
+          "order": 19,
+          "rotation": 0,
+          "name": "警報の小札 L",
+          "x": 246,
+          "y": 332,
+          "width": 40,
+          "height": 20,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002b",
+            "limit": "l",
+            "text": "L",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000044",
+          "order": 20,
+          "rotation": 0,
+          "name": "警報の小札 LL",
+          "x": 246,
+          "y": 356,
+          "width": 40,
+          "height": 20,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002b",
+            "limit": "ll",
+            "text": "LL",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000045",
+          "order": 21,
+          "rotation": 0,
+          "name": "P-102 吸込",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 240,
+                "y": 530
+              },
+              {
+                "x": 300,
+                "y": 530
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000046",
+          "order": 22,
+          "rotation": 0,
+          "name": "P-101 吸込（分岐）",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 270,
+                "y": 530
+              },
+              {
+                "x": 270,
+                "y": 380
+              },
+              {
+                "x": 300,
+                "y": 380
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000047",
+          "order": 23,
+          "rotation": 0,
+          "name": "P-101 原水ポンプ 1 号",
+          "x": 300,
+          "y": 313,
+          "width": 100,
+          "height": 144,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000010",
+            "equipmentId": "0199d301-0000-7000-8000-000000000022",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000048",
+          "order": 24,
+          "rotation": 0,
+          "name": "P-102 原水ポンプ 2 号（予備）",
+          "x": 300,
+          "y": 463,
+          "width": 100,
+          "height": 144,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000010",
+            "equipmentId": "0199d301-0000-7000-8000-000000000023",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000049",
+          "order": 25,
+          "rotation": 0,
+          "name": "V-101 P-101 吐出弁",
+          "x": 430,
+          "y": 334.5,
+          "width": 50,
+          "height": 86,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000021",
+            "equipmentId": "0199d301-0000-7000-8000-000000000028",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000004a",
+          "order": 26,
+          "rotation": 0,
+          "name": "V-102 P-102 吐出弁",
+          "x": 430,
+          "y": 484.5,
+          "width": 50,
+          "height": 86,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000021",
+            "equipmentId": "0199d301-0000-7000-8000-000000000029",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000004b",
+          "order": 27,
+          "rotation": 0,
+          "name": "P-101 吐出",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000033"
+            },
+            "points": [
+              {
+                "x": 400,
+                "y": 380
+              },
+              {
+                "x": 430,
+                "y": 380
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000004c",
+          "order": 28,
+          "rotation": 0,
+          "name": "P-101 吐出（合流へ）",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000033"
+            },
+            "points": [
+              {
+                "x": 480,
+                "y": 380
+              },
+              {
+                "x": 520,
+                "y": 380
+              },
+              {
+                "x": 520,
+                "y": 455
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000004d",
+          "order": 29,
+          "rotation": 0,
+          "name": "P-102 吐出",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000034"
+            },
+            "points": [
+              {
+                "x": 400,
+                "y": 530
+              },
+              {
+                "x": 430,
+                "y": 530
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000004e",
+          "order": 30,
+          "rotation": 0,
+          "name": "P-102 吐出（合流へ）",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000034"
+            },
+            "points": [
+              {
+                "x": 480,
+                "y": 530
+              },
+              {
+                "x": 520,
+                "y": 530
+              },
+              {
+                "x": 520,
+                "y": 455
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000004f",
+          "order": 31,
+          "rotation": 0,
+          "name": "送水（合流後）",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000032"
+            },
+            "points": [
+              {
+                "x": 520,
+                "y": 455
+              },
+              {
+                "x": 610,
+                "y": 455
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000050",
+          "order": 32,
+          "rotation": 0,
+          "name": "警報の小札 故障",
+          "x": 408,
+          "y": 576,
+          "width": 56,
+          "height": 20,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002e",
+            "text": "故障",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000051",
+          "order": 33,
+          "rotation": 0,
+          "x": 528,
+          "y": 396,
+          "width": 80,
+          "height": 18,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "FIT-101",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000052",
+          "order": 34,
+          "rotation": 0,
+          "x": 524,
+          "y": 414,
+          "width": 84,
+          "height": 20,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.Feed.Flow"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "m³/h"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000053",
+          "order": 35,
+          "rotation": 0,
+          "x": 528,
+          "y": 466,
+          "width": 80,
+          "height": 18,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "PIT-101",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000054",
+          "order": 36,
+          "rotation": 0,
+          "x": 524,
+          "y": 484,
+          "width": 84,
+          "height": 20,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.Feed.Pressure"
+            },
+            "format": {
+              "decimals": 2,
+              "unit": "MPa"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000055",
+          "order": 37,
+          "rotation": 0,
+          "name": "画面切替 原水ポンプ場の詳細 ▶",
+          "x": 296,
+          "y": 618,
+          "width": 190,
+          "height": 32,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "screen",
+              "screenId": "0199d301-0000-7000-8000-000000000002"
+            },
+            "label": "原水ポンプ場の詳細 ▶",
+            "fontSize": 15,
+            "fill": "#1e293b",
+            "textColor": "#e2e8f0",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0b1220"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000056",
+          "order": 38,
+          "rotation": 0,
+          "x": 590,
+          "y": 302,
+          "width": 190,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-201 pH 調整槽",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "center"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000057",
+          "order": 39,
+          "rotation": 0,
+          "name": "T-201 pH 調整槽 外形",
+          "x": 610,
+          "y": 330,
+          "width": 150,
+          "height": 270,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#94a3b8",
+                "width": 3
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000058",
+          "order": 40,
+          "rotation": 0,
+          "name": "T-201 pH 調整槽 液位",
+          "x": 615,
+          "y": 335,
+          "width": 140,
+          "height": 260,
+          "fill": "#60a5fa",
+          "shape": {
+            "type": "level",
+            "direction": "up",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.React.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000059",
+          "order": 41,
+          "rotation": 0,
+          "x": 610,
+          "y": 606,
+          "width": 30,
+          "height": 22,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "pH",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000005a",
+          "order": 42,
+          "rotation": 0,
+          "x": 640,
+          "y": 606,
+          "width": 50,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.React.pH"
+            },
+            "format": {
+              "decimals": 2
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000005b",
+          "order": 43,
+          "rotation": 0,
+          "name": "警報の小札 H",
+          "x": 700,
+          "y": 606,
+          "width": 28,
+          "height": 20,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002c",
+            "limit": "h",
+            "text": "H",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000005c",
+          "order": 44,
+          "rotation": 0,
+          "name": "警報の小札 L",
+          "x": 732,
+          "y": 606,
+          "width": 28,
+          "height": 20,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002c",
+            "limit": "l",
+            "text": "L",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000005d",
+          "order": 45,
+          "rotation": 0,
+          "x": 520,
+          "y": 102,
+          "width": 140,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-202 薬品",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "align": "center"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000005e",
+          "order": 46,
+          "rotation": 0,
+          "name": "T-202 外形",
+          "x": 560,
+          "y": 128,
+          "width": 60,
+          "height": 110,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#94a3b8",
+                "width": 2
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000005f",
+          "order": 47,
+          "rotation": 0,
+          "name": "T-202 液位",
+          "x": 564,
+          "y": 132,
+          "width": 52,
+          "height": 102,
+          "fill": "#c084fc",
+          "shape": {
+            "type": "level",
+            "direction": "up",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.Chem.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000060",
+          "order": 48,
+          "rotation": 0,
+          "name": "薬品 吸込",
+          "x": 0,
+          "y": 0,
+          "fill": "#c084fc",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 620,
+                "y": 215
+              },
+              {
+                "x": 650,
+                "y": 215
+              }
+            ],
+            "strokeWidth": 4,
+            "lineStyle": "dashed",
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000061",
+          "order": 49,
+          "rotation": 0,
+          "name": "P-201 薬注ポンプ",
+          "x": 650,
+          "y": 168.1,
+          "width": 70,
+          "height": 100.8,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000010",
+            "equipmentId": "0199d301-0000-7000-8000-000000000024",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000062",
+          "order": 50,
+          "rotation": 0,
+          "name": "薬品 注入",
+          "x": 0,
+          "y": 0,
+          "fill": "#c084fc",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000035"
+            },
+            "points": [
+              {
+                "x": 720,
+                "y": 215
+              },
+              {
+                "x": 752,
+                "y": 215
+              },
+              {
+                "x": 752,
+                "y": 330
+              }
+            ],
+            "strokeWidth": 4,
+            "lineStyle": "dashed",
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000063",
+          "order": 51,
+          "rotation": 0,
+          "name": "pH 調整槽 → 曝気槽",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 760,
+                "y": 455
+              },
+              {
+                "x": 850,
+                "y": 455
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000064",
+          "order": 52,
+          "rotation": 0,
+          "x": 830,
+          "y": 302,
+          "width": 260,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-301 曝気槽",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "center"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000065",
+          "order": 53,
+          "rotation": 0,
+          "name": "T-301 曝気槽 外形",
+          "x": 850,
+          "y": 330,
+          "width": 220,
+          "height": 270,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#94a3b8",
+                "width": 3
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000066",
+          "order": 54,
+          "rotation": 0,
+          "name": "T-301 曝気槽 液位",
+          "x": 855,
+          "y": 335,
+          "width": 210,
+          "height": 260,
+          "fill": "#60a5fa",
+          "shape": {
+            "type": "level",
+            "direction": "up",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.Aer.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000067",
+          "order": 55,
+          "rotation": 0,
+          "x": 1080,
+          "y": 340,
+          "width": 30,
+          "height": 20,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "DO",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000068",
+          "order": 56,
+          "rotation": 0,
+          "x": 1076,
+          "y": 358,
+          "width": 62,
+          "height": 20,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.Aer.DO"
+            },
+            "format": {
+              "decimals": 2
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000069",
+          "order": 57,
+          "rotation": 0,
+          "x": 1080,
+          "y": 376,
+          "width": 50,
+          "height": 18,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "mg/L",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000006a",
+          "order": 58,
+          "rotation": 0,
+          "name": "警報の小札 L",
+          "x": 1080,
+          "y": 398,
+          "width": 28,
+          "height": 20,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002d",
+            "limit": "l",
+            "text": "L",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000006b",
+          "order": 59,
+          "rotation": 0,
+          "name": "B-301 曝気ブロワー 1 号",
+          "x": 640,
+          "y": 632.4,
+          "width": 80,
+          "height": 115.2,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000019",
+            "equipmentId": "0199d301-0000-7000-8000-000000000026",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000006c",
+          "order": 60,
+          "rotation": 0,
+          "name": "B-302 曝気ブロワー 2 号",
+          "x": 640,
+          "y": 762.4,
+          "width": 80,
+          "height": 115.2,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000019",
+            "equipmentId": "0199d301-0000-7000-8000-000000000027",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000006d",
+          "order": 61,
+          "rotation": 0,
+          "name": "B-301 送気",
+          "x": 0,
+          "y": 0,
+          "fill": "#cbd5e1",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 720,
+                "y": 690
+              },
+              {
+                "x": 780,
+                "y": 690
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000006e",
+          "order": 62,
+          "rotation": 0,
+          "name": "B-302 送気",
+          "x": 0,
+          "y": 0,
+          "fill": "#cbd5e1",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000036"
+            },
+            "points": [
+              {
+                "x": 720,
+                "y": 820
+              },
+              {
+                "x": 780,
+                "y": 820
+              },
+              {
+                "x": 780,
+                "y": 690
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000006f",
+          "order": 63,
+          "rotation": 0,
+          "name": "空気 母管",
+          "x": 0,
+          "y": 0,
+          "fill": "#cbd5e1",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 780,
+                "y": 690
+              },
+              {
+                "x": 1030,
+                "y": 690
+              },
+              {
+                "x": 1030,
+                "y": 600
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000070",
+          "order": 64,
+          "rotation": 0,
+          "name": "散気 1",
+          "x": 0,
+          "y": 0,
+          "fill": "#cbd5e1",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 890,
+                "y": 690
+              },
+              {
+                "x": 890,
+                "y": 600
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000071",
+          "order": 65,
+          "rotation": 0,
+          "name": "散気 2",
+          "x": 0,
+          "y": 0,
+          "fill": "#cbd5e1",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 960,
+                "y": 690
+              },
+              {
+                "x": 960,
+                "y": 600
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000072",
+          "order": 66,
+          "rotation": 0,
+          "x": 800,
+          "y": 700,
+          "width": 40,
+          "height": 21,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "風量",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000073",
+          "order": 67,
+          "rotation": 0,
+          "x": 840,
+          "y": 700,
+          "width": 110,
+          "height": 21,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Air.Flow"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "m³/min"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000074",
+          "order": 68,
+          "rotation": 0,
+          "name": "曝気槽 → 沈殿槽",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 1070,
+                "y": 455
+              },
+              {
+                "x": 1140,
+                "y": 455
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000075",
+          "order": 69,
+          "rotation": 0,
+          "x": 1120,
+          "y": 302,
+          "width": 200,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-401 沈殿槽",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "center"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000076",
+          "order": 70,
+          "rotation": 0,
+          "name": "T-401 沈殿槽 外形",
+          "x": 1140,
+          "y": 330,
+          "width": 160,
+          "height": 270,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#94a3b8",
+                "width": 3
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000077",
+          "order": 71,
+          "rotation": 0,
+          "name": "T-401 沈殿槽 液位",
+          "x": 1145,
+          "y": 335,
+          "width": 150,
+          "height": 260,
+          "fill": "#60a5fa",
+          "shape": {
+            "type": "level",
+            "direction": "up",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.Clar.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000078",
+          "order": 72,
+          "rotation": 0,
+          "x": 1232,
+          "y": 608,
+          "width": 60,
+          "height": 21,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "汚泥界面",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000079",
+          "order": 73,
+          "rotation": 0,
+          "x": 1292,
+          "y": 608,
+          "width": 60,
+          "height": 21,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Clar.Sludge"
+            },
+            "format": {
+              "decimals": 2,
+              "unit": "m"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000007a",
+          "order": 74,
+          "rotation": 0,
+          "name": "V-401 返送汚泥弁",
+          "x": 1060,
+          "y": 599.5,
+          "width": 50,
+          "height": 86,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000021",
+            "equipmentId": "0199d301-0000-7000-8000-00000000002a",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000007b",
+          "order": 75,
+          "rotation": 0,
+          "name": "汚泥 引抜",
+          "x": 0,
+          "y": 0,
+          "fill": "#b08968",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 1220,
+                "y": 600
+              },
+              {
+                "x": 1220,
+                "y": 645
+              },
+              {
+                "x": 1110,
+                "y": 645
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000007c",
+          "order": 76,
+          "rotation": 0,
+          "name": "返送汚泥",
+          "x": 0,
+          "y": 0,
+          "fill": "#b08968",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000037"
+            },
+            "points": [
+              {
+                "x": 1060,
+                "y": 645
+              },
+              {
+                "x": 805,
+                "y": 645
+              },
+              {
+                "x": 805,
+                "y": 455
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000007d",
+          "order": 77,
+          "rotation": 0,
+          "x": 1124,
+          "y": 670,
+          "width": 78,
+          "height": 18,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.Return.Flow"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "m³/h"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000007e",
+          "order": 78,
+          "rotation": 0,
+          "name": "沈殿槽 → 処理水槽",
+          "x": 0,
+          "y": 0,
+          "fill": "#2dd4bf",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 1300,
+                "y": 455
+              },
+              {
+                "x": 1370,
+                "y": 455
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000007f",
+          "order": 79,
+          "rotation": 0,
+          "x": 1350,
+          "y": 332,
+          "width": 180,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-501 処理水槽",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "center"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000080",
+          "order": 80,
+          "rotation": 0,
+          "name": "T-501 処理水槽 外形",
+          "x": 1370,
+          "y": 360,
+          "width": 140,
+          "height": 240,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#94a3b8",
+                "width": 3
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000081",
+          "order": 81,
+          "rotation": 0,
+          "name": "T-501 処理水槽 液位",
+          "x": 1375,
+          "y": 365,
+          "width": 130,
+          "height": 230,
+          "fill": "#2dd4bf",
+          "shape": {
+            "type": "level",
+            "direction": "up",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.Treated.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000082",
+          "order": 82,
+          "rotation": 0,
+          "x": 1452,
+          "y": 608,
+          "width": 40,
+          "height": 21,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "濁度",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000083",
+          "order": 83,
+          "rotation": 0,
+          "x": 1492,
+          "y": 608,
+          "width": 90,
+          "height": 21,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Treated.Turbidity"
+            },
+            "format": {
+              "decimals": 2,
+              "unit": "NTU"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000084",
+          "order": 84,
+          "rotation": 0,
+          "name": "放流ポンプ 吸込",
+          "x": 0,
+          "y": 0,
+          "fill": "#2dd4bf",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 1440,
+                "y": 600
+              },
+              {
+                "x": 1440,
+                "y": 740
+              },
+              {
+                "x": 1460,
+                "y": 740
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000085",
+          "order": 85,
+          "rotation": 0,
+          "name": "P-501 放流ポンプ",
+          "x": 1460,
+          "y": 686.4,
+          "width": 80,
+          "height": 115.2,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000010",
+            "equipmentId": "0199d301-0000-7000-8000-000000000025",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000086",
+          "order": 86,
+          "rotation": 0,
+          "name": "放流",
+          "x": 0,
+          "y": 0,
+          "fill": "#2dd4bf",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000038"
+            },
+            "points": [
+              {
+                "x": 1540,
+                "y": 740
+              },
+              {
+                "x": 1590,
+                "y": 740
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000087",
+          "order": 87,
+          "rotation": 0,
+          "x": 1540,
+          "y": 752,
+          "width": 56,
+          "height": 18,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "放流",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "center"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000088",
+          "order": 88,
+          "rotation": 0,
+          "x": 1452,
+          "y": 816,
+          "width": 56,
+          "height": 21,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "FIT-501",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000089",
+          "order": 89,
+          "rotation": 0,
+          "x": 1508,
+          "y": 816,
+          "width": 84,
+          "height": 21,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Out.Flow"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "m³/h"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000008a",
+          "order": 90,
+          "rotation": 0,
+          "name": "主要計測",
+          "x": 1090,
+          "y": 716,
+          "width": 330,
+          "height": 160,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "table",
+            "columns": [5, 4],
+            "rows": [1, 1, 1, 1, 1],
+            "cells": [
+              [
+                {
+                  "text": "主要計測",
+                  "fill": "#1e293b"
+                },
+                {
+                  "text": "現在値",
+                  "fill": "#1e293b"
+                }
+              ],
+              [
+                {
+                  "text": "流入量"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Inflow.Flow"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "m³/h"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "送水量"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Feed.Flow"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "m³/h"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "積算送水量"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Feed.Total"
+                  },
+                  "format": {
+                    "decimals": 0,
+                    "unit": "m³"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "放流量"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Out.Flow"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "m³/h"
+                  }
+                }
+              ]
+            ],
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "center"
+            },
+            "border": {
+              "color": "#475569",
+              "width": 1
+            },
+            "background": "#0f172a"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000008b",
+          "order": 91,
+          "rotation": 0,
+          "name": "履歴トレンド",
+          "x": 40,
+          "y": 690,
+          "width": 280,
+          "height": 104,
+          "shape": {
+            "type": "trend",
+            "trendId": "trend:raw-level"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000008c",
+          "order": 92,
+          "rotation": 0,
+          "name": "履歴トレンド",
+          "x": 330,
+          "y": 690,
+          "width": 280,
+          "height": 104,
+          "shape": {
+            "type": "trend",
+            "trendId": "trend:quality"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000008d",
+          "order": 93,
+          "rotation": 0,
+          "x": 40,
+          "y": 812,
+          "width": 60,
+          "height": 20,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "状態色",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000008e",
+          "order": 94,
+          "rotation": 0,
+          "name": "凡例 運転・開",
+          "x": 40,
+          "y": 840,
+          "width": 18,
+          "height": 18,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#22c55e",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000008f",
+          "order": 95,
+          "rotation": 0,
+          "x": 64,
+          "y": 838,
+          "width": 110,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "運転・開",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000090",
+          "order": 96,
+          "rotation": 0,
+          "name": "凡例 停止・閉",
+          "x": 180,
+          "y": 840,
+          "width": 18,
+          "height": 18,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#64748b",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000091",
+          "order": 97,
+          "rotation": 0,
+          "x": 204,
+          "y": 838,
+          "width": 110,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "停止・閉",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000092",
+          "order": 98,
+          "rotation": 0,
+          "name": "凡例 故障",
+          "x": 320,
+          "y": 840,
+          "width": 18,
+          "height": 18,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#ef4444",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000093",
+          "order": 99,
+          "rotation": 0,
+          "x": 344,
+          "y": 838,
+          "width": 110,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "故障",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000094",
+          "order": 100,
+          "rotation": 0,
+          "name": "凡例 取得不能",
+          "x": 460,
+          "y": 840,
+          "width": 18,
+          "height": 18,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#d97706",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000095",
+          "order": 101,
+          "rotation": 0,
+          "x": 484,
+          "y": 838,
+          "width": 110,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "取得不能",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "groups": [],
+      "folders": [],
+      "background": "#0b1220",
+      "id": "0199d301-0000-7000-8000-000000000002",
+      "name": "原水ポンプ場",
+      "width": 1600,
+      "height": 900,
+      "objects": [
+        {
+          "id": "0199d301-0000-7000-8000-000000000096",
+          "order": 0,
+          "rotation": 0,
+          "x": 30,
+          "y": 16,
+          "width": 600,
+          "height": 36,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "原水ポンプ場",
+            "style": {
+              "fontSize": 26,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000097",
+          "order": 1,
+          "rotation": 0,
+          "x": 30,
+          "y": 54,
+          "width": 700,
+          "height": 22,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "液位の警報の小札は、しきい値の高さに置いています。",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000098",
+          "order": 2,
+          "rotation": 0,
+          "name": "送水の状態",
+          "x": 1000,
+          "y": 432,
+          "width": 130,
+          "height": 30,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "送水",
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "bold",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.Feed.Flowing"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "送水中",
+                "color": "#38bdf8"
+              },
+              "false": {
+                "text": "送水停止",
+                "color": "#475569"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000099",
+          "order": 3,
+          "rotation": 0,
+          "name": "P-101 吐出の配色元",
+          "visible": false,
+          "x": 0,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "P-101",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.P101.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "送水中",
+                "color": "#38bdf8"
+              },
+              "false": {
+                "text": "送水停止",
+                "color": "#475569"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000009a",
+          "order": 4,
+          "rotation": 0,
+          "name": "P-102 吐出の配色元",
+          "visible": false,
+          "x": 0,
+          "y": 0,
+          "width": 10,
+          "height": 10,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "P-102",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "WWT.P102.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "送水中",
+                "color": "#38bdf8"
+              },
+              "false": {
+                "text": "送水停止",
+                "color": "#475569"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000009b",
+          "order": 5,
+          "rotation": 0,
+          "name": "流入",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 300,
+                "y": 96
+              },
+              {
+                "x": 300,
+                "y": 180
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000009c",
+          "order": 6,
+          "rotation": 0,
+          "x": 316,
+          "y": 104,
+          "width": 40,
+          "height": 22,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "流入",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000009d",
+          "order": 7,
+          "rotation": 0,
+          "x": 356,
+          "y": 104,
+          "width": 100,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Inflow.Flow"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "m³/h"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000009e",
+          "order": 8,
+          "rotation": 0,
+          "name": "原水槽 液位（大）",
+          "x": 120,
+          "y": 130,
+          "width": 170,
+          "height": 44,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 32,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.RawTank.Level"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000009f",
+          "order": 9,
+          "rotation": 0,
+          "name": "T-101 外形",
+          "x": 150,
+          "y": 180,
+          "width": 300,
+          "height": 520,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#94a3b8",
+                "width": 3
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000a0",
+          "order": 10,
+          "rotation": 0,
+          "name": "T-101 液位",
+          "x": 156,
+          "y": 186,
+          "width": 288,
+          "height": 508,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "level",
+            "direction": "up",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.RawTank.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000a1",
+          "order": 11,
+          "rotation": 0,
+          "x": 150,
+          "y": 706,
+          "width": 300,
+          "height": 24,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-101 原水槽",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold",
+              "align": "center"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000a2",
+          "order": 12,
+          "rotation": 0,
+          "name": "しきい値 HH",
+          "x": 0,
+          "y": 0,
+          "fill": "#ef4444",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 156,
+                "y": 236.8
+              },
+              {
+                "x": 444,
+                "y": 236.8
+              }
+            ],
+            "strokeWidth": 2,
+            "lineStyle": "dashed",
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000a3",
+          "order": 13,
+          "rotation": 0,
+          "name": "警報の小札 HH",
+          "x": 98,
+          "y": 225.8,
+          "width": 44,
+          "height": 22,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002b",
+            "limit": "hh",
+            "text": "HH",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000a4",
+          "order": 14,
+          "rotation": 0,
+          "x": 40,
+          "y": 226.8,
+          "width": 52,
+          "height": 20,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "90 %",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "right"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000a5",
+          "order": 15,
+          "rotation": 0,
+          "name": "しきい値 H",
+          "x": 0,
+          "y": 0,
+          "fill": "#f59e0b",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 156,
+                "y": 287.6
+              },
+              {
+                "x": 444,
+                "y": 287.6
+              }
+            ],
+            "strokeWidth": 2,
+            "lineStyle": "dashed",
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000a6",
+          "order": 16,
+          "rotation": 0,
+          "name": "警報の小札 H",
+          "x": 98,
+          "y": 276.6,
+          "width": 44,
+          "height": 22,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002b",
+            "limit": "h",
+            "text": "H",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000a7",
+          "order": 17,
+          "rotation": 0,
+          "x": 40,
+          "y": 277.6,
+          "width": 52,
+          "height": 20,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "80 %",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "right"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000a8",
+          "order": 18,
+          "rotation": 0,
+          "name": "しきい値 L",
+          "x": 0,
+          "y": 0,
+          "fill": "#f59e0b",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 156,
+                "y": 592.4
+              },
+              {
+                "x": 444,
+                "y": 592.4
+              }
+            ],
+            "strokeWidth": 2,
+            "lineStyle": "dashed",
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000a9",
+          "order": 19,
+          "rotation": 0,
+          "name": "警報の小札 L",
+          "x": 98,
+          "y": 581.4,
+          "width": 44,
+          "height": 22,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002b",
+            "limit": "l",
+            "text": "L",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000aa",
+          "order": 20,
+          "rotation": 0,
+          "x": 40,
+          "y": 582.4,
+          "width": 52,
+          "height": 20,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "20 %",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "right"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ab",
+          "order": 21,
+          "rotation": 0,
+          "name": "しきい値 LL",
+          "x": 0,
+          "y": 0,
+          "fill": "#ef4444",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 156,
+                "y": 643.2
+              },
+              {
+                "x": 444,
+                "y": 643.2
+              }
+            ],
+            "strokeWidth": 2,
+            "lineStyle": "dashed",
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ac",
+          "order": 22,
+          "rotation": 0,
+          "name": "警報の小札 LL",
+          "x": 98,
+          "y": 632.2,
+          "width": 44,
+          "height": 22,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002b",
+            "limit": "ll",
+            "text": "LL",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ad",
+          "order": 23,
+          "rotation": 0,
+          "x": 40,
+          "y": 633.2,
+          "width": 52,
+          "height": 20,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "10 %",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "right"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ae",
+          "order": 24,
+          "rotation": 0,
+          "name": "P-102 吸込",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 450,
+                "y": 640
+              },
+              {
+                "x": 560,
+                "y": 640
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000af",
+          "order": 25,
+          "rotation": 0,
+          "name": "P-101 吸込（分岐）",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 505,
+                "y": 640
+              },
+              {
+                "x": 505,
+                "y": 330
+              },
+              {
+                "x": 560,
+                "y": 330
+              }
+            ],
+            "strokeWidth": 6,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000b0",
+          "order": 26,
+          "rotation": 0,
+          "name": "P-101 原水ポンプ 1 号",
+          "x": 560,
+          "y": 209.39999999999998,
+          "width": 180,
+          "height": 259.2,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000010",
+            "equipmentId": "0199d301-0000-7000-8000-000000000022",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000b1",
+          "order": 27,
+          "rotation": 0,
+          "name": "P-102 原水ポンプ 2 号（予備）",
+          "x": 560,
+          "y": 519.4,
+          "width": 180,
+          "height": 259.2,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000010",
+            "equipmentId": "0199d301-0000-7000-8000-000000000023",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000b2",
+          "order": 28,
+          "rotation": 0,
+          "name": "V-101 P-101 吐出弁",
+          "x": 800,
+          "y": 248.1,
+          "width": 90,
+          "height": 154.8,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000021",
+            "equipmentId": "0199d301-0000-7000-8000-000000000028",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000b3",
+          "order": 29,
+          "rotation": 0,
+          "name": "V-102 P-102 吐出弁",
+          "x": 800,
+          "y": 558.1,
+          "width": 90,
+          "height": 154.8,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199d301-0000-7000-8000-000000000021",
+            "equipmentId": "0199d301-0000-7000-8000-000000000029",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000b4",
+          "order": 30,
+          "rotation": 0,
+          "name": "P-101 吐出",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000099"
+            },
+            "points": [
+              {
+                "x": 740,
+                "y": 330
+              },
+              {
+                "x": 800,
+                "y": 330
+              }
+            ],
+            "strokeWidth": 8,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000b5",
+          "order": 31,
+          "rotation": 0,
+          "name": "P-101 吐出（合流へ）",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000099"
+            },
+            "points": [
+              {
+                "x": 890,
+                "y": 330
+              },
+              {
+                "x": 980,
+                "y": 330
+              },
+              {
+                "x": 980,
+                "y": 485
+              }
+            ],
+            "strokeWidth": 8,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000b6",
+          "order": 32,
+          "rotation": 0,
+          "name": "P-102 吐出",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000009a"
+            },
+            "points": [
+              {
+                "x": 740,
+                "y": 640
+              },
+              {
+                "x": 800,
+                "y": 640
+              }
+            ],
+            "strokeWidth": 8,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000b7",
+          "order": 33,
+          "rotation": 0,
+          "name": "P-102 吐出（合流へ）",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000009a"
+            },
+            "points": [
+              {
+                "x": 890,
+                "y": 640
+              },
+              {
+                "x": 980,
+                "y": 640
+              },
+              {
+                "x": 980,
+                "y": 485
+              }
+            ],
+            "strokeWidth": 8,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000b8",
+          "order": 34,
+          "rotation": 0,
+          "name": "送水（合流後）",
+          "x": 0,
+          "y": 0,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000098"
+            },
+            "points": [
+              {
+                "x": 980,
+                "y": 485
+              },
+              {
+                "x": 1120,
+                "y": 485
+              }
+            ],
+            "strokeWidth": 8,
+            "arrow": "end"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000b9",
+          "order": 35,
+          "rotation": 0,
+          "x": 1000,
+          "y": 500,
+          "width": 130,
+          "height": 20,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "pH 調整槽へ",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ba",
+          "order": 36,
+          "rotation": 0,
+          "x": 760,
+          "y": 404,
+          "width": 40,
+          "height": 22,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "電流",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000bb",
+          "order": 37,
+          "rotation": 0,
+          "x": 800,
+          "y": 404,
+          "width": 80,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.P101.Current"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "A"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000bc",
+          "order": 38,
+          "rotation": 0,
+          "x": 760,
+          "y": 714,
+          "width": 40,
+          "height": 22,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "電流",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000bd",
+          "order": 39,
+          "rotation": 0,
+          "x": 800,
+          "y": 714,
+          "width": 80,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.P102.Current"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "A"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000be",
+          "order": 40,
+          "rotation": 0,
+          "name": "警報の小札 故障",
+          "x": 760,
+          "y": 744,
+          "width": 70,
+          "height": 24,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199d301-0000-7000-8000-00000000002e",
+            "text": "故障",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000bf",
+          "order": 41,
+          "rotation": 0,
+          "x": 1000,
+          "y": 530,
+          "width": 64,
+          "height": 22,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "FIT-101",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000c0",
+          "order": 42,
+          "rotation": 0,
+          "x": 1064,
+          "y": 530,
+          "width": 96,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Feed.Flow"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "m³/h"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000c1",
+          "order": 43,
+          "rotation": 0,
+          "x": 1000,
+          "y": 556,
+          "width": 64,
+          "height": 22,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "PIT-101",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000c2",
+          "order": 44,
+          "rotation": 0,
+          "x": 1064,
+          "y": 556,
+          "width": 96,
+          "height": 22,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Feed.Pressure"
+            },
+            "format": {
+              "decimals": 3,
+              "unit": "MPa"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000c3",
+          "order": 45,
+          "rotation": 0,
+          "name": "ポンプの運転データ",
+          "x": 1180,
+          "y": 110,
+          "width": 390,
+          "height": 132,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "table",
+            "columns": [3, 3, 4],
+            "rows": [1, 1, 1],
+            "cells": [
+              [
+                {
+                  "text": "機器",
+                  "fill": "#1e293b"
+                },
+                {
+                  "text": "電流",
+                  "fill": "#1e293b"
+                },
+                {
+                  "text": "運転時間",
+                  "fill": "#1e293b"
+                }
+              ],
+              [
+                {
+                  "text": "P-101"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.P101.Current"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "A"
+                  }
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.P101.Hours"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "h"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "P-102"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.P102.Current"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "A"
+                  }
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.P102.Hours"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "h"
+                  }
+                }
+              ]
+            ],
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "center"
+            },
+            "border": {
+              "color": "#475569",
+              "width": 1
+            },
+            "background": "#0f172a"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000c4",
+          "order": 46,
+          "rotation": 0,
+          "x": 1180,
+          "y": 256,
+          "width": 90,
+          "height": 23,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "積算送水量",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000c5",
+          "order": 47,
+          "rotation": 0,
+          "x": 1270,
+          "y": 256,
+          "width": 140,
+          "height": 23,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Feed.Total"
+            },
+            "format": {
+              "decimals": 0,
+              "unit": "m³"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000c6",
+          "order": 48,
+          "rotation": 0,
+          "name": "履歴トレンド",
+          "x": 1180,
+          "y": 300,
+          "width": 390,
+          "height": 104,
+          "shape": {
+            "type": "trend",
+            "trendId": "trend:raw-level"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000c7",
+          "order": 49,
+          "rotation": 0,
+          "name": "履歴トレンド",
+          "x": 1180,
+          "y": 416,
+          "width": 390,
+          "height": 104,
+          "shape": {
+            "type": "trend",
+            "trendId": "trend:pump-current"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000c8",
+          "order": 50,
+          "rotation": 0,
+          "name": "筋書きの枠",
+          "x": 1180,
+          "y": 540,
+          "width": 390,
+          "height": 170,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f172a",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#334155",
+                "width": 1
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000c9",
+          "order": 51,
+          "rotation": 0,
+          "x": 1194,
+          "y": 550,
+          "width": 362,
+          "height": 24,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "模擬値の筋書き（3 分で一巡）",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ca",
+          "order": 52,
+          "rotation": 0,
+          "x": 1194,
+          "y": 582,
+          "width": 362,
+          "height": 118,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "① 流入が増え、原水槽の液位が上がる\n② 80 % を超える頃に P-102 が起動し、H・HH の警報\n③ 2 台で送水して液位が下がる\n④ P-102 が故障（警報）、後に復帰\n⑤ 20 % を下回り L の警報、P-101 が停止\n⑥ 送水を再開して最初へ戻る",
+            "style": {
+              "wrap": "word",
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000cb",
+          "order": 53,
+          "rotation": 0,
+          "name": "画面切替 ◀ 全体フローへ",
+          "x": 1380,
+          "y": 824,
+          "width": 190,
+          "height": 40,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "screen",
+              "screenId": "0199d301-0000-7000-8000-000000000001"
+            },
+            "label": "◀ 全体フローへ",
+            "fontSize": 15,
+            "fill": "#1e293b",
+            "textColor": "#e2e8f0",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0b1220"
+          }
+        }
+      ]
+    },
+    {
+      "groups": [],
+      "folders": [],
+      "background": "#0b1220",
+      "id": "0199d301-0000-7000-8000-000000000003",
+      "name": "計測一覧",
+      "width": 1600,
+      "height": 900,
+      "objects": [
+        {
+          "id": "0199d301-0000-7000-8000-0000000000cc",
+          "order": 0,
+          "rotation": 0,
+          "x": 30,
+          "y": 16,
+          "width": 600,
+          "height": 36,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "計測一覧",
+            "style": {
+              "fontSize": 26,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000cd",
+          "order": 1,
+          "rotation": 0,
+          "x": 30,
+          "y": 54,
+          "width": 700,
+          "height": 22,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "表のセルと横向きの液位で、同じタグを別の形で表しています。",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ce",
+          "order": 2,
+          "rotation": 0,
+          "name": "計測値の表",
+          "x": 40,
+          "y": 100,
+          "width": 760,
+          "height": 720,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "table",
+            "columns": [2, 4, 3],
+            "rows": [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            "cells": [
+              [
+                {
+                  "text": "計器",
+                  "fill": "#1e293b"
+                },
+                {
+                  "text": "名称",
+                  "fill": "#1e293b"
+                },
+                {
+                  "text": "現在値",
+                  "fill": "#1e293b"
+                }
+              ],
+              [
+                {
+                  "text": "FIT-001"
+                },
+                {
+                  "text": "流入量"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Inflow.Flow"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "m³/h"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "LIT-101"
+                },
+                {
+                  "text": "原水槽 液位"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.RawTank.Level"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "%"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "FIT-101"
+                },
+                {
+                  "text": "送水流量"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Feed.Flow"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "m³/h"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "PIT-101"
+                },
+                {
+                  "text": "送水圧力"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Feed.Pressure"
+                  },
+                  "format": {
+                    "decimals": 3,
+                    "unit": "MPa"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "FQ-101"
+                },
+                {
+                  "text": "積算送水量"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Feed.Total"
+                  },
+                  "format": {
+                    "decimals": 0,
+                    "unit": "m³"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "LIT-202"
+                },
+                {
+                  "text": "薬品タンク 液位"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Chem.Level"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "%"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "AIT-201"
+                },
+                {
+                  "text": "pH 調整槽 pH"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.React.pH"
+                  },
+                  "format": {
+                    "decimals": 2
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "AIT-301"
+                },
+                {
+                  "text": "曝気槽 溶存酸素"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Aer.DO"
+                  },
+                  "format": {
+                    "decimals": 2,
+                    "unit": "mg/L"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "FIT-301"
+                },
+                {
+                  "text": "曝気 風量"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Air.Flow"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "m³/min"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "LIT-401"
+                },
+                {
+                  "text": "沈殿槽 汚泥界面"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Clar.Sludge"
+                  },
+                  "format": {
+                    "decimals": 2,
+                    "unit": "m"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "FIT-401"
+                },
+                {
+                  "text": "返送汚泥量"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Return.Flow"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "m³/h"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "AIT-501"
+                },
+                {
+                  "text": "処理水 濁度"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Treated.Turbidity"
+                  },
+                  "format": {
+                    "decimals": 2,
+                    "unit": "NTU"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "FIT-501"
+                },
+                {
+                  "text": "放流量"
+                },
+                {
+                  "text": "0",
+                  "binding": {
+                    "externalName": "WWT.Out.Flow"
+                  },
+                  "format": {
+                    "decimals": 1,
+                    "unit": "m³/h"
+                  }
+                }
+              ]
+            ],
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "center"
+            },
+            "border": {
+              "color": "#475569",
+              "width": 1
+            },
+            "background": "#0f172a"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000cf",
+          "order": 3,
+          "rotation": 0,
+          "x": 860,
+          "y": 100,
+          "width": 400,
+          "height": 24,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "槽の液位",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000d0",
+          "order": 4,
+          "rotation": 0,
+          "x": 860,
+          "y": 140,
+          "width": 160,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-101 原水槽",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000d1",
+          "order": 5,
+          "rotation": 0,
+          "name": "T-101 原水槽 枠",
+          "x": 1028,
+          "y": 140,
+          "width": 404,
+          "height": 26,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#475569",
+                "width": 1
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000d2",
+          "order": 6,
+          "rotation": 0,
+          "name": "T-101 原水槽 液位（横）",
+          "x": 1030,
+          "y": 142,
+          "width": 400,
+          "height": 22,
+          "fill": "#38bdf8",
+          "shape": {
+            "type": "level",
+            "direction": "right",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.RawTank.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000d3",
+          "order": 7,
+          "rotation": 0,
+          "x": 1440,
+          "y": 140,
+          "width": 110,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.RawTank.Level"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000d4",
+          "order": 8,
+          "rotation": 0,
+          "x": 860,
+          "y": 198,
+          "width": 160,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-201 pH 調整槽",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000d5",
+          "order": 9,
+          "rotation": 0,
+          "name": "T-201 pH 調整槽 枠",
+          "x": 1028,
+          "y": 198,
+          "width": 404,
+          "height": 26,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#475569",
+                "width": 1
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000d6",
+          "order": 10,
+          "rotation": 0,
+          "name": "T-201 pH 調整槽 液位（横）",
+          "x": 1030,
+          "y": 200,
+          "width": 400,
+          "height": 22,
+          "fill": "#60a5fa",
+          "shape": {
+            "type": "level",
+            "direction": "right",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.React.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000d7",
+          "order": 11,
+          "rotation": 0,
+          "x": 1440,
+          "y": 198,
+          "width": 110,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.React.Level"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000d8",
+          "order": 12,
+          "rotation": 0,
+          "x": 860,
+          "y": 256,
+          "width": 160,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-202 薬品",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000d9",
+          "order": 13,
+          "rotation": 0,
+          "name": "T-202 薬品 枠",
+          "x": 1028,
+          "y": 256,
+          "width": 404,
+          "height": 26,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#475569",
+                "width": 1
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000da",
+          "order": 14,
+          "rotation": 0,
+          "name": "T-202 薬品 液位（横）",
+          "x": 1030,
+          "y": 258,
+          "width": 400,
+          "height": 22,
+          "fill": "#c084fc",
+          "shape": {
+            "type": "level",
+            "direction": "right",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.Chem.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000db",
+          "order": 15,
+          "rotation": 0,
+          "x": 1440,
+          "y": 256,
+          "width": 110,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Chem.Level"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000dc",
+          "order": 16,
+          "rotation": 0,
+          "x": 860,
+          "y": 314,
+          "width": 160,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-301 曝気槽",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000dd",
+          "order": 17,
+          "rotation": 0,
+          "name": "T-301 曝気槽 枠",
+          "x": 1028,
+          "y": 314,
+          "width": 404,
+          "height": 26,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#475569",
+                "width": 1
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000de",
+          "order": 18,
+          "rotation": 0,
+          "name": "T-301 曝気槽 液位（横）",
+          "x": 1030,
+          "y": 316,
+          "width": 400,
+          "height": 22,
+          "fill": "#60a5fa",
+          "shape": {
+            "type": "level",
+            "direction": "right",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.Aer.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000df",
+          "order": 19,
+          "rotation": 0,
+          "x": 1440,
+          "y": 314,
+          "width": 110,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Aer.Level"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000e0",
+          "order": 20,
+          "rotation": 0,
+          "x": 860,
+          "y": 372,
+          "width": 160,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-401 沈殿槽",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000e1",
+          "order": 21,
+          "rotation": 0,
+          "name": "T-401 沈殿槽 枠",
+          "x": 1028,
+          "y": 372,
+          "width": 404,
+          "height": 26,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#475569",
+                "width": 1
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000e2",
+          "order": 22,
+          "rotation": 0,
+          "name": "T-401 沈殿槽 液位（横）",
+          "x": 1030,
+          "y": 374,
+          "width": 400,
+          "height": 22,
+          "fill": "#60a5fa",
+          "shape": {
+            "type": "level",
+            "direction": "right",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.Clar.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000e3",
+          "order": 23,
+          "rotation": 0,
+          "x": 1440,
+          "y": 372,
+          "width": 110,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Clar.Level"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000e4",
+          "order": 24,
+          "rotation": 0,
+          "x": 860,
+          "y": 430,
+          "width": 160,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "T-501 処理水槽",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000e5",
+          "order": 25,
+          "rotation": 0,
+          "name": "T-501 処理水槽 枠",
+          "x": 1028,
+          "y": 430,
+          "width": 404,
+          "height": 26,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#0f1b2d",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#475569",
+                "width": 1
+              }
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000e6",
+          "order": 26,
+          "rotation": 0,
+          "name": "T-501 処理水槽 液位（横）",
+          "x": 1030,
+          "y": 432,
+          "width": 400,
+          "height": 22,
+          "fill": "#2dd4bf",
+          "shape": {
+            "type": "level",
+            "direction": "right",
+            "min": 0,
+            "max": 100,
+            "background": "#0f1b2d",
+            "binding": {
+              "externalName": "WWT.Treated.Level"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000e7",
+          "order": 27,
+          "rotation": 0,
+          "x": 1440,
+          "y": 430,
+          "width": 110,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "0",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "WWT.Treated.Level"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "%"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000e8",
+          "order": 28,
+          "rotation": 0,
+          "x": 860,
+          "y": 510,
+          "width": 400,
+          "height": 24,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "機器の状態（bit のタグを文字と色に）",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000e9",
+          "order": 29,
+          "rotation": 0,
+          "name": "P-101 原水ポンプ 1 号 の状態",
+          "x": 1092,
+          "y": 548,
+          "width": 90,
+          "height": 30,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "状態",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "binding": {
+              "externalName": "WWT.P101.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "運転",
+                "color": "#22c55e"
+              },
+              "false": {
+                "text": "停止",
+                "color": "#64748b"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ea",
+          "order": 30,
+          "rotation": 0,
+          "name": "P-101 原水ポンプ 1 号 の灯",
+          "x": 860,
+          "y": 553,
+          "width": 20,
+          "height": 20,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#64748b",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            },
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-0000000000e9"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000eb",
+          "order": 31,
+          "rotation": 0,
+          "x": 890,
+          "y": 550,
+          "width": 200,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "P-101 原水ポンプ 1 号",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ec",
+          "order": 32,
+          "rotation": 0,
+          "name": "P-102 原水ポンプ 2 号 の状態",
+          "x": 1452,
+          "y": 548,
+          "width": 90,
+          "height": 30,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "状態",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "binding": {
+              "externalName": "WWT.P102.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "運転",
+                "color": "#22c55e"
+              },
+              "false": {
+                "text": "停止",
+                "color": "#64748b"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ed",
+          "order": 33,
+          "rotation": 0,
+          "name": "P-102 原水ポンプ 2 号 の灯",
+          "x": 1220,
+          "y": 553,
+          "width": 20,
+          "height": 20,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#64748b",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            },
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-0000000000ec"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ee",
+          "order": 34,
+          "rotation": 0,
+          "x": 1250,
+          "y": 550,
+          "width": 200,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "P-102 原水ポンプ 2 号",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ef",
+          "order": 35,
+          "rotation": 0,
+          "name": "P-102 故障 の状態",
+          "x": 1092,
+          "y": 592,
+          "width": 90,
+          "height": 30,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "状態",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "binding": {
+              "externalName": "WWT.P102.Fault"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "故障",
+                "color": "#ef4444"
+              },
+              "false": {
+                "text": "正常",
+                "color": "#22c55e"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000f0",
+          "order": 36,
+          "rotation": 0,
+          "name": "P-102 故障 の灯",
+          "x": 860,
+          "y": 597,
+          "width": 20,
+          "height": 20,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#64748b",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            },
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-0000000000ef"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000f1",
+          "order": 37,
+          "rotation": 0,
+          "x": 890,
+          "y": 594,
+          "width": 200,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "P-102 故障",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000f2",
+          "order": 38,
+          "rotation": 0,
+          "name": "P-201 薬注ポンプ の状態",
+          "x": 1452,
+          "y": 592,
+          "width": 90,
+          "height": 30,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "状態",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "binding": {
+              "externalName": "WWT.P201.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "運転",
+                "color": "#22c55e"
+              },
+              "false": {
+                "text": "停止",
+                "color": "#64748b"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000f3",
+          "order": 39,
+          "rotation": 0,
+          "name": "P-201 薬注ポンプ の灯",
+          "x": 1220,
+          "y": 597,
+          "width": 20,
+          "height": 20,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#64748b",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            },
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-0000000000f2"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000f4",
+          "order": 40,
+          "rotation": 0,
+          "x": 1250,
+          "y": 594,
+          "width": 200,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "P-201 薬注ポンプ",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000f5",
+          "order": 41,
+          "rotation": 0,
+          "name": "B-301 曝気ブロワー 1 号 の状態",
+          "x": 1092,
+          "y": 636,
+          "width": 90,
+          "height": 30,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "状態",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "binding": {
+              "externalName": "WWT.B301.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "運転",
+                "color": "#22c55e"
+              },
+              "false": {
+                "text": "停止",
+                "color": "#64748b"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000f6",
+          "order": 42,
+          "rotation": 0,
+          "name": "B-301 曝気ブロワー 1 号 の灯",
+          "x": 860,
+          "y": 641,
+          "width": 20,
+          "height": 20,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#64748b",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            },
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-0000000000f5"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000f7",
+          "order": 43,
+          "rotation": 0,
+          "x": 890,
+          "y": 638,
+          "width": 200,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "B-301 曝気ブロワー 1 号",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000f8",
+          "order": 44,
+          "rotation": 0,
+          "name": "B-302 曝気ブロワー 2 号 の状態",
+          "x": 1452,
+          "y": 636,
+          "width": 90,
+          "height": 30,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "状態",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "binding": {
+              "externalName": "WWT.B302.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "運転",
+                "color": "#22c55e"
+              },
+              "false": {
+                "text": "停止",
+                "color": "#64748b"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000f9",
+          "order": 45,
+          "rotation": 0,
+          "name": "B-302 曝気ブロワー 2 号 の灯",
+          "x": 1220,
+          "y": 641,
+          "width": 20,
+          "height": 20,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#64748b",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            },
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-0000000000f8"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000fa",
+          "order": 46,
+          "rotation": 0,
+          "x": 1250,
+          "y": 638,
+          "width": 200,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "B-302 曝気ブロワー 2 号",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000fb",
+          "order": 47,
+          "rotation": 0,
+          "name": "V-401 返送汚泥弁 の状態",
+          "x": 1092,
+          "y": 680,
+          "width": 90,
+          "height": 30,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "状態",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "binding": {
+              "externalName": "WWT.V401.Open"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "開",
+                "color": "#22c55e"
+              },
+              "false": {
+                "text": "閉",
+                "color": "#64748b"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000fc",
+          "order": 48,
+          "rotation": 0,
+          "name": "V-401 返送汚泥弁 の灯",
+          "x": 860,
+          "y": 685,
+          "width": 20,
+          "height": 20,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#64748b",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            },
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-0000000000fb"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000fd",
+          "order": 49,
+          "rotation": 0,
+          "x": 890,
+          "y": 682,
+          "width": 200,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "V-401 返送汚泥弁",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000fe",
+          "order": 50,
+          "rotation": 0,
+          "name": "P-501 放流ポンプ の状態",
+          "x": 1452,
+          "y": 680,
+          "width": 90,
+          "height": 30,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "状態",
+            "style": {
+              "fontSize": 17,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "binding": {
+              "externalName": "WWT.P501.Run"
+            },
+            "boolDisplay": {
+              "true": {
+                "text": "運転",
+                "color": "#22c55e"
+              },
+              "false": {
+                "text": "停止",
+                "color": "#64748b"
+              },
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-0000000000ff",
+          "order": 51,
+          "rotation": 0,
+          "name": "P-501 放流ポンプ の灯",
+          "x": 1220,
+          "y": 685,
+          "width": 20,
+          "height": 20,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#64748b",
+                  "alpha": 1
+                }
+              },
+              "stroke": null
+            },
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-0000000000fe"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000100",
+          "order": 52,
+          "rotation": 0,
+          "x": 1250,
+          "y": 682,
+          "width": 200,
+          "height": 26,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "P-501 放流ポンプ",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000101",
+          "order": 53,
+          "rotation": 0,
+          "name": "画面切替 ◀ 全体フローへ",
+          "x": 1380,
+          "y": 824,
+          "width": 190,
+          "height": 40,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "screen",
+              "screenId": "0199d301-0000-7000-8000-000000000001"
+            },
+            "label": "◀ 全体フローへ",
+            "fontSize": 15,
+            "fill": "#1e293b",
+            "textColor": "#e2e8f0",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0b1220"
+          }
+        }
+      ]
+    },
+    {
+      "groups": [],
+      "folders": [],
+      "background": "#0f172a",
+      "id": "0199d301-0000-7000-8000-000000000004",
+      "name": "運転表示ヘッダー",
+      "width": 1600,
+      "height": 94,
+      "objects": [
+        {
+          "id": "0199d301-0000-7000-8000-000000000102",
+          "order": 0,
+          "rotation": 0,
+          "x": 16,
+          "y": 10,
+          "width": 190,
+          "height": 34,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "排水処理設備",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000103",
+          "order": 1,
+          "rotation": 0,
+          "name": "画面切替 全体フロー",
+          "x": 214,
+          "y": 10,
+          "width": 130,
+          "height": 34,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "screen",
+              "screenId": "0199d301-0000-7000-8000-000000000001"
+            },
+            "label": "全体フロー",
+            "fontSize": 15,
+            "fill": "#1e293b",
+            "textColor": "#e2e8f0",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0b1220"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000104",
+          "order": 2,
+          "rotation": 0,
+          "name": "画面切替 原水ポンプ場",
+          "x": 352,
+          "y": 10,
+          "width": 140,
+          "height": 34,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "screen",
+              "screenId": "0199d301-0000-7000-8000-000000000002"
+            },
+            "label": "原水ポンプ場",
+            "fontSize": 15,
+            "fill": "#1e293b",
+            "textColor": "#e2e8f0",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0b1220"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000105",
+          "order": 3,
+          "rotation": 0,
+          "name": "画面切替 計測一覧",
+          "x": 500,
+          "y": 10,
+          "width": 120,
+          "height": 34,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "screen",
+              "screenId": "0199d301-0000-7000-8000-000000000003"
+            },
+            "label": "計測一覧",
+            "fontSize": 15,
+            "fill": "#1e293b",
+            "textColor": "#e2e8f0",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0b1220"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000106",
+          "order": 4,
+          "rotation": 0,
+          "name": "画面切替 ◀ 戻る",
+          "x": 650,
+          "y": 10,
+          "width": 80,
+          "height": 34,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "back"
+            },
+            "label": "◀ 戻る",
+            "fontSize": 15,
+            "fill": "#1e293b",
+            "textColor": "#e2e8f0",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0b1220"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000107",
+          "order": 5,
+          "rotation": 0,
+          "name": "画面切替 進む ▶",
+          "x": 738,
+          "y": 10,
+          "width": 80,
+          "height": 34,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "forward"
+            },
+            "label": "進む ▶",
+            "fontSize": 15,
+            "fill": "#1e293b",
+            "textColor": "#e2e8f0",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0b1220"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000108",
+          "order": 6,
+          "rotation": 0,
+          "name": "画面切替 アラーム一覧",
+          "x": 848,
+          "y": 10,
+          "width": 140,
+          "height": 34,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "alarmList"
+            },
+            "label": "アラーム一覧",
+            "fontSize": 15,
+            "fill": "#3f1d1d",
+            "textColor": "#fecaca",
+            "currentFill": "#0ea5e9",
+            "currentTextColor": "#0b1220"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000109",
+          "order": 7,
+          "rotation": 0,
+          "name": "時計",
+          "x": 1320,
+          "y": 12,
+          "width": 264,
+          "height": 30,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "clock",
+            "format": "dateTime",
+            "seconds": true,
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "normal",
+              "align": "right"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000010a",
+          "order": 8,
+          "rotation": 0,
+          "name": "最新の警報の帯",
+          "x": 16,
+          "y": 54,
+          "width": 1568,
+          "height": 30,
+          "shape": {
+            "type": "alarmBanner",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "normal"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "groups": [],
+      "folders": [],
+      "background": "#0f172a",
+      "id": "0199d301-0000-7000-8000-000000000005",
+      "name": "運転表示フッター",
+      "width": 1600,
+      "height": 30,
+      "objects": [
+        {
+          "id": "0199d301-0000-7000-8000-00000000010b",
+          "order": 0,
+          "rotation": 0,
+          "x": 16,
+          "y": 5,
+          "width": 1568,
+          "height": 20,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "デモ（模擬値）— 架空の排水処理設備です。実設備・Hub・PLC には接続していません。",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "symbols": [
+    {
+      "readSlots": [
+        {
+          "name": "state",
+          "type": "state",
+          "direction": "read"
+        }
+      ],
+      "folders": [],
+      "id": "0199d301-0000-7000-8000-000000000010",
+      "name": "ポンプ（状態つき）",
+      "width": 100,
+      "height": 144,
+      "objects": [
+        {
+          "id": "0199d301-0000-7000-8000-000000000009",
+          "order": 0,
+          "rotation": 0,
+          "name": "機器コード",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 20,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "CODE",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "equipmentProperty": {
+              "field": "code"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000000a",
+          "order": 1,
+          "rotation": 0,
+          "name": "状態の文字",
+          "x": 0,
+          "y": 122,
+          "width": 100,
+          "height": 20,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "状態",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "slotBinding": {
+              "slotName": "state"
+            },
+            "stateColors": {
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000000b",
+          "order": 2,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000000a"
+            },
+            "points": [
+              {
+                "x": 80,
+                "y": 67
+              },
+              {
+                "x": 78.978,
+                "y": 74.765
+              },
+              {
+                "x": 75.981,
+                "y": 82
+              },
+              {
+                "x": 71.213,
+                "y": 88.213
+              },
+              {
+                "x": 65,
+                "y": 92.981
+              },
+              {
+                "x": 57.765,
+                "y": 95.978
+              },
+              {
+                "x": 50,
+                "y": 97
+              },
+              {
+                "x": 42.235,
+                "y": 95.978
+              },
+              {
+                "x": 35,
+                "y": 92.981
+              },
+              {
+                "x": 28.787,
+                "y": 88.213
+              },
+              {
+                "x": 24.019,
+                "y": 82
+              },
+              {
+                "x": 21.022,
+                "y": 74.765
+              },
+              {
+                "x": 20,
+                "y": 67
+              },
+              {
+                "x": 21.022,
+                "y": 59.235
+              },
+              {
+                "x": 24.019,
+                "y": 52
+              },
+              {
+                "x": 28.787,
+                "y": 45.787
+              },
+              {
+                "x": 35,
+                "y": 41.019
+              },
+              {
+                "x": 42.235,
+                "y": 38.022
+              },
+              {
+                "x": 50,
+                "y": 37
+              },
+              {
+                "x": 57.765,
+                "y": 38.022
+              },
+              {
+                "x": 65,
+                "y": 41.019
+              },
+              {
+                "x": 71.213,
+                "y": 45.787
+              },
+              {
+                "x": 75.981,
+                "y": 52
+              },
+              {
+                "x": 78.978,
+                "y": 59.235
+              },
+              {
+                "x": 80,
+                "y": 67
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000000c",
+          "order": 3,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000000a"
+            },
+            "points": [
+              {
+                "x": 34,
+                "y": 82
+              },
+              {
+                "x": 65,
+                "y": 67
+              },
+              {
+                "x": 34,
+                "y": 52
+              },
+              {
+                "x": 34,
+                "y": 82
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000000d",
+          "order": 4,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000000a"
+            },
+            "points": [
+              {
+                "x": 30,
+                "y": 96
+              },
+              {
+                "x": 25,
+                "y": 110
+              },
+              {
+                "x": 75,
+                "y": 110
+              },
+              {
+                "x": 70,
+                "y": 96
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000000e",
+          "order": 5,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000000a"
+            },
+            "points": [
+              {
+                "x": 0,
+                "y": 67
+              },
+              {
+                "x": 20,
+                "y": 67
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000000f",
+          "order": 6,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000000a"
+            },
+            "points": [
+              {
+                "x": 80,
+                "y": 67
+              },
+              {
+                "x": 100,
+                "y": 67
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          }
+        }
+      ]
+    },
+    {
+      "readSlots": [
+        {
+          "name": "state",
+          "type": "state",
+          "direction": "read"
+        }
+      ],
+      "folders": [],
+      "id": "0199d301-0000-7000-8000-000000000019",
+      "name": "ブロワー（状態つき）",
+      "width": 100,
+      "height": 144,
+      "objects": [
+        {
+          "id": "0199d301-0000-7000-8000-000000000011",
+          "order": 0,
+          "rotation": 0,
+          "name": "機器コード",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 20,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "CODE",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "equipmentProperty": {
+              "field": "code"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000012",
+          "order": 1,
+          "rotation": 0,
+          "name": "状態の文字",
+          "x": 0,
+          "y": 122,
+          "width": 100,
+          "height": 20,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "状態",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "slotBinding": {
+              "slotName": "state"
+            },
+            "stateColors": {
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000013",
+          "order": 2,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000012"
+            },
+            "points": [
+              {
+                "x": 70,
+                "y": 82
+              },
+              {
+                "x": 69.148,
+                "y": 88.47
+              },
+              {
+                "x": 66.651,
+                "y": 94.5
+              },
+              {
+                "x": 62.678,
+                "y": 99.678
+              },
+              {
+                "x": 57.5,
+                "y": 103.651
+              },
+              {
+                "x": 51.47,
+                "y": 106.148
+              },
+              {
+                "x": 45,
+                "y": 107
+              },
+              {
+                "x": 38.53,
+                "y": 106.148
+              },
+              {
+                "x": 32.5,
+                "y": 103.651
+              },
+              {
+                "x": 27.322,
+                "y": 99.678
+              },
+              {
+                "x": 23.349,
+                "y": 94.5
+              },
+              {
+                "x": 20.852,
+                "y": 88.47
+              },
+              {
+                "x": 20,
+                "y": 82
+              },
+              {
+                "x": 20.852,
+                "y": 75.53
+              },
+              {
+                "x": 23.349,
+                "y": 69.5
+              },
+              {
+                "x": 27.322,
+                "y": 64.322
+              },
+              {
+                "x": 32.5,
+                "y": 60.349
+              },
+              {
+                "x": 38.53,
+                "y": 57.852
+              },
+              {
+                "x": 45,
+                "y": 57
+              },
+              {
+                "x": 51.47,
+                "y": 57.852
+              },
+              {
+                "x": 57.5,
+                "y": 60.349
+              },
+              {
+                "x": 62.678,
+                "y": 64.322
+              },
+              {
+                "x": 66.651,
+                "y": 69.5
+              },
+              {
+                "x": 69.148,
+                "y": 75.53
+              },
+              {
+                "x": 70,
+                "y": 82
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000014",
+          "order": 3,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000012"
+            },
+            "points": [
+              {
+                "x": 45,
+                "y": 57
+              },
+              {
+                "x": 88,
+                "y": 57
+              },
+              {
+                "x": 88,
+                "y": 80
+              },
+              {
+                "x": 69.92,
+                "y": 80
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000015",
+          "order": 4,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000012"
+            },
+            "points": [
+              {
+                "x": 51,
+                "y": 82
+              },
+              {
+                "x": 50.796,
+                "y": 83.553
+              },
+              {
+                "x": 50.196,
+                "y": 85
+              },
+              {
+                "x": 49.243,
+                "y": 86.243
+              },
+              {
+                "x": 48,
+                "y": 87.196
+              },
+              {
+                "x": 46.553,
+                "y": 87.796
+              },
+              {
+                "x": 45,
+                "y": 88
+              },
+              {
+                "x": 43.447,
+                "y": 87.796
+              },
+              {
+                "x": 42,
+                "y": 87.196
+              },
+              {
+                "x": 40.757,
+                "y": 86.243
+              },
+              {
+                "x": 39.804,
+                "y": 85
+              },
+              {
+                "x": 39.204,
+                "y": 83.553
+              },
+              {
+                "x": 39,
+                "y": 82
+              },
+              {
+                "x": 39.204,
+                "y": 80.447
+              },
+              {
+                "x": 39.804,
+                "y": 79
+              },
+              {
+                "x": 40.757,
+                "y": 77.757
+              },
+              {
+                "x": 42,
+                "y": 76.804
+              },
+              {
+                "x": 43.447,
+                "y": 76.20400000000001
+              },
+              {
+                "x": 45,
+                "y": 76
+              },
+              {
+                "x": 46.553,
+                "y": 76.20400000000001
+              },
+              {
+                "x": 48,
+                "y": 76.804
+              },
+              {
+                "x": 49.243,
+                "y": 77.757
+              },
+              {
+                "x": 50.196,
+                "y": 79
+              },
+              {
+                "x": 50.796,
+                "y": 80.447
+              },
+              {
+                "x": 51,
+                "y": 82
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000016",
+          "order": 5,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000012"
+            },
+            "points": [
+              {
+                "x": 30,
+                "y": 102
+              },
+              {
+                "x": 25,
+                "y": 117
+              },
+              {
+                "x": 65,
+                "y": 117
+              },
+              {
+                "x": 60,
+                "y": 102
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000017",
+          "order": 6,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000012"
+            },
+            "points": [
+              {
+                "x": 0,
+                "y": 72
+              },
+              {
+                "x": 22.087,
+                "y": 72
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000018",
+          "order": 7,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-000000000012"
+            },
+            "points": [
+              {
+                "x": 88,
+                "y": 72
+              },
+              {
+                "x": 100,
+                "y": 72
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          }
+        }
+      ]
+    },
+    {
+      "readSlots": [
+        {
+          "name": "open",
+          "type": "bool",
+          "direction": "read"
+        }
+      ],
+      "folders": [],
+      "id": "0199d301-0000-7000-8000-000000000021",
+      "name": "バルブ（状態つき）",
+      "width": 100,
+      "height": 172,
+      "objects": [
+        {
+          "id": "0199d301-0000-7000-8000-00000000001a",
+          "order": 0,
+          "rotation": 0,
+          "name": "機器コード",
+          "x": 0,
+          "y": 0,
+          "width": 100,
+          "height": 34,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "CODE",
+            "style": {
+              "fontSize": 26,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "equipmentProperty": {
+              "field": "code"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000001b",
+          "order": 1,
+          "rotation": 0,
+          "name": "状態の文字",
+          "x": 0,
+          "y": 136,
+          "width": 100,
+          "height": 34,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "text",
+            "text": "状態",
+            "style": {
+              "fontSize": 26,
+              "fontWeight": "bold",
+              "align": "center"
+            },
+            "slotBinding": {
+              "slotName": "open"
+            },
+            "stateColors": {
+              "unknownColor": "#d97706"
+            }
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000001c",
+          "order": 2,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000001b"
+            },
+            "points": [
+              {
+                "x": 10,
+                "y": 71
+              },
+              {
+                "x": 90,
+                "y": 111
+              },
+              {
+                "x": 90,
+                "y": 71
+              },
+              {
+                "x": 10,
+                "y": 111
+              },
+              {
+                "x": 10,
+                "y": 71
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000001d",
+          "order": 3,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000001b"
+            },
+            "points": [
+              {
+                "x": 50,
+                "y": 91
+              },
+              {
+                "x": 50,
+                "y": 51
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000001e",
+          "order": 4,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000001b"
+            },
+            "points": [
+              {
+                "x": 30,
+                "y": 51
+              },
+              {
+                "x": 70,
+                "y": 51
+              }
+            ],
+            "strokeWidth": 4,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-00000000001f",
+          "order": 5,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000001b"
+            },
+            "points": [
+              {
+                "x": 0,
+                "y": 91
+              },
+              {
+                "x": 10,
+                "y": 91
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          }
+        },
+        {
+          "id": "0199d301-0000-7000-8000-000000000020",
+          "order": 6,
+          "rotation": 0,
+          "x": 0,
+          "y": 0,
+          "fill": "#94a3b8",
+          "shape": {
+            "type": "polyline",
+            "stateColor": {
+              "textId": "0199d301-0000-7000-8000-00000000001b"
+            },
+            "points": [
+              {
+                "x": 90,
+                "y": 91
+              },
+              {
+                "x": 100,
+                "y": 91
+              }
+            ],
+            "strokeWidth": 5,
+            "arrow": "none"
+          }
+        }
+      ]
+    }
+  ]
+}

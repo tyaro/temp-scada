@@ -9,6 +9,7 @@
 | 設計・操作・機能別資料を探す | [文書索引](docs/README.md)                                                                                  |
 | 今使える機能と残り           | [実装状況](docs/project/implementation-status.md)                                                           |
 | 編集の操作                   | [操作ガイド](docs/guides/user-guide.md)                                                                     |
+| ブラウザのデモ（模擬値）     | [GitHub Pages のデモ](docs/guides/demo-pages.md)                                                            |
 | 次の工程・保留・統合         | [開発計画](docs/project/development-plan.md)・[実Hub・S7接続計画](docs/project/real-hub-connection-plan.md) |
 | コード変更・検証             | [コード対応表](docs/engineering/code-map.md)・[検証手順](#検証)                                             |
 | 過去の実装・検証             | [実装履歴](docs/history/implementation-history.md)                                                          |
@@ -45,6 +46,7 @@ source scripts/cloud-env.sh
 pnpm check
 pnpm test
 pnpm build
+pnpm build:pages
 pnpm e2e
 pnpm format:check
 node scripts/check-doc-links.mjs
@@ -53,6 +55,7 @@ cargo clippy --workspace --locked --all-targets -- -D warnings
 cargo test --workspace --locked
 cargo run --locked -p scada-model -- validate examples/minimal.project.json
 cargo run --locked -p scada-model -- validate examples/process.project.json
+cargo run --locked -p scada-model -- validate examples/demo-water.project.json
 ```
 
 E2E は開発サーバーを自動起動します。既に同じサーバーを起動しているときは再利用します。
