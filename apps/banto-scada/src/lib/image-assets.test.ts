@@ -168,3 +168,67 @@ it("keeps a pinned export snapshot readable across disposal and releases it afte
   expect(other.blob(hash).size).toBe(png.length);
   other.dispose();
 });
+it("keeps one URL lease per original until collection or disposal, and keeps a pinned original's URL", async () => {
+  const created: string[] = [];
+  const create = vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+      created.push(`blob:${created.length}`);
+      return created.at(-1)!;
+    }),
+    revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+  try {
+    const store = new AssetStore(),
+      hash = (await store.put(blob(), "one")).sha256;
+    const url = store.url(hash);
+    expect(store.url(hash)).toBe(url);
+    expect(create).toHaveBeenCalledOnce();
+    // A retained original keeps its URL.
+    store.collect(new Set([hash]));
+    expect(revoke).not.toHaveBeenCalled();
+    // A pinned original keeps its URL through collection and disposal.
+    const release = store.pin([hash]);
+    store.collect(new Set());
+    store.dispose();
+    expect(store.count).toBe(1);
+    expect(store.url(hash)).toBe(url);
+    expect(revoke).not.toHaveBeenCalled();
+    release();
+    expect(revoke).toHaveBeenCalledExactlyOnceWith(url);
+    expect(store.count).toBe(0);
+    expect(() => store.url(hash)).toThrow(/閉じられ|見つかりません/);
+    // Disposal ends the leases of unpinned originals.
+    const other = new AssetStore(),
+      otherHash = (await other.put(blob(), "two")).sha256,
+      otherUrl = other.url(otherHash);
+    other.dispose();
+    expect(revoke).toHaveBeenLastCalledWith(otherUrl);
+    expect(other.count).toBe(0);
+  } finally {
+    create.mockRestore();
+    revoke.mockRestore();
+  }
+});
+it("keeps the first name of an original until it is collected, and drops content failing its declaration", async () => {
+  const store = new AssetStore(),
+    first = await store.put(blob(), "first.png");
+  expect((await store.put(blob(), "second.png")).name).toBe("first.png");
+  const other = new AssetStore();
+  expect(other.importFrom(store, first.sha256).name).toBe("first.png");
+  store.collect(new Set());
+  expect((await store.put(blob(), "third.png")).name).toBe("third.png");
+  store.collect(new Set());
+  // A new original that does not match its package declaration is not kept.
+  await expect(
+    store.put(blob(), "declared", { ...first, height: 5 }),
+  ).rejects.toThrow(/宣言/);
+  expect(store.count).toBe(0);
+  // The upstream code stays in the cause.
+  let cause: unknown;
+  try {
+    store.blob("missing");
+  } catch (error) {
+    cause = (error as Error).cause;
+  }
+  expect(cause).toMatchObject({ code: "unknown-asset" });
+  store.dispose();
+  other.dispose();
+});
