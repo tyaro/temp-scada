@@ -405,6 +405,85 @@ describe("project files on the desktop", () => {
     );
   });
 
+  it("does not say the Project was saved when an explicit apply fails", async () => {
+    const { controller, reports } = setup({
+      open: async () => null,
+      save: async () => ({ fileId: 12, fileName: "plant.json" }),
+      apply: async () => ({ status: "failed", reason: "somethingNew" }),
+    });
+    controller.save();
+    await settle();
+    await controller.applyAlarm();
+    expect(reports.at(-1)).toEqual({
+      kind: "error",
+      text: "警報定義を適用できませんでした。理由: somethingNew。",
+    });
+  });
+
+  it("does not say the Project was saved when an explicit apply is declined", async () => {
+    vi.stubGlobal("window", { confirm: vi.fn(() => false) });
+    try {
+      const { controller, reports } = setup({
+        open: async () => null,
+        save: async () => ({ fileId: 12, fileName: "plant.json" }),
+        apply: async () => ({
+          status: "confirmationRequired",
+          occurrences: [],
+        }),
+      });
+      controller.save();
+      await settle();
+      await controller.applyAlarm();
+      expect(reports.at(-1)).toEqual({
+        kind: "info",
+        text: "警報定義は適用していません。",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("asks before an explicit apply leaves unsaved edits out", async () => {
+    const confirm = vi.fn(() => false);
+    vi.stubGlobal("window", { confirm });
+    try {
+      const apply = vi.fn(async (): Promise<AlarmApplyResult> => ({
+        status: "applied",
+      }));
+      const { controller, state, reports } = setup({
+        open: async () => null,
+        save: async () => ({ fileId: 12, fileName: "plant.json" }),
+        apply,
+      });
+      controller.save();
+      await settle();
+      await controller.applyAlarm();
+      expect(confirm).not.toHaveBeenCalled();
+      expect(apply).toHaveBeenCalledTimes(1);
+
+      state.project = {
+        ...state.project,
+        manifest: { ...state.project.manifest, name: "編集後" },
+      };
+      await controller.applyAlarm();
+      expect(confirm).toHaveBeenCalledWith(
+        "未保存の変更は適用されません。保存済みの内容で警報定義を適用しますか？",
+      );
+      expect(apply).toHaveBeenCalledTimes(1);
+      expect(reports.at(-1)).toEqual({
+        kind: "info",
+        text: "警報定義は適用していません。保存してから適用してください。",
+      });
+
+      confirm.mockReturnValue(true);
+      await controller.applyAlarm();
+      expect(apply).toHaveBeenCalledTimes(2);
+      expect(apply).toHaveBeenLastCalledWith(12, []);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("shows an unknown apply code as it is", async () => {
     const { controller, reports } = setup({
       open: async () => null,
