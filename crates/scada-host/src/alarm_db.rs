@@ -356,6 +356,15 @@ pub fn plan_restore(
     })
 }
 
+/// A Project id becomes a filename; reject path segments and non-UUIDs.
+fn db_file(terminal: &AlarmTerminal, project_id: &str) -> Result<std::path::PathBuf, AlarmDbError> {
+    let id = uuid::Uuid::parse_str(project_id).map_err(|_| AlarmDbError::InvalidProjectId)?;
+    if id.to_string() != project_id {
+        return Err(AlarmDbError::InvalidProjectId);
+    }
+    Ok(terminal.data_dir().join("alarms").join(format!("{id}.db")))
+}
+
 pub struct AlarmDb {
     pool: SqlitePool,
     project_id: String,
@@ -367,15 +376,10 @@ impl AlarmDb {
         terminal: Arc<AlarmTerminal>,
         project_id: &str,
     ) -> Result<Self, AlarmDbError> {
-        // A Project id becomes a filename; reject path segments and non-UUIDs.
-        let id = uuid::Uuid::parse_str(project_id).map_err(|_| AlarmDbError::InvalidProjectId)?;
-        if id.to_string() != project_id {
-            return Err(AlarmDbError::InvalidProjectId);
-        }
-        let dir = terminal.data_dir().join("alarms");
-        durable::create_dir_durably(&dir)?;
+        let file = db_file(&terminal, project_id)?;
+        durable::create_dir_durably(file.parent().expect("the alarms directory"))?;
         let options = SqliteConnectOptions::new()
-            .filename(dir.join(format!("{id}.db")))
+            .filename(file)
             .create_if_missing(true)
             .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal)
             .foreign_keys(true);
@@ -418,6 +422,55 @@ impl AlarmDb {
             project_id: project_id.into(),
             _terminal: terminal,
         })
+    }
+
+    /// Open an existing Project DB for the screen's reads (history, the
+    /// applied definitions of a Project other than the running one, the
+    /// retention status), on its own connection so they never queue behind
+    /// the Engine's writes on the shared one. Creates nothing and changes no
+    /// schema or journal mode, so it never takes the write lock that the
+    /// Engine's `BEGIN IMMEDIATE` waits for. `None` when the Project has no
+    /// DB yet (nothing was applied or recorded).
+    pub async fn open_read(
+        terminal: Arc<AlarmTerminal>,
+        project_id: &str,
+    ) -> Result<Option<Self>, AlarmDbError> {
+        let file = db_file(&terminal, project_id)?;
+        if !file.try_exists()? {
+            return Ok(None);
+        }
+        let options = SqliteConnectOptions::new()
+            .filename(file)
+            .create_if_missing(false)
+            .foreign_keys(true);
+        let pool = SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect_with(options)
+            .await?;
+        let version: i64 = match sqlx::query_scalar("PRAGMA user_version")
+            .fetch_one(&pool)
+            .await
+        {
+            Ok(version) => version,
+            Err(error) => {
+                pool.close().await;
+                return Err(error.into());
+            }
+        };
+        if version != FORMAT {
+            pool.close().await;
+            // An empty file left before the first `open` finished its schema.
+            return if version == 0 {
+                Ok(None)
+            } else {
+                Err(AlarmDbError::UnsupportedFormat)
+            };
+        }
+        Ok(Some(Self {
+            pool,
+            project_id: project_id.into(),
+            _terminal: terminal,
+        }))
     }
 
     /// Release SQLite handles before an application shutdown or an isolated
