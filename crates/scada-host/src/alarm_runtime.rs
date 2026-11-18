@@ -704,6 +704,18 @@ impl AlarmRuntime {
             Err(_) => self.task.await.map_err(|_| AlarmRuntimeError::Closed)?,
         }
     }
+
+    /// Ends the task as a dropped control channel does, and keeps showing the
+    /// `Running` read before the end, so a caller checks the status and then
+    /// gets `Closed` (the race between the two).
+    #[cfg(test)]
+    pub(crate) async fn close_for_test(&mut self) {
+        self.control = mpsc::channel(1).0;
+        while !self.task.is_finished() {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        self.status = watch::channel(AlarmRuntimeStatus::Running).1;
+    }
 }
 
 async fn run(

@@ -139,7 +139,7 @@ describe("project files on the desktop", () => {
     await settle();
     expect(reports.at(-1)).toEqual({
       kind: "info",
-      text: "Projectを保存しました。Hubへの接続処理中のため警報定義は適用していません。接続後に明示的に適用してください。",
+      text: "Projectを保存しました。ほかの警報の操作（Hubへの接続・適用など）の途中のため、警報定義は適用していません。終わってから明示的に適用してください。",
     });
   });
 

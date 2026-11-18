@@ -683,9 +683,9 @@ impl AlarmService {
                     match runtime
                         .apply(
                             applied.clone(),
-                            saved.definitions,
+                            saved.definitions.clone(),
                             confirmed.to_vec(),
-                            client,
+                            client.clone(),
                         )
                         .await
                     {
@@ -717,6 +717,9 @@ impl AlarmService {
                         ))) => {
                             return Ok(ApplyResult::ConfirmationRequired { occurrences });
                         }
+                        // The task ended after the status check above. Reap it
+                        // and re-plan from the DB on the common path below.
+                        Err(AlarmRuntimeError::Closed) => {}
                         Err(error) => return Err(error.into()),
                     }
                 }
@@ -1409,6 +1412,68 @@ mod tests {
         let changed = service.snapshot().await.unwrap();
         assert_eq!(changed.engine.unwrap().session, session);
         assert!(changed.applied.unwrap().applied_at_ms > renamed_applied_at);
+        service.stop().await.unwrap();
+        drop(service);
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn same_project_apply_restarts_when_the_runtime_closed_after_the_status_check() {
+        let hub = Hub::new(&[("PLANT.FLAG", "bit")]).await;
+        let dir = std::env::temp_dir().join(format!("alarm-closed-apply-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("a.json");
+        let id = uuid::Uuid::now_v7().to_string();
+        let mut value = project(&id, "A");
+        std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+        let service = AlarmService::open(&dir).await.unwrap();
+        assert!(matches!(
+            service
+                .apply(
+                    &path,
+                    &hub.url,
+                    hub.clients(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
+                .await
+                .unwrap(),
+            ApplyResult::Applied { .. }
+        ));
+        let before = service.snapshot().await.unwrap();
+        let session = before.engine.unwrap().session;
+        let first_applied_at = before.applied.unwrap().applied_at_ms;
+        {
+            let mut active = service.active.lock().await;
+            let runtime = active.runtime.as_mut().unwrap();
+            runtime.close_for_test().await;
+            assert!(matches!(
+                *runtime.status().borrow(),
+                AlarmRuntimeStatus::Running
+            ));
+        }
+
+        value["alarms"]["definitions"][0]["name"] = json!("Renamed");
+        std::fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+        assert!(matches!(
+            service
+                .apply(
+                    &path,
+                    &hub.url,
+                    hub.clients(),
+                    "未ログイン",
+                    &[],
+                    ApplyMode::Saved
+                )
+                .await
+                .unwrap(),
+            ApplyResult::Applied { .. }
+        ));
+        let after = service.snapshot().await.unwrap();
+        assert_eq!(after.status, "running");
+        assert_ne!(after.engine.unwrap().session, session);
+        assert!(after.applied.unwrap().applied_at_ms > first_applied_at);
         service.stop().await.unwrap();
         drop(service);
         std::fs::remove_dir_all(dir).unwrap();
