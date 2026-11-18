@@ -1,5 +1,6 @@
 import {
   getBounds,
+  isAreaShape,
   type Project,
   type Screen,
   type SymbolDefinition,
@@ -227,7 +228,6 @@ export function applyObjectCreation(
     }
   }
   const added = screen.objects.at(-1)!;
-  if (added.shape.type === "rectangle" || added.shape.type === "ellipse")
-    delete added.fill;
+  if (isAreaShape(added.shape)) delete added.fill;
   centerObject(added, command.center);
 }

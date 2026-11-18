@@ -1,4 +1,4 @@
-import type { ScreenObject } from "./project";
+import { isAreaShape, type ScreenObject } from "./project";
 /** Color alpha for compound line/arrow, text and monochrome Symbol is applied after compositing. */
 export function compositedOpacity(object: ScreenObject): number | undefined {
   const shape = object.shape;
@@ -8,8 +8,7 @@ export function compositedOpacity(object: ScreenObject): number | undefined {
     shape.type === "navButton" ||
     shape.type === "alarmBadge" ||
     shape.type === "alarmBanner" ||
-    shape.type === "rectangle" ||
-    shape.type === "ellipse" ||
+    isAreaShape(shape) ||
     shape.type === "level" ||
     shape.type === "table" ||
     (shape.type === "symbol" && shape.colorMode === "definition")

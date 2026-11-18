@@ -38,11 +38,12 @@
     type NumericProperty,
     type NumericTarget,
   } from "./numeric-properties";
-  import type {
-    Project,
-    Screen,
-    SymbolDefinition,
-    ScreenObject,
+  import {
+    isAreaShape,
+    type Project,
+    type Screen,
+    type SymbolDefinition,
+    type ScreenObject,
   } from "../project";
   import type { EditCommand } from "../editor";
   import { symbolUsage } from "../editor";
@@ -134,10 +135,7 @@
       screen.objects
         .filter((object) => selectedIds.includes(object.id))
         .flatMap((object) => {
-          if (
-            object.shape.type === "rectangle" ||
-            object.shape.type === "ellipse"
-          )
+          if (isAreaShape(object.shape))
             return [
               ...(object.shape.paint.fill.enabled
                 ? object.shape.paint.fill.paint.type === "solid"
@@ -175,8 +173,7 @@
     screen.objects.filter(
       (object) =>
         selectedIds.includes(object.id) &&
-        (object.shape.type === "rectangle" ||
-          object.shape.type === "ellipse") &&
+        isAreaShape(object.shape) &&
         !object.shape.paint.fill.enabled &&
         !object.shape.paint.stroke,
     ).length,
@@ -185,8 +182,7 @@
     screen.objects.filter(
       (object) =>
         selectedIds.includes(object.id) &&
-        (object.shape.type === "rectangle" ||
-          object.shape.type === "ellipse") &&
+        isAreaShape(object.shape) &&
         object.shape.paint.fill.enabled &&
         object.shape.paint.fill.paint.type !== "solid",
     ).length,
@@ -660,7 +656,7 @@
       {:else}<p>グループを含むため、内部の書式は解除後に編集できます。</p>{/if}
     {:else if selected}
       {#key `${generation}:${screen.id}:${selected.id}`}
-        {#if (selected.shape.type === "rectangle" || selected.shape.type === "ellipse" || selected.shape.type === "polyline") && (activeDefinition || selected.shape.stateColor || stateColorSources(screen).length > 0)}
+        {#if (isAreaShape(selected.shape) || selected.shape.type === "polyline") && (activeDefinition || selected.shape.stateColor || stateColorSources(screen).length > 0)}
           <StateColor
             owner={screen}
             object={selected}
@@ -671,7 +667,7 @@
             onsource={(id) => onselectsource(id)}
           />
         {/if}
-        {#if selected.shape.type === "rectangle" || selected.shape.type === "ellipse"}
+        {#if isAreaShape(selected.shape)}
           <ShapePaint
             paint={selected.shape.paint}
             objectId={selected.id}
@@ -956,7 +952,7 @@
                   {/each}
                 </div>
               {/if}
-              {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "navButton" && selected.shape.type !== "alarmBadge" && selected.shape.type !== "alarmBanner" && selected.shape.type !== "trend" && selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse"}
+              {#if selected.shape.type !== "image" && selected.shape.type !== "screenView" && selected.shape.type !== "navButton" && selected.shape.type !== "alarmBadge" && selected.shape.type !== "alarmBanner" && selected.shape.type !== "trend" && !isAreaShape(selected.shape)}
                 <label
                   >{selected.shape.type === "symbol" &&
                   selected.shape.colorMode === "definition"
@@ -1011,7 +1007,7 @@
                 >
                   現在の描画にはこの単色を使用していません。各図形の色は共有定義で編集します。色と不透明度の保存値は保持し、色の使い方を「配置の単色」に適用した後に編集できます。
                 </p>{/if}
-              {#if (selected.shape.type === "rectangle" || selected.shape.type === "ellipse") && !selected.shape.paint.fill.enabled}<p
+              {#if isAreaShape(selected.shape) && !selected.shape.paint.fill.enabled}<p
                   class="numeric-hint"
                 >
                   塗りは無効です。色と不透明度の設定は保持され、現在の描画には使われません。

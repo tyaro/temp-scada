@@ -1,4 +1,4 @@
-import type { ScreenObject } from "./project";
+import { isAreaShape, type ScreenObject } from "./project";
 
 export type PaintAlphaChannel = "fill" | "stroke";
 export type PaintAlphaPatch = Partial<Record<PaintAlphaChannel, number>>;
@@ -13,7 +13,7 @@ export function paintAlphaTarget(
   const values: number[] = [];
   for (const object of objects) {
     const shape = object.shape;
-    if (shape.type !== "rectangle" && shape.type !== "ellipse")
+    if (!isAreaShape(shape))
       return {
         reason: "矩形・楕円だけを選択してください。一部だけの変更はしません。",
         common: null,
@@ -67,7 +67,7 @@ export function setPaintAlpha(objects: ScreenObject[], patch: PaintAlphaPatch) {
   // Both channels and all placements are validated before the first mutation.
   for (const object of objects) {
     const shape = object.shape;
-    if (shape.type !== "rectangle" && shape.type !== "ellipse") continue;
+    if (!isAreaShape(shape)) continue;
     if (
       patch.fill !== undefined &&
       shape.paint.fill.paint.type === "solid" &&

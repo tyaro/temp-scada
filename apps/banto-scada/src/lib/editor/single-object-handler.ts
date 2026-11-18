@@ -1,7 +1,12 @@
 import { connectedVertex, remapConnections } from "../connections";
 import { normalizeTextNewlines } from "../text-content";
 import { reorderUnit } from "./group-handler";
-import { type Project, type Screen, type SymbolDefinition } from "../project";
+import {
+  isAreaShape,
+  type Project,
+  type Screen,
+  type SymbolDefinition,
+} from "../project";
 import { normalizeRotation, replaceRotatedVertex } from "../rotation";
 import { setFlip } from "../flip";
 import { setLineStyle } from "../line-style";
@@ -151,8 +156,7 @@ export function applySingleObjectCommand(
         object.shape.type === "alarmBadge" ||
         object.shape.type === "alarmBanner" ||
         object.shape.type === "trend" ||
-        object.shape.type === "rectangle" ||
-        object.shape.type === "ellipse") &&
+        isAreaShape(object.shape)) &&
       (geometry.fill !== undefined || colorAlpha !== undefined)
     )
       throw new Error(
@@ -182,7 +186,7 @@ export function applySingleObjectCommand(
       else delete object.name;
     }
     if (paint !== undefined) {
-      if (object.shape.type !== "rectangle" && object.shape.type !== "ellipse")
+      if (!isAreaShape(object.shape))
         throw new Error("塗りと枠線は矩形と楕円にだけ設定できます");
       object.shape.paint = structuredClone(paint);
     }
@@ -232,11 +236,7 @@ export function applySingleObjectCommand(
       else object.shape.slotBinding = slotBinding;
     }
     if (stateColor !== undefined) {
-      if (!(
-        object.shape.type === "rectangle" ||
-        object.shape.type === "ellipse" ||
-        object.shape.type === "polyline"
-      ))
+      if (!(isAreaShape(object.shape) || object.shape.type === "polyline"))
         throw new Error("状態色の追従は矩形・楕円・線だけに設定できます");
       if (stateColor === null) delete object.shape.stateColor;
       else object.shape.stateColor = structuredClone(stateColor);

@@ -1,8 +1,9 @@
-import type {
-  Project,
-  Screen,
-  ScreenObject,
-  SymbolDefinition,
+import {
+  isAreaShape,
+  type Project,
+  type Screen,
+  type ScreenObject,
+  type SymbolDefinition,
 } from "./project";
 import { presentScreenBool } from "./screen-bool-display";
 import type { TagReadings } from "./tag-presentation";
@@ -20,7 +21,7 @@ export function supportsStateColor(object: ScreenObject): boolean {
   const shape = object.shape;
   return (
     shape.type === "polyline" ||
-    ((shape.type === "rectangle" || shape.type === "ellipse") &&
+    (isAreaShape(shape) &&
       shape.paint.fill.enabled &&
       shape.paint.fill.paint.type === "solid")
   );

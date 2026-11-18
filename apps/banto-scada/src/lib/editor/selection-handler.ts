@@ -8,6 +8,7 @@ import { groupFor } from "../geometric-groups";
 import { arrangeUnits } from "./group-arrangement";
 import {
   getBounds,
+  isAreaShape,
   placementColor,
   type Screen,
   type SymbolDefinition,
@@ -160,22 +161,14 @@ export function applySelectionCommand(
       throw new Error(
         "枠線なしと色・幅・線種は同時に指定できません。スタイルの指定を解除してください",
       );
-    if (
-      objects.some(
-        (object) =>
-          object.shape.type !== "rectangle" && object.shape.type !== "ellipse",
-      )
-    )
+    if (objects.some((object) => !isAreaShape(object.shape)))
       throw new Error(
         "矩形・楕円だけを選択してください。対応する図形だけを暗黙に変更しません",
       );
     if (
       mode !== "none" &&
       objects.some(
-        (object) =>
-          (object.shape.type === "rectangle" ||
-            object.shape.type === "ellipse") &&
-          !object.shape.paint.stroke,
+        (object) => isAreaShape(object.shape) && !object.shape.paint.stroke,
       ) &&
       (mode !== "enabled" || color === undefined || width === undefined)
     )
@@ -184,8 +177,7 @@ export function applySelectionCommand(
       );
     const normalized = color?.trim().toLowerCase();
     for (const object of objects) {
-      if (object.shape.type !== "rectangle" && object.shape.type !== "ellipse")
-        continue;
+      if (!isAreaShape(object.shape)) continue;
       if (mode === "none") object.shape.paint.stroke = null;
       else if (!object.shape.paint.stroke)
         object.shape.paint.stroke = { color: normalized!, width: width! };
@@ -266,8 +258,7 @@ export function applySelectionCommand(
     if (
       objects.some(
         (object) =>
-          (object.shape.type === "rectangle" ||
-            object.shape.type === "ellipse") &&
+          isAreaShape(object.shape) &&
           object.shape.paint.fill.enabled &&
           object.shape.paint.fill.paint.type !== "solid",
       )
@@ -309,8 +300,7 @@ export function applySelectionCommand(
     if (
       objects.some(
         (object) =>
-          (object.shape.type === "rectangle" ||
-            object.shape.type === "ellipse") &&
+          isAreaShape(object.shape) &&
           !object.shape.paint.fill.enabled &&
           !object.shape.paint.stroke,
       )
@@ -319,10 +309,7 @@ export function applySelectionCommand(
         "塗りと枠線が無効の配置を含みます。有効にしてから適用してください",
       );
     objects.forEach((object) => {
-      if (
-        object.shape.type === "rectangle" ||
-        object.shape.type === "ellipse"
-      ) {
+      if (isAreaShape(object.shape)) {
         if (
           object.shape.paint.fill.enabled &&
           object.shape.paint.fill.paint.type === "solid" &&

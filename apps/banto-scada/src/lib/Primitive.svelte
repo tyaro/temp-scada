@@ -16,7 +16,7 @@
   import TablePrimitive from "./TablePrimitive.svelte";
   import ClockPrimitive from "./ClockPrimitive.svelte";
   import type { TableSlotResolver } from "./table-cell-slot";
-  import type { ScreenObject } from "./project";
+  import { isAreaShape, type ScreenObject } from "./project";
   import {
     formatSlotText,
     presentNumeric,
@@ -54,9 +54,7 @@
   } = $props();
   const gradientId = $props.id();
   const fill = $derived(
-    object.shape.type === "rectangle" || object.shape.type === "ellipse"
-      ? object.shape.paint.fill
-      : null,
+    isAreaShape(object.shape) ? object.shape.paint.fill : null,
   );
   const gradient = $derived(
     fill?.paint.type === "linearGradient" ? fill.paint : null,
