@@ -1,7 +1,7 @@
 <script lang="ts">
   import { lineStyleLabels } from "../line-style";
   import { tick } from "svelte";
-  import type { ScreenObject } from "../project";
+  import { isAreaShape, type ScreenObject } from "../project";
   import { parseNumericProperty } from "./numeric-properties";
   import type { createDraftGuard } from "./drafts.svelte";
   let {
@@ -25,9 +25,7 @@
   } = $props();
   const shapes = $derived(
     objects.flatMap((object) =>
-      object.shape.type === "rectangle" || object.shape.type === "ellipse"
-        ? [object.shape]
-        : [],
+      isAreaShape(object.shape) ? [object.shape] : [],
     ),
   );
   const eligible = $derived(

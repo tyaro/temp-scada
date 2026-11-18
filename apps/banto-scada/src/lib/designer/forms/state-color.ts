@@ -1,5 +1,5 @@
 import type { EditCommand } from "../../editor";
-import type { Screen, SymbolDefinition } from "../../project";
+import { isAreaShape, type Screen, type SymbolDefinition } from "../../project";
 import { supportsStateColor, stateColorSources } from "../../state-color";
 import type {
   SymbolColorModeInput,
@@ -16,7 +16,10 @@ export function stateColorCommand(
     selected?.id !== input.objectId ||
     context.owner.id !== context.screenId ||
     "background" in context.owner === context.definition ||
-    !["rectangle", "ellipse", "polyline"].includes(selected?.shape.type ?? "")
+    !(
+      selected &&
+      (isAreaShape(selected.shape) || selected.shape.type === "polyline")
+    )
   )
     throw new Error("状態色の追従先が変更されています。選択し直してください。");
   const textId = String(input.data.get("stateColorTextId") ?? "");

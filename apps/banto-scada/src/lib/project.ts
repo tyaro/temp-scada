@@ -289,6 +289,14 @@ export interface PolylineObject extends BaseObject {
 }
 export type LineArrow = "none" | "start" | "end" | "both";
 export type ScreenObject = LayoutObject | PolylineObject;
+/** 図形（shape）の共用体。 */
+export type Shape = ScreenObject["shape"];
+/** 面の図形（塗りと枠線を持つ矩形・楕円。新しい面の図形はここに足す）。 */
+export type AreaShape = Extract<Shape, { type: "rectangle" | "ellipse" }>;
+/** 面の図形かどうかの唯一の判定。 */
+export function isAreaShape(shape: Shape): shape is AreaShape {
+  return shape.type === "rectangle" || shape.type === "ellipse";
+}
 export interface LayerFolder {
   id: string;
   name: string;
@@ -399,31 +407,30 @@ export function parseProject(json: string): Project {
         objects: screen.objects.map((object) => ({
           ...object,
           rotation: 0,
-          shape:
-            object.shape.type === "rectangle" || object.shape.type === "ellipse"
+          shape: isAreaShape(object.shape)
+            ? {
+                ...object.shape,
+                paint: {
+                  fill: {
+                    enabled: true,
+                    paint: { type: "solid", color: object.fill!, alpha: 1 },
+                  },
+                  stroke: null,
+                },
+              }
+            : object.shape.type === "text"
               ? {
                   ...object.shape,
-                  paint: {
-                    fill: {
-                      enabled: true,
-                      paint: { type: "solid", color: object.fill!, alpha: 1 },
-                    },
-                    stroke: null,
+                  style: {
+                    fontSize: Math.min(
+                      512,
+                      (object as LayoutObject).height * 0.7,
+                    ),
+                    fontWeight: "normal",
+                    align: "left",
                   },
                 }
-              : object.shape.type === "text"
-                ? {
-                    ...object.shape,
-                    style: {
-                      fontSize: Math.min(
-                        512,
-                        (object as LayoutObject).height * 0.7,
-                      ),
-                      fontWeight: "normal",
-                      align: "left",
-                    },
-                  }
-                : object.shape,
+              : object.shape,
         })),
         background: "#0b1220",
       })),
@@ -433,11 +440,7 @@ export function parseProject(json: string): Project {
   if (migratedLegacy) {
     for (const screen of (value as Project).screens)
       for (const object of screen.objects)
-        if (
-          object.shape.type === "rectangle" ||
-          object.shape.type === "ellipse"
-        )
-          delete object.fill;
+        if (isAreaShape(object.shape)) delete object.fill;
   }
   normalizeProjectText(value);
   if (!validate(value))
@@ -546,16 +549,13 @@ export function parseProject(json: string): Project {
           project.assets.find((a) => a.id === shape.assetId)!,
           shape.crop,
         );
-      if (
-        (shape.type === "rectangle" || shape.type === "ellipse") &&
-        shape.paint.fill.paint.type === "pattern"
-      ) {
+      if (isAreaShape(shape) && shape.paint.fill.paint.type === "pattern") {
         const pattern = shape.paint.fill.paint;
         patternGeometry(pattern.kind, pattern.spacing, pattern.size);
       }
 
       if (
-        (shape.type === "rectangle" || shape.type === "ellipse") &&
+        isAreaShape(shape) &&
         "width" in object &&
         shape.paint.fill.paint.type === "radialGradient"
       ) {
@@ -573,7 +573,7 @@ export function parseProject(json: string): Project {
           );
       }
       if (
-        (shape.type === "rectangle" || shape.type === "ellipse") &&
+        isAreaShape(shape) &&
         "width" in object &&
         shape.paint.fill.paint.type === "linearGradient"
       ) {
@@ -654,10 +654,9 @@ export function getLayoutBounds(object: ScreenObject) {
 /** Painted outline, used by selection, alignment, range and placement anchors. */
 export function getLocalBounds(object: ScreenObject) {
   const bounds = getLayoutBounds(object);
-  const pad =
-    object.shape.type === "rectangle" || object.shape.type === "ellipse"
-      ? (object.shape.paint.stroke?.width ?? 0) / 2
-      : 0;
+  const pad = isAreaShape(object.shape)
+    ? (object.shape.paint.stroke?.width ?? 0) / 2
+    : 0;
   return {
     x: bounds.x - pad,
     y: bounds.y - pad,
@@ -680,8 +679,7 @@ export function strokeOverflowIds(
     .filter((object) => {
       if (
         object.visible === false ||
-        (object.shape.type !== "rectangle" &&
-          object.shape.type !== "ellipse") ||
+        !isAreaShape(object.shape) ||
         !object.shape.paint.stroke
       )
         return false;
@@ -730,7 +728,7 @@ export function paintBaseColor(paint: FillPaint): PaintColor {
       : paint.foreground;
 }
 export function placementColor(object: ScreenObject): string {
-  if (object.shape.type === "rectangle" || object.shape.type === "ellipse") {
+  if (isAreaShape(object.shape)) {
     const paint = object.shape.paint.fill.paint;
     return paintBaseColor(paint).color;
   }

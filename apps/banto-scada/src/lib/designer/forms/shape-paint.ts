@@ -1,5 +1,5 @@
 import type { EditCommand } from "../../editor";
-import type { ScreenObject } from "../../project";
+import { isAreaShape, type ScreenObject } from "../../project";
 import { normalizeGradientAngle } from "../../linear-gradient";
 import { parseLineStyle } from "../../line-style";
 import { patternFromForm } from "../pattern-fields";
@@ -29,7 +29,7 @@ export function shapePaintCommand(
     input.targetKey !==
       `${context.generation}:${context.screenId}:${context.definition}` ||
     selected?.id !== input.objectId ||
-    (selected.shape.type !== "rectangle" && selected.shape.type !== "ellipse")
+    !isAreaShape(selected.shape)
   )
     throw new Error(
       "塗りと枠線の適用先が変更されています。選択し直してください。",

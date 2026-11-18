@@ -72,6 +72,11 @@ pub struct TextBinding {
     pub external_name: String,
 }
 
+/// 面の図形（塗りと枠線を持つ矩形・楕円）かどうかの唯一の判定。新しい面の図形はここに足す。
+fn is_area_shape(shape: &Value) -> bool {
+    shape["type"] == "rectangle" || shape["type"] == "ellipse"
+}
+
 fn validate_image_crop(value: &Value, image: &Value) -> Result<(), String> {
     if let Some(crop) = image.get("crop") {
         let asset = value["assets"]
@@ -198,9 +203,7 @@ impl Project {
                     if object["shape"]["type"] == "text" {
                         object["shape"]["style"] = serde_json::json!({"fontSize":(object["height"].as_f64().unwrap() * 0.7).min(512.0),"fontWeight":"normal","align":"left"});
                     }
-                    if object["shape"]["type"] == "rectangle"
-                        || object["shape"]["type"] == "ellipse"
-                    {
+                    if is_area_shape(&object["shape"]) {
                         object["shape"]["paint"] = serde_json::json!({"fill":{"enabled":true,"paint":{"type":"solid","color":object["fill"].clone(),"alpha":1}},"stroke":null});
                         object.as_object_mut().unwrap().remove("fill");
                     }
@@ -351,9 +354,7 @@ impl Project {
                     validate_image_crop(&value, shape)?;
                 }
 
-                if (shape["type"] == "rectangle" || shape["type"] == "ellipse")
-                    && shape["paint"]["fill"]["paint"]["type"] == "pattern"
-                {
+                if is_area_shape(shape) && shape["paint"]["fill"]["paint"]["type"] == "pattern" {
                     let pattern = &shape["paint"]["fill"]["paint"];
                     if pattern["size"].as_f64().unwrap()
                         > pattern["spacing"].as_f64().unwrap() / 2.0
@@ -362,7 +363,7 @@ impl Project {
                     }
                 }
 
-                if (shape["type"] == "rectangle" || shape["type"] == "ellipse")
+                if is_area_shape(shape)
                     && shape["paint"]["fill"]["paint"]["type"] == "radialGradient"
                 {
                     let paint = &shape["paint"]["fill"]["paint"];
@@ -385,7 +386,7 @@ impl Project {
                         );
                     }
                 }
-                if (shape["type"] == "rectangle" || shape["type"] == "ellipse")
+                if is_area_shape(shape)
                     && shape["paint"]["fill"]["paint"]["type"] == "linearGradient"
                 {
                     let width = object["width"].as_f64().unwrap();
