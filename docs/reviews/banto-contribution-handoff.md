@@ -45,7 +45,12 @@ Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v
 - #436の1段目（2026-11-18）: `designer/controllers/image-import.svelte.ts`の画像読込を`@banto/admin-core`の`createRequestOwner`に載せた（key `"image"`）。要求番号`imageReadRequest`と`imageBusy`を`begin`・`isCurrent`・`busy`に、画面・モード・世代などの変化（`imageScope`）での打切りを`invalidate`に置き換え、controllerの破棄で`dispose`する。仮の`AssetStore`は`hold`して`finish`で1回だけ閉じる。入力の確定待ちで適用を先送りしたときは`adopt`で先送りした適用へ渡し、適用側が閉じる（従来と同じ）。
   - 変えていない点: 背景の切抜き・差替えの対象・差替えの切抜きのepochは、要求の種類（背景・差替え）ごとの条件なので`invalidate`にせず、`current()`の中で従来どおり比べる（背景の切抜きが変わっても配置の読込は続く）。先送りした適用が実行されないまま捨てられた場合に仮Storeが残るのは従来と同じ。
   - 試験: `image-import.svelte.test.ts`（新しい読込による失効と古い読込がbusyを解かないこと、先送りした適用が読込の終了後も仮Storeを使えること）と、既存e2eの`image-assets`・`image-placement`・`image-replacement`・`background-image`・`background-crop`・`image-crop`・`image-paste`・`image-fit`。vitest（node）ではsvelteがサーバー向けにコンパイルされ`$effect`が動かないので、対象の変化による失効と破棄はe2eで確かめる。
-  - 次は`clipboard.svelte.ts`の`clipboardEpoch`。`catalog.svelte.ts`は1回の要求で複数のdeliveryを受ける流れで`createRequestOwner`の形に合うか先に確かめる。
+- #436の2段目（2026-11-18）: `designer/controllers/clipboard.svelte.ts`のcopy・cut・pasteを`createRequestOwner`に載せた。keyを2つに分ける。
+  - `"target"`: 操作を受けた時点で`begin`してすぐ`finish`する（busyにしない）。画面・モード・世代などの変化（`clipboardOwnerScope`）で`invalidate`し、従来の`clipboardEpoch`の比較を`isCurrent()`に置き換えた。下書きの確定待ちで実行を先送りした間の変化もこれで失効する。確定待ちの間の次の操作は`draft.pending`で入口が断るので、先送り中の`"target"`が新しい操作で上書きされることはない。
+  - `"run"`: 実行中のcopy・cut・paste（busy）。対象の変化では`invalidate`しない。OSのクリップボード書込みは止められないので、古い実行が終わるまで次の操作を受けない従来の動き（2つの書込みが競わない）を保つ。失効した実行がモデルを触らないことは`"target"`の確認が受け持つ。controllerの破棄で`dispose`する。
+  - 変えていない点: Projectの版・下書き・選択の一致の確認は対象の失効と別の条件として残した。完了したOSの書込みは戻さない（失効しても「コピーしました。…切り取りは中止しました。」のとおり）。
+  - 試験: `clipboard.svelte.test.ts`（実行中のbusyと次の操作の拒否、確定待ちの先送りと取消し、失敗の後始末、読取り中の版の変化）と、既存e2eの`clipboard`・`asset-clipboard`・`image-paste`・`screen-view-clipboard`・`symbol-usages`。対象の変化による失効はe2eで確かめる（vitestでは`$effect`が動かない）。
+  - 次は`catalog.svelte.ts`。1回の要求で複数のdeliveryを受ける流れで`createRequestOwner`の形に合うか先に確かめる。
 - Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらず、上流mainの`anchoredPopover.ts`の横clampも同じ式のまま。[tyaro/banto#668](https://github.com/tyaro/banto/issues/668)で報告した（2026-11-18）。
 - 置き換えの各区切りでは、既存の入力保護・資源解放・保存失敗のE2Eを通してから手元の実装を消す（[引渡しの方法](#引渡しの方法)の3）。
 - 新しい還元候補（パネルの幅・高さの保存と「標準レイアウトに戻す」、作業タブの入力保護など）は、上の採用で上流のAPIとの差が見えてから起票する。
