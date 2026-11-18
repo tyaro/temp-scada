@@ -132,24 +132,25 @@ pub async fn project_save<R: Runtime>(
     let path = match target {
         Some(path) => path,
         None => match pick_save(&window, header.format, &header.name).await {
-            Some(path) => {
-                alarm::authorize(&auth).await?;
-                path
-            }
+            Some(path) => path,
             None => return Ok(json!({"status": "cancelled"})),
         },
     };
+    // Checked again before the write: the dialog may have stayed open.
     alarm::authorize(&auth).await?;
     let saved = files
         .0
         .write(&path, header.format, content)
         .map_err(|error| error.reason())?;
-    let path = files.0.path(saved.file_id).ok_or("unknown_file_id")?;
-    let apply = match alarm::authorized_user(&auth).await {
-        Ok(user) => {
-            alarm::apply_file(&alarm, &host, &path, &user, &header.confirmed, false, None).await
-        }
-        Err(reason) => Err(reason),
+    // The file is written: from here a failure belongs to the alarm apply,
+    // never to the save. Saving never ends unacknowledged rounds; the
+    // confirmation goes through the explicit `alarm_apply`.
+    let apply = match files.0.path(saved.file_id) {
+        None => Err("unknownFileId".to_string()),
+        Some(path) => match alarm::authorized_user(&auth).await {
+            Ok(user) => alarm::apply_file(&alarm, &host, &path, &user, &[], false, None).await,
+            Err(reason) => Err(reason),
+        },
     };
     let apply = match apply {
         Ok(result) => {
