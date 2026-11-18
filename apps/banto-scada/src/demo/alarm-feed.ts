@@ -107,6 +107,7 @@ export function createDemoAlarmFeed(
   let seq = 0,
     order = 0,
     occurrences = 0,
+    eventSeq = 0,
     ticking = false;
 
   function record(
@@ -116,7 +117,8 @@ export function createDemoAlarmFeed(
     detail: Record<string, unknown>,
   ) {
     events.push({
-      seq: events.length + 1,
+      // 古い履歴を捨てても番号が重ならないよう、保持数と別に数える。
+      seq: ++eventSeq,
       sessionId: SESSION.id,
       event: {
         atMs,

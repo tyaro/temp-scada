@@ -265,6 +265,33 @@ describe("water demo alarms", () => {
     expect(history.at(-1)!.display?.limitLabel).toBe("H");
   });
 
+  it("keeps history sequences unique after old events are dropped", async () => {
+    const time = manualClock(BASE);
+    const feed = createDemoAlarmFeed(project, waterScenario, time.clock);
+    await feed.snapshot();
+    // 保持数（2000 件）を超えるまで筋書きを回す。
+    for (let second = 1; second <= 180 * 260; second += 3)
+      time.to(BASE + second);
+    const page = await feed.history!({
+      beforeSeq: null,
+      fromMs: null,
+      toMs: null,
+      kind: null,
+      limit: 100,
+    });
+    expect(page).toHaveLength(100);
+    expect(new Set(page.map((row) => row.seq)).size).toBe(100);
+    expect(page[0].seq).toBeGreaterThan(2000);
+    const next = await feed.history!({
+      beforeSeq: page.at(-1)!.seq,
+      fromMs: null,
+      toMs: null,
+      kind: null,
+      limit: 100,
+    });
+    expect(next[0].seq).toBe(page.at(-1)!.seq - 1);
+  });
+
   it("refuses an acknowledgement of another occurrence", async () => {
     const time = manualClock(BASE + 80);
     const feed = createDemoAlarmFeed(project, waterScenario, time.clock);
