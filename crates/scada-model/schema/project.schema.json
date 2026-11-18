@@ -309,6 +309,44 @@
               "type": "object",
               "properties": {
                 "type": {
+                  "const": "polygon"
+                },
+                "points": {
+                  "type": "array",
+                  "minItems": 3,
+                  "maxItems": 64,
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "x": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "y": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "required": ["x", "y"],
+                    "additionalProperties": false
+                  }
+                },
+                "paint": {
+                  "$ref": "#/$defs/shapePaint"
+                },
+                "stateColor": {
+                  "$ref": "#/$defs/stateColor"
+                }
+              },
+              "required": ["type", "points", "paint"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
                   "const": "text"
                 },
                 "text": {
@@ -588,7 +626,7 @@
               "shape": {
                 "properties": {
                   "type": {
-                    "enum": ["rectangle", "ellipse"]
+                    "enum": ["rectangle", "ellipse", "polygon"]
                   }
                 },
                 "type": "object"

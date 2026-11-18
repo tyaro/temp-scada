@@ -72,9 +72,61 @@ pub struct TextBinding {
     pub external_name: String,
 }
 
-/// 面の図形（塗りと枠線を持つ矩形・楕円）かどうかの唯一の判定。新しい面の図形はここに足す。
+/// 面の図形（塗りと枠線を持つ矩形・楕円・多角形）かどうかの唯一の判定。新しい面の図形はここに足す。
 fn is_area_shape(shape: &Value) -> bool {
-    shape["type"] == "rectangle" || shape["type"] == "ellipse"
+    shape["type"] == "rectangle" || shape["type"] == "ellipse" || shape["type"] == "polygon"
+}
+
+/// 多角形の一直線の判定に使う許容差。TypeScript と同じ値。
+const POLYGON_COLLINEAR_EPSILON: f64 = 1e-9;
+
+/// 多角形の頂点を検証する（schema の後に呼ぶ）。TypeScript の `validatePolygonPoints` と
+/// 同じ規則・同じ演算順（`mul_add` を使わない）。
+fn validate_polygon_points(points: &[Value]) -> Result<(), String> {
+    if points.len() < 3 || points.len() > 64 {
+        return Err("多角形の頂点は3〜64個です".into());
+    }
+    let mut coords = Vec::with_capacity(points.len());
+    for p in points {
+        let (Some(x), Some(y)) = (p["x"].as_f64(), p["y"].as_f64()) else {
+            return Err("多角形の頂点は0以上1以下の有限の値です".into());
+        };
+        if !x.is_finite()
+            || !y.is_finite()
+            || !(0.0..=1.0).contains(&x)
+            || !(0.0..=1.0).contains(&y)
+        {
+            return Err("多角形の頂点は0以上1以下の有限の値です".into());
+        }
+        coords.push((x, y));
+    }
+    let (mut min_x, mut max_x, mut min_y, mut max_y) =
+        (coords[0].0, coords[0].0, coords[0].1, coords[0].1);
+    for &(x, y) in &coords {
+        min_x = min_x.min(x);
+        max_x = max_x.max(x);
+        min_y = min_y.min(y);
+        max_y = max_y.max(y);
+    }
+    if min_x != 0.0 || max_x != 1.0 || min_y != 0.0 || max_y != 1.0 {
+        return Err("多角形の頂点の外接矩形は枠（0〜1）に一致させてください".into());
+    }
+    for (i, a) in coords.iter().enumerate() {
+        let b = coords[(i + 1) % coords.len()];
+        if a.0 == b.0 && a.1 == b.1 {
+            return Err("多角形の隣り合う頂点が同じです".into());
+        }
+    }
+    if coords
+        .iter()
+        .all(|&(x, y)| (x - y).abs() < POLYGON_COLLINEAR_EPSILON)
+        || coords
+            .iter()
+            .all(|&(x, y)| (x + y - 1.0).abs() < POLYGON_COLLINEAR_EPSILON)
+    {
+        return Err("多角形の頂点がすべて一直線上にあります".into());
+    }
+    Ok(())
 }
 
 fn validate_image_crop(value: &Value, image: &Value) -> Result<(), String> {
@@ -567,6 +619,9 @@ impl Project {
                     && !symbols.contains(shape["symbolId"].as_str().unwrap())
                 {
                     return Err("Symbol 定義が見つかりません".into());
+                }
+                if shape["type"] == "polygon" {
+                    validate_polygon_points(shape["points"].as_array().unwrap())?;
                 }
                 if shape["type"] == "polyline" {
                     let points = shape["points"].as_array().unwrap();
@@ -1811,6 +1866,63 @@ mod tests {
                 "{}",
                 case["name"]
             );
+        }
+    }
+    #[test]
+    fn polygon_shares_the_browser_contract() {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/polygon-cases.json")).unwrap();
+        for case in cases.as_array().unwrap() {
+            let mut value: Value = serde_json::from_str(match case["sample"].as_str().unwrap() {
+                "process" => include_str!("../../../examples/process.project.json"),
+                "stateColor" => include_str!("../../../examples/state-color.project.json"),
+                other => panic!("unknown sample {other}"),
+            })
+            .unwrap();
+            let object = value.pointer_mut(case["target"].as_str().unwrap()).unwrap();
+            object["shape"] = case["shape"].clone();
+            if let Some(patch) = case.get("objectPatch").and_then(Value::as_object) {
+                object.as_object_mut().unwrap().extend(patch.clone());
+            }
+            let result = Project::from_json(&value.to_string());
+            assert_eq!(
+                result.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}: {:?}",
+                case["name"],
+                result.err()
+            );
+            if let Ok(project) = result {
+                assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+            }
+        }
+    }
+    #[test]
+    fn polygon_accepts_exponent_and_rejects_non_finite_points() {
+        let mut value: Value =
+            serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
+        let paint = value["screens"][0]["objects"][2]["shape"]["paint"].clone();
+        value["screens"][0]["objects"][2]["shape"] = serde_json::json!({
+            "type": "polygon",
+            "points": [{"x": 0, "y": 1}, {"x": 0.5, "y": 0}, {"x": 1, "y": 1}],
+            "paint": paint,
+        });
+        let text = value
+            .to_string()
+            .replace(r#"{"x":1,"y":1}"#, r#"{"x":1e0,"y":1e0}"#);
+        assert!(text.contains("1e0"));
+        Project::from_json(&text).unwrap();
+        for bad in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let points = [
+                serde_json::json!({"x": 0, "y": 1}),
+                serde_json::json!({"x": 0.5, "y": 0}),
+                serde_json::json!({"x": 1, "y": 1}),
+            ];
+            assert!(validate_polygon_points(&points).is_ok());
+            // serde_json は非有限の f64 を null にするので、as_f64 が無い場合も同じく拒否する。
+            let mut with_bad = points.to_vec();
+            with_bad.push(serde_json::json!({"x": bad, "y": 0.5}));
+            assert!(validate_polygon_points(&with_bad).is_err());
         }
     }
     #[test]

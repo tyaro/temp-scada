@@ -249,6 +249,7 @@ export interface LayoutObject extends BaseObject {
   shape:
     | { type: "rectangle"; paint: ShapePaint; stateColor?: StateColor }
     | { type: "ellipse"; paint: ShapePaint; stateColor?: StateColor }
+    | PolygonShape
     | {
         type: "text";
         text: string;
@@ -288,14 +289,74 @@ export interface PolylineObject extends BaseObject {
   };
 }
 export type LineArrow = "none" | "start" | "end" | "both";
+/**
+ * 塗りつぶした多角形。頂点は配置の枠に対する 0〜1 の割合で、外接矩形は枠そのもの
+ * （x・y それぞれ最小 0・最大 1）。最後の点から最初の点へ閉じる。
+ */
+export interface PolygonShape {
+  type: "polygon";
+  points: Point[];
+  paint: ShapePaint;
+  stateColor?: StateColor;
+}
 export type ScreenObject = LayoutObject | PolylineObject;
 /** 図形（shape）の共用体。 */
 export type Shape = ScreenObject["shape"];
-/** 面の図形（塗りと枠線を持つ矩形・楕円。新しい面の図形はここに足す）。 */
-export type AreaShape = Extract<Shape, { type: "rectangle" | "ellipse" }>;
+/** 面の図形（塗りと枠線を持つ矩形・楕円・多角形。新しい面の図形はここに足す）。 */
+export type AreaShape = Extract<
+  Shape,
+  { type: "rectangle" | "ellipse" | "polygon" }
+>;
 /** 面の図形かどうかの唯一の判定。 */
 export function isAreaShape(shape: Shape): shape is AreaShape {
-  return shape.type === "rectangle" || shape.type === "ellipse";
+  return (
+    shape.type === "rectangle" ||
+    shape.type === "ellipse" ||
+    shape.type === "polygon"
+  );
+}
+/** 多角形の一直線の判定に使う許容差。Rust と同じ値。 */
+const POLYGON_COLLINEAR_EPSILON = 1e-9;
+/**
+ * 多角形の頂点を検証する（schema の後に呼ぶ）。Rust の `validate_polygon_points` と
+ * 同じ規則・同じ演算順。
+ */
+export function validatePolygonPoints(points: readonly Point[]): void {
+  if (points.length < 3 || points.length > 64)
+    throw new Error("多角形の頂点は3〜64個です");
+  for (const p of points)
+    if (
+      !Number.isFinite(p.x) ||
+      !Number.isFinite(p.y) ||
+      p.x < 0 ||
+      p.x > 1 ||
+      p.y < 0 ||
+      p.y > 1
+    )
+      throw new Error("多角形の頂点は0以上1以下の有限の値です");
+  let minX = points[0].x,
+    maxX = points[0].x,
+    minY = points[0].y,
+    maxY = points[0].y;
+  for (const p of points) {
+    minX = Math.min(minX, p.x);
+    maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y);
+    maxY = Math.max(maxY, p.y);
+  }
+  if (minX !== 0 || maxX !== 1 || minY !== 0 || maxY !== 1)
+    throw new Error("多角形の頂点の外接矩形は枠（0〜1）に一致させてください");
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i],
+      b = points[(i + 1) % points.length];
+    if (a.x === b.x && a.y === b.y)
+      throw new Error("多角形の隣り合う頂点が同じです");
+  }
+  if (
+    points.every((p) => Math.abs(p.x - p.y) < POLYGON_COLLINEAR_EPSILON) ||
+    points.every((p) => Math.abs(p.x + p.y - 1) < POLYGON_COLLINEAR_EPSILON)
+  )
+    throw new Error("多角形の頂点がすべて一直線上にあります");
 }
 export interface LayerFolder {
   id: string;
@@ -586,6 +647,7 @@ export function parseProject(json: string): Project {
         );
       }
 
+      if (shape.type === "polygon") validatePolygonPoints(shape.points);
       if (shape.type === "level") validateLevelShape(shape);
       if (shape.type === "table") validateTableShape(shape);
       if (shape.type === "clock") validateClockShape(shape);

@@ -504,6 +504,10 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 2026-11-13のフロー図 段階1-D前半で、配置の左右・上下反転（任意の`flipX`／`flipY`、trueのときだけ保存）を追加した。矩形・楕円・Polyline・Symbol・Image・液位と定義の内部図形が対象で、Text・トレンドは拒否する。pivotで鏡映してから回転し、描画・選択・接続点・リサイズ・頂点移動とRustの配管端点の照合で同じ変換を使う。反転したSymbol内のTextは読める向きを保つ。schemaVersionは0.37.0のまま。[現行仕様](../design/editor/object-flip-design.md)。
 
+## 塗りつぶした多角形
+
+2026-11-19の#260 P1b-1で、面の図形`polygon`（枠に対する0〜1の頂点3〜64点、矩形・楕円と同じ`paint`・`stateColor`）の保存形式と検証をschema・TS・Rustに追加した。外接矩形を枠に一致させ、隣り合う同じ点と一直線の形を拒否する。共通の契約ケースは`examples/polygon-cases.json`。描画・挿入・編集は未実装（P1b-2・P1c）。schemaVersionは0.37.0のまま。[設計](../design/graphics/polygon.md)。
+
 ## 表
 
 2026-11-13のフロー図 段階1-Fの第1段で、図形`table`（列幅・行の高さの比、固定の文字のセル、セルの塗り・文字色、罫線、地）を追加した。Inspectorではセルの文字・色をタブ区切りで入力し、表計算ソフトから貼り付けられる。文字を含むので反転できない。同日の第2段の2aで、画面の表のセルをタグに結合できるようにした（セルの`binding`と数値の`format`。値・品質の表示はTextの数値表示と同じ）。Inspectorでは「セルのタグ」「セルの書式」をタブ区切りで入力する。Rustの`text_bindings`とTSの`shapeTagBindings`が表のセルを返し、読取・参照一覧・一括置換・貼り付けが表に対応した。Symbol定義内のセルのタグは拒否する。続く2bで、Symbol定義の中の表のセルを宣言済みの読取slotに結合できるようにした（セルの`slotBinding`・`stateColors`・`format`。状態の文字・色と書式付きの数値はslotに結合したTextと同じ規則）。Inspectorでは定義の編集中に「セルのslot」「セルの書式」「セルの取得不能の色」を出す。slotの使用箇所・状態一覧・改名や削除の拒否が表のセルに対応した。schemaVersionは0.37.0のまま。Tauri実機は未確認。[現行仕様](../design/graphics/table.md)。
