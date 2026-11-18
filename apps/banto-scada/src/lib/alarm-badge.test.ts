@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import sample from "../../../../examples/process.project.json";
 import cases from "../../../../examples/alarm-badge-cases.json";
+import embeddedSample from "../../../../examples/embedded-screen.project.json";
 import {
   parseProject,
   serializeProject,
@@ -18,6 +19,7 @@ import { objectFormValues } from "./designer/numeric-properties";
 import { canFlip } from "./flip";
 import { shapeSlotNames, shapeTagBindings } from "./shape-bindings";
 import { createMockAlarmFeed } from "./mock-alarm-feed";
+import { copyObjects, parseClipboard } from "./clipboard";
 import type { AlarmDefinition } from "./alarms";
 
 const TEMP = "0199f6a1-0000-7000-8000-000000000101";
@@ -193,6 +195,128 @@ describe("alarm badge editing", () => {
         "edit",
       ).alarms!.definitions[0],
     ).toEqual(other);
+  });
+  it("copies with only the definitions it points at, and pastes onto the same id", () => {
+    const { next, object } = added();
+    const text = copyObjects(next, screenId, [object.id], "a");
+    const fragment = parseClipboard(text);
+    expect(fragment.project.alarms).toEqual({
+      definitions: [next.alarms!.definitions.find((d) => d.id === TEMP)],
+    });
+    const paste = (base: Project, origin = "b") =>
+      applyCommand(
+        base,
+        { type: "paste", screenId, text, origin, center: { x: 10, y: 10 } },
+        "edit",
+      );
+    const pasted = paste(next).screens[0].objects.at(-1)!;
+    expect(pasted.id).not.toBe(object.id);
+    expect(pasted.shape).toEqual(object.shape);
+    // 定義は取り込まない。
+    expect(paste(next).alarms).toEqual(next.alarms);
+    // 貼付け先に同じ id の定義が無い・限界が無いときは、名前を示して拒む。
+    const without = structuredClone(next);
+    without.screens[0].objects = without.screens[0].objects.filter(
+      (o) => o.shape.type !== "alarmBadge",
+    );
+    without.alarms!.definitions = without.alarms!.definitions.filter(
+      (d) => d.id !== TEMP,
+    );
+    expect(() => paste(without)).toThrow(
+      "警報の小札が指す警報「T-01 温度 HH」の定義がありません",
+    );
+    const noLimit = structuredClone(next);
+    noLimit.screens[0].objects = noLimit.screens[0].objects.filter(
+      (o) => o.shape.type !== "alarmBadge",
+    );
+    const temp = noLimit.alarms!.definitions.find((d) => d.id === TEMP)!;
+    if (temp.source.kind !== "threshold") throw new Error("threshold");
+    delete temp.source.limits.hh;
+    expect(() => paste(noLimit)).toThrow("「T-01 温度 HH」の定義がありません");
+    // Symbol 定義へは貼り付けない。
+    expect(() =>
+      applyCommand(
+        next,
+        {
+          type: "paste",
+          screenId,
+          definitionId: next.symbols[0].id,
+          text,
+          origin: "b",
+          center: { x: 10, y: 10 },
+        },
+        "edit",
+      ),
+    ).toThrow("警報の小札");
+  });
+  it("checks badges on an embedded screen imported with the paste", () => {
+    // 埋込画面の元の画面に小札を置き、埋込画面だけをコピーする。
+    const base = parseProject(JSON.stringify(embeddedSample));
+    base.alarms = structuredClone(sample.alarms) as Project["alarms"];
+    const source = base.screens[1];
+    source.objects.push({
+      id: "0199f6a1-0000-7000-8000-0000000009a1",
+      x: 10,
+      y: 10,
+      width: 48,
+      height: 24,
+      rotation: 0,
+      order: Math.max(...source.objects.map((o) => o.order)) + 1,
+      shape: newAlarmBadgeShape(base),
+    } as Project["screens"][number]["objects"][number]);
+    const p = parseProject(serializeProject(base));
+    const view = p.screens[0].objects.find(
+      (o) => o.shape.type === "screenView",
+    )!;
+    const text = copyObjects(p, p.screens[0].id, [view.id], "a");
+    const fragment = parseClipboard(text);
+    expect(fragment.project.screens).toHaveLength(2);
+    expect(fragment.project.alarms!.definitions.map((d) => d.id)).toEqual([
+      TEMP,
+    ]);
+    const paste = (destination: Project) =>
+      applyCommand(
+        destination,
+        {
+          type: "paste",
+          screenId: destination.screens[0].id,
+          text,
+          origin: "b",
+          center: { x: 10, y: 10 },
+        },
+        "edit",
+      );
+    // 別の origin なので画面ごと取り込み、小札は同じ id の定義を指す。
+    const pasted = paste(p);
+    expect(pasted.screens).toHaveLength(3);
+    expect(
+      pasted.screens[2].objects.find((o) => o.shape.type === "alarmBadge")!
+        .shape,
+    ).toEqual(newAlarmBadgeShape(p));
+    // 貼付け先に定義が無ければ、取り込む画面の小札で拒む。
+    const without = structuredClone(p);
+    without.screens[1].objects = without.screens[1].objects.filter(
+      (o) => o.shape.type !== "alarmBadge",
+    );
+    delete without.alarms;
+    expect(() => paste(without)).toThrow(
+      "警報の小札が指す警報「T-01 温度 HH」の定義がありません",
+    );
+  });
+  it("rejects clipboard definitions no badge points at", () => {
+    const { next, object } = added();
+    const value = JSON.parse(copyObjects(next, screenId, [object.id], "a"));
+    value.project.alarms.definitions.push(
+      next.alarms!.definitions.find((d) => d.id === PUMP),
+    );
+    expect(() => parseClipboard(JSON.stringify(value))).toThrow(
+      "clipboardの警報の定義の形式が不正です",
+    );
+    const blink = JSON.parse(copyObjects(next, screenId, [object.id], "a"));
+    blink.project.alarms.blinkUnacked = true;
+    expect(() => parseClipboard(JSON.stringify(blink))).toThrow(
+      "clipboardの警報の定義の形式が不正です",
+    );
   });
 });
 

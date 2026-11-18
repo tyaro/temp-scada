@@ -8,6 +8,7 @@ import {
   type ScreenObject,
 } from "../project";
 import { parseClipboard } from "../clipboard";
+import { assertAlarmBadgePasteTarget } from "../alarm-badge";
 import { shapeTagBindings } from "../shape-bindings";
 import type { PasteCommand } from "./commands";
 import {
@@ -78,6 +79,14 @@ export function applyPasteCommand(
     ...objects,
     ...importedScreens.flatMap((source) => source.objects),
   ];
+  // 警報の定義は取り込まない。小札は貼付け先の同じ id の定義と限界を指す。
+  for (const object of importedObjects)
+    if (object.shape.type === "alarmBadge")
+      assertAlarmBadgePasteTarget(
+        object.shape,
+        fragment.project.alarms?.definitions ?? [],
+        next.alarms?.definitions ?? [],
+      );
   const references = new Map<string, string>();
   const importedSymbols: SymbolDefinition[] = [];
   for (const object of importedObjects)

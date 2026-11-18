@@ -39,6 +39,27 @@ export function validateAlarmBadgeTarget(
   return definition;
 }
 
+/**
+ * 貼り付ける小札が貼付け先の定義を指せるか。定義は id で照合し、clipboard の
+ * 定義は取り込まない（名前は文言にだけ使う）。指せなければ Error。
+ */
+export function assertAlarmBadgePasteTarget(
+  shape: Pick<AlarmBadgeShape, "alarmId" | "limit">,
+  copied: readonly AlarmDefinition[],
+  destination: readonly AlarmDefinition[],
+): void {
+  try {
+    validateAlarmBadgeTarget(shape, destination);
+  } catch {
+    const name =
+      copied.find((row) => row.id === shape.alarmId)?.name ?? shape.alarmId;
+    const label = shape.limit ? `${name} ${shape.limit.toUpperCase()}` : name;
+    throw new Error(
+      `貼り付け先の Project に、警報の小札が指す警報「${label}」の定義がありません。警報の定義は id で照合します。コピー元の Project か、その定義を引き継いだ Project へ貼り付けるか、小札を除いてコピーしてください。`,
+    );
+  }
+}
+
 /** 画面の直下の小札をすべて確かめる（parseProject から呼ぶ）。 */
 export function validateAlarmBadges(project: Project): void {
   const definitions = project.alarms?.definitions ?? [];
