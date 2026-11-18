@@ -107,6 +107,9 @@
                   rx="14"
                   ry="10"
                 />
+              {:else if item.part.type === "basic" && item.part.kind === "polygon"}<polygon
+                  points="20,6 34,26 6,26"
+                />
               {:else if item.part.type === "basic" && item.part.kind === "text"}<path
                   d="M10 6h20M20 6v20M15 26h10"
                 />

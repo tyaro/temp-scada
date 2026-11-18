@@ -1,6 +1,7 @@
 <script lang="ts">
   import SymbolThumbnail from "./SymbolThumbnail.svelte";
   import type { ScreenObject, SymbolDefinition } from "../project";
+  import { polygonLocalPoints, polygonPointsAttribute } from "../polygon";
   let {
     images,
     object,
@@ -37,6 +38,15 @@
         cy="12"
         rx="9"
         ry="7"
+      />
+    {:else if object.shape.type === "polygon"}<polygon
+        points={polygonPointsAttribute(
+          polygonLocalPoints({
+            width: 18,
+            height: 14,
+            shape: object.shape,
+          }).map((p) => ({ x: p.x + 3, y: p.y + 5 })),
+        )}
       />
     {:else if object.shape.type === "screenView"}<rect
         x="2"

@@ -10,6 +10,7 @@ export const FAVORITES_LIMIT = 64;
 const basic = [
   "rectangle",
   "ellipse",
+  "polygon",
   "text",
   "line",
   "pipe",
@@ -84,6 +85,7 @@ export function availableFavorites(
           label: {
             rectangle: "四角形",
             ellipse: "円・楕円",
+            polygon: "多角形",
             text: "テキスト",
             line: "線",
             pipe: "配管",

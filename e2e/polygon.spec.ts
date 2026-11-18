@@ -1,0 +1,158 @@
+import { test, expect, type Page } from "@playwright/test";
+import minimal from "../examples/minimal.project.json" with { type: "json" };
+import { chooseTheme, mainCanvas, selectPanel } from "./helpers/designer";
+
+const rect = minimal.screens[0].objects[0];
+const triangleId = "0199f000-0000-7000-8000-0000000000a1";
+const emptyId = "0199f000-0000-7000-8000-0000000000a2";
+const triangle = [
+  { x: 0.5, y: 0 },
+  { x: 1, y: 1 },
+  { x: 0, y: 1 },
+];
+
+/** 矩形の真上に同じ枠の三角形、離れた所に塗りも枠線もない三角形を置いた Project。 */
+function overlapProject() {
+  const project = structuredClone(minimal) as any;
+  project.screens[0].objects.push(
+    {
+      id: triangleId,
+      order: 6,
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      rotation: 0,
+      shape: {
+        type: "polygon",
+        points: triangle,
+        paint: {
+          fill: {
+            enabled: true,
+            paint: { type: "solid", color: "#f59e0b", alpha: 1 },
+          },
+          stroke: null,
+        },
+      },
+    },
+    {
+      id: emptyId,
+      order: 7,
+      x: 420,
+      y: 380,
+      width: 120,
+      height: 120,
+      rotation: 0,
+      shape: {
+        type: "polygon",
+        points: triangle,
+        paint: {
+          fill: {
+            enabled: false,
+            paint: { type: "solid", color: "#f59e0b", alpha: 1 },
+          },
+          stroke: null,
+        },
+      },
+    },
+  );
+  return project;
+}
+
+const placement = (page: Page, id: string) =>
+  mainCanvas(page).locator(`[data-object-id="${id}"]`);
+
+/** 配置の中の座標（枠の左上が原点）を画面上の位置へ直してクリックする。 */
+async function clickLocal(page: Page, id: string, x: number, y: number) {
+  const point = await placement(page, id)
+    .locator("[data-object-rotation]")
+    .evaluate(
+      (element, local) => {
+        const g = element as SVGGraphicsElement;
+        const p = new DOMPoint(local.x, local.y).matrixTransform(
+          g.getScreenCTM()!,
+        );
+        return { x: p.x, y: p.y };
+      },
+      { x, y },
+    );
+  await page.mouse.click(point.x, point.y);
+}
+
+for (const theme of ["light", "dark"] as const)
+  test(`polygon is inserted, drawn, selected and undoable in ${theme}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.goto("/");
+    await chooseTheme(page, theme);
+    await page.getByRole("button", { name: "編集", exact: true }).click();
+    await selectPanel(page, "部品");
+    const polygons = mainCanvas(page).locator(
+      "[data-object-id] > [data-object-rotation] polygon",
+    );
+    await expect(polygons).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "多角形を追加", exact: true })
+      .click();
+    await expect(polygons).toHaveCount(1);
+    // 頂点は実寸（160 × 100 の枠）で描き、miter の角にする。
+    await expect(polygons).toHaveAttribute("points", "80,0 160,100 0,100");
+    await expect(polygons).toHaveAttribute("stroke-linejoin", "miter");
+    await expect(polygons).toHaveAttribute("stroke-miterlimit", "4");
+    const fill = await polygons.getAttribute("fill");
+    expect(fill).toMatch(/^#/);
+    const added = mainCanvas(page).locator('[data-selected="true"]');
+    await expect(added).toHaveCount(1);
+    await expect(
+      added.locator(':scope > rect[stroke="var(--canvas-accent)"]'),
+    ).toHaveAttribute("width", "160");
+    // Inspector は矩形・楕円と同じ塗り・枠線の欄を出し、頂点の欄は出さない。
+    await expect(
+      page.getByRole("form", { name: "塗りと枠線", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByLabel("頂点（x,y を1行ずつ）")).toHaveCount(0);
+    // ミニマップも同じ部品で描く。
+    await expect(
+      page.locator(".minimap [data-object-rotation] polygon"),
+    ).toHaveCount(1);
+    await page.getByRole("button", { name: "元に戻す", exact: true }).click();
+    await expect(polygons).toHaveCount(0);
+    await page.getByRole("button", { name: "やり直す", exact: true }).click();
+    await expect(polygons).toHaveCount(1);
+    await expect(polygons).toHaveAttribute("points", "80,0 160,100 0,100");
+  });
+
+test("polygon hit test follows the shape, not the frame", async ({ page }) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await page.getByLabel("Project を開く", { exact: true }).setInputFiles({
+    name: "polygon.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(overlapProject())),
+  });
+  await expect(placement(page, triangleId)).toHaveCount(1);
+  // 三角形の空いた隅（枠の左上）は、下の矩形を選ぶ。
+  await clickLocal(page, triangleId, 20, 20);
+  await expect(placement(page, rect.id)).toHaveAttribute(
+    "data-selected",
+    "true",
+  );
+  await expect(placement(page, triangleId)).not.toHaveAttribute(
+    "data-selected",
+    "true",
+  );
+  // 三角形の中は三角形を選ぶ。
+  await clickLocal(page, triangleId, rect.width / 2, rect.height * 0.75);
+  await expect(placement(page, triangleId)).toHaveAttribute(
+    "data-selected",
+    "true",
+  );
+  // 塗りも枠線もない三角形も、輪郭の近く（右の辺の 3px 外）でつかめる。
+  await clickLocal(page, emptyId, 90 + 3, 60);
+  await expect(placement(page, emptyId)).toHaveAttribute(
+    "data-selected",
+    "true",
+  );
+});

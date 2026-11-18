@@ -26,6 +26,7 @@ import { imageCropViewBox, type ImageCrop } from "./image-crop";
 import type { ImageMetadata } from "./image-assets";
 import { rotatedBounds, rotationPivot } from "./rotation";
 import { arrowHeadPoints, arrowSize } from "./line-arrow";
+import { polygonLocalPoints, polygonStrokeBounds } from "./polygon";
 import Ajv2020 from "ajv/dist/2020.js";
 import schema from "../../../../crates/scada-model/schema/project.schema.json";
 import legacySchema from "../../../../crates/scada-model/schema/legacy.project.schema.json";
@@ -717,6 +718,12 @@ export function getLayoutBounds(object: ScreenObject) {
 }
 /** Painted outline, used by selection, alignment, range and placement anchors. */
 export function getLocalBounds(object: ScreenObject) {
+  // 多角形は鋭い角の miter の先端が線幅の半分より外へ出るので、外形を別に計算する。
+  if ("width" in object && object.shape.type === "polygon")
+    return polygonStrokeBounds(
+      polygonLocalPoints({ ...object, shape: object.shape }),
+      object.shape.paint.stroke?.width ?? 0,
+    );
   const bounds = getLayoutBounds(object);
   const pad = isAreaShape(object.shape)
     ? (object.shape.paint.stroke?.width ?? 0) / 2
