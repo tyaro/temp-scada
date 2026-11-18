@@ -21,6 +21,7 @@ use crate::alarm_db::{
 use crate::alarm_project::{AlarmProjectError, SavedAlarmProject};
 use crate::alarm_runtime::{
     AlarmChange, AlarmEvaluator, AlarmRuntime, AlarmRuntimeError, AlarmRuntimeStatus,
+    AlarmStopReason,
 };
 use crate::alarm_terminal::{
     AlarmSettings, AlarmSettingsWarning, AlarmTerminal, MonitoredProject, PendingSwitch,
@@ -106,6 +107,10 @@ pub struct AlarmSnapshot {
     pub status: String,
     pub pending_condition_changes: bool,
     pub pending_display_changes: bool,
+    /// The monitored Project's saved file cannot be read as that Project
+    /// (moved, unreadable, broken or now another Project), so whether it has
+    /// unapplied changes is unknown. Both flags above are false meanwhile.
+    pub pending_unknown: bool,
     /// The running Engine cannot write its history (design §5.3). ACK and
     /// apply are refused until a retry records the unrecorded period.
     pub history_write_failure: Option<crate::alarm_runtime::HistoryWriteFailure>,
@@ -234,8 +239,24 @@ struct PendingCache {
     modified: Option<std::time::SystemTime>,
     len: u64,
     applied_at_ms: i64,
+    pending: Pending,
+}
+
+/// Unapplied changes in the monitored Project's saved file.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+struct Pending {
     condition: bool,
     display: bool,
+    /// The file could not be read as the applied Project.
+    unknown: bool,
+}
+
+impl Pending {
+    const UNKNOWN: Self = Self {
+        condition: false,
+        display: false,
+        unknown: true,
+    };
 }
 
 pub struct AlarmService {
@@ -891,9 +912,10 @@ impl AlarmService {
         drop(active);
         if let (Some(monitored), Some(applied)) = (self.terminal.monitored()?, applied.as_ref()) {
             if monitored.project_id == applied.project_id {
-                let (condition, display) = self.pending_changes(&monitored.path, applied).await;
-                snapshot.pending_condition_changes = condition;
-                snapshot.pending_display_changes = display;
+                let pending = self.pending_changes(&monitored.path, applied).await;
+                snapshot.pending_condition_changes = pending.condition;
+                snapshot.pending_display_changes = pending.display;
+                snapshot.pending_unknown = pending.unknown;
             }
         }
         Ok(snapshot)
@@ -919,6 +941,7 @@ impl AlarmService {
                     status: active.reason.clone(),
                     pending_condition_changes: false,
                     pending_display_changes: false,
+                    pending_unknown: false,
                     history_write_failure: None,
                     reread_failure: None,
                     buzzer: self.buzzer.status(),
@@ -964,7 +987,8 @@ impl AlarmService {
         let status = match &active.runtime {
             Some(runtime) => match *runtime.status().borrow() {
                 AlarmRuntimeStatus::Running if engine.is_some() => "running".into(),
-                _ => "stopped".into(),
+                AlarmRuntimeStatus::Stopped { reason } => stop_status(reason).into(),
+                AlarmRuntimeStatus::Running => "stopped".into(),
             },
             None => active.reason.clone(),
         };
@@ -978,6 +1002,7 @@ impl AlarmService {
                 status,
                 pending_condition_changes: false,
                 pending_display_changes: false,
+                pending_unknown: false,
                 history_write_failure,
                 reread_failure,
                 buzzer: self.buzzer.status(),
@@ -987,9 +1012,9 @@ impl AlarmService {
         ))
     }
 
-    async fn pending_changes(&self, path: &Path, applied: &AppliedDefinitions) -> (bool, bool) {
+    async fn pending_changes(&self, path: &Path, applied: &AppliedDefinitions) -> Pending {
         let Ok(metadata) = std::fs::metadata(path) else {
-            return (false, false);
+            return Pending::UNKNOWN;
         };
         let modified = metadata.modified().ok();
         let mut cache = self.pending_cache.lock().await;
@@ -999,36 +1024,36 @@ impl AlarmService {
                 && cached.len == metadata.len()
                 && cached.applied_at_ms == applied.applied_at_ms
             {
-                return (cached.condition, cached.display);
+                return cached.pending;
             }
         }
         let path = path.to_path_buf();
         let applied_at_ms = applied.applied_at_ms;
         let applied = applied.clone();
         let read_path = path.clone();
-        let (condition, display) =
+        let pending =
             tokio::task::spawn_blocking(move || match SavedAlarmProject::read(&read_path) {
-                Ok(saved) if saved.project_id == applied.project_id => (
-                    saved
+                Ok(saved) if saved.project_id == applied.project_id => Pending {
+                    condition: saved
                         .applied(applied.endpoint, applied.applied_by, applied.applied_at_ms)
                         .condition_hashes
                         != applied.condition_hashes
                         || saved.disabled != applied.disabled_condition_ids,
-                    saved.displays != applied.displays,
-                ),
-                _ => (false, false),
+                    display: saved.displays != applied.displays,
+                    unknown: false,
+                },
+                _ => Pending::UNKNOWN,
             })
             .await
-            .unwrap_or((false, false));
+            .unwrap_or(Pending::UNKNOWN);
         *cache = Some(PendingCache {
             path,
             modified,
             len: metadata.len(),
             applied_at_ms,
-            condition,
-            display,
+            pending,
         });
-        (condition, display)
+        pending
     }
 
     pub async fn ack(
@@ -1211,6 +1236,19 @@ fn wall_ms() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as i64
+}
+
+/// `alarm_snapshot.status` for an Engine that ended by itself, so the screen
+/// can tell an expired credential (design §5.1) from other stops.
+fn stop_status(reason: AlarmStopReason) -> &'static str {
+    match reason {
+        AlarmStopReason::Requested => "stopped",
+        AlarmStopReason::Unauthorized => "authExpired",
+        AlarmStopReason::ConnectionFailure => "connectionFailed",
+        AlarmStopReason::StorageFailure => "alarmDbFailed",
+        AlarmStopReason::InvalidDefinition => "invalidAppliedDefinition",
+        AlarmStopReason::InternalError => "engineFailed",
+    }
 }
 
 fn stopped_reason(error: &AlarmServiceError) -> &'static str {
@@ -2283,8 +2321,53 @@ mod tests {
         assert_eq!(snapshot.applied.unwrap().project_id, project_id);
         assert!(snapshot.pending_display_changes);
         assert!(!snapshot.pending_condition_changes);
+        assert!(!snapshot.pending_unknown);
+
+        // Another Project in the monitored file: unknown, not "no changes".
+        let other = project(&uuid::Uuid::now_v7().to_string(), "Other");
+        std::fs::write(&path, serde_json::to_vec(&other).unwrap()).unwrap();
+        let snapshot = service.snapshot().await.unwrap();
+        assert!(snapshot.pending_unknown);
+        assert!(!snapshot.pending_display_changes);
+        assert!(!snapshot.pending_condition_changes);
+
+        // The monitored file is gone.
+        std::fs::remove_file(&path).unwrap();
+        let snapshot = service.snapshot().await.unwrap();
+        assert!(snapshot.pending_unknown);
+        assert!(!snapshot.pending_display_changes);
+
+        // It comes back with the applied Project: known again.
+        std::fs::write(&path, serde_json::to_vec(&edited).unwrap()).unwrap();
+        let snapshot = service.snapshot().await.unwrap();
+        assert!(!snapshot.pending_unknown);
+        assert!(snapshot.pending_display_changes);
         drop(service);
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn an_engine_that_ended_by_itself_reports_why() {
+        let statuses = [
+            AlarmStopReason::Requested,
+            AlarmStopReason::Unauthorized,
+            AlarmStopReason::ConnectionFailure,
+            AlarmStopReason::StorageFailure,
+            AlarmStopReason::InvalidDefinition,
+            AlarmStopReason::InternalError,
+        ]
+        .map(stop_status);
+        assert_eq!(
+            statuses,
+            [
+                "stopped",
+                "authExpired",
+                "connectionFailed",
+                "alarmDbFailed",
+                "invalidAppliedDefinition",
+                "engineFailed",
+            ]
+        );
     }
 
     #[tokio::test]

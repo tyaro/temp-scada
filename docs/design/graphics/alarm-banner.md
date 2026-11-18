@@ -31,7 +31,7 @@
 | `alarm`        | 監視中で、候補がある                                                       | 時刻・名前・メッセージ（復帰・未確認なら「復帰」を前に） |
 | `none`         | 監視中で、候補が無い                                                       | 警報なし                                                 |
 
-- status のラベル: notApplied=未適用、noHub=Hub未設定、endpointChanged=接続先が変わりました、noConditions=警報の定義がありません、stopped=停止、terminalUnavailable=端末設定を開けません、alarmDbUnavailable=警報DBを開けません、invalidAppliedDefinition=適用済みの定義が不正です、engineStartFailed=開始できませんでした、engineStopped=Engineが止まりました、confirmationRequired=切替の確認待ち、switchRecoveryFailed=切替の復旧に失敗しました。未知の文字列はそのまま出す（Engine 単位の理由も同じ）。
+- status のラベル: notApplied=未適用、noHub=Hub未設定、endpointChanged=接続先が変わりました、noConditions=警報の定義がありません、stopped=停止、terminalUnavailable=端末設定を開けません、alarmDbUnavailable=警報DBを開けません、invalidAppliedDefinition=適用済みの定義が不正です、engineStartFailed=開始できませんでした、engineStopped=Engineが止まりました、authExpired=Hubの認証が切れました（接続し直すと再開します）、connectionFailed=Hubとの通信に失敗しました、alarmDbFailed=警報DBに書けなくなりました、engineFailed=内部エラーで止まりました（この4つは Engine が自ら止まったときの理由。利用者の停止は stopped）、confirmationRequired=切替の確認待ち、switchRecoveryFailed=切替の復旧に失敗しました。未知の文字列はそのまま出す（Engine 単位の理由も同じ）。
 - Engine 単位の評価不能のあいだは、選んだ 1 件も件数も出さない（警報が無いように見せず、古い 1 件を最新と見せない）。
 - 候補: 表示状態（`alarm-view.ts` の `conditionDisplay`）が `activeUnacked`・`activeAcked`・`returnedUnacked` の condition。発生待ち（Pending）は Normal と同じに扱い、出さない。
 - 時刻は `occurredAtMs` の端末のローカル時刻 `M/D HH:mm:ss`、無ければ「—」。名前とメッセージは `applied.displays[condition id]`、表示情報が無ければ名前に condition id を出す。

@@ -35,6 +35,7 @@ const snapshot = (generation: number, seq: number): AlarmSnapshot => ({
   status: "running",
   pendingConditionChanges: false,
   pendingDisplayChanges: false,
+  pendingUnknown: false,
   historyWriteFailure: null,
   rereadFailure: null,
 });
@@ -109,6 +110,7 @@ describe("alarm event reconciliation", () => {
       status: "notApplied",
       pendingConditionChanges: false,
       pendingDisplayChanges: false,
+      pendingUnknown: false,
       historyWriteFailure: null,
       rereadFailure: null,
     });

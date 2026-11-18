@@ -2078,6 +2078,8 @@
     if (warnings) return `警報: ${warnings}`;
     if (alarmSnapshot.monitored?.projectId !== project.manifest.projectId)
       return "警報: 別のProjectを監視中";
+    if (alarmSnapshot.pendingUnknown)
+      return "警報: 保存済みファイルを確認できません";
     if (alarmSnapshot.pendingConditionChanges)
       return "警報: 保存済み定義に未適用の変更あり";
     if (alarmSnapshot.pendingDisplayChanges)
@@ -4296,7 +4298,8 @@
         !alarmSnapshot.historyWriteFailure &&
         !alarmSnapshot.rereadFailure &&
         !alarmSnapshot.pendingConditionChanges &&
-        !alarmSnapshot.pendingDisplayChanges
+        !alarmSnapshot.pendingDisplayChanges &&
+        !alarmSnapshot.pendingUnknown
           ? "neutral"
           : "warning"}
         label={alarmLabel}

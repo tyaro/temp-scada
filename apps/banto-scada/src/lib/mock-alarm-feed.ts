@@ -71,6 +71,7 @@ const STOPPED: AlarmSnapshot = {
   status: "notApplied",
   pendingConditionChanges: false,
   pendingDisplayChanges: false,
+  pendingUnknown: false,
   historyWriteFailure: null,
   rereadFailure: null,
 };
