@@ -1,3 +1,12 @@
+import {
+  inspectImage as inspectImageBytes,
+  inspectImageHeader,
+  isImageAssetError,
+  sha256Hex,
+  validateImageImportLimits,
+  type ImageAssetErrorCode,
+  type ImageImportLimits,
+} from "@banto/image-assets";
 /** Original image bytes live here, outside Project and its JSON Undo snapshots. */
 export const IMAGE_LIMIT = 8 * 1024 * 1024;
 export const STORE_LIMIT = 256 * 1024 * 1024;
@@ -11,134 +20,80 @@ export interface ImageMetadata {
   height: number;
   name: string;
 }
-export async function sha256(blob: Blob): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    await blob.arrayBuffer(),
-  );
-  return Array.from(new Uint8Array(digest), (b) =>
-    b.toString(16).padStart(2, "0"),
-  ).join("");
+/** Import limits handed to @banto/image-assets (the package has no defaults). */
+const LIMITS: ImageImportLimits = validateImageImportLimits({
+  maxBytes: IMAGE_LIMIT,
+  maxEdge: IMAGE_SIDE_LIMIT,
+  maxPixels: IMAGE_PIXEL_LIMIT,
+  formats: ["png", "jpeg"],
+});
+/** Display text for the package's error codes (it holds no text itself). */
+function imageAssetErrorText(code: ImageAssetErrorCode): string {
+  switch (code) {
+    case "too-large":
+      return "画像は空でない8MiB以下のファイルにしてください。";
+    case "dimensions-too-large":
+    case "too-many-pixels":
+      return "画像は1辺8192px以下・1600万画素以下にしてください。";
+    case "unsupported-format":
+      return "静止PNGまたはJPEGを選択してください（アニメーションPNG、ロスレス・12bitのJPEGには対応していません）。";
+    case "malformed-header":
+      return "画像のヘッダーが壊れています。ファイルの内容を確認してください。";
+    case "read-failed":
+      return "画像ファイルを読み取れません。";
+    case "decode-failed":
+      return "画像を読み取れません。ファイルの内容を確認してください。";
+    case "dimensions-mismatch":
+      return "画像の寸法がヘッダーと一致しません。";
+    default:
+      return `画像を取り込めません（${code}）。`;
+  }
 }
-function checkDimensions(width: number, height: number) {
-  if (
-    !Number.isInteger(width) ||
-    !Number.isInteger(height) ||
-    width < 1 ||
-    height < 1 ||
-    width > IMAGE_SIDE_LIMIT ||
-    height > IMAGE_SIDE_LIMIT ||
-    width * height > IMAGE_PIXEL_LIMIT
-  )
-    throw new Error("画像は1辺8192px以下・1600万画素以下にしてください。");
+/** Rethrow a package error as the display text the editor reports. */
+function translated(error: unknown): never {
+  if (isImageAssetError(error))
+    throw new Error(imageAssetErrorText(error.code), { cause: error });
+  throw error;
+}
+export async function sha256(blob: Blob): Promise<string> {
+  return sha256Hex(new Uint8Array(await blob.arrayBuffer()));
 }
 /** Bounded header inspection before decoding allocates the full image. */
 export function imageHeader(
   bytes: Uint8Array,
 ): Pick<ImageMetadata, "mime" | "width" | "height"> {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (
-    bytes.length >= 33 &&
-    [137, 80, 78, 71, 13, 10, 26, 10].every((b, i) => bytes[i] === b)
-  ) {
-    let offset = 8,
-      width = 0,
-      height = 0,
-      end = false;
-    while (offset + 12 <= bytes.length) {
-      const size = view.getUint32(offset),
-        type = String.fromCharCode(...bytes.subarray(offset + 4, offset + 8));
-      if (size > bytes.length - offset - 12)
-        throw new Error("PNGのチャンクが壊れています。");
-      if (offset === 8) {
-        if (type !== "IHDR" || size !== 13)
-          throw new Error("PNGのヘッダーが不正です。");
-        width = view.getUint32(offset + 8);
-        height = view.getUint32(offset + 12);
-        checkDimensions(width, height);
-      }
-      if (type === "acTL")
-        throw new Error("アニメーションPNGにはまだ対応していません。");
-      offset += size + 12;
-      if (type === "IEND") {
-        if (size !== 0 || offset !== bytes.length)
-          throw new Error("PNGの終端が不正です。");
-        end = true;
-        break;
-      }
-    }
-    if (!end) throw new Error("PNGの終端がありません。");
-    return { mime: "image/png", width, height };
+  try {
+    const header = inspectImageHeader(bytes, LIMITS);
+    return {
+      mime: header.mimeType,
+      width: header.width,
+      height: header.height,
+    };
+  } catch (error) {
+    return translated(error);
   }
-  if (bytes.length >= 4 && bytes[0] === 255 && bytes[1] === 216) {
-    let offset = 2;
-    while (offset < bytes.length) {
-      if (bytes[offset++] !== 255)
-        throw new Error("JPEGのマーカーが不正です。");
-      while (bytes[offset] === 255) offset++;
-      const marker = bytes[offset++];
-      if (marker === 0xda || marker === 0xd9) break;
-      if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) continue;
-      if (offset + 2 > bytes.length) break;
-      const size = view.getUint16(offset);
-      if (size < 2 || size > bytes.length - offset)
-        throw new Error("JPEGのセグメントが壊れています。");
-      if ([0xc0, 0xc1, 0xc2].includes(marker)) {
-        if (size < 8) throw new Error("JPEGのフレームが不正です。");
-        const height = view.getUint16(offset + 3),
-          width = view.getUint16(offset + 5);
-        checkDimensions(width, height);
-        return { mime: "image/jpeg", width, height };
-      }
-      offset += size;
-    }
-    throw new Error("対応するJPEGの画像寸法を取得できません。");
-  }
-  throw new Error("静止PNGまたはJPEGを選択してください。");
 }
 export async function inspectImage(
   blob: Blob,
   name: string,
 ): Promise<ImageMetadata> {
-  if (blob.size === 0 || blob.size > IMAGE_LIMIT)
+  if (blob.size === 0)
     throw new Error("画像は空でない8MiB以下のファイルにしてください。");
-  const header = imageHeader(new Uint8Array(await blob.arrayBuffer()));
-  // Use content MIME rather than the untrusted file extension or Blob.type.
-  const original = new Blob([blob], { type: header.mime });
-  let bitmap: ImageBitmap;
+  let checked: Awaited<ReturnType<typeof inspectImageBytes>>;
   try {
-    bitmap = await createImageBitmap(original, {
-      imageOrientation: "from-image",
-    });
-  } catch {
-    throw new Error("画像を読み取れません。ファイルの内容を確認してください。");
-  }
-  let width: number, height: number;
-  try {
-    width = bitmap.width;
-    height = bitmap.height;
-    checkDimensions(width, height);
-    // EXIF orientation may transpose JPEG's stored dimensions.
-    if (
-      !(width === header.width && height === header.height) &&
-      !(
-        header.mime === "image/jpeg" &&
-        width === header.height &&
-        height === header.width
-      )
-    )
-      throw new Error("画像の寸法がヘッダーと一致しません。");
-  } finally {
-    bitmap.close();
+    // Content decides the format, not the untrusted file extension or Blob.type.
+    checked = await inspectImageBytes(blob, LIMITS);
+  } catch (error) {
+    return translated(error);
   }
   const filename =
     name.replace(/\\/g, "/").split("/").at(-1)?.trim().slice(0, 200) || "画像";
   return Object.freeze({
-    ...header,
-    width,
-    height,
-    sha256: await sha256(original),
-    byteLength: blob.size,
+    mime: checked.mimeType,
+    width: checked.width,
+    height: checked.height,
+    sha256: checked.sha256,
+    byteLength: checked.byteLength,
     name: filename,
   });
 }
