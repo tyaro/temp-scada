@@ -251,6 +251,18 @@ test("menus show the shared keys, and Ctrl or Meta runs them with a menu open", 
   page,
 }) => {
   await page.goto("/");
+  // Banto shows the platform's key (⌘ on macOS, Ctrl elsewhere); Ctrl and Meta
+  // both run the command on every platform.
+  const mac = await page.evaluate(() => {
+    const data = (
+      navigator as Navigator & { userAgentData?: { platform?: string } }
+    ).userAgentData;
+    return /mac|iphone|ipad|ipod/i.test(
+      data?.platform || navigator.platform || "",
+    );
+  });
+  const aria = (key: string) => `${mac ? "Meta" : "Control"}+${key}`;
+  const shown = (key: string) => (mac ? `⌘${key}` : `Ctrl+${key}`);
   const bar = page.getByRole("menubar");
   await bar.getByRole("menuitem", { name: "ファイル", exact: true }).click();
   // The accessible name stays the label; the key goes to aria-keyshortcuts.
@@ -258,8 +270,8 @@ test("menus show the shared keys, and Ctrl or Meta runs them with a menu open", 
     name: "Project を保存",
     exact: true,
   });
-  await expect(save).toHaveAttribute("aria-keyshortcuts", "Control+S");
-  await expect(save).toContainText("Ctrl+S");
+  await expect(save).toHaveAttribute("aria-keyshortcuts", aria("S"));
+  await expect(save).toContainText(shown("S"));
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await bar.getByRole("menuitem", { name: "挿入", exact: true }).click();
@@ -279,11 +291,11 @@ test("menus show the shared keys, and Ctrl or Meta runs them with a menu open", 
   ] as const) {
     await bar.getByRole("menuitem", { name: "編集", exact: true }).click();
     const undo = edit.getByRole("menuitem", { name: "元に戻す", exact: true });
-    await expect(undo).toHaveAttribute("aria-keyshortcuts", "Control+Z");
-    await expect(undo).toContainText("Ctrl+Z");
+    await expect(undo).toHaveAttribute("aria-keyshortcuts", aria("Z"));
+    await expect(undo).toContainText(shown("Z"));
     await expect(
       edit.getByRole("menuitem", { name: "やり直す", exact: true }),
-    ).toHaveAttribute("aria-keyshortcuts", "Control+Y");
+    ).toHaveAttribute("aria-keyshortcuts", aria("Y"));
     await page.keyboard.press(`${modifier}+z`);
     await expect(svg.locator("[data-object-id]")).toHaveCount(count);
     if (await edit.isVisible()) await page.keyboard.press("Escape");
