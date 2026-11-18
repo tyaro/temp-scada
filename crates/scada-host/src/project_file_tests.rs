@@ -186,12 +186,16 @@ fn a_frame_round_trips_and_a_cut_frame_is_refused() {
             format: ProjectFormat::Package,
             name: "A".into(),
             save_as: false,
-            confirmed: Vec::new(),
         }
     );
     assert_eq!(body, b"PKbody");
     assert!(unframe::<SaveRequest>(&framed[..6]).is_none());
     assert!(unframe::<SaveRequest>(&[]).is_none());
     assert!(unframe::<SaveRequest>(&frame(&json!({"fileId": null}), b"")).is_none());
+    // Saving never carries confirmed rounds: that goes through `alarm_apply`.
+    let with_confirmed = json!({
+        "fileId": 3, "format": "package", "name": "A", "saveAs": false, "confirmed": []
+    });
+    assert!(unframe::<SaveRequest>(&frame(&with_confirmed, b"")).is_none());
     assert!(unframe::<SaveRequest>(&u32::MAX.to_le_bytes()).is_none());
 }

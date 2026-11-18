@@ -53,7 +53,6 @@ export interface SaveProjectFileRequest {
   /** Always ask where to save. */
   readonly saveAs: boolean;
   readonly content: Uint8Array;
-  readonly confirmed?: readonly UnackedOccurrence[];
 }
 
 export interface SavedProjectFile {
