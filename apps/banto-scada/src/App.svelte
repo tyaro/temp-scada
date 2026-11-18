@@ -154,6 +154,8 @@
     Menu,
     MenuGroup,
     MenuItem,
+    hasVisibleModalLayer,
+    isEditableTarget,
     shouldHandleShortcut,
   } from "@banto/ui";
   import { notify, type NotificationKind } from "@banto/admin-core";
@@ -984,6 +986,21 @@
       );
     }
   }
+  // Banto #435 の保護のうち IME・押し続け・入力欄・モーダルだけを使う。上流の
+  // shouldHandleShortcut はメニューの表示中も止めるが、ここではコンテキストメニューを
+  // 開いたままの Ctrl+A などで選択を変え、メニューを閉じる（selection-context の約束）。
+  function shortcutAllowed(
+    event: KeyboardEvent,
+    { allowInEditable = false, allowRepeat = false } = {},
+  ) {
+    return (
+      !event.isComposing &&
+      event.keyCode !== 229 &&
+      (allowRepeat || !event.repeat) &&
+      (allowInEditable || !isEditableTarget(event.target)) &&
+      !hasVisibleModalLayer()
+    );
+  }
   function shortcut(event: KeyboardEvent) {
     if (
       operatorStart !== null ||
@@ -1018,7 +1035,7 @@
       if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
         return;
       // F1／F2 は入力欄の中でも効く（ブラウザのヘルプ等は常に止める）。
-      const allowed = shouldHandleShortcut(event, { allowInEditable: true });
+      const allowed = shortcutAllowed(event, { allowInEditable: true });
       event.preventDefault();
       if (
         !allowed ||
@@ -1120,7 +1137,7 @@
       !replacement &&
       !positionPlacement &&
       clipboardScope(event.target) &&
-      shouldHandleShortcut(event)
+      shortcutAllowed(event)
     ) {
       event.preventDefault();
       if (!hiddenCanvasMutation(event.target)) removeSelection();
@@ -1130,7 +1147,7 @@
       return;
     const key = event.key.toLowerCase();
     if (["n", "o"].includes(key) && !event.shiftKey) {
-      const allowed = shouldHandleShortcut(event, { allowInEditable: true });
+      const allowed = shortcutAllowed(event, { allowInEditable: true });
       event.preventDefault();
       if (!allowed || busy || drafts.pending || replacement || helpOpen) return;
       if (key === "n") projectFiles.newProject();
@@ -1146,9 +1163,7 @@
     }
     if (busy || mode !== "edit" || drafts.pending || replacement) return;
     // 入力欄では標準の編集・Undo を優先する。押し続けの繰り返しは元に戻す・やり直しだけ。
-    if (
-      !shouldHandleShortcut(event, { allowRepeat: key === "z" || key === "y" })
-    )
+    if (!shortcutAllowed(event, { allowRepeat: key === "z" || key === "y" }))
       return;
     if (key === "z") {
       event.preventDefault();
