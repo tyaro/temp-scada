@@ -12,6 +12,25 @@
 - 題材 1: `examples/demo-water.project.json`（全体フロー・原水ポンプ場・計測一覧と運転表示の枠。生成は `scripts/demo-projects/`）と 3 分で一巡する筋書き。
 - 検証: 契約試験（`src/demo/demo.test.ts`）と e2e（`e2e/demo-pages.spec.ts`、明・暗）。仕組みと画面写真は[GitHub Pages のデモ](../guides/demo-pages.md)。
 
+## 作業タブ・Banto共通APIへの乗り換え・警報の手直し（PR #237〜#266、2026-11-17〜18）
+
+#258（GitHub Pages のデモ）は上の節に記録した。#260は欠番。
+
+- 計画（#237）: [C6 連続運用とリリース判断の計画](../project/real-hub-c6-plan.md)を提案した。運転条件は5系列・1秒・24時間をユーザーが選んだ。C6自体は未着手。
+- Banto（#238・#239）: Banto を v7.2.0 へ更新した。テーマが OKLCH になったため、e2e で色を読む試験は`rgb()`前提の数字拾いでは誤る（layer-folders-ui だけ canvas で sRGB に直した）。旧版の認証DBからの移行試験と、更新前に認証DBを退避する手順を足した。Tauri 実機（Hub 未接続・サンプル）で明暗テーマ・3ペイン・未保存の保持を確認した。
+- 画面の揺れ（#240）: 上の段の札の重なりと、ドラッグ中のスクロールバーの出入りによるキャンバスの揺れを直した（記録ボタンの幅、上の段の折返し、表示領域の端数の切捨て）。Tauri 実機で確認した。
+- 警報（#241・#242）: 定義の適用の失敗を原因の文で知らせる（`alarmApplyReasonText`）。重なった音の変更の回帰試験を足した（#234で未追加だったもの）。
+- 作業タブ（#243〜#249、Issue #223）: [設計](../design/editor/main-work-tabs-design.md)（#243）に沿い、左ペインの設定をキャンバスと並ぶ作業タブへ移した。WT0（#244）で左の画面管理の重複ボタンを削除し、WT1a（#245）で作業タブの基盤（controller は`work-tabs.svelte.ts`、入口は表示メニュー「プロジェクト設定」）、WT1b（#246）でプロジェクト設定、WT2（#247）で警報の定義、WT3（#248）で機器台帳を移した。WT4（#249）で UX 精査に対応状況を追記して Issue を閉じた。L-6 の記録系 Modal・割付の一覧表、F-5 の Inspector 側、P1-14 は対象外のまま。
+- 警報の小札（#250）: 小札を含む配置をコピー・貼り付けできる。同じ id の定義を持つ Project へだけ貼れる。Symbol 定義の中の小札は未対応。
+- Banto 共通APIへの乗り換え（#251〜#264）: #251で上流の版と SCADA の採用状況を棚卸しし（[引継ぎ](../reviews/banto-contribution-handoff.md)）、次の順に置き換えた。
+  - #435 ショートカット: キー保護を`shouldHandleShortcut`へ（#252、`shortcutAllowed`が上流と同等でない点の注記は#253）、`createShortcutDispatcher`へ（#254、保存の2操作は dispatcher の外の`handleSaveShortcut`）、メニュー・toolbar・キーを同じ`CommandSpec`から作る（#255）。#256で ContextMenu キーを離したときのこだまが選択の操作を上書きする不具合を直した。
+  - #437 UI設定の保存（#257）: 11件を`createUiPreference`（上流`createSavedSetting`の包み）へ。保存失敗の通知は`save()`の Promise ごとに1回。
+  - #436 要求の所有（#259・#261・#262）: 画像取込・クリップボード・タグ一覧の購読を`createRequestOwner`へ。#262で#259の試験の固定回数の待ちを`vi.waitFor`に直した。
+  - #438 画像（#263・#264）: 取込の検査を`@banto/image-assets`へ、原本の保持を`createImageStore`へ（`AssetStore`の外の形は不変、URL の貸出しは`AssetStore`が持つ）。
+- 警報の#222のP3（#265・#266）: ヘッダーの状態コードを日本語にし、「警報を適用」の連打を止めた。明示の適用では保存の文言を出さず、未保存の編集があれば確かめてから適用する。
+
+オーナーのレビューで要修正とされた点は各PRで直した。未検証として残ったのは、Tauri 実機・実ブラウザでの画像の URL の寿命、OS クリップボード書込み中の画面往復、macOS・実 IME・WebView2 実機のキー操作、警報の確認ダイアログの表示など（各PR本文）。
+
 ## 警報の端末設定（PR #230〜#235、2026-11-17）
 
 #230で段階3の完了を文書に記録した。[端末設定の設計](../design/runtime/alarm-terminal-settings.md)（#231）を同日ユーザーが承認し（保持の既定は365日・件数なら100万件、音はWAV PCM 8/16bit・1MB・5秒まで）、次の順に実装した。
