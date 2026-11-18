@@ -413,7 +413,7 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 
 `crates/scada-runtime/src/catalog.rs`の`CatalogHost`がSDK REST clientとProject／要求tokenを所有する。`request().fetch()`は一度だけ取得し、`accept`が最新要求と一致した結果だけを公開する。`catalog_view`はSDKの重複名検査を再利用して表示metadataへ投影する。`schema/catalog-view.schema.json`と`examples/catalog-view.json`をRust／TSで共有する。値購読・再接続・自動pollを所有しない。
 
-`lib/catalog-session.ts`はProject所有者・payload検証・immutableな候補・旧delivery拒否を担当し、`designer/controllers/catalog.svelte.ts`は任意CatalogSourceの購読寿命を担当する。`tag-catalog.ts`はmetadata階層と型互換、`TagPicker.svelte`は検索・確認・明示選択、InspectorPanelとEquipmentLibraryは現在の配置／機器／slotと入力要素の再確認を所有する。適用・保存・履歴は既存フォームに残す。
+`lib/catalog-session.ts`はProject所有者・payload検証・immutableな候補・旧delivery拒否を担当し、`designer/controllers/catalog.svelte.ts`は任意CatalogSourceの購読寿命と要求の失効（`@banto/admin-core`の`createRequestOwner`、key `"scope"`と`"delivery"`）を担当する。`tag-catalog.ts`はmetadata階層と型互換、`TagPicker.svelte`は検索・確認・明示選択、InspectorPanelとEquipmentLibraryは現在の配置／機器／slotと入力要素の再確認を所有する。適用・保存・履歴は既存フォームに残す。
 
 関連検証はRust `tests/catalog.rs`、`catalog-session.test.ts`、`e2e/catalog-selection.spec.ts`と既存tag-picker／equipment系。製品transportと資格情報は[P3b](../design/runtime/transport-boundary.md)に残し、通常entrypointはsourceを渡さない。
 
