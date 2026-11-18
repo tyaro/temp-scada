@@ -61,6 +61,10 @@ Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v
   - 変えていない点: `AssetStore`（原本の保持・重複排除・URL・pin・collect・`importFrom`）は手元のまま。空のファイルは上流へ渡す前に従来の文で断る。ファイル名の整形と`ImageMetadata`の形（`mime`・`name`）。
   - 2段目（store）の境界: 上流の`createImageStore`はURLを`acquireUrl`の貸出しと`release`で管理し、最後の`release`でrevokeする。手元は`url(hash)`をcollectまで共有する（利用は`App.svelte`の`assetImages`だけ）。ほかに、metadataにファイル名が無い、package読込の宣言との一致確認（`put`の`expected`）が無い、`add`が内部に要求の失効（key）を持ち`createRequestOwner`と重なる、の差がある。移す前に、URLの貸出しを誰が持つか（`$derived`の中で借りられない）と、ファイル名・宣言の確認をどこに残すかを決める。
   - 試験: `image-assets.test.ts`（終端の欠けの期待を上流の分類へ、エラーコードが`cause`に残ること）、vitest全件、既存e2eの画像・資産14ファイル（`asset-clipboard`・`background-*`・`image-*`・`screen-background`・`symbol-image*`・`project-files`）。
+- #438の2段目（2026-11-18）: `AssetStore`の中身を上流の`createImageStore`（`maxTotalBytes`は256MiB）に置き換えた。外から見た形（`put`・`url`・`pin`・`collect`・`importFrom`・`dispose`、`ImageMetadata`の`mime`・`name`）は変えていない。原本の保持・hashでの重複排除・容量上限・pinの数え・URLの作成と取消しは上流が持つ。
+  - 決めた境界: URLの貸出しは`AssetStore`が原本1つにつき1つ持つ。`url()`の初回に`acquireUrl`で借り、`collect`でその原本が残らないとき・`dispose`のときに返す（`url()`は`App.svelte`の`$derived`で呼ばれ、そこでは返せないため）。pin中の原本は貸出しも残し、`dispose`後は最後のpinの解放で返す（従来の「pin中はURLも残る」）。手元に残したもの: ファイル名（同じ原本では最初の名前。原本が消えたら忘れる）、package読込の宣言との照合（`put`の`expected`）、失敗の日本語の文言（上流のコードは`Error.cause`）。`add`は`key`なしで呼ぶので、失効は`dispose`だけ（取込の要求の失効は従来どおり各controllerの`createRequestOwner`）。
+  - 変わった点: 宣言との照合は上流が保持した後に行う。合わなければ、そのputで新しく入った原本だけを`delete`で消す（既にあった原本は残す）。`has`・`count`・`byteLength`は上流のreactiveな値になる。
+  - 試験: `image-assets.test.ts`に、URLの貸出しが`collect`・`dispose`・pinの解放で1回だけ取り消されること、名前の引継ぎと宣言違反の巻戻し・`cause`の2件を追加。vitest全件（11033件）、svelte-check、既存e2eの画像・資産（`asset-clipboard`・`background-*`・`image-*`・`screen-background`・`symbol-image*`、94件）。Tauri実機・実ブラウザでのURLの寿命は未確認。
 - Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらず、上流mainの`anchoredPopover.ts`の横clampも同じ式のまま。[tyaro/banto#668](https://github.com/tyaro/banto/issues/668)で報告した（2026-11-18）。
 - 置き換えの各区切りでは、既存の入力保護・資源解放・保存失敗のE2Eを通してから手元の実装を消す（[引渡しの方法](#引渡しの方法)の3）。
 - 新しい還元候補（パネルの幅・高さの保存と「標準レイアウトに戻す」、作業タブの入力保護など）は、上の採用で上流のAPIとの差が見えてから起票する。
