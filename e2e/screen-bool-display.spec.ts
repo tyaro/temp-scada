@@ -127,7 +127,7 @@ test("the Inspector sets a bool display and the Text follows the bit tag", async
   expect(await sendBit(page, 5, { quality: "good", numericValue: 3 })).toBe(
     true,
   );
-  await expect(text).toHaveText("-- · slot型不一致");
+  await expect(text).toHaveText("-- · 型不一致");
   await expect(text).toHaveAttribute("fill", "#d97706");
 
   // Undo removes the whole display in one step.

@@ -53,6 +53,9 @@ export function readingAsBoolSlot(reading?: NumericReading): SlotPresentation {
   return slotPresentation("invalid");
 }
 
+/** Same word as the alarm banner and the trend use for a tag of the wrong type. */
+const SCREEN_TYPE_MISMATCH = "-- · 型不一致";
+
 export interface ScreenBoolPresentation {
   evaluation: SlotStateEvaluation;
   text: string;
@@ -75,7 +78,12 @@ export function presentScreenBool(
     direction: "read",
     boolDisplay: { true: display.true, false: display.false },
   };
-  const evaluation = evaluateSlotState(slot, readingAsBoolSlot(reading))!;
+  const evaluated = evaluateSlotState(slot, readingAsBoolSlot(reading))!;
+  // A screen Text binds a tag, not a slot: a number tag is a tag type mismatch.
+  const evaluation: SlotStateEvaluation =
+    evaluated.state === "unknown" && evaluated.reason === "typeMismatch"
+      ? { ...evaluated, text: SCREEN_TYPE_MISMATCH }
+      : evaluated;
   return {
     evaluation,
     text: slotStateText(evaluation),
