@@ -95,6 +95,19 @@ S0／S1のDesign Domain・正式Project layout・型／参照整合性・revisio
 
 **S9b（scada-server core＋host 1）はCore v1のserver基盤**。v1.1のAlarm・常時Event／Action・History／Trend・recorder・Windowsサービス化をその上に追加する。Design DomainはCore v1、Design APIのREST／OpenAPI公開は後続。現行のローカル読取プレビューを正式Runtimeの完成とはしない。
 
+### Core v1の残り（2026-11-19、上流草案との比較）
+
+上流草案（[scada-design](../upstream/industrial/scada-design.md)、2026-10-01版）と現状を比べると、作図・Historian・Alarmは先行した一方、Core v1の中心が残っている。依存の順に並べる。Issueは着手するものだけ、PR 1本の大きさで立てる。
+
+| 順  | 残り                                                                      | 上流草案 | 前提                | Issue                                                  |
+| --- | ------------------------------------------------------------------------- | -------- | ------------------- | ------------------------------------------------------ |
+| 1   | 正式Runtime modeとcapability分離                                          | §18      | なし                | [#279](https://github.com/tyaro/temp-scada/issues/279) |
+| 2   | 書込みActionとexecution record                                            | §10・§16 | 1                   | [#280](https://github.com/tyaro/temp-scada/issues/280) |
+| 3   | 保存世代の契約（working／保存世代の分離、external-modified）と正式package | §4.3・§5 | なし                | 後で                                                   |
+| 4   | 式と宣言的mappingによる動的表示                                           | §9.5     | なし                | 後で                                                   |
+| 5   | 正式Faceplate                                                             | §7.4     | 2（操作を含むため） | 後で                                                   |
+| 6   | Design Domain（共通mutation／validation）                                 | §19.2    | 3                   | 後で                                                   |
+
 ## 作成支援・プラント運用の追加検討（2026-10-20・日本時間）
 
 [追加検討資料](../design/proposals/scada-authoring-plant-operations-proposal.md)と[機器作成の詳細提案](../design/proposals/equipment-authoring-detail-proposal.md)は、採用候補・未決事項・後続機能の根拠。文書の存在だけで実装済み・着手指示と扱わない。提供段階は統合設計、現在の機能は実装状況に従う。
