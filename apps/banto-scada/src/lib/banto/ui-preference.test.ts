@@ -105,6 +105,58 @@ describe("createUiPreference", () => {
     expect(width.saved).toBe(250);
   });
 
+  /** `set` が即座に答える provider（localStorage と同じ）。答えを1回ずつ順に使う。 */
+  function immediateProvider(outcomes: (Error | "ok")[]) {
+    const sent: string[] = [];
+    const provider: UiSettingsProvider = {
+      async get() {
+        return null;
+      },
+      async set(_key, value) {
+        sent.push(value);
+        const outcome = outcomes.shift() ?? "ok";
+        if (outcome !== "ok") throw outcome;
+      },
+    };
+    return { provider, sent };
+  }
+
+  it("即座に失敗する provider でも、失敗した送信ごとに1回通知する", async () => {
+    const store = immediateProvider([new Error("a"), new Error("b")]);
+    const warnings: string[] = [];
+    const width = widthPreference(store.provider, warnings);
+    const results = await Promise.all([
+      width.update(250),
+      width.update(260),
+      width.update(270),
+    ]);
+    expect(store.sent).toEqual(["250", "270"]);
+    expect(results).toEqual([false, false, false]);
+    expect(warnings).toEqual(["保存できません", "保存できません"]);
+  });
+
+  it("失敗の直後にまとめた送信が成功しても、先の失敗の通知は消えない", async () => {
+    const store = immediateProvider([new Error("a"), "ok"]);
+    const warnings: string[] = [];
+    const width = widthPreference(store.provider, warnings);
+    const results = await Promise.all([width.update(250), width.update(260)]);
+    expect(store.sent).toEqual(["250", "260"]);
+    expect(results).toEqual([false, true]);
+    expect(warnings).toEqual(["保存できません"]);
+    expect(width.saved).toBe(260);
+  });
+
+  it("同じ Error を使い回す provider でも、別の送信の失敗はそれぞれ通知する", async () => {
+    const same = new Error("full");
+    const store = immediateProvider([same, same, same]);
+    const warnings: string[] = [];
+    const width = widthPreference(store.provider, warnings);
+    expect(await width.update(250)).toBe(false);
+    expect(await width.update(260)).toBe(false);
+    expect(await width.update(270)).toBe(false);
+    expect(warnings).toHaveLength(3);
+  });
+
   it("壊れた値は既定値で通知なし、読込みの失敗だけを通知する", async () => {
     const broken = heldProvider({ "scada.test.width": "-50" });
     const warnings: string[] = [];

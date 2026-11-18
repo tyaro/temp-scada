@@ -13,7 +13,7 @@ import {
  * ここが持つもの: 通知の文言、壊れた値の解釈（`parse`）と既定値（`fallback`）。
  *
  * 保存の失敗は `current`（このタブで使う値）を残し、`saved` は前の値のまま。
- * まとめられた保存は同じ失敗を共有するので、同じ失敗の通知は1回だけ出す。
+ * まとめられた保存は同じ結果を共有するので、失敗の通知は失敗した送信ごとに1回。
  */
 export interface UiPreferenceOptions<T> {
   provider: UiSettingsProvider;
@@ -55,7 +55,9 @@ export function createUiPreference<T>(
     fallback: options.fallback,
     mode: "explicit",
   });
-  let reported: unknown = null;
+  // 上流はまとめた保存に同じ Promise を返す。通知は送信（Promise）ごとに1回。
+  // `setting.error` は次の送信が結果を返す前に書き換えるので、見分けに使わない。
+  const reported = new WeakSet<Promise<boolean>>();
   return {
     get current() {
       return setting.current;
@@ -65,9 +67,10 @@ export function createUiPreference<T>(
     },
     async update(value) {
       setting.set(value);
-      if (await setting.save()) return true;
-      if (setting.error !== reported) {
-        reported = setting.error;
+      const sending = setting.save();
+      if (await sending) return true;
+      if (!reported.has(sending)) {
+        reported.add(sending);
         options.warn(options.saveFailed);
       }
       return false;
