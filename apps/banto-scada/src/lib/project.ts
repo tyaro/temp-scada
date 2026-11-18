@@ -723,6 +723,7 @@ export function getLocalBounds(object: ScreenObject) {
     return polygonStrokeBounds(
       polygonLocalPoints({ ...object, shape: object.shape }),
       object.shape.paint.stroke?.width ?? 0,
+      object.shape.paint.stroke?.lineStyle,
     );
   const bounds = getLayoutBounds(object);
   const pad = isAreaShape(object.shape)

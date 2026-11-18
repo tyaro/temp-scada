@@ -75,6 +75,24 @@ describe("polygonLocalPoints", () => {
 });
 
 describe("polygonStrokeBounds", () => {
+  it("includes the round caps of dots at the vertices for a dotted outline", () => {
+    // 10×100 の細い三角形・線幅 10。実線・破線の上端は miter を超えて bevel になり -0.25 付近だが、
+    // 点線は頂点 (5, 0) に半径 5 の点が乗るので -5 まで出る。
+    const points = [
+      { x: 5, y: 0 },
+      { x: 10, y: 100 },
+      { x: 0, y: 100 },
+    ];
+    const solid = polygonStrokeBounds(points, 10);
+    const dashed = polygonStrokeBounds(points, 10, "dashed");
+    const dotted = polygonStrokeBounds(points, 10, "dotted");
+    expect(solid.y).toBeGreaterThan(-1);
+    expect(dashed).toEqual(solid);
+    expect(dotted.y).toBe(-5);
+    expect(dotted.x).toBeLessThanOrEqual(-5);
+    expect(dotted.x + dotted.width).toBeGreaterThanOrEqual(15);
+    expect(dotted.y + dotted.height).toBeGreaterThanOrEqual(105);
+  });
   it("枠線がなければ頂点の外接矩形（＝枠）", () => {
     expect(
       polygonStrokeBounds(

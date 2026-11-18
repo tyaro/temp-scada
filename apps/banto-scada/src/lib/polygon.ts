@@ -1,4 +1,4 @@
-import type { Point } from "./project";
+import type { LineStyle, Point } from "./project";
 
 /** 多角形の配置（枠と割合の頂点）。`ScreenObject` の polygon に当たる部分だけを取る。 */
 export interface PolygonPlacement {
@@ -30,10 +30,14 @@ export function polygonPointsAttribute(points: readonly Point[]): string {
  * 枠線を含めた描画の外形（配置の中の座標の外接矩形）。各辺を法線方向に ±線幅/2 ずらした
  * 長方形と、miter の比 1/sin(θ/2) が limit 以下の角の先端の和をとる。limit を超える角は
  * SVG が bevel に切り替えるので、辺の長方形に含まれる。線幅が 0 以下なら頂点の外接矩形。
+ * 点線は長さ 0 の dash を丸い端点で描くので、頂点に乗る点が全方向に半幅はみ出す。点の中心は
+ * 辺の上にあるので、頂点の外接矩形を半幅ずつ広げた矩形も和に入れる。破線は butt なので
+ * 辺の長方形と角の先端に収まる。
  */
 export function polygonStrokeBounds(
   points: readonly Point[],
   strokeWidth: number,
+  lineStyle?: LineStyle,
   miterLimit = POLYGON_MITER_LIMIT,
 ): { x: number; y: number; width: number; height: number } {
   const xs: number[] = [],
@@ -82,6 +86,11 @@ export function polygonStrokeBounds(
       const tip = half / sinHalf;
       add(p.x - (sx / s) * tip, p.y - (sy / s) * tip);
     }
+    if (lineStyle === "dotted")
+      for (const p of points) {
+        add(p.x - half, p.y - half);
+        add(p.x + half, p.y + half);
+      }
   }
   const minX = Math.min(...xs),
     minY = Math.min(...ys),
