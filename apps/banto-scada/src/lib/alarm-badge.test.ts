@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import sample from "../../../../examples/process.project.json";
 import cases from "../../../../examples/alarm-badge-cases.json";
+import embeddedSample from "../../../../examples/embedded-screen.project.json";
 import {
   parseProject,
   serializeProject,
@@ -247,6 +248,60 @@ describe("alarm badge editing", () => {
         "edit",
       ),
     ).toThrow("警報の小札");
+  });
+  it("checks badges on an embedded screen imported with the paste", () => {
+    // 埋込画面の元の画面に小札を置き、埋込画面だけをコピーする。
+    const base = parseProject(JSON.stringify(embeddedSample));
+    base.alarms = structuredClone(sample.alarms) as Project["alarms"];
+    const source = base.screens[1];
+    source.objects.push({
+      id: "0199f6a1-0000-7000-8000-0000000009a1",
+      x: 10,
+      y: 10,
+      width: 48,
+      height: 24,
+      rotation: 0,
+      order: Math.max(...source.objects.map((o) => o.order)) + 1,
+      shape: newAlarmBadgeShape(base),
+    } as Project["screens"][number]["objects"][number]);
+    const p = parseProject(serializeProject(base));
+    const view = p.screens[0].objects.find(
+      (o) => o.shape.type === "screenView",
+    )!;
+    const text = copyObjects(p, p.screens[0].id, [view.id], "a");
+    const fragment = parseClipboard(text);
+    expect(fragment.project.screens).toHaveLength(2);
+    expect(fragment.project.alarms!.definitions.map((d) => d.id)).toEqual([
+      TEMP,
+    ]);
+    const paste = (destination: Project) =>
+      applyCommand(
+        destination,
+        {
+          type: "paste",
+          screenId: destination.screens[0].id,
+          text,
+          origin: "b",
+          center: { x: 10, y: 10 },
+        },
+        "edit",
+      );
+    // 別の origin なので画面ごと取り込み、小札は同じ id の定義を指す。
+    const pasted = paste(p);
+    expect(pasted.screens).toHaveLength(3);
+    expect(
+      pasted.screens[2].objects.find((o) => o.shape.type === "alarmBadge")!
+        .shape,
+    ).toEqual(newAlarmBadgeShape(p));
+    // 貼付け先に定義が無ければ、取り込む画面の小札で拒む。
+    const without = structuredClone(p);
+    without.screens[1].objects = without.screens[1].objects.filter(
+      (o) => o.shape.type !== "alarmBadge",
+    );
+    delete without.alarms;
+    expect(() => paste(without)).toThrow(
+      "警報の小札が指す警報「T-01 温度 HH」の定義がありません",
+    );
   });
   it("rejects clipboard definitions no badge points at", () => {
     const { next, object } = added();
