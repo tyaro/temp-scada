@@ -928,10 +928,14 @@ impl AlarmService {
             if active.project_id.as_deref() == Some(&monitored.project_id) {
                 active.applied.clone()
             } else {
-                let db = AlarmDb::open(self.terminal.clone(), &monitored.project_id).await?;
-                let applied = db.applied().await;
-                db.close().await;
-                applied?
+                match AlarmDb::open_read(self.terminal.clone(), &monitored.project_id).await? {
+                    Some(db) => {
+                        let applied = db.applied().await;
+                        db.close().await;
+                        applied?
+                    }
+                    None => None,
+                }
             }
         } else {
             None
@@ -1063,8 +1067,9 @@ impl AlarmService {
     /// readable while the DB is busy or broken (the Engine reports that).
     async fn retention_status(&self) -> Option<RetentionStatus> {
         let monitored = self.terminal.monitored().ok()??;
-        let db = match AlarmDb::open(self.terminal.clone(), &monitored.project_id).await {
-            Ok(db) => db,
+        let db = match AlarmDb::open_read(self.terminal.clone(), &monitored.project_id).await {
+            Ok(Some(db)) => db,
+            Ok(None) => return None,
             Err(error) => {
                 eprintln!("alarm retention status unavailable: {error:?}");
                 return None;
@@ -1186,7 +1191,12 @@ impl AlarmService {
             .terminal
             .monitored()?
             .ok_or(AlarmServiceError::NoMonitoredProject)?;
-        let db = AlarmDb::open(self.terminal.clone(), &monitored.project_id).await?;
+        // Its own read connection (`open_read`): the Engine's writes and the
+        // retention's deletes keep the shared one busy.
+        let Some(db) = AlarmDb::open_read(self.terminal.clone(), &monitored.project_id).await?
+        else {
+            return Ok(Vec::new());
+        };
         let result = db.history(before_seq, from_ms, to_ms, kind, limit).await;
         db.close().await;
         Ok(result?)

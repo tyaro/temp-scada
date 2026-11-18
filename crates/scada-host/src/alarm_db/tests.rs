@@ -37,6 +37,55 @@ async fn existing_format_one_db_gets_historical_display_index() {
 }
 
 #[tokio::test]
+async fn read_open_creates_nothing_and_reads_while_the_writer_holds_the_lock() {
+    let dir = temp_dir();
+    let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
+    let id = project_id();
+    // No DB yet: nothing is created, not even the directory.
+    assert!(AlarmDb::open_read(terminal.clone(), &id)
+        .await
+        .unwrap()
+        .is_none());
+    assert!(!dir.join("alarms").exists());
+    assert!(matches!(
+        AlarmDb::open_read(terminal.clone(), "../x").await,
+        Err(AlarmDbError::InvalidProjectId)
+    ));
+
+    let db = AlarmDb::open(terminal.clone(), &id).await.unwrap();
+    // The Engine's write transaction holds the write lock; a read still opens
+    // (no schema work) and answers from the last commit.
+    let writer = db.pool.begin_with("BEGIN IMMEDIATE").await.unwrap();
+    let reader = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        AlarmDb::open_read(terminal.clone(), &id),
+    )
+    .await
+    .expect("the read open must not wait for the writer")
+    .unwrap()
+    .expect("the DB exists");
+    assert!(reader.applied().await.unwrap().is_none());
+    assert!(reader
+        .history(None, None, None, None, 10)
+        .await
+        .unwrap()
+        .is_empty());
+    writer.rollback().await.unwrap();
+    reader.close().await;
+    db.close().await;
+
+    // An empty file left before the schema was written reads as no DB.
+    let empty = project_id();
+    std::fs::write(dir.join("alarms").join(format!("{empty}.db")), b"").unwrap();
+    assert!(AlarmDb::open_read(terminal.clone(), &empty)
+        .await
+        .unwrap()
+        .is_none());
+    drop(terminal);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test]
 async fn recovery_close_cannot_stop_a_session_claimed_while_waiting_for_db() {
     let dir = temp_dir();
     let terminal = std::sync::Arc::new(AlarmTerminal::open(&dir).await.unwrap());
