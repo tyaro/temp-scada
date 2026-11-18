@@ -91,19 +91,8 @@ async fn hub_connect(
         .as_ref()
         .is_ok_and(|connection| connection.status.is_connected());
     drop(active);
-    let credential = state
-        .bootstrap
-        .stored_credential()
-        .ok()
-        .flatten()
-        .or_else(|| {
-            result
-                .as_ref()
-                .ok()
-                .and_then(|connection| connection.judged)
-        });
     if !state.exiting.load(Ordering::SeqCst) {
-        alarm::after_hub_connect(&state, &alarm, credential).await;
+        alarm::after_hub_connect(&state, &alarm).await;
     }
     result
         .map(|connection| connection.status)

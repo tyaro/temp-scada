@@ -159,7 +159,14 @@ async fn authorize_alarm_settings(auth: &AuthState) -> Result<(), String> {
         .map_err(refusal)
 }
 
-fn hub_context(host: &NativeHost) -> Result<(String, HubClients), String> {
+/// The applied endpoint, the clients the Engine reads with, and the identity
+/// of the stored key those clients use. The identity comes from the same
+/// saved record and key as the clients (`rest_client` builds only from the
+/// stored key), so start-up and reconnects compare the same thing. Callers
+/// hold `host.active` so `hub_connect` cannot change the record in between.
+fn hub_context(
+    host: &NativeHost,
+) -> Result<(String, HubClients, Option<CredentialIdentity>), String> {
     let record = host
         .bootstrap
         .record()
@@ -169,6 +176,10 @@ fn hub_context(host: &NativeHost) -> Result<(String, HubClients), String> {
         .rest_client()
         .map_err(|_| "hubUnavailable")?
         .ok_or("noHub")?;
+    let credential = host
+        .bootstrap
+        .stored_credential()
+        .map_err(|_| "hubUnavailable")?;
     // The Engine makes more clients later (rereads, resubscription). Each
     // one is refused once the saved Hub record names another endpoint.
     let bootstrap = host.bootstrap.clone();
@@ -180,7 +191,7 @@ fn hub_context(host: &NativeHost) -> Result<(String, HubClients), String> {
         }
         bootstrap.rest_client().ok()?
     });
-    Ok((record.endpoint, clients))
+    Ok((record.endpoint, clients, credential))
 }
 
 pub fn start_events<R: Runtime>(app: AppHandle<R>) {
@@ -227,17 +238,14 @@ pub fn start_events<R: Runtime>(app: AppHandle<R>) {
         if host.exiting.load(std::sync::atomic::Ordering::SeqCst) {
             return;
         }
-        let (current, context) = {
+        let context = {
             let _active = host.active.lock().await;
-            (
-                host.bootstrap.stored_credential().ok().flatten(),
-                hub_context(&host),
-            )
+            hub_context(&host)
         };
         let alarm = app.state::<AlarmState>();
         let mut credential = alarm.credential.lock().await;
         match context {
-            Ok((endpoint, client)) => {
+            Ok((endpoint, client, current)) => {
                 *credential = current;
                 let _ = service.resume(Some(&endpoint), Some(client)).await;
             }
@@ -248,20 +256,20 @@ pub fn start_events<R: Runtime>(app: AppHandle<R>) {
     });
 }
 
-pub async fn after_hub_connect(
-    host: &NativeHost,
-    alarm: &AlarmState,
-    judged: Option<CredentialIdentity>,
-) {
+pub async fn after_hub_connect(host: &NativeHost, alarm: &AlarmState) {
     let Ok(service) = alarm.get() else {
         return;
     };
     let mut credential = alarm.credential.lock().await;
-    if let Ok((endpoint, client)) = hub_context(host) {
-        if *credential != judged && service.stop().await.is_err() {
+    let context = {
+        let _active = host.active.lock().await;
+        hub_context(host)
+    };
+    if let Ok((endpoint, client, current)) = context {
+        if *credential != current && service.stop().await.is_err() {
             return;
         }
-        *credential = judged;
+        *credential = current;
         let _ = service.resume(Some(&endpoint), Some(client)).await;
     } else {
         let _ = service.stop().await;
@@ -295,7 +303,7 @@ pub async fn apply_file(
         let _active = host.active.lock().await;
         hub_context(host)
     };
-    let (endpoint, client) = match context {
+    let (endpoint, client, _) = match context {
         Ok(context) => context,
         Err(reason) if !explicit && reason == "noHub" => return Ok(ApplyResult::SkippedNoHub),
         Err(reason) => return Err(reason),
