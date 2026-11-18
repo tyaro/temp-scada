@@ -78,6 +78,7 @@ function snapshot(
     status: "running",
     pendingConditionChanges: false,
     pendingDisplayChanges: false,
+    pendingUnknown: false,
     historyWriteFailure: null,
     rereadFailure: null,
     ...rest,

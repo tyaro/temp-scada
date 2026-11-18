@@ -163,6 +163,7 @@ function snapshot(
     status: "running",
     pendingConditionChanges: false,
     pendingDisplayChanges: false,
+    pendingUnknown: false,
     historyWriteFailure: null,
     rereadFailure: null,
   };
@@ -261,6 +262,25 @@ test("a badge follows the mocked alarm feed through every state", async ({
   });
   await expect(
     page.getByText("警報: 警報の定義がありません", { exact: true }),
+  ).toBeVisible();
+  // Engine が自ら止まった理由（認証の失効）を「停止」と区別して出す。
+  await setSnapshot({
+    ...snapshot(5, 1, { active: false, acked: true }),
+    status: "authExpired",
+  });
+  await expect(
+    page.getByText("警報: Hubの認証が切れました（接続し直すと再開します）", {
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  // 監視中の保存済みファイルが読めないときは「監視中」と言わない。
+  await setSnapshot({
+    ...snapshot(6, 1, { active: false, acked: true }),
+    pendingUnknown: true,
+  });
+  await expect(
+    page.getByText("警報: 保存済みファイルを確認できません", { exact: true }),
   ).toBeVisible();
 });
 

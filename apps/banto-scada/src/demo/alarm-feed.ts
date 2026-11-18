@@ -195,6 +195,7 @@ export function createDemoAlarmFeed(
       status: "running",
       pendingConditionChanges: false,
       pendingDisplayChanges: false,
+      pendingUnknown: false,
       historyWriteFailure: null,
       rereadFailure: null,
     });

@@ -60,6 +60,10 @@ export const ALARM_STATUS_LABELS: Readonly<Record<string, string>> = {
   invalidAppliedDefinition: "適用済みの定義が不正です",
   engineStartFailed: "開始できませんでした",
   engineStopped: "Engineが止まりました",
+  authExpired: "Hubの認証が切れました（接続し直すと再開します）",
+  connectionFailed: "Hubとの通信に失敗しました",
+  alarmDbFailed: "警報DBに書けなくなりました",
+  engineFailed: "内部エラーで止まりました",
   confirmationRequired: "切替の確認待ち",
   switchRecoveryFailed: "切替の復旧に失敗しました",
 };

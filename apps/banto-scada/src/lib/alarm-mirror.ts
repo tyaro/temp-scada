@@ -50,6 +50,8 @@ export interface AlarmSnapshot {
   readonly status: string;
   readonly pendingConditionChanges: boolean;
   readonly pendingDisplayChanges: boolean;
+  /** The monitored saved file cannot be read as that Project; both flags above are false. */
+  readonly pendingUnknown: boolean;
   /** The alarm DB cannot be written; ACK and apply are refused meanwhile. */
   readonly historyWriteFailure: {
     readonly sinceWallMs: number;
