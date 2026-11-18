@@ -2,6 +2,8 @@
   export type ContextAction = {
     label: string;
     disabled?: boolean;
+    /** メニューに出すキー（表示だけ。`Mod+Z` の形。toolbar では使わない）。 */
+    shortcut?: string;
     run: () => void;
   };
 </script>
@@ -192,6 +194,7 @@
         {#each items as item}
           <MenuItem
             label={item.label}
+            shortcut={item.shortcut}
             disabled={item.disabled}
             onSelect={() => {
               if (openedKey !== contextKey) return;

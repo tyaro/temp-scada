@@ -37,6 +37,11 @@ Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v
   - Ctrl+S・Shift+Ctrl+Sは2段目のまま`handleSaveShortcut`（層で止めない。共有の`project.save`の`enabled`は`menuBlocked`を見るので使わない）。
   - 項目の文言は共有の`title`（従来のメニュー・toolbarの文言）。メニューにキーを出すには`MenuItem`に表示欄が要るので、[tyaro/banto#671](https://github.com/tyaro/banto/issues/671)で上流へ依頼した。
   - 試験: `e2e/history.spec.ts`の「edit shortcuts share the toolbar's conditions」、`e2e/edit-lock.spec.ts`のロック中のCtrl+D。
+- Banto v7.6.0の#669・#671の採用（2026-11-18）: 上の回避を上流のAPIへ置き換えた。
+  - `menuOwnerLayer`（`ownerLayer`）を`blockOnMenu: false`へ。モーダルでは従来どおり上流が止める。変わった点: メニューが2つ同時に見えるときも止めない（従来は止まった）。
+  - `Mod+`を`Ctrl+`と`Meta+`に分けた登録をやめ、`createShortcutDispatcher({ mod: "either" })`にした。`handleSaveShortcut`も`matchShortcut(…, "either")`。Ctrl+Meta同時押しは従来どおり一致しない。
+  - 共有の`commands`に`shortcut`（メニューに出すキー）を持たせ、`commandItem`経由でメニューバー・コンテキストメニューの`MenuItem`の`shortcut`へ渡す。`keyCommand`は既定でこのキーを登録し、やり直しのShift+Ctrl+Zだけを別に足す（表示はCtrl+Y）。切り取り・コピー・貼り付けもCtrl+X/C/Vを表示する（キーはブラウザのcut/copy/pasteイベントが受ける）。toolbarには出さない。記号はOSに合わせる（macOSは⌘）。
+  - 試験: `e2e/menubar.spec.ts`の「menus show the shared keys …」（表示と`aria-keyshortcuts`、メニュー表示中のCtrl+Z・Meta+Z）。
 - #437（2026-11-18）: `banto/setup.ts`のUI設定11件（テーマ、メニューバー・ミニマップ・ルーラーの表示、部品の表示形式、パネルの幅、タグ参照パネルの高さ、お気に入り、プロパティ・作業パネルの浮動配置の保存枠）を、`@banto/admin-core`の`createSavedSetting`（`explicit`）に載せた。包みは`banto/ui-preference.ts`の`createUiPreference`で、通知の文言・既定値・壊れた値の解釈はSCADAに残す。
   - 変わった点: 送信は1件ずつになり、送信中の変更は1回にまとめて最後の値を送る（従来は幅のドラッグなどで書込みが並行し、終わる順で古い値が残り得た）。まとめた保存が失敗したときの通知は1回（失敗した送信ごとに1回）。浮動配置の保存枠は、送信に成功した値だけを`saved`とする上流の契約で従来の「失敗時は前の枠を残す」を保つ。
   - 変えていない点: 壊れた値の扱い（幅・高さ・お気に入りは既定値へ丸める従来の`parse`、表示の有無は`"false"`だけを非表示）、読込み失敗の通知の文言と順序、「標準レイアウトに戻す」の5項目は通知1回。

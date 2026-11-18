@@ -162,8 +162,6 @@
     Menu,
     MenuGroup,
     MenuItem,
-    hasVisibleMenuLayer,
-    hasVisibleModalLayer,
     createShortcutDispatcher,
     matchShortcut,
     type CommandSpec,
@@ -999,16 +997,8 @@
   // Banto #435 の操作定義と dispatcher（createShortcutDispatcher）でキーを処理する。
   // 上流の保護（IME・defaultPrevented・押し続け・入力欄・モーダル・メニュー）を
   // そのまま使うが、F 以外はコンテキストメニューを開いたままの Ctrl+A などで選択を
-  // 変え、メニューを閉じる（selection-context の約束）ので、表示中のメニューを
-  // ownerLayer に渡してメニューでは止めない。モーダルの表示中は null を返し、
-  // モーダルでは止める。上流へは「メニューを止める対象から外す」選択肢として相談する
-  // （docs/reviews/banto-contribution-handoff.md）。
-  function menuOwnerLayer(): Element | null {
-    if (hasVisibleModalLayer()) return null;
-    for (const menu of document.querySelectorAll('[role="menu"]'))
-      if (!hasVisibleMenuLayer({ except: menu })) return menu;
-    return null;
-  }
+  // 変え、メニューを閉じる（selection-context の約束）ので、blockOnMenu: false で
+  // メニューでは止めない（tyaro/banto#669）。モーダルでは上流が止める。
   // enabled／run は event を受け取らないので、処理中の keydown の対象を控える。
   let shortcutTarget: EventTarget | null = null;
   function filePromptsReady() {
@@ -1025,8 +1015,10 @@
       !equipmentLibrary?.isTagPickerOpen()
     );
   }
-  const shortcutDispatcher = createShortcutDispatcher();
-  const menuScoped = { ownerLayer: menuOwnerLayer } as const;
+  // 従来どおり Ctrl と Cmd（Meta）のどちらでも効かせる（tyaro/banto#669）。
+  // メニューに出すキーの記号は OS に合わせたまま。
+  const shortcutDispatcher = createShortcutDispatcher({ mod: "either" });
+  const menuScoped = { blockOnMenu: false } as const;
   // メニュー・toolbar と共有する操作（designer-actions の CommandSpec）にキーを付ける。
   // 名前・実行・使える条件は共有側が決め、キーは自分だけの保護（when: 入力元・
   // キャンバス上の対象・ヘルプやタグ選択の表示中など）を足すだけ。
@@ -1035,19 +1027,24 @@
     | "allowInEditable"
     | "allowRepeat"
     | "preventDefaultWhenDisabled"
-    | "ownerLayer"
-  > & { keyId?: string; when?: () => boolean; run?: () => void };
+    | "blockOnMenu"
+  > & {
+    keyId?: string;
+    shortcut?: string;
+    when?: () => boolean;
+    run?: () => void;
+  };
+  // キーは既定で共有側の shortcut（メニューに出すキー）。別のキーは shortcut で渡す。
   function keyCommand(
     id: DesignerCommandId,
-    shortcut: string,
-    { keyId, when, run, ...flags }: KeyOptions = {},
+    { keyId, shortcut, when, run, ...flags }: KeyOptions = {},
   ): CommandSpec {
     const shared = designerActions.command(id);
     return {
       ...flags,
       id: keyId ?? id,
       title: shared.title,
-      shortcut,
+      shortcut: shortcut ?? shared.shortcut,
       visible: shared.visible,
       enabled: () => (when?.() ?? true) && (shared.enabled?.() ?? true),
       run: run ?? shared.run,
@@ -1062,10 +1059,10 @@
       ...menuScoped,
     } as const;
     return [
-      keyCommand("selection.show", "F", {
+      keyCommand("selection.show", {
         when: () => !helpOpen && clipboardScope(shortcutTarget),
       }),
-      keyCommand("help.open", "F1", { ...fileKey, when: functionKeysReady }),
+      keyCommand("help.open", { ...fileKey, when: functionKeysReady }),
       {
         id: "object.rename",
         title: "名前を変更",
@@ -1076,7 +1073,7 @@
           if (canvasActive && !positionPlacement) renameFocused(shortcutTarget);
         },
       },
-      keyCommand("selection.remove", "Delete", {
+      keyCommand("selection.remove", {
         ...menuScoped,
         when: () =>
           !clipboard.busy &&
@@ -1086,37 +1083,38 @@
           if (!hiddenCanvasMutation(shortcutTarget)) removeSelection();
         },
       }),
-      keyCommand("project.new", "Mod+N", {
+      keyCommand("project.new", {
         ...fileKey,
         when: filePromptsReady,
       }),
-      keyCommand("project.open", "Mod+O", {
+      keyCommand("project.open", {
         ...fileKey,
         when: filePromptsReady,
       }),
       // 入力欄では標準の編集・Undo を優先する。押し続けの繰り返しは元に戻す・やり直しだけ。
-      keyCommand("history.undo", "Mod+Z", { allowRepeat: true, ...menuScoped }),
-      keyCommand("history.redo", "Mod+Shift+Z", {
+      keyCommand("history.undo", { allowRepeat: true, ...menuScoped }),
+      keyCommand("history.redo", {
+        keyId: "history.redoShift",
+        shortcut: "Mod+Shift+Z",
         allowRepeat: true,
         ...menuScoped,
       }),
-      keyCommand("history.redo", "Mod+Y", {
-        keyId: "history.redoY",
+      keyCommand("history.redo", {
         allowRepeat: true,
         ...menuScoped,
       }),
       // W4: Ctrl+A／G／D はキャンバスの表示中だけ（共有側の canvasBlocked）。
       // Ctrl+G はブラウザの「次を検索」を出さないよう、使えないときも既定を止める。
-      keyCommand("selection.all", "Mod+A", menuScoped),
-      keyCommand("selection.group", "Mod+G", {
+      keyCommand("selection.all", menuScoped),
+      keyCommand("selection.group", {
         preventDefaultWhenDisabled: true,
         ...menuScoped,
       }),
-      keyCommand("selection.ungroup", "Mod+Shift+G", {
+      keyCommand("selection.ungroup", {
         preventDefaultWhenDisabled: true,
         ...menuScoped,
       }),
-      keyCommand("selection.duplicate", "Mod+D", menuScoped),
+      keyCommand("selection.duplicate", menuScoped),
     ];
   }
   // Ctrl+S・Shift+Ctrl+S は dispatcher に載せず、層（モーダル・メニュー）では止めない。
@@ -1142,9 +1140,7 @@
   ];
   function handleSaveShortcut(event: KeyboardEvent) {
     const command = saveShortcuts.find((command) =>
-      ["Ctrl", "Meta"].some((modifier) =>
-        matchShortcut(event, modifier + command.shortcut!.slice(3), "other"),
-      ),
+      matchShortcut(event, command.shortcut!, "other", "either"),
     );
     if (!command || event.isComposing || event.keyCode === 229) return false;
     const consumed = event.defaultPrevented;
@@ -4042,20 +4038,7 @@
       },
     },
   });
-  // 従来どおり Ctrl と Cmd（Meta）のどちらでも効かせる。上流の Mod は macOS では Cmd、
-  // それ以外では Ctrl だけなので、Mod+ の操作は Ctrl+ と Meta+ の二つに分けて登録する
-  // （tyaro/banto#669）。
-  shortcutDispatcher.register(
-    "designer",
-    designerShortcuts().flatMap((command) =>
-      command.shortcut?.startsWith("Mod+")
-        ? (["Ctrl", "Meta"] as const).map((modifier) => ({
-            ...command,
-            shortcut: modifier + command.shortcut!.slice(3),
-          }))
-        : [command],
-    ),
-  );
+  shortcutDispatcher.register("designer", designerShortcuts());
   const folderContextItems = $derived(designerActions.folderContext());
   const editToolbarGroups = $derived(designerActions.editGroups());
   const clipboardItems = $derived(designerActions.clipboardItems());

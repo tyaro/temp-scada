@@ -3,6 +3,8 @@
     label: string;
     icon: string;
     disabled?: boolean;
+    /** メニューに出すキー（表示だけ。`Mod+Z` の形。toolbar では使わない）。 */
+    shortcut?: string;
     /** Menus only: kept out of the toolbar so the 1440px row does not wrap. */
     menuOnly?: boolean;
     run: () => void;
