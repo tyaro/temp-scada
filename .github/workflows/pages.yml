@@ -1,0 +1,54 @@
+name: Pages
+# GitHub Pages のデモ（模擬値）を配信する。入口と仕組みは docs/guides/demo-pages.md。
+# リポジトリの Settings → Pages で Source を「GitHub Actions」にしておく。
+on:
+  push:
+    branches: [work]
+    paths:
+      - "apps/banto-scada/**"
+      - "examples/demo-*.project.json"
+      - "crates/scada-model/schema/**"
+      - "crates/scada-runtime/schema/**"
+      - "crates/scada-historian/schema/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - id: pages
+        uses: actions/configure-pages@v5
+      - name: Build the demo pages
+        env:
+          # 公開先のパス（例 /temp-scada）。末尾に / を付けて vite の base にする。
+          PAGES_BASE: ${{ steps.pages.outputs.base_path }}/
+        run: pnpm build:pages
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/banto-scada/dist-pages
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

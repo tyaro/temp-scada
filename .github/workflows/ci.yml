@@ -78,6 +78,7 @@ jobs:
       - run: pnpm check
       - run: pnpm test
       - run: pnpm build
+      - run: pnpm build:pages
 
   rust:
     needs: changes
@@ -95,6 +96,7 @@ jobs:
       - run: cargo run --locked -p scada-model -- validate examples/minimal.project.json
       - run: cargo run --locked -p scada-model -- validate examples/process.project.json
       - run: cargo run --locked -p scada-model -- validate examples/tag-binding.project.json
+      - run: cargo run --locked -p scada-model -- validate examples/demo-water.project.json
 
   native:
     needs: changes
