@@ -59,6 +59,10 @@ test("locked placements remain visible, exclude canvas/all/range selection, and 
   await expect(page.getByLabel("X", { exact: true })).toBeDisabled();
   await expect(button(page, "選択図形を削除")).toBeDisabled();
   await expect(button(page, "選択図形を複製")).toBeDisabled();
+  // キーも toolbar と同じ条件: ロック中の選択は Ctrl+D で複製しない。
+  const placed = await canvas(page).locator("[data-object-id]").count();
+  await page.keyboard.press("Control+d");
+  await expect(canvas(page).locator("[data-object-id]")).toHaveCount(placed);
   await expect(canvas(page).locator("[data-resize-handle]")).toHaveCount(0);
   await expect(rect).toBeVisible();
   await expect(rect).toHaveAttribute("pointer-events", "none");

@@ -117,7 +117,7 @@ FolderDialogとfolder ContextActionsはAppのrootに置いたまま、controller
 
 ## 共通操作の現行境界
 
-`designer/controllers/designer-actions.ts`は状態を持たないaction builder。Appの`$derived`から呼び、toolbar・編集メニュー・右クリックでは同じ編集／clipboard項目を共有する。disabledとラベルは生成時のgetterで追従し、run callback内の選択ID・screen・context座標・originは実行時に読む。生成時の値を閉じ込めない。
+`designer/controllers/designer-actions.ts`は状態を持たないaction builder。Appの`$derived`から呼び、toolbar・編集メニュー・右クリックでは同じ編集／clipboard項目を共有する。disabledとラベルは生成時のgetterで追従し、run callback内の選択ID・screen・context座標・originは実行時に読む。生成時の値を閉じ込めない。キーと共有する操作（新規・開く・保存・Undo/Redo・すべて選択・複製・削除・グループ化・解除・選択範囲を表示・ヘルプ）は同ファイルの`commands`（Banto `CommandSpec`、`DesignerCommandId`）に名前・実行・使える条件を一度だけ書き、toolbar・メニューの項目と`App.svelte`の`keyCommand`（キーだけの保護を足してdispatcherへ登録）がそこから作る。
 
 Appはキー／クリックイベントの受付、現在情報と既存callbackの供給、Project・履歴・draft・共通editを所有する。ファイル・画像・clipboardの操作は同期で各controllerへ渡し、ブラウザのuser activationを維持する。新しいaction registry・非同期wrapper・編集コマンドの分類は追加しない。コマンド分類とhandler分割は次節のR5の境界で進める。
 
