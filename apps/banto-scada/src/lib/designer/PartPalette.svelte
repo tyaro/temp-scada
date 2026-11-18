@@ -120,6 +120,13 @@
         "円や楕円を描画します。位置・サイズ・色をプロパティで設定できます。",
     },
     {
+      kind: "polygon",
+      label: "多角形を追加",
+      keywords: "多角形 三角形 台形 ひし形 polygon",
+      description:
+        "直線の辺の塗りつぶした多角形を描画します。初期形は三角形です。位置・サイズ・色をプロパティで設定できます。",
+    },
+    {
       kind: "text",
       label: "Text を追加",
       keywords: "文字 テキスト text",
@@ -553,6 +560,9 @@
                           cy="20"
                           rx="22"
                           ry="14"
+                        />
+                      {:else if part.kind === "polygon"}<polygon
+                          points="30,6 52,34 8,34"
                         />
                       {:else if part.kind === "text"}<text
                           x="21"

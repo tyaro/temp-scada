@@ -5,6 +5,11 @@
   import { previewEquipmentLink } from "./equipment-read-details";
   import { untrack } from "svelte";
   import {
+    polygonHitStrokeWidth,
+    polygonLocalPoints,
+    polygonPointsAttribute,
+  } from "./polygon";
+  import {
     getBounds,
     getLocalBounds,
     type Point,
@@ -822,7 +827,24 @@
             {trends}
           />
         {/if}
-        {#if linked}
+        {#if linked && "width" in visual && visual.shape.type === "polygon"}
+          {@const outline = polygonPointsAttribute(
+            polygonLocalPoints({ ...visual, shape: visual.shape }),
+          )}
+          <polygon
+            class="equipment-hit"
+            points={outline}
+            fill="transparent"
+            pointer-events="all"
+          /><polygon
+            points={outline}
+            fill="none"
+            stroke="transparent"
+            stroke-width={polygonHitStrokeWidth(visual.shape)}
+            stroke-linejoin="round"
+            pointer-events="stroke"
+          />
+        {:else if linked}
           {@const hit = getLocalBounds(visual)}
           <rect
             class="equipment-hit"
@@ -844,6 +866,20 @@
             fill="none"
             stroke="transparent"
             stroke-width={Math.max(12, visual.shape.strokeWidth + 8)}
+          />
+        {:else if "width" in visual && visual.shape.type === "polygon"}
+          <!-- 多角形は形そのもので当たる。枠の空いた隅は下の配置へ通し、塗りも枠線もない形は輪郭の近くでつかめる。 -->
+          {@const outline = polygonPointsAttribute(
+            polygonLocalPoints({ ...visual, shape: visual.shape }),
+          )}
+          <polygon
+            transform={rotationTransform(visual)}
+            points={outline}
+            fill="transparent"
+            stroke="transparent"
+            stroke-width={polygonHitStrokeWidth(visual.shape)}
+            stroke-linejoin="round"
+            pointer-events="all"
           />
         {:else}
           {@const hit = getLocalBounds(visual)}

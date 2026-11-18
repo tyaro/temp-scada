@@ -34,6 +34,7 @@ import type {
 export type AddKind =
   | "rectangle"
   | "ellipse"
+  | "polygon"
   | "text"
   | "line"
   | "pipe"

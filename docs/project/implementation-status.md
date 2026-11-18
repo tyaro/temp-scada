@@ -506,7 +506,7 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 ## 塗りつぶした多角形
 
-2026-11-19の#260 P1b-1で、面の図形`polygon`（枠に対する0〜1の頂点3〜64点、矩形・楕円と同じ`paint`・`stateColor`）の保存形式と検証をschema・TS・Rustに追加した。外接矩形を枠に一致させ、隣り合う同じ点と一直線の形を拒否する。共通の契約ケースは`examples/polygon-cases.json`。描画・挿入・編集は未実装（P1b-2・P1c）。schemaVersionは0.37.0のまま。[設計](../design/graphics/polygon.md)。
+2026-11-19の#260 P1b-1で、面の図形`polygon`（枠に対する0〜1の頂点3〜64点、矩形・楕円と同じ`paint`・`stateColor`）の保存形式と検証をschema・TS・Rustに追加した。外接矩形を枠に一致させ、隣り合う同じ点と一直線の形を拒否する。共通の契約ケースは`examples/polygon-cases.json`。同日のP1b-2で、描画（`Primitive.svelte`の`<polygon>`、頂点は実寸へ直す。塗り・枠線・状態色・Symbolの単色は矩形・楕円と共用）、描画の外形（miterの先端を含む`getLocalBounds`と枠線のはみ出しの警告）、形そのものの当たり判定（三角形の空いた隅は下の配置へ通し、塗りも枠線もない形も輪郭の近くでつかめる）、部品パレット・挿入メニュー・お気に入り・コマンド`add`からの挿入（初期形は三角形）を加えた。サンプルは`examples/shape-paint.project.json`の2つ。頂点の編集（Inspectorの欄・ドラッグ）は未実装（P1c・P2）。schemaVersionは0.37.0のまま。[設計](../design/graphics/polygon.md)。
 
 ## 表
 

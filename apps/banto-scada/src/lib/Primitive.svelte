@@ -18,6 +18,11 @@
   import type { TableSlotResolver } from "./table-cell-slot";
   import { isAreaShape, type ScreenObject } from "./project";
   import {
+    POLYGON_MITER_LIMIT,
+    polygonLocalPoints,
+    polygonPointsAttribute,
+  } from "./polygon";
+  import {
     formatSlotText,
     presentNumeric,
     type TagReadings,
@@ -251,6 +256,26 @@
         object.shape.paint.stroke?.width ?? 1,
       )}
       stroke-linecap={lineCap(object.shape.paint.stroke?.lineStyle)}
+    />
+  {:else if object.shape.type === "polygon"}<polygon
+      points={polygonPointsAttribute(
+        polygonLocalPoints({ ...object, shape: object.shape }),
+      )}
+      fill={fillColor}
+      stroke={object.shape.paint.stroke
+        ? (color ?? object.shape.paint.stroke.color)
+        : "none"}
+      fill-opacity={fillAlpha}
+      fill-rule="nonzero"
+      stroke-opacity={object.shape.paint.stroke?.alpha}
+      stroke-width={object.shape.paint.stroke?.width}
+      stroke-dasharray={lineDash(
+        object.shape.paint.stroke?.lineStyle,
+        object.shape.paint.stroke?.width ?? 1,
+      )}
+      stroke-linecap={lineCap(object.shape.paint.stroke?.lineStyle)}
+      stroke-linejoin="miter"
+      stroke-miterlimit={String(POLYGON_MITER_LIMIT)}
     />
   {:else if object.shape.type === "text"}
     {#if !bound && !metadata && (object.shape.text.includes("\n") || (object.shape.style.wrap === "word" && object.shape.text.length > 0))}

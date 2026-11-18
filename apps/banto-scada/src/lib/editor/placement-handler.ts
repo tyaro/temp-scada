@@ -196,7 +196,17 @@ export function applyObjectCreation(
               style: { fontSize: 22.4, fontWeight: "normal", align: "left" },
             }
           : {
-              type: command.kind,
+              ...(command.kind === "polygon"
+                ? {
+                    type: "polygon" as const,
+                    // 初期形は三角形。頂点は枠に対する割合。
+                    points: [
+                      { x: 0.5, y: 0 },
+                      { x: 1, y: 1 },
+                      { x: 0, y: 1 },
+                    ],
+                  }
+                : { type: command.kind }),
               paint: {
                 fill: {
                   enabled: true,

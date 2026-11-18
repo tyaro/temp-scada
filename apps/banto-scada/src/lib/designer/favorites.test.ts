@@ -66,4 +66,16 @@ describe("favorite UI preferences", () => {
     expect(definition.name).toBe("ポンプA");
     expect(keys).toEqual([sharedKey, "basic:rectangle", "builtin:pump"]);
   });
+  it("keeps the polygon as a basic favorite on screens and in definitions", () => {
+    for (const allowSymbols of [true, false])
+      expect(
+        availableFavorites(["basic:polygon"], projectA, [], allowSymbols),
+      ).toEqual([
+        {
+          key: "basic:polygon",
+          part: { type: "basic", kind: "polygon" },
+          label: "多角形",
+        },
+      ]);
+  });
 });
