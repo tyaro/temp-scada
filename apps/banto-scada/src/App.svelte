@@ -154,6 +154,7 @@
     Menu,
     MenuGroup,
     MenuItem,
+    shouldHandleShortcut,
   } from "@banto/ui";
   import { notify, type NotificationKind } from "@banto/admin-core";
   import {
@@ -1003,14 +1004,9 @@
       !event.shiftKey
     ) {
       if (
-        !event.repeat &&
-        !event.isComposing &&
-        event.keyCode !== 229 &&
         !helpOpen &&
-        !document.querySelector(
-          '[role="dialog"]:not([aria-modal="false"]):not([data-layer-inactive="true"]),[popover]:popover-open',
-        ) &&
-        clipboardScope(event.target)
+        clipboardScope(event.target) &&
+        shouldHandleShortcut(event)
       ) {
         event.preventDefault();
         showSelection();
@@ -1021,21 +1017,18 @@
     if (event.key === "F1" || event.key === "F2") {
       if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
         return;
+      // F1／F2 は入力欄の中でも効く（ブラウザのヘルプ等は常に止める）。
+      const allowed = shouldHandleShortcut(event, { allowInEditable: true });
       event.preventDefault();
       if (
-        event.repeat ||
-        event.isComposing ||
-        event.keyCode === 229 ||
+        !allowed ||
         busy ||
         clipboard.busy ||
         drafts.pending ||
         replacement ||
         helpOpen ||
         inspectorController?.isTagPickerOpen() ||
-        equipmentLibrary?.isTagPickerOpen() ||
-        document.querySelector(
-          '[role="dialog"]:not([aria-modal="false"]):not([data-layer-inactive="true"])',
-        )
+        equipmentLibrary?.isTagPickerOpen()
       )
         return;
       if (event.key === "F1") helpOpen = true;
@@ -1116,8 +1109,6 @@
     }
     if (
       event.key === "Delete" &&
-      !event.repeat &&
-      !event.isComposing &&
       !event.ctrlKey &&
       !event.metaKey &&
       !event.altKey &&
@@ -1128,7 +1119,8 @@
       !drafts.pending &&
       !replacement &&
       !positionPlacement &&
-      clipboardScope(event.target)
+      clipboardScope(event.target) &&
+      shouldHandleShortcut(event)
     ) {
       event.preventDefault();
       if (!hiddenCanvasMutation(event.target)) removeSelection();
@@ -1138,18 +1130,9 @@
       return;
     const key = event.key.toLowerCase();
     if (["n", "o"].includes(key) && !event.shiftKey) {
+      const allowed = shouldHandleShortcut(event, { allowInEditable: true });
       event.preventDefault();
-      if (
-        event.repeat ||
-        busy ||
-        drafts.pending ||
-        replacement ||
-        helpOpen ||
-        document.querySelector(
-          '[role="dialog"]:not([aria-modal="false"]):not([data-layer-inactive="true"])',
-        )
-      )
-        return;
+      if (!allowed || busy || drafts.pending || replacement || helpOpen) return;
       if (key === "n") projectFiles.newProject();
       else projectFiles.openProjectFile();
       return;
@@ -1162,10 +1145,9 @@
       return;
     }
     if (busy || mode !== "edit" || drafts.pending || replacement) return;
-    const target = event.target;
+    // 入力欄では標準の編集・Undo を優先する。押し続けの繰り返しは元に戻す・やり直しだけ。
     if (
-      target instanceof Element &&
-      target.closest("input,textarea,select,[contenteditable]")
+      !shouldHandleShortcut(event, { allowRepeat: key === "z" || key === "y" })
     )
       return;
     if (key === "z") {

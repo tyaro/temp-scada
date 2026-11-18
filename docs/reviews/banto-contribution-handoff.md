@@ -20,6 +20,7 @@ Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v
 | [#433](https://github.com/tyaro/banto/issues/433) 操作の所有者・取消         | `@banto/dock-svelte`の操作の持ち主とキーボード操作                     | `@banto/dock-svelte`（なし）                 | `designer/floating-panel*.svelte.ts`、`PanelResizeHandle.svelte`          | 同上                                                                                               |
 | [#434](https://github.com/tyaro/banto/issues/434) 配置の検証・到達性         | `DockState`の`hydrate`の検証、`DockHost`の`clamp`                      | `@banto/dock-svelte`（なし）                 | `designer/floating-panel-layout.ts`                                       | 同上                                                                                               |
 
+- #435の1段目（2026-11-18）: `App.svelte`の`shortcut`のF・F1/F2・Delete・Ctrl+N/O・Ctrl+Z/Y/A/G/Dの保護（IME変換中・`repeat`・入力欄・モーダル／メニュー）を`@banto/ui`の`shouldHandleShortcut`へ置き換えた。変わった点: 押し続けのCtrl+A/G/Dと`keyCode 229`のCtrl+キーは無視、`aria-modal="true"`の層の表示中はCtrl+Z/Y/A/G/Dも効かない、F1/F2・Ctrl+N/Oはメニューの表示中も止まる、チェックボックスは入力欄に数えない。Ctrl+Sの扱い（モーダル中の保存）と操作定義・`createShortcutDispatcher`への移行は後の区切り。試験は`e2e/history.spec.ts`の「shared guards」。
 - Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらない。Banto Issueは未起票のまま。
 - 置き換えの各区切りでは、既存の入力保護・資源解放・保存失敗のE2Eを通してから手元の実装を消す（[引渡しの方法](#引渡しの方法)の3）。
 - 新しい還元候補（パネルの幅・高さの保存と「標準レイアウトに戻す」、作業タブの入力保護など）は、上の採用で上流のAPIとの差が見えてから起票する。
