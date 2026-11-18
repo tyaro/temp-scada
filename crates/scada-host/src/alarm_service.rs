@@ -1046,7 +1046,9 @@ impl AlarmService {
             })
             .await
             .unwrap_or(Pending::UNKNOWN);
-        *cache = Some(PendingCache {
+        // A failed read may recover without changing the file (a permission or
+        // a lock coming back), so only a known result is reused.
+        *cache = (!pending.unknown).then(|| PendingCache {
             path,
             modified,
             len: metadata.len(),
@@ -2339,6 +2341,25 @@ mod tests {
 
         // It comes back with the applied Project: known again.
         std::fs::write(&path, serde_json::to_vec(&edited).unwrap()).unwrap();
+        let snapshot = service.snapshot().await.unwrap();
+        assert!(!snapshot.pending_unknown);
+        assert!(snapshot.pending_display_changes);
+
+        // A read that fails and then recovers with the same size and mtime
+        // (a permission coming back) is read again, not answered from cache.
+        let good = std::fs::read(&path).unwrap();
+        let mut broken = good.clone();
+        broken[0] = b'X';
+        std::fs::write(&path, &broken).unwrap();
+        let failed_at = std::fs::metadata(&path).unwrap().modified().unwrap();
+        assert!(service.snapshot().await.unwrap().pending_unknown);
+        std::fs::write(&path, &good).unwrap();
+        std::fs::File::options()
+            .write(true)
+            .open(&path)
+            .unwrap()
+            .set_modified(failed_at)
+            .unwrap();
         let snapshot = service.snapshot().await.unwrap();
         assert!(!snapshot.pending_unknown);
         assert!(snapshot.pending_display_changes);
