@@ -70,6 +70,7 @@
     setAlarmViewSnapshot,
   } from "./lib/alarm-view-state.svelte";
   import { AlarmMirror, type AlarmSnapshot } from "./lib/alarm-mirror";
+  import { ALARM_STATUS_LABELS, labelOf } from "./lib/alarm-banner";
   import { AlarmRefreshQueue } from "./lib/alarm-refresh-queue";
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
@@ -2064,7 +2065,7 @@
     if (alarmReadError) return "警報: 状態を取得できません";
     if (!alarmSnapshot) return "警報: 確認中";
     if (alarmSnapshot.status !== "running")
-      return `警報: ${alarmSnapshot.status}`;
+      return `警報: ${labelOf(ALARM_STATUS_LABELS, alarmSnapshot.status)}`;
     // Not monitoring outranks the history outage; both are shown together.
     const history = alarmSnapshot.historyWriteFailure
       ? `履歴に書けません（未記録 ${alarmSnapshot.historyWriteFailure.unrecordedEvents} 件）`
@@ -4328,7 +4329,10 @@
       <button
         type="button"
         onclick={() => void projectFiles.applyAlarm()}
-        title="開いている保存済みProjectの警報定義を適用">警報を適用</button
+        disabled={projectFiles.alarmApplying}
+        aria-busy={projectFiles.alarmApplying}
+        title="開いている保存済みProjectの警報定義を適用"
+        >{projectFiles.alarmApplying ? "適用中…" : "警報を適用"}</button
       >
     {/if}
     <!-- メニューバー表示中は同じ項目の重複になるので、☰ は隠しているときだけ出す。 -->

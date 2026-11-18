@@ -68,6 +68,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
 
   let exporting = $state(false);
   let exportingName = $state("");
+  let alarmApplying = $state(false);
   let lastUnavailableReason: string | null = null;
   const saveLabel = $derived(
     exporting
@@ -388,6 +389,8 @@ export function createProjectFilesController(host: ProjectFilesHost) {
   }
   async function applyAlarm() {
     if (!host.fileService?.apply) return;
+    // 連打で同じ適用を重ねて送らない。切替の確認と再送も含めて 1 回が終わるまで受けない。
+    if (alarmApplying) return;
     const requestedFileId = fileId;
     if (requestedFileId === null) {
       host.report(
@@ -396,6 +399,7 @@ export function createProjectFilesController(host: ProjectFilesHost) {
       );
       return;
     }
+    alarmApplying = true;
     try {
       await reportAlarmApply(
         await host.fileService.apply(requestedFileId, []),
@@ -406,6 +410,8 @@ export function createProjectFilesController(host: ProjectFilesHost) {
         "error",
         `警報定義を適用できませんでした。${applyErrorText(error)}。`,
       );
+    } finally {
+      alarmApplying = false;
     }
   }
   async function writeProject(asNew = false) {
@@ -493,6 +499,10 @@ export function createProjectFilesController(host: ProjectFilesHost) {
     },
     get lastExport() {
       return lastExport;
+    },
+    /** 「警報を適用」の要求が終わっていない間 true。 */
+    get alarmApplying() {
+      return alarmApplying;
     },
     /** Whether saves go to the desktop's file host (else a download). */
     native,

@@ -253,6 +253,15 @@ test("a badge follows the mocked alarm feed through every state", async ({
   // 監視中の Project に戻れば状態が出る。
   await setSnapshot(snapshot(3, 1, { active: true, acked: false }));
   await name("未確認（発生中）");
+
+  // 止まった Engine の状態コードは、ヘッダーで日本語の文言にして出す。
+  await setSnapshot({
+    ...snapshot(4, 1, { active: false, acked: true }),
+    status: "noConditions",
+  });
+  await expect(
+    page.getByText("警報: 警報の定義がありません", { exact: true }),
+  ).toBeVisible();
 });
 
 test("a badge copies and pastes onto the same alarm, and is refused where the alarm is missing", async ({
