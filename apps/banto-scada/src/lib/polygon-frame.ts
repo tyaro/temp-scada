@@ -1,5 +1,6 @@
 import { validatePolygonPoints, type Point } from "./project";
-import { placementVector } from "./rotation";
+import { objectToWorld, placementVector, worldToObject } from "./rotation";
+import { vertexPosition } from "./snap";
 
 /** 枠の作り直しに要る配置の部分（多角形の配置）。 */
 export interface PolygonFrame {
@@ -153,4 +154,73 @@ export function parsePolygonVertexText(
     return { x: Number(parts[0]), y: Number(parts[1]) };
   });
   return changed ? edits : undefined;
+}
+
+/** i 番目の頂点を実寸の点へ置き換え、ほかの頂点は残す編集の列。 */
+export function polygonVertexMove(
+  object: PolygonFrame,
+  index: number,
+  point: Point,
+): PolygonVertexEdit[] {
+  return object.shape.points.map((_, i) =>
+    i === index ? { x: point.x, y: point.y } : { keep: i },
+  );
+}
+
+/**
+ * ドラッグ中の頂点の行き先（今の枠の左上を原点とする実寸）。Polyline と同じ遊び（0.5）と
+ * グリッドへの吸着で、吸着は画面上の座標で行う。回転・反転は配置の変換で戻す。
+ */
+export function dragPolygonVertex(
+  object: PolygonFrame,
+  index: number,
+  delta: Point,
+  step: number | null,
+): Point {
+  const vertex = object.shape.points[index];
+  if (!vertex || ![delta.x, delta.y].every(Number.isFinite))
+    throw new Error("頂点と有限の移動量が必要です");
+  const local = { x: vertex.x * object.width, y: vertex.y * object.height };
+  if (Math.hypot(delta.x, delta.y) <= 0.5) return local;
+  const layout = polygonLayout(object);
+  const start = objectToWorld(layout, local);
+  return worldToObject(
+    layout,
+    vertexPosition({ x: 0, y: 0 }, start, delta, step),
+  );
+}
+
+/**
+ * ドラッグ中の見た目。外接矩形・退化を検査せず、今の枠のまま i 番目の頂点だけを動かす
+ * （割合は 0〜1 の外へ出てよい。描画は実寸へ直すので形はそのまま見える）。
+ */
+export function previewPolygonVertex<T extends PolygonFrame>(
+  object: T,
+  index: number,
+  point: Point,
+): T {
+  return {
+    ...object,
+    shape: {
+      ...object.shape,
+      points: object.shape.points.map((p, i) =>
+        i === index
+          ? { x: point.x / object.width, y: point.y / object.height }
+          : p,
+      ),
+    },
+  };
+}
+
+/** 幾何の関数へ渡す枠だけの配置（割合の点を渡さないため、shape を外す）。 */
+export function polygonLayout(object: PolygonFrame) {
+  return {
+    x: object.x,
+    y: object.y,
+    width: object.width,
+    height: object.height,
+    rotation: object.rotation,
+    flipX: object.flipX,
+    flipY: object.flipY,
+  };
 }

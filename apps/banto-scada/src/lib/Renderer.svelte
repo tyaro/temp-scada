@@ -10,6 +10,11 @@
     polygonPointsAttribute,
   } from "./polygon";
   import {
+    dragPolygonVertex,
+    polygonLayout,
+    previewPolygonVertex,
+  } from "./polygon-frame";
+  import {
     getBounds,
     getLocalBounds,
     type Point,
@@ -364,6 +369,16 @@
   function rawPreviewObject(object: ScreenObject): ScreenObject {
     if ("width" in object && resizeDrag?.id === object.id)
       return { ...object, ...resizeDrag.current };
+    if (
+      "width" in object &&
+      object.shape.type === "polygon" &&
+      vertexDrag?.id === object.id
+    )
+      return previewPolygonVertex(
+        { ...object, shape: object.shape },
+        vertexDrag.index,
+        vertexDrag.current,
+      );
     if ("width" in object || vertexDrag?.id !== object.id) return object;
     const geometry = replaceRotatedVertex(
       object,
@@ -418,7 +433,7 @@
       !editable ||
       object.locked ||
       object.visible === false ||
-      object.shape.type !== "polyline" ||
+      (object.shape.type !== "polyline" && object.shape.type !== "polygon") ||
       event.ctrlKey ||
       event.metaKey ||
       event.altKey
@@ -440,6 +455,34 @@
     event.preventDefault();
     event.stopPropagation();
     const current = screen.objects.find((item) => item.id === object.id);
+    if (
+      current &&
+      !current.locked &&
+      current.visible !== false &&
+      "width" in current &&
+      current.shape.type === "polygon" &&
+      current.shape.points[index]
+    ) {
+      // 多角形は画面上の座標で動かし、今の枠の左上を原点とする実寸へ戻す。
+      const layout = polygonLayout({ ...current, shape: current.shape });
+      const vertex = current.shape.points[index];
+      const start = objectToWorld(layout, {
+        x: vertex.x * current.width,
+        y: vertex.y * current.height,
+      });
+      const amount = event.shiftKey ? 10 : 1;
+      const target = { ...start };
+      if (direction.x)
+        target.x = snapEnabled
+          ? nextGridCoordinate(start.x, direction.x, gridSize)
+          : start.x + direction.x * amount;
+      if (direction.y)
+        target.y = snapEnabled
+          ? nextGridCoordinate(start.y, direction.y, gridSize)
+          : start.y + direction.y * amount;
+      onvertexmove?.(object.id, index, worldToObject(layout, target));
+      return;
+    }
     if (
       !current ||
       current.locked ||
@@ -549,7 +592,7 @@
         !object ||
         object.locked ||
         object.visible === false ||
-        object.shape.type !== "polyline" ||
+        (object.shape.type !== "polyline" && object.shape.type !== "polygon") ||
         !start ||
         !object.shape.points[index] ||
         connectedVertex(object, index)
@@ -557,7 +600,12 @@
         return;
       event.preventDefault();
       (event.currentTarget as SVGSVGElement).setPointerCapture(event.pointerId);
-      const original = { ...object.shape.points[index] };
+      const vertex = object.shape.points[index];
+      // 多角形の頂点は、今の枠の左上を原点とする実寸で持つ。
+      const original =
+        "width" in object && object.shape.type === "polygon"
+          ? { x: vertex.x * object.width, y: vertex.y * object.height }
+          : { ...vertex };
       interactionOwner = screen;
       vertexDrag = {
         id: object.id,
@@ -640,6 +688,13 @@
           const object = screen.objects.find(
             (object) => object.id === vertexDrag!.id,
           )!;
+          if ("width" in object && object.shape.type === "polygon")
+            return dragPolygonVertex(
+              { ...object, shape: object.shape },
+              vertexDrag!.index,
+              delta,
+              step,
+            );
           if (object.shape.type !== "polyline") return vertexDrag!.original;
           return moveRotatedVertex(
             object as typeof object & { shape: typeof object.shape },
@@ -961,6 +1016,32 @@
             aria-disabled={connectedVertex(object, index)}
             tabindex={connectedVertex(object, index) ? -1 : 0}
             aria-label={`頂点 ${index + 1}${connectedVertex(object, index) ? "（接続中・移動するには接続を解除）" : "（方向キーで移動）"}`}
+            onkeydown={(event) => vertexKey(event, object, index)}
+          />
+        {/each}
+      {/if}
+    {/if}
+    {#if object && !object.locked && object.visible !== false && "width" in object && object.shape.type === "polygon"}
+      {@const visual = previewObject(object)}
+      {#if "width" in visual && visual.shape.type === "polygon"}
+        {@const layout = polygonLayout({ ...visual, shape: visual.shape })}
+        {#each polygonLocalPoints( { ...visual, shape: visual.shape } ) as p, index}
+          {@const world = objectToWorld(layout, p)}
+          <!-- 枠の角のサイズ変更の四角が見えてつかめるよう、折れ線より小さい丸にする。 -->
+          <circle
+            class="vertex"
+            cx={world.x}
+            cy={world.y}
+            r={4 / viewScale}
+            fill={background}
+            stroke="var(--canvas-accent)"
+            stroke-width="2"
+            vector-effect="non-scaling-stroke"
+            data-vertex-object-id={object.id}
+            data-vertex-index={index}
+            role="button"
+            tabindex="0"
+            aria-label={`頂点 ${index + 1}（方向キーで移動）`}
             onkeydown={(event) => vertexKey(event, object, index)}
           />
         {/each}

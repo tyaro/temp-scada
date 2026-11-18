@@ -328,3 +328,45 @@ describe("多角形の頂点の編集（update の polygonVertices）", () => {
     ).toThrow("多角形以外");
   });
 });
+
+describe("多角形の頂点の移動（move-vertex）", () => {
+  const original = parseProject(JSON.stringify(minimal));
+  const screenId = original.screens[0].id;
+  const added = applyCommand(
+    original,
+    { type: "add", screenId, kind: "polygon", center: { x: 600, y: 400 } },
+    "edit",
+  );
+  const polygon = added.screens[0].objects.at(-1)!;
+  const move = (index: number, point: { x: number; y: number }) =>
+    applyCommand(
+      added,
+      { type: "move-vertex", screenId, objectId: polygon.id, index, point },
+      "edit",
+    ).screens[0].objects.at(-1)!;
+
+  it("実寸の点へ動かし、枠を作り直す", () => {
+    expect(move(0, { x: -40, y: -20 })).toMatchObject({
+      x: polygon.x - 40,
+      y: polygon.y - 20,
+      width: 200,
+      height: 120,
+      shape: {
+        points: [
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+          { x: 0.2, y: 1 },
+        ],
+      },
+    });
+  });
+
+  it("一直線になる移動は拒否し、Project を変えない", () => {
+    expect(() => move(0, { x: 80, y: 100 })).toThrow("1以上");
+    expect(added.screens[0].objects.at(-1)).toEqual(polygon);
+  });
+
+  it("無い頂点は拒否する", () => {
+    expect(() => move(3, { x: 0, y: 0 })).toThrow("頂点が見つかりません");
+  });
+});

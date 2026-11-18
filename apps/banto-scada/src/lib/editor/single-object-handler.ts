@@ -9,7 +9,7 @@ import {
 } from "../project";
 import { normalizeRotation, replaceRotatedVertex } from "../rotation";
 import { setFlip } from "../flip";
-import { reframePolygon } from "../polygon-frame";
+import { polygonVertexMove, reframePolygon } from "../polygon-frame";
 import { setLineStyle } from "../line-style";
 import { parseLineArrow } from "../line-arrow";
 import { validateLevelShape } from "../level";
@@ -79,8 +79,28 @@ export function applySingleObjectCommand(
     object.shape.symbolId = copy.id;
   } else if (command.type === "move-vertex") {
     const shape = screen.objects[index].shape;
+    const target = screen.objects[index];
+    if ("width" in target && target.shape.type === "polygon") {
+      const polygon = { ...target, shape: target.shape };
+      if (
+        !Number.isInteger(command.index) ||
+        !target.shape.points[command.index]
+      )
+        throw new Error("頂点が見つかりません");
+      const frame = reframePolygon(
+        polygon,
+        polygonVertexMove(polygon, command.index, command.point),
+      );
+      if (!frame.ok) throw new Error(frame.reason);
+      target.x = frame.x;
+      target.y = frame.y;
+      target.width = frame.width;
+      target.height = frame.height;
+      target.shape.points = frame.points;
+      return "finish";
+    }
     if (shape.type !== "polyline")
-      throw new Error("折れ線の頂点だけを移動できます");
+      throw new Error("折れ線と多角形の頂点だけを移動できます");
     if (
       !Number.isInteger(command.index) ||
       command.index < 0 ||

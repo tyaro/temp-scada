@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  dragPolygonVertex,
   parsePolygonVertexText,
+  polygonLayout,
+  polygonVertexMove,
+  previewPolygonVertex,
   polygonVertexText,
   reframePolygon,
   type PolygonFrame,
@@ -240,5 +244,51 @@ describe("polygon vertex text", () => {
     expect(() => parsePolygonVertexText("80,0\n160\n0,100", object)).toThrow(
       "x,y",
     );
+  });
+});
+
+describe("dragPolygonVertex", () => {
+  it("returns the local vertex inside the dead zone", () => {
+    const object = frame(37, true, false);
+    expect(dragPolygonVertex(object, 0, { x: 0.3, y: 0.3 }, null)).toEqual({
+      x: 80,
+      y: 0,
+    });
+  });
+  for (const rotation of [0, 90, 37])
+    for (const flipX of [false, true])
+      it(`follows the pointer on screen (rotation ${rotation}, flipX ${flipX})`, () => {
+        const object = frame(rotation, flipX, !flipX);
+        const delta = { x: 25, y: -40 };
+        const point = dragPolygonVertex(object, 0, delta, null);
+        const layout = polygonLayout(object);
+        const before = objectToWorld(layout, { x: 80, y: 0 }),
+          after = objectToWorld(layout, point);
+        expect(after.x - before.x).toBeCloseTo(delta.x, 9);
+        expect(after.y - before.y).toBeCloseTo(delta.y, 9);
+        // 確定すると、動かした頂点はその位置に、ほかの頂点は元の位置に残る。
+        const next = apply(object, polygonVertexMove(object, 0, point));
+        for (const [i, expected] of [
+          [0, after],
+          [1, world(object, 1)],
+          [2, world(object, 2)],
+        ] as const) {
+          const got = world(next, i);
+          expect(Math.abs(got.x - expected.x)).toBeLessThan(1e-9);
+          expect(Math.abs(got.y - expected.y)).toBeLessThan(1e-9);
+        }
+      });
+  it("snaps the screen position to the grid", () => {
+    const object = frame(0, false, false);
+    const point = dragPolygonVertex(object, 0, { x: 13, y: 9 }, 10);
+    expect(object.x + point.x).toBe(130);
+    expect(object.y + point.y).toBe(0);
+  });
+  it("previews without checking the bounding box", () => {
+    const object = frame(0, false, false);
+    const preview = previewPolygonVertex(object, 0, { x: -40, y: 50 });
+    expect(preview.width).toBe(160);
+    expect(preview.shape.points[0]).toEqual({ x: -0.25, y: 0.5 });
+    expect(preview.shape.points[1]).toBe(object.shape.points[1]);
   });
 });
