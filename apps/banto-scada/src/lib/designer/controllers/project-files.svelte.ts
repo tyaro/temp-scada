@@ -281,8 +281,8 @@ export function createProjectFilesController(host: ProjectFilesHost) {
           "info",
           afterSave(
             saved
-              ? "Hubへの接続処理中のため警報定義は適用していません。接続後に明示的に適用してください。"
-              : "Hubへの接続処理中のため警報定義は適用していません。接続後に再度適用してください。",
+              ? "ほかの警報の操作（Hubへの接続・適用など）の途中のため、警報定義は適用していません。終わってから明示的に適用してください。"
+              : "ほかの警報の操作（Hubへの接続・適用など）の途中のため、警報定義は適用していません。終わってから再度適用してください。",
           ),
         );
       if (result?.status === "skippedEndpointChanged")
