@@ -36,6 +36,7 @@ docs/
 | 今使える機能・残り       | [実装状況](project/implementation-status.md)。正式Runtime・serverは未完成                                                 |
 | 次の判断・上流待ち・統合 | [開発計画](project/development-plan.md)と[単体開発工程表](project/upstream-independent-plan.md)                           |
 | 操作・ショートカット     | [操作ガイド](guides/user-guide.md)                                                                                        |
+| ブラウザのデモ（模擬値） | [GitHub Pages のデモ](guides/demo-pages.md)。題材の Project・模擬値の筋書き・配信                                         |
 | コード・責務・関連テスト | [コード対応表](engineering/code-map.md)                                                                                   |
 | 過去の仕様・実装・検証   | [実装履歴](history/implementation-history.md)。当時の「次は」「未実装」を現在情報として読まない                           |
 | 構造整理の不変条件・結果 | [リファクタリング計画](engineering/maintenance-refactoring-plan.md)                                                       |

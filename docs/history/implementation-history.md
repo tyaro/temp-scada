@@ -4,6 +4,14 @@
 
 開発計画から日付付き記録を移した。元ファイルには従来の見出しanchorと、折りたたみ式の移動先案内を残している。
 
+## GitHub Pages のデモ 題材 1 排水処理設備（2026-11-18）
+
+2026-11-18 のユーザー指示で、トップページ（GitHub Pages）に SCADA の機能と表現力を見せるデモを作る。題材は 3 つ（排水処理・搬送・プレス工場の生産進捗）で、題材ごとに 1 PR に分ける。オーナー提供の実プラントの参照画面には寄せず、架空の工程にした。
+
+- 土台: Pages 用の別の入口（`apps/banto-scada/pages/`・`src/demo/`）、時刻だけで値が決まる筋書きと、そこから作る模擬値の読取 source・警報 feed・履歴 service、トップページ、Pages 向けビルド（`pnpm build:pages`）と配信の workflow。`App` に起動時の Project と表示を受ける prop `startup` を足した。保存形式は変えていない（0.37.0）。
+- 題材 1: `examples/demo-water.project.json`（全体フロー・原水ポンプ場・計測一覧と運転表示の枠。生成は `scripts/demo-projects/`）と 3 分で一巡する筋書き。
+- 検証: 契約試験（`src/demo/demo.test.ts`）と e2e（`e2e/demo-pages.spec.ts`、明・暗）。仕組みと画面写真は[GitHub Pages のデモ](../guides/demo-pages.md)。
+
 ## 警報の端末設定（PR #230〜#235、2026-11-17）
 
 #230で段階3の完了を文書に記録した。[端末設定の設計](../design/runtime/alarm-terminal-settings.md)（#231）を同日ユーザーが承認し（保持の既定は365日・件数なら100万件、音はWAV PCM 8/16bit・1MB・5秒まで）、次の順に実装した。
