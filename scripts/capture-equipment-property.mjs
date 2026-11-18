@@ -46,6 +46,13 @@ try {
         exact: true,
       })
       .click();
+    // 作業タブの選択中はキャンバスが隠れるので、画面タブへ戻してから撮る。
+    await page
+      .getByRole("navigation", { name: "画面タブ", exact: true })
+      .getByRole("button")
+      .first()
+      .click();
+    await expect(page.locator(".sheet > svg")).toBeVisible();
     const name = page.locator(
       `.sheet > svg [data-object-id="${project.screens[0].objects[0].id}"] [data-equipment-property="name"]`,
     );
