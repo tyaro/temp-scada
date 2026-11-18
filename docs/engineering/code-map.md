@@ -68,7 +68,7 @@
 | 通常配置      | `InspectorPanel.svelte`・`numeric-properties.ts`    | `forms/object-form.ts`の解析・名前確定と既存Appの`commitNumber`                |
 | 画面・Project | Appの左ペイン                                       | `forms/screen-form.ts`／`project-form.ts`の解析・Project名確定                 |
 
-面の図形（塗りと枠線を持つ矩形・楕円）かどうかの判定は、TypeScriptでは`lib/project.ts`の`isAreaShape`（型は`AreaShape`）、Rustでは`crates/scada-model/src/lib.rs`の`is_area_shape`に集約している。矩形と楕円を個別に見る分岐を増やさず、新しい面の図形はこの関数へ足す。
+面の図形（塗りと枠線を持つ矩形・楕円・多角形）かどうかの判定は、TypeScriptでは`lib/project.ts`の`isAreaShape`（型は`AreaShape`）、Rustでは`crates/scada-model/src/lib.rs`の`is_area_shape`に集約している。矩形と楕円を個別に見る分岐を増やさず、新しい面の図形はこの関数へ足す。多角形（`polygon`）の頂点の検証（3〜64点、0〜1、外接矩形＝枠、隣り合う同じ点と一直線の拒否）はTSの`validatePolygonPoints`とRustの`validate_polygon_points`が同じ規則・同じ演算順で行い、共通の契約ケースは`examples/polygon-cases.json`（`polygon-contract.test.ts`と`polygon_shares_the_browser_contract`）。
 
 複数選択の移動欄は`forms/move-form.ts`で解析する。フォームのmarkup・dirty追跡と通常数値の個別確定は既存の所有先に残す。関連検証と未移行の責務は計画の進捗へ記録する。
 

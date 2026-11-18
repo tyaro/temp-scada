@@ -1,0 +1,1590 @@
+[
+  {
+    "name": "三角形",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "Symbol 定義の中の三角形",
+    "sample": "stateColor",
+    "target": "/symbols/0/objects/7",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "-0・1.0・10e-1 の座標は0・1と等しい（prettier が 1e0 を 1 に直すため指数は 10e-1）",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        { "x": -0, "y": 1.0 },
+        { "x": 0.5, "y": -0 },
+        { "x": 10e-1, "y": 1 }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "自己交差（8の字）",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 0,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "面積0だが一直線でない形",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "64点",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 1.0,
+          "y": 1
+        },
+        {
+          "x": 0.9836065573770492,
+          "y": 1
+        },
+        {
+          "x": 0.9672131147540983,
+          "y": 1
+        },
+        {
+          "x": 0.9508196721311475,
+          "y": 1
+        },
+        {
+          "x": 0.9344262295081968,
+          "y": 1
+        },
+        {
+          "x": 0.9180327868852459,
+          "y": 1
+        },
+        {
+          "x": 0.9016393442622951,
+          "y": 1
+        },
+        {
+          "x": 0.8852459016393442,
+          "y": 1
+        },
+        {
+          "x": 0.8688524590163934,
+          "y": 1
+        },
+        {
+          "x": 0.8524590163934427,
+          "y": 1
+        },
+        {
+          "x": 0.8360655737704918,
+          "y": 1
+        },
+        {
+          "x": 0.819672131147541,
+          "y": 1
+        },
+        {
+          "x": 0.8032786885245902,
+          "y": 1
+        },
+        {
+          "x": 0.7868852459016393,
+          "y": 1
+        },
+        {
+          "x": 0.7704918032786885,
+          "y": 1
+        },
+        {
+          "x": 0.7540983606557377,
+          "y": 1
+        },
+        {
+          "x": 0.7377049180327868,
+          "y": 1
+        },
+        {
+          "x": 0.7213114754098361,
+          "y": 1
+        },
+        {
+          "x": 0.7049180327868853,
+          "y": 1
+        },
+        {
+          "x": 0.6885245901639344,
+          "y": 1
+        },
+        {
+          "x": 0.6721311475409837,
+          "y": 1
+        },
+        {
+          "x": 0.6557377049180328,
+          "y": 1
+        },
+        {
+          "x": 0.639344262295082,
+          "y": 1
+        },
+        {
+          "x": 0.6229508196721312,
+          "y": 1
+        },
+        {
+          "x": 0.6065573770491803,
+          "y": 1
+        },
+        {
+          "x": 0.5901639344262295,
+          "y": 1
+        },
+        {
+          "x": 0.5737704918032787,
+          "y": 1
+        },
+        {
+          "x": 0.5573770491803278,
+          "y": 1
+        },
+        {
+          "x": 0.540983606557377,
+          "y": 1
+        },
+        {
+          "x": 0.5245901639344263,
+          "y": 1
+        },
+        {
+          "x": 0.5081967213114754,
+          "y": 1
+        },
+        {
+          "x": 0.4918032786885246,
+          "y": 1
+        },
+        {
+          "x": 0.47540983606557374,
+          "y": 1
+        },
+        {
+          "x": 0.4590163934426229,
+          "y": 1
+        },
+        {
+          "x": 0.4426229508196722,
+          "y": 1
+        },
+        {
+          "x": 0.42622950819672134,
+          "y": 1
+        },
+        {
+          "x": 0.4098360655737705,
+          "y": 1
+        },
+        {
+          "x": 0.39344262295081966,
+          "y": 1
+        },
+        {
+          "x": 0.3770491803278688,
+          "y": 1
+        },
+        {
+          "x": 0.360655737704918,
+          "y": 1
+        },
+        {
+          "x": 0.34426229508196726,
+          "y": 1
+        },
+        {
+          "x": 0.3278688524590164,
+          "y": 1
+        },
+        {
+          "x": 0.3114754098360656,
+          "y": 1
+        },
+        {
+          "x": 0.29508196721311475,
+          "y": 1
+        },
+        {
+          "x": 0.2786885245901639,
+          "y": 1
+        },
+        {
+          "x": 0.2622950819672131,
+          "y": 1
+        },
+        {
+          "x": 0.24590163934426235,
+          "y": 1
+        },
+        {
+          "x": 0.2295081967213115,
+          "y": 1
+        },
+        {
+          "x": 0.21311475409836067,
+          "y": 1
+        },
+        {
+          "x": 0.19672131147540983,
+          "y": 1
+        },
+        {
+          "x": 0.180327868852459,
+          "y": 1
+        },
+        {
+          "x": 0.16393442622950816,
+          "y": 1
+        },
+        {
+          "x": 0.14754098360655743,
+          "y": 1
+        },
+        {
+          "x": 0.1311475409836066,
+          "y": 1
+        },
+        {
+          "x": 0.11475409836065575,
+          "y": 1
+        },
+        {
+          "x": 0.09836065573770492,
+          "y": 1
+        },
+        {
+          "x": 0.08196721311475408,
+          "y": 1
+        },
+        {
+          "x": 0.06557377049180324,
+          "y": 1
+        },
+        {
+          "x": 0.049180327868852514,
+          "y": 1
+        },
+        {
+          "x": 0.032786885245901676,
+          "y": 1
+        },
+        {
+          "x": 0.016393442622950838,
+          "y": 1
+        },
+        {
+          "x": 0.0,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "主対角線から1e-8ずれた点は一直線でない",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 0.50000001
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "単色塗りと状態色",
+    "sample": "stateColor",
+    "target": "/symbols/0/objects/7",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "stateColor": {
+        "textId": "0199f600-0000-7000-8000-000000000001"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "線形グラデーションの塗り",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "linearGradient",
+            "angle": 45,
+            "start": {
+              "color": "#ff8800",
+              "alpha": 0.25
+            },
+            "end": {
+              "color": "#2266cc",
+              "alpha": 0.8
+            }
+          }
+        },
+        "stroke": null
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "模様の塗り",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "pattern",
+            "kind": "hatch",
+            "spacing": 12,
+            "size": 2,
+            "angle": 45,
+            "foreground": {
+              "color": "#22aa66",
+              "alpha": 0.5
+            },
+            "background": null
+          }
+        },
+        "stroke": null
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "頂点2点",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "頂点65点",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 1.0,
+          "y": 1
+        },
+        {
+          "x": 0.9838709677419355,
+          "y": 1
+        },
+        {
+          "x": 0.967741935483871,
+          "y": 1
+        },
+        {
+          "x": 0.9516129032258065,
+          "y": 1
+        },
+        {
+          "x": 0.935483870967742,
+          "y": 1
+        },
+        {
+          "x": 0.9193548387096774,
+          "y": 1
+        },
+        {
+          "x": 0.9032258064516129,
+          "y": 1
+        },
+        {
+          "x": 0.8870967741935484,
+          "y": 1
+        },
+        {
+          "x": 0.8709677419354839,
+          "y": 1
+        },
+        {
+          "x": 0.8548387096774194,
+          "y": 1
+        },
+        {
+          "x": 0.8387096774193549,
+          "y": 1
+        },
+        {
+          "x": 0.8225806451612903,
+          "y": 1
+        },
+        {
+          "x": 0.8064516129032258,
+          "y": 1
+        },
+        {
+          "x": 0.7903225806451613,
+          "y": 1
+        },
+        {
+          "x": 0.7741935483870968,
+          "y": 1
+        },
+        {
+          "x": 0.7580645161290323,
+          "y": 1
+        },
+        {
+          "x": 0.7419354838709677,
+          "y": 1
+        },
+        {
+          "x": 0.7258064516129032,
+          "y": 1
+        },
+        {
+          "x": 0.7096774193548387,
+          "y": 1
+        },
+        {
+          "x": 0.6935483870967742,
+          "y": 1
+        },
+        {
+          "x": 0.6774193548387097,
+          "y": 1
+        },
+        {
+          "x": 0.6612903225806452,
+          "y": 1
+        },
+        {
+          "x": 0.6451612903225806,
+          "y": 1
+        },
+        {
+          "x": 0.6290322580645161,
+          "y": 1
+        },
+        {
+          "x": 0.6129032258064516,
+          "y": 1
+        },
+        {
+          "x": 0.5967741935483871,
+          "y": 1
+        },
+        {
+          "x": 0.5806451612903225,
+          "y": 1
+        },
+        {
+          "x": 0.564516129032258,
+          "y": 1
+        },
+        {
+          "x": 0.5483870967741935,
+          "y": 1
+        },
+        {
+          "x": 0.532258064516129,
+          "y": 1
+        },
+        {
+          "x": 0.5161290322580645,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 1
+        },
+        {
+          "x": 0.4838709677419355,
+          "y": 1
+        },
+        {
+          "x": 0.467741935483871,
+          "y": 1
+        },
+        {
+          "x": 0.4516129032258065,
+          "y": 1
+        },
+        {
+          "x": 0.4354838709677419,
+          "y": 1
+        },
+        {
+          "x": 0.4193548387096774,
+          "y": 1
+        },
+        {
+          "x": 0.4032258064516129,
+          "y": 1
+        },
+        {
+          "x": 0.3870967741935484,
+          "y": 1
+        },
+        {
+          "x": 0.3709677419354839,
+          "y": 1
+        },
+        {
+          "x": 0.3548387096774194,
+          "y": 1
+        },
+        {
+          "x": 0.33870967741935487,
+          "y": 1
+        },
+        {
+          "x": 0.32258064516129037,
+          "y": 1
+        },
+        {
+          "x": 0.30645161290322576,
+          "y": 1
+        },
+        {
+          "x": 0.29032258064516125,
+          "y": 1
+        },
+        {
+          "x": 0.27419354838709675,
+          "y": 1
+        },
+        {
+          "x": 0.25806451612903225,
+          "y": 1
+        },
+        {
+          "x": 0.24193548387096775,
+          "y": 1
+        },
+        {
+          "x": 0.22580645161290325,
+          "y": 1
+        },
+        {
+          "x": 0.20967741935483875,
+          "y": 1
+        },
+        {
+          "x": 0.19354838709677424,
+          "y": 1
+        },
+        {
+          "x": 0.17741935483870963,
+          "y": 1
+        },
+        {
+          "x": 0.16129032258064513,
+          "y": 1
+        },
+        {
+          "x": 0.14516129032258063,
+          "y": 1
+        },
+        {
+          "x": 0.12903225806451613,
+          "y": 1
+        },
+        {
+          "x": 0.11290322580645162,
+          "y": 1
+        },
+        {
+          "x": 0.09677419354838712,
+          "y": 1
+        },
+        {
+          "x": 0.08064516129032262,
+          "y": 1
+        },
+        {
+          "x": 0.06451612903225812,
+          "y": 1
+        },
+        {
+          "x": 0.048387096774193505,
+          "y": 1
+        },
+        {
+          "x": 0.032258064516129004,
+          "y": 1
+        },
+        {
+          "x": 0.016129032258064502,
+          "y": 1
+        },
+        {
+          "x": 0.0,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "範囲外 -0.1",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": -0.1,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "範囲外 1.1",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1.1,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "外接矩形が0〜1に合わない（最大0.9）",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.9,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "外接矩形が0〜1に合わない（最小0.1）",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0.1
+        },
+        {
+          "x": 1,
+          "y": 0.1
+        },
+        {
+          "x": 0.5,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "隣り合う同じ点",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "最後と最初が同じ",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 1
+        },
+        {
+          "x": 0,
+          "y": 0
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "主対角線の一直線",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 0.5
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "主対角線から1e-10ずれた点も一直線",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 0.5,
+          "y": 0.5000000001
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "反対角線の一直線",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0.5
+        },
+        {
+          "x": 1,
+          "y": 0
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "root の fill",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "objectPatch": {
+      "fill": "#112233"
+    },
+    "valid": false
+  },
+  {
+    "name": "root の colorAlpha",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "objectPatch": {
+      "colorAlpha": 0.5
+    },
+    "valid": false
+  },
+  {
+    "name": "模様の太さが間隔の半分を超える",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "pattern",
+            "kind": "hatch",
+            "spacing": 12,
+            "size": 7,
+            "angle": 45,
+            "foreground": {
+              "color": "#22aa66",
+              "alpha": 0.5
+            },
+            "background": null
+          }
+        },
+        "stroke": null
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "グラデーションの不透明度が1を超える",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "linearGradient",
+            "angle": 45,
+            "start": {
+              "color": "#ff8800",
+              "alpha": 0.25
+            },
+            "end": {
+              "color": "#2266cc",
+              "alpha": 1.1
+            }
+          }
+        },
+        "stroke": null
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "状態色にグラデーションの塗り",
+    "sample": "stateColor",
+    "target": "/symbols/0/objects/7",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "linearGradient",
+            "angle": 45,
+            "start": {
+              "color": "#ff8800",
+              "alpha": 0.25
+            },
+            "end": {
+              "color": "#2266cc",
+              "alpha": 0.8
+            }
+          }
+        },
+        "stroke": null
+      },
+      "stateColor": {
+        "textId": "0199f600-0000-7000-8000-000000000001"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "points が無い",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "頂点に余分な欄",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1,
+          "z": 0
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "shape に余分な欄",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "fillRule": "evenodd"
+    },
+    "valid": false
+  }
+]
