@@ -154,9 +154,10 @@
     Menu,
     MenuGroup,
     MenuItem,
+    hasVisibleMenuLayer,
     hasVisibleModalLayer,
-    isEditableTarget,
-    shouldHandleShortcut,
+    createShortcutDispatcher,
+    type CommandSpec,
   } from "@banto/ui";
   import { notify, type NotificationKind } from "@banto/admin-core";
   import {
@@ -986,23 +987,220 @@
       );
     }
   }
-  // Banto #435 の保護のうち IME・押し続け・入力欄・モーダルだけを使う。上流の
-  // shouldHandleShortcut はメニューの表示中も止めるが、ここではコンテキストメニューを
-  // 開いたままの Ctrl+A などで選択を変え、メニューを閉じる（selection-context の約束）。
-  // 上流と同等ではない: メニュー判定のほかに、defaultPrevented の検査と composedPath()
-  // による入力元の解決（shadow DOM 内の入力欄）を持たない。dispatcher へ移すときに
-  // 同等と見なさず、差を試験で確かめる（docs/reviews/banto-contribution-handoff.md）。
-  function shortcutAllowed(
-    event: KeyboardEvent,
-    { allowInEditable = false, allowRepeat = false } = {},
-  ) {
+  // Banto #435 の操作定義と dispatcher（createShortcutDispatcher）でキーを処理する。
+  // 上流の保護（IME・defaultPrevented・押し続け・入力欄・モーダル・メニュー）を
+  // そのまま使うが、F 以外はコンテキストメニューを開いたままの Ctrl+A などで選択を
+  // 変え、メニューを閉じる（selection-context の約束）ので、表示中のメニューを
+  // ownerLayer に渡してメニューでは止めない。モーダルの表示中は null を返し、
+  // モーダルでは止める。上流へは「メニューを止める対象から外す」選択肢として相談する
+  // （docs/reviews/banto-contribution-handoff.md）。
+  function menuOwnerLayer(): Element | null {
+    if (hasVisibleModalLayer()) return null;
+    for (const menu of document.querySelectorAll('[role="menu"]'))
+      if (!hasVisibleMenuLayer({ except: menu })) return menu;
+    return null;
+  }
+  // Ctrl+S は「Project を置き換えますか」などのモーダルの表示中も書き出す（置換の前に
+  // 書き出したファイルを確かめる流れ）。最前面のモーダル・メニューを ownerLayer に返し、
+  // どの層でも止めない。
+  function topOwnerLayer(): Element | null {
+    for (const layer of document.querySelectorAll(
+      '[aria-modal="true"],[role="menu"]',
+    ))
+      if (
+        !hasVisibleModalLayer({ except: layer }) &&
+        !hasVisibleMenuLayer({ except: layer })
+      )
+        return layer;
+    return null;
+  }
+  // enabled／run は event を受け取らないので、処理中の keydown の対象を控える。
+  let shortcutTarget: EventTarget | null = null;
+  function editCommandsReady() {
+    return !busy && mode === "edit" && !drafts.pending && !replacement;
+  }
+  function filePromptsReady() {
+    return !busy && !drafts.pending && !replacement && !helpOpen;
+  }
+  function functionKeysReady() {
     return (
-      !event.isComposing &&
-      event.keyCode !== 229 &&
-      (allowRepeat || !event.repeat) &&
-      (allowInEditable || !isEditableTarget(event.target)) &&
-      !hasVisibleModalLayer()
+      !busy &&
+      !clipboard.busy &&
+      !drafts.pending &&
+      !replacement &&
+      !helpOpen &&
+      !inspectorController?.isTagPickerOpen() &&
+      !equipmentLibrary?.isTagPickerOpen()
     );
+  }
+  const shortcutDispatcher = createShortcutDispatcher();
+  const menuScoped = { ownerLayer: menuOwnerLayer } as const;
+  const designerShortcuts: CommandSpec[] = [
+    {
+      id: "selection.show",
+      title: "選択範囲を表示",
+      shortcut: "F",
+      enabled: () => !helpOpen && clipboardScope(shortcutTarget),
+      run: showSelection,
+    },
+    {
+      // F1／F2 は入力欄の中でも効く（ブラウザのヘルプ等は常に止める）。
+      id: "help.open",
+      title: "ヘルプ",
+      shortcut: "F1",
+      allowInEditable: true,
+      preventDefaultWhenDisabled: true,
+      ...menuScoped,
+      enabled: functionKeysReady,
+      run: () => {
+        helpOpen = true;
+      },
+    },
+    {
+      id: "object.rename",
+      title: "名前を変更",
+      shortcut: "F2",
+      allowInEditable: true,
+      preventDefaultWhenDisabled: true,
+      ...menuScoped,
+      enabled: functionKeysReady,
+      run: () => {
+        if (canvasActive && !positionPlacement) renameFocused(shortcutTarget);
+      },
+    },
+    {
+      id: "selection.remove",
+      title: "削除",
+      shortcut: "Delete",
+      ...menuScoped,
+      enabled: () =>
+        editCommandsReady() &&
+        !clipboard.busy &&
+        !positionPlacement &&
+        clipboardScope(shortcutTarget),
+      run: () => {
+        if (!hiddenCanvasMutation(shortcutTarget)) removeSelection();
+      },
+    },
+    {
+      id: "project.new",
+      title: "新規作成",
+      shortcut: "Mod+N",
+      allowInEditable: true,
+      preventDefaultWhenDisabled: true,
+      ...menuScoped,
+      enabled: filePromptsReady,
+      run: () => projectFiles.newProject(),
+    },
+    {
+      id: "project.open",
+      title: "開く",
+      shortcut: "Mod+O",
+      allowInEditable: true,
+      preventDefaultWhenDisabled: true,
+      ...menuScoped,
+      enabled: filePromptsReady,
+      run: () => projectFiles.openProjectFile(),
+    },
+    {
+      id: "project.save",
+      title: "保存",
+      shortcut: "Mod+S",
+      allowInEditable: true,
+      preventDefaultWhenDisabled: true,
+      ownerLayer: topOwnerLayer,
+      enabled: () => !busy,
+      run: () => projectFiles.save(),
+    },
+    {
+      id: "project.saveAs",
+      title: "名前を付けて保存",
+      shortcut: "Mod+Shift+S",
+      allowInEditable: true,
+      preventDefaultWhenDisabled: true,
+      ownerLayer: topOwnerLayer,
+      enabled: () => !busy,
+      run: () => projectFiles.saveAs(),
+    },
+    // 入力欄では標準の編集・Undo を優先する。押し続けの繰り返しは元に戻す・やり直しだけ。
+    {
+      id: "history.undo",
+      title: "元に戻す",
+      shortcut: "Mod+Z",
+      allowRepeat: true,
+      ...menuScoped,
+      enabled: editCommandsReady,
+      run: () => travel("undo"),
+    },
+    {
+      id: "history.redo",
+      title: "やり直す",
+      shortcut: "Mod+Shift+Z",
+      allowRepeat: true,
+      ...menuScoped,
+      enabled: editCommandsReady,
+      run: () => travel("redo"),
+    },
+    {
+      id: "history.redoY",
+      title: "やり直す",
+      shortcut: "Mod+Y",
+      allowRepeat: true,
+      ...menuScoped,
+      enabled: editCommandsReady,
+      run: () => travel("redo"),
+    },
+    // W4: Ctrl+A／G／D はキャンバスの表示中だけ。Undo／Redo は上で全体に効く。
+    {
+      id: "selection.all",
+      title: "すべて選択",
+      shortcut: "Mod+A",
+      ...menuScoped,
+      enabled: () => editCommandsReady() && canvasActive,
+      run: () =>
+        transition(
+          () =>
+            (selectedIds = canvasSelectionIds(
+              screen,
+              screen.objects.map((object) => object.id),
+            )),
+        ),
+    },
+    {
+      id: "selection.group",
+      title: "グループ化",
+      shortcut: "Mod+G",
+      ...menuScoped,
+      enabled: () => editCommandsReady() && canvasActive,
+      run: () => groupSelection(),
+    },
+    {
+      id: "selection.ungroup",
+      title: "グループ解除",
+      shortcut: "Mod+Shift+G",
+      ...menuScoped,
+      enabled: () => editCommandsReady() && canvasActive,
+      run: () => ungroupSelection(),
+    },
+    {
+      id: "selection.duplicate",
+      title: "複製",
+      shortcut: "Mod+D",
+      ...menuScoped,
+      enabled: () =>
+        editCommandsReady() && canvasActive && selectedIds.length > 0,
+      run: () => duplicateSelection(),
+    },
+  ];
+  shortcutDispatcher.register("designer", designerShortcuts);
+  // 保護で断ったときもブラウザの既定（ヘルプ・新規ウィンドウ・ページ保存など）は止める。
+  function reservedBrowserKey(event: KeyboardEvent) {
+    if (event.altKey) return false;
+    const plain = !event.ctrlKey && !event.metaKey && !event.shiftKey;
+    if (plain && (event.key === "F1" || event.key === "F2")) return true;
+    if (!(event.ctrlKey || event.metaKey) || event.isComposing) return false;
+    const key = event.key.toLowerCase();
+    return key === "s" || (!event.shiftKey && (key === "n" || key === "o"));
   }
   function shortcut(event: KeyboardEvent) {
     if (
@@ -1016,45 +1214,26 @@
       recordingRequest
     )
       return;
-    if (
-      event.key.toLowerCase() === "f" &&
+    // F・F1・F2 は下のダイアログ・配置・フォルダの扱いより先に決める（従来の順）。
+    const functionKey =
       !event.ctrlKey &&
       !event.metaKey &&
       !event.altKey &&
-      !event.shiftKey
-    ) {
-      if (
-        !helpOpen &&
-        clipboardScope(event.target) &&
-        shouldHandleShortcut(event)
-      ) {
-        event.preventDefault();
-        showSelection();
-      }
-      return;
+      !event.shiftKey &&
+      (event.key.toLowerCase() === "f" ||
+        event.key === "F1" ||
+        event.key === "F2");
+    if (!functionKey && routeBeforeCommands(event)) return;
+    shortcutTarget = event.target;
+    try {
+      if (shortcutDispatcher.handle(event)) return;
+    } finally {
+      shortcutTarget = null;
     }
-
-    if (event.key === "F1" || event.key === "F2") {
-      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
-        return;
-      // F1／F2 は入力欄の中でも効く（ブラウザのヘルプ等は常に止める）。
-      const allowed = shortcutAllowed(event, { allowInEditable: true });
-      event.preventDefault();
-      if (
-        !allowed ||
-        busy ||
-        clipboard.busy ||
-        drafts.pending ||
-        replacement ||
-        helpOpen ||
-        inspectorController?.isTagPickerOpen() ||
-        equipmentLibrary?.isTagPickerOpen()
-      )
-        return;
-      if (event.key === "F1") helpOpen = true;
-      else if (canvasActive && !positionPlacement) renameFocused(event.target);
-      return;
-    }
+    if (reservedBrowserKey(event)) event.preventDefault();
+  }
+  // ダイアログ・タグ選択・配置・レイヤーのフォルダが先にキーを取る。取ったら true。
+  function routeBeforeCommands(event: KeyboardEvent) {
     if (
       screenViewRequest !== null ||
       bindingTableOpen ||
@@ -1079,7 +1258,7 @@
           (!localInput && ["z", "y"].includes(key)))
       )
         event.preventDefault();
-      return;
+      return true;
     }
     if (
       event.key === "Escape" &&
@@ -1096,7 +1275,7 @@
     ) {
       event.preventDefault();
       stopPlacement(true);
-      return;
+      return true;
     }
     const focusedFolder =
       event.target instanceof Element
@@ -1117,83 +1296,17 @@
             focusedFolder.dataset.layerFolder,
             focusedFolder,
           );
-        return;
+        return true;
       }
       if (
         (event.ctrlKey || event.metaKey) &&
         ["d", "x", "c"].includes(event.key.toLowerCase())
       ) {
         event.preventDefault();
-        return;
+        return true;
       }
     }
-    if (
-      event.key === "Delete" &&
-      !event.ctrlKey &&
-      !event.metaKey &&
-      !event.altKey &&
-      !event.shiftKey &&
-      mode === "edit" &&
-      !busy &&
-      !clipboard.busy &&
-      !drafts.pending &&
-      !replacement &&
-      !positionPlacement &&
-      clipboardScope(event.target) &&
-      shortcutAllowed(event)
-    ) {
-      event.preventDefault();
-      if (!hiddenCanvasMutation(event.target)) removeSelection();
-      return;
-    }
-    if (event.isComposing || event.altKey || !(event.ctrlKey || event.metaKey))
-      return;
-    const key = event.key.toLowerCase();
-    if (["n", "o"].includes(key) && !event.shiftKey) {
-      const allowed = shortcutAllowed(event, { allowInEditable: true });
-      event.preventDefault();
-      if (!allowed || busy || drafts.pending || replacement || helpOpen) return;
-      if (key === "n") projectFiles.newProject();
-      else projectFiles.openProjectFile();
-      return;
-    }
-    if (key === "s") {
-      event.preventDefault();
-      if (!busy && !event.repeat)
-        if (event.shiftKey) projectFiles.saveAs();
-        else projectFiles.save();
-      return;
-    }
-    if (busy || mode !== "edit" || drafts.pending || replacement) return;
-    // 入力欄では標準の編集・Undo を優先する。押し続けの繰り返しは元に戻す・やり直しだけ。
-    if (!shortcutAllowed(event, { allowRepeat: key === "z" || key === "y" }))
-      return;
-    if (key === "z") {
-      event.preventDefault();
-      travel(event.shiftKey ? "redo" : "undo");
-    } else if (key === "y" && !event.shiftKey) {
-      event.preventDefault();
-      travel("redo");
-    } else if (!canvasActive) {
-      // W4: Ctrl+A／G／D はキャンバスの表示中だけ。Undo／Redo は上で全体に効く。
-      return;
-    } else if (key === "a" && !event.shiftKey) {
-      event.preventDefault();
-      transition(
-        () =>
-          (selectedIds = canvasSelectionIds(
-            screen,
-            screen.objects.map((object) => object.id),
-          )),
-      );
-    } else if (key === "g") {
-      event.preventDefault();
-      if (event.shiftKey) ungroupSelection();
-      else groupSelection();
-    } else if (key === "d" && !event.shiftKey && selectedIds.length) {
-      event.preventDefault();
-      duplicateSelection();
-    }
+    return false;
   }
   let mode = $state<"edit" | "preview">("preview");
   let selectedIds = $state<string[]>([]);
