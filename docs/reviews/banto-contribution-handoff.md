@@ -1,10 +1,28 @@
 # SCADAからBantoへの共通機能引渡し
 
-2026-10-22（日本時間）更新。状態: **起票・当初資産の引渡し済み。上流IssueはClosed、SCADAへの採用は未完了**。既存の[パネル基盤比較](banto-dock-comparison.md)に加え、汎用化の候補と受入資産を記録する。
+2026-10-22（日本時間）更新、2026-11-18に棚卸しを追記。状態: **起票・当初資産の引渡し済み。上流は#432〜#438をBanto v6.8.0で公開済み。SCADAへの採用は未着手**（[2026-11-18の棚卸し](#2026-11-18の棚卸し上流の版とscadaの採用状況)）。既存の[パネル基盤比較](banto-dock-comparison.md)に加え、汎用化の候補と受入資産を記録する。
 
 ## 現在の確認状態
 
 Banto main `ac571ebffa76db61e28230a7138223f069eee067`で再確認し、#432〜#438はすべてClosed。[PR #447](https://github.com/tyaro/banto/pull/447)のdraft基盤と[PR #453](https://github.com/tyaro/banto/pull/453)の画像Storeはmerge済み。SCADAのadmin-core／theme／uiはv6.9.0（`1bd12fe023cf3958dbdde923e1bdd4fdb28a9139`）へ固定依存更新済み。Menuの上流#427／#430修正を受け入れ、局所adapterをPR #9で撤去した。その他の共通APIへの接続・受入は未完了。
+
+## 2026-11-18の棚卸し：上流の版とSCADAの採用状況
+
+Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v6.8.0**で入った（計画書PR-1〜PR-14）。SCADAの固定依存はv7.2.0（#238）なので、`@banto/admin-core`・`@banto/ui`のAPIは依存を変えずに使える。`@banto/forms`・`@banto/dock-svelte`・`@banto/image-assets`はSCADAの依存に無い。SCADAのコード（`apps/banto-scada/src`）は下の上流APIを1つもimportしていない（2026-11-18にgrepで確認）。手元の対応先は名前と責務からの候補で、差分の照合はまだしていない。
+
+| Issue                                                                        | 上流の公開API（v6.8.0）                                                | パッケージ（SCADAの依存）                    | SCADAの手元の対応先（候補）                                               | 判断                                                                                               |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| [#435](https://github.com/tyaro/banto/issues/435) 操作定義・ショートカット   | `CommandSpec`、`shouldHandleShortcut`・`createShortcutDispatcher`      | `@banto/ui`（あり）                          | `designer/controllers/designer-actions.ts`、`App.svelte`の`shortcut`      | 1番目。キーの保護（IME変換中・入力欄・モーダル・`repeat`）から置き換え、操作定義の移行は後に分ける |
+| [#437](https://github.com/tyaro/banto/issues/437) UI設定の保存状態           | `createSavedSetting`（`current`・`saved`・`saving`・`error`・`dirty`） | `@banto/admin-core`（あり）                  | `banto/setup.ts`、`designer/floating-*.svelte.ts`の保存                   | 2番目。パネルの幅・高さ・浮動配置の保存失敗と破損値のE2Eで受け入れる                               |
+| [#436](https://github.com/tyaro/banto/issues/436) 非同期結果の失効と資源解放 | `createRequestOwner`（`begin`・`invalidate`・`dispose`・`busy`）       | `@banto/admin-core`（あり）                  | `designer/controllers/`の`image-import`・`clipboard`・`catalog`の世代番号 | 3番目。controllerごとに1つずつ置き換える                                                           |
+| [#438](https://github.com/tyaro/banto/issues/438) ブラウザ画像の取込・原本   | `@banto/image-assets`の`inspectImageHeader`・`createImageStore`        | `@banto/image-assets`（なし）                | `lib/image-assets.ts`とProjectの資産store                                 | 4番目。依存の追加が要る。Projectの資産（Undo・package・資産lease）と上流のstoreの境界を先に決める  |
+| [#432](https://github.com/tyaro/banto/issues/432) 入力保持とpane切替前guard  | `createFormDraft`・`DraftCoordinator`、`DockHost`の`beforePanelChange` | `@banto/forms`・`@banto/dock-svelte`（なし） | `designer/drafts.svelte.ts`、Inspector・作業タブの入力保護                | 可動パネルの工程（改訂B）で`@banto/dock-svelte`の採用と一緒に判断する                              |
+| [#433](https://github.com/tyaro/banto/issues/433) 操作の所有者・取消         | `@banto/dock-svelte`の操作の持ち主とキーボード操作                     | `@banto/dock-svelte`（なし）                 | `designer/floating-panel*.svelte.ts`、`PanelResizeHandle.svelte`          | 同上                                                                                               |
+| [#434](https://github.com/tyaro/banto/issues/434) 配置の検証・到達性         | `DockState`の`hydrate`の検証、`DockHost`の`clamp`                      | `@banto/dock-svelte`（なし）                 | `designer/floating-panel-layout.ts`                                       | 同上                                                                                               |
+
+- Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらない。Banto Issueは未起票のまま。
+- 置き換えの各区切りでは、既存の入力保護・資源解放・保存失敗のE2Eを通してから手元の実装を消す（[引渡しの方法](#引渡しの方法)の3）。
+- 新しい還元候補（パネルの幅・高さの保存と「標準レイアウトに戻す」、作業タブの入力保護など）は、上の採用で上流のAPIとの差が見えてから起票する。
 
 追加候補・TreeViewの既存APIとの差・現在渡せる試験は[還元候補と採用境界](banto-contribution-candidates.md)へ整理した。以下は当初起票時の目的と引渡し資産であり、未実装項目の現行一覧ではない。
 
