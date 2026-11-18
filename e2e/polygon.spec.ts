@@ -1,6 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 import minimal from "../examples/minimal.project.json" with { type: "json" };
-import { chooseTheme, mainCanvas, selectPanel } from "./helpers/designer";
+import {
+  chooseTheme,
+  fileCommand,
+  mainCanvas,
+  selectPanel,
+} from "./helpers/designer";
 
 const rect = minimal.screens[0].objects[0];
 const triangleId = "0199f000-0000-7000-8000-0000000000a1";
@@ -246,4 +251,30 @@ test("polygon vertices are dragged on the canvas and rejected without changes", 
   await expect
     .poll(async () => Number(await height.inputValue()))
     .toBeGreaterThan(100);
+});
+
+test("polygon presets are inserted and the polygon part sample opens", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  await selectPanel(page, "プロジェクト");
+  await fileCommand(page, "多角形の部品サンプルを開く");
+  // ホッパー 2・サイロ 1・行き先の札 2 の配置が、多角形を含む Symbol 定義で描かれる。
+  await expect(
+    mainCanvas(page).locator('polygon[stroke-linejoin="miter"]'),
+  ).toHaveCount(5);
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "部品");
+  const last = mainCanvas(page)
+    .locator('[data-selected="true"] > [data-object-rotation] polygon')
+    .first();
+  for (const [name, points] of [
+    ["台形を追加", "0,0 160,0 120,100 40,100"],
+    ["ひし形を追加", "80,0 160,50 80,100 0,50"],
+    ["行き先の札を追加", "0,0 128,0 160,50 128,100 0,100"],
+  ] as const) {
+    await page.getByRole("button", { name, exact: true }).click();
+    await expect(last).toHaveAttribute("points", points);
+  }
 });

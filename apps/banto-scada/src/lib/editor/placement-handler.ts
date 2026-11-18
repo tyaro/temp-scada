@@ -14,6 +14,7 @@ import type {
 import { newId, centerObject } from "./model-helpers";
 import { newAlarmBadgeShape } from "../alarm-badge";
 import { newAlarmBannerShape } from "../alarm-banner";
+import { isPolygonPreset, polygonPresetPoints } from "../polygon-presets";
 
 export function applyScreenViewPlacement(
   screen: Screen | SymbolDefinition,
@@ -196,15 +197,11 @@ export function applyObjectCreation(
               style: { fontSize: 22.4, fontWeight: "normal", align: "left" },
             }
           : {
-              ...(command.kind === "polygon"
+              ...(isPolygonPreset(command.kind)
                 ? {
                     type: "polygon" as const,
-                    // 初期形は三角形。頂点は枠に対する割合。
-                    points: [
-                      { x: 0.5, y: 0 },
-                      { x: 1, y: 1 },
-                      { x: 0, y: 1 },
-                    ],
+                    // 初期形（三角形・台形・ひし形・行き先の札）。頂点は枠に対する割合。
+                    points: polygonPresetPoints(command.kind),
                   }
                 : { type: command.kind }),
               paint: {

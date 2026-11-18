@@ -287,6 +287,7 @@
   import sample from "../../../examples/minimal.project.json";
   import processSample from "../../../examples/process.project.json";
   import shapePaintSample from "../../../examples/shape-paint.project.json";
+  import polygonSymbolSample from "../../../examples/polygon-symbols.project.json";
   import symbolColorSample from "../../../examples/symbol-color.project.json";
   import CanvasWorkspace, {
     type CanvasView,
@@ -3939,6 +3940,11 @@
       openPaintSample: () =>
         projectFiles.requestReplacement(
           parseProject(JSON.stringify(shapePaintSample)),
+          "sample",
+        ),
+      openPolygonSample: () =>
+        projectFiles.requestReplacement(
+          parseProject(JSON.stringify(polygonSymbolSample)),
           "sample",
         ),
       openScreenViewDialog,
