@@ -41,12 +41,21 @@ it("checks content, dimensions, static PNG chunks, decode and original-byte hash
   const malformed = png.slice();
   new DataView(malformed.buffer).setUint32(8, 0xffffffff);
   expect(() => imageHeader(malformed)).toThrow(/壊れ/);
-  expect(() => imageHeader(png.slice(0, -12))).toThrow(/終端/);
+  // 上流（@banto/image-assets）は終端の欠けもヘッダーの壊れとして返す。
+  expect(() => imageHeader(png.slice(0, -12))).toThrow(/壊れ/);
   const animation = new Uint8Array(png.length + 12);
   animation.set(png.subarray(0, 33));
   animation.set([0, 0, 0, 0, 97, 99, 84, 76, 0, 0, 0, 0], 33);
   animation.set(png.subarray(33), 45);
   expect(() => imageHeader(animation)).toThrow(/アニメーション/);
+  // 表示の文言の元になった上流のエラーコードはcauseに残す。
+  let cause: unknown;
+  try {
+    imageHeader(animation);
+  } catch (error) {
+    cause = (error as Error).cause;
+  }
+  expect(cause).toMatchObject({ code: "unsupported-format" });
   await expect(
     inspectImage(new Blob([new Uint8Array(IMAGE_LIMIT + 1)]), "large"),
   ).rejects.toThrow(/8MiB/);

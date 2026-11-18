@@ -23,6 +23,9 @@ importers:
       '@banto/admin-core':
         specifier: github:tyaro/banto#v7.2.0&path:packages/admin-core
         version: https://codeload.github.com/tyaro/banto/tar.gz/5cf8406c63e27d7a79886021a1a979c0b6967645#path:packages/admin-core
+      '@banto/image-assets':
+        specifier: github:tyaro/banto#v7.2.0&path:packages/image-assets
+        version: https://codeload.github.com/tyaro/banto/tar.gz/5cf8406c63e27d7a79886021a1a979c0b6967645#path:packages/image-assets
       '@banto/theme':
         specifier: github:tyaro/banto#v7.2.0&path:packages/theme
         version: https://codeload.github.com/tyaro/banto/tar.gz/5cf8406c63e27d7a79886021a1a979c0b6967645#path:packages/theme
@@ -62,6 +65,10 @@ packages:
 
   '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/5cf8406c63e27d7a79886021a1a979c0b6967645#path:packages/admin-core':
     resolution: {path: packages/admin-core, tarball: https://codeload.github.com/tyaro/banto/tar.gz/5cf8406c63e27d7a79886021a1a979c0b6967645}
+    version: 7.2.0
+
+  '@banto/image-assets@https://codeload.github.com/tyaro/banto/tar.gz/5cf8406c63e27d7a79886021a1a979c0b6967645#path:packages/image-assets':
+    resolution: {path: packages/image-assets, tarball: https://codeload.github.com/tyaro/banto/tar.gz/5cf8406c63e27d7a79886021a1a979c0b6967645}
     version: 7.2.0
 
   '@banto/theme@https://codeload.github.com/tyaro/banto/tar.gz/5cf8406c63e27d7a79886021a1a979c0b6967645#path:packages/theme':
@@ -619,6 +626,8 @@ packages:
 snapshots:
 
   '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/5cf8406c63e27d7a79886021a1a979c0b6967645#path:packages/admin-core': {}
+
+  '@banto/image-assets@https://codeload.github.com/tyaro/banto/tar.gz/5cf8406c63e27d7a79886021a1a979c0b6967645#path:packages/image-assets': {}
 
   '@banto/theme@https://codeload.github.com/tyaro/banto/tar.gz/5cf8406c63e27d7a79886021a1a979c0b6967645#path:packages/theme': {}
 

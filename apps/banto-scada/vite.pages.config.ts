@@ -9,7 +9,9 @@ export default defineConfig(({ mode }) => ({
   root: "pages",
   base: loadEnv(mode, ".", "PAGES_").PAGES_BASE ?? "/temp-scada/",
   plugins: [svelte()],
-  optimizeDeps: { exclude: ["@banto/admin-core", "@banto/ui"] },
+  optimizeDeps: {
+    exclude: ["@banto/admin-core", "@banto/image-assets", "@banto/ui"],
+  },
   build: {
     outDir: "../dist-pages",
     emptyOutDir: true,

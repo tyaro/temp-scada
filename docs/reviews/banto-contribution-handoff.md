@@ -56,6 +56,11 @@ Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v
   - 変えていない点: Project・sourceの同一性の比較は別の条件として残した（値が変わってからeffectが走り直すまでの間に届いた返事を採らないため）。`catalog-session.ts`のtokenによる古いdeliveryの拒否・payload検証もそのまま（純関数の単体試験を持つため二重の確認になる）。busyは使わない（読込中は従来どおりsessionのphaseで表す）。
   - 試験: 既存e2eの`catalog-selection`（差し替えた古いsourceから遅れて来た`begin`が今のdeliveryを失効させない確認を追加）・`native-auth`・`native-read-path`・`slot-state-color`・`slot-state-display`・`symbol-equipment-check`・`table`と`catalog-session.test.ts`。vitestでは`$effect`が動かないので単体試験は足していない。
   - #436の置き換えは`designer/controllers/`の3つで終わり。
+- #438の1段目（2026-11-18）: `@banto/image-assets`（v7.2.0の固定）を依存に足し、`lib/image-assets.ts`の取込の検査（`imageHeader`・`inspectImage`・`sha256`）を上流の`inspectImageHeader`・`inspectImage`・`sha256Hex`に置き換えた。上限（8MiB・1辺8192px・1600万画素・PNG/JPEG）はSCADAが`validateImageImportLimits`で渡す。上流は文言を持たないので、エラーコードを従来の日本語の文に変え、コードは`Error.cause`に残す。`.svelte.ts`を含むソース配布なのでviteの`optimizeDeps.exclude`に足した（`vite.pages.config.ts`も）。
+  - 変わった点: 終端の欠けたPNGは「ヘッダーが壊れています」になる（上流は`malformed-header`にまとめる）。アニメーションPNGと非対応のJPEG（ロスレス・12bit・算術符号化）は同じ`unsupported-format`の文。JPEGはフレームヘッダの成分数（1・3・4以外）・高さ0・セグメント長の不整合も断る（上流のヘッダ検査の範囲）。hashは`crypto.subtle`が無い平文HTTPでも計算できる。PNGの`eXIf`による縦横の入替えも一致とみなす。
+  - 変えていない点: `AssetStore`（原本の保持・重複排除・URL・pin・collect・`importFrom`）は手元のまま。空のファイルは上流へ渡す前に従来の文で断る。ファイル名の整形と`ImageMetadata`の形（`mime`・`name`）。
+  - 2段目（store）の境界: 上流の`createImageStore`はURLを`acquireUrl`の貸出しと`release`で管理し、最後の`release`でrevokeする。手元は`url(hash)`をcollectまで共有する（利用は`App.svelte`の`assetImages`だけ）。ほかに、metadataにファイル名が無い、package読込の宣言との一致確認（`put`の`expected`）が無い、`add`が内部に要求の失効（key）を持ち`createRequestOwner`と重なる、の差がある。移す前に、URLの貸出しを誰が持つか（`$derived`の中で借りられない）と、ファイル名・宣言の確認をどこに残すかを決める。
+  - 試験: `image-assets.test.ts`（終端の欠けの期待を上流の分類へ、エラーコードが`cause`に残ること）、vitest全件、既存e2eの画像・資産14ファイル（`asset-clipboard`・`background-*`・`image-*`・`screen-background`・`symbol-image*`・`project-files`）。
 - Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらず、上流mainの`anchoredPopover.ts`の横clampも同じ式のまま。[tyaro/banto#668](https://github.com/tyaro/banto/issues/668)で報告した（2026-11-18）。
 - 置き換えの各区切りでは、既存の入力保護・資源解放・保存失敗のE2Eを通してから手元の実装を消す（[引渡しの方法](#引渡しの方法)の3）。
 - 新しい還元候補（パネルの幅・高さの保存と「標準レイアウトに戻す」、作業タブの入力保護など）は、上の採用で上流のAPIとの差が見えてから起票する。
