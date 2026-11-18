@@ -451,3 +451,36 @@ test("back-to-back context requests open only the last insertion point", async (
   expect(Math.abs((await n("Y")) + (await n("高さ")) / 2 - 30)).toBeLessThan(2);
   await expect(svg(page).locator("[data-object-id]")).toHaveCount(4);
 });
+test("the contextmenu echo of the menu key keeps the selection's canvas menu", async ({
+  page,
+}) => {
+  await edit(page);
+  await list(page)
+    .getByRole("button", { name: "rectangle · 3", exact: true })
+    .click();
+  await canvas(page).focus();
+  // Windows の Chromium は ContextMenu キーを離したときにも contextmenu を出す
+  // （button は右ボタン以外）。キーで開いた選択の操作を、空白の操作で上書きしない。
+  await canvas(page).evaluate((element) => {
+    element.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "ContextMenu",
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    element.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        button: 0,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
+  await expect(menu(page, "rectangle · 3")).toBeVisible();
+  await expect(menu(page, "キャンバス")).toHaveCount(0);
+  // 右クリックはこれまでどおり、押した場所の操作を開く。
+  await page.keyboard.press("Escape");
+  await at(page, 5, 5);
+  await expect(menu(page, "キャンバス")).toBeVisible();
+});
