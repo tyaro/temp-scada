@@ -407,30 +407,32 @@ export function parseProject(json: string): Project {
         objects: screen.objects.map((object) => ({
           ...object,
           rotation: 0,
-          shape: isAreaShape(object.shape)
-            ? {
-                ...object.shape,
-                paint: {
-                  fill: {
-                    enabled: true,
-                    paint: { type: "solid", color: object.fill!, alpha: 1 },
-                  },
-                  stroke: null,
-                },
-              }
-            : object.shape.type === "text"
+          // 旧形式の移行。旧形式に無い図形を足しても対象を広げない。
+          shape:
+            object.shape.type === "rectangle" || object.shape.type === "ellipse"
               ? {
                   ...object.shape,
-                  style: {
-                    fontSize: Math.min(
-                      512,
-                      (object as LayoutObject).height * 0.7,
-                    ),
-                    fontWeight: "normal",
-                    align: "left",
+                  paint: {
+                    fill: {
+                      enabled: true,
+                      paint: { type: "solid", color: object.fill!, alpha: 1 },
+                    },
+                    stroke: null,
                   },
                 }
-              : object.shape,
+              : object.shape.type === "text"
+                ? {
+                    ...object.shape,
+                    style: {
+                      fontSize: Math.min(
+                        512,
+                        (object as LayoutObject).height * 0.7,
+                      ),
+                      fontWeight: "normal",
+                      align: "left",
+                    },
+                  }
+                : object.shape,
         })),
         background: "#0b1220",
       })),

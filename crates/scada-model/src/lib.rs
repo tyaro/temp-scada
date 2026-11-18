@@ -203,7 +203,10 @@ impl Project {
                     if object["shape"]["type"] == "text" {
                         object["shape"]["style"] = serde_json::json!({"fontSize":(object["height"].as_f64().unwrap() * 0.7).min(512.0),"fontWeight":"normal","align":"left"});
                     }
-                    if is_area_shape(&object["shape"]) {
+                    // 旧形式の移行。旧形式に無い図形を足しても対象を広げない。
+                    if object["shape"]["type"] == "rectangle"
+                        || object["shape"]["type"] == "ellipse"
+                    {
                         object["shape"]["paint"] = serde_json::json!({"fill":{"enabled":true,"paint":{"type":"solid","color":object["fill"].clone(),"alpha":1}},"stroke":null});
                         object.as_object_mut().unwrap().remove("fill");
                     }
