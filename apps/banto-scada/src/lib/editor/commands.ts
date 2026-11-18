@@ -317,6 +317,10 @@ export type ObjectCommand = (
       screenId: string;
       objectId: string;
       index: number;
+      /**
+       * 折れ線は配置の中の頂点。多角形は今の枠の左上を原点とする実寸の頂点で、
+       * 枠の作り直し（`reframePolygon`）を通す。
+       */
       point: Point;
     }
   | {

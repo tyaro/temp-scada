@@ -195,3 +195,55 @@ test("polygon vertices are edited in the inspector and rejected in place", async
   await expect(polygon).toHaveAttribute("points", "80,0 160,100 0,100");
   await expect(x).toHaveValue(String(startX));
 });
+
+test("polygon vertices are dragged on the canvas and rejected without changes", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "部品");
+  await page.getByRole("button", { name: "多角形を追加", exact: true }).click();
+  const polygon = mainCanvas(page).locator(
+    "[data-object-id] > [data-object-rotation] polygon",
+  );
+  const handle = (index: number) =>
+    mainCanvas(page).locator(`[data-vertex-index="${index}"]`);
+  await expect(handle(0)).toHaveCount(1);
+  await expect(handle(2)).toHaveCount(1);
+  const x = page.getByLabel("X", { exact: true });
+  const height = page.getByLabel("高さ", { exact: true });
+  const startX = Number(await x.inputValue());
+  /** 頂点を画面上の座標（world）で dx, dy だけ動かす。Alt でグリッドへ吸着させない。 */
+  async function drag(index: number, dx: number, dy: number) {
+    const box = (await handle(index).boundingBox())!;
+    const scale = await handle(index).evaluate(
+      (element) => (element as SVGGraphicsElement).getScreenCTM()!.a,
+    );
+    const from = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.keyboard.down("Alt");
+    await page.mouse.move(from.x + (dx * scale) / 2, from.y + (dy * scale) / 2);
+    await page.mouse.move(from.x + dx * scale, from.y + dy * scale);
+    await page.mouse.up();
+    await page.keyboard.up("Alt");
+  }
+  // 上の頂点を左上の枠の外へ。外接矩形が新しい枠になり、ほかの頂点は動かない。
+  await drag(0, -120, -40);
+  await expect(polygon).toHaveAttribute("points", "0,0 200,140 40,140");
+  await expect(x).toHaveValue(String(startX - 40));
+  await expect(height).toHaveValue("140");
+  await page.getByRole("button", { name: "元に戻す", exact: true }).click();
+  await expect(polygon).toHaveAttribute("points", "80,0 160,100 0,100");
+  // 下の辺に重ねると一直線になるので拒否し、元の形に戻して理由を出す。
+  await drag(0, 0, 100);
+  await expect(page.getByTestId("project-status")).toContainText("1以上");
+  await expect(polygon).toHaveAttribute("points", "80,0 160,100 0,100");
+  // 方向キーでも動かせる。上へ動かすと枠が高くなる。
+  await handle(0).focus();
+  await page.keyboard.press("ArrowUp");
+  await expect
+    .poll(async () => Number(await height.inputValue()))
+    .toBeGreaterThan(100);
+});
