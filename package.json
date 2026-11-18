@@ -10,6 +10,7 @@
   "scripts": {
     "dev": "pnpm --filter banto-scada dev",
     "build": "pnpm --filter banto-scada build",
+    "build:pages": "pnpm --filter banto-scada build:pages",
     "check": "pnpm --filter banto-scada check",
     "test": "pnpm --filter banto-scada test",
     "e2e": "playwright test",

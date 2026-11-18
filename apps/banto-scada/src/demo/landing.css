@@ -1,0 +1,140 @@
+/* GitHub Pages のトップページだけの見た目。製品の画面（studio.css）とは分ける。 */
+:root {
+  color-scheme: light dark;
+  --bg: #f4f7fa;
+  --surface: #ffffff;
+  --border: #d5dee8;
+  --text: #16243a;
+  --muted: #55657c;
+  --primary: #0b6fb8;
+  --primary-text: #ffffff;
+  --badge-bg: #fef3c7;
+  --badge-text: #78350f;
+  --badge-border: #b45309;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --surface: #111b2e;
+    --border: #25344d;
+    --text: #e2e8f0;
+    --muted: #9fb0c7;
+    --primary: #38bdf8;
+    --primary-text: #06202f;
+    --badge-bg: #3b2a08;
+    --badge-text: #fde68a;
+    --badge-border: #d97706;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    "Hiragino Kaku Gothic ProN",
+    "Noto Sans JP",
+    Meiryo,
+    sans-serif;
+  line-height: 1.7;
+}
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 40px 16px 56px;
+}
+h1 {
+  margin: 12px 0 8px;
+  font-size: 2rem;
+  line-height: 1.3;
+}
+h2 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+}
+p {
+  margin: 0 0 12px;
+}
+.lede {
+  max-width: 44em;
+  color: var(--muted);
+}
+.badge {
+  display: inline-block;
+  padding: 2px 12px;
+  border: 1px solid var(--badge-border);
+  border-radius: 999px;
+  background: var(--badge-bg);
+  color: var(--badge-text);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.subjects {
+  display: grid;
+  gap: 16px;
+  margin: 28px 0;
+}
+.subject,
+.notes {
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.subject ul,
+.notes ul {
+  margin: 0 0 12px;
+  padding-left: 1.3em;
+}
+.subject ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  column-gap: 28px;
+}
+.story {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+.entry {
+  display: inline-block;
+  padding: 9px 20px;
+  border: 1px solid var(--primary);
+  border-radius: 8px;
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+.entry.primary {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+.entry:hover {
+  filter: brightness(1.08);
+}
+.entry:focus-visible,
+footer a:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+.notes li {
+  margin-bottom: 6px;
+}
+footer {
+  margin-top: 28px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+footer a {
+  color: var(--primary);
+}
