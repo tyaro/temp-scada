@@ -10,6 +10,7 @@ import {
   type ScreenObject,
 } from "../../project";
 import { parseLineStyle } from "../../line-style";
+import { parsePolygonVertexText } from "../../polygon-frame";
 import { CLOCK_FORMATS } from "../../clock-format";
 import { ALARM_LIMIT_KEYS, type AlarmLimitKey } from "../../alarms";
 import { parseNumericProperty } from "../numeric-properties";
@@ -328,6 +329,13 @@ export function objectFormCommand(
     patch.points = parsePoints(String(data.get("points")));
     patch.strokeWidth = Number(data.get("strokeWidth"));
     patch.arrow = parseLineArrow(data.get("arrow"));
+  }
+  if (selected.shape.type === "polygon" && "width" in selected) {
+    const vertices = parsePolygonVertexText(String(data.get("points")), {
+      ...selected,
+      shape: selected.shape,
+    });
+    if (vertices) patch.polygonVertices = vertices;
   }
   return {
     type: "update",

@@ -2,6 +2,7 @@
   import type { Snippet } from "svelte";
   import FloatingPanelHeader from "./FloatingPanelHeader.svelte";
   import { lineArrowLabels, lineArrows } from "../line-arrow";
+  import { parsePolygonVertexText, reframePolygon } from "../polygon-frame";
   import SelectionTextStyle from "./SelectionTextStyle.svelte";
   import SelectionSize from "./SelectionSize.svelte";
   import SelectionOpacity from "./SelectionOpacity.svelte";
@@ -303,6 +304,24 @@
     const input = event.currentTarget as HTMLInputElement;
     input.setCustomValidity("");
     numericErrors = { ...numericErrors, [input.name]: "" };
+  }
+  /** 多角形の頂点の欄: 入力のたびに枠の作り直しを試し、拒否の理由を欄の下に出す。 */
+  function checkPolygonVertices(event: Event) {
+    const input = event.currentTarget as HTMLTextAreaElement;
+    let message = "";
+    if (selected?.shape.type === "polygon" && "width" in selected) {
+      const object = { ...selected, shape: selected.shape };
+      try {
+        const vertices = parsePolygonVertexText(input.value, object);
+        if (vertices) {
+          const frame = reframePolygon(object, vertices);
+          if (!frame.ok) message = frame.reason;
+        }
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+    }
+    numericErrors = { ...numericErrors, points: message };
   }
   function commitInput(input: HTMLInputElement) {
     if (composing.has(input) || !input.isConnected || drafts.pending) return;
@@ -1012,6 +1031,29 @@
                 >
                   塗りは無効です。色と不透明度の設定は保持され、現在の描画には使われません。
                 </p>{/if}
+              {#if selected.shape.type === "polygon"}
+                <label class="banto-field banto-field--stacked"
+                  ><span class="banto-field-label">頂点（x,y を1行ずつ）</span
+                  ><textarea
+                    class="banto-field-control"
+                    name="points"
+                    aria-label="頂点"
+                    rows="5"
+                    required
+                    aria-invalid={numericErrors.points ? "true" : undefined}
+                    aria-describedby={numericErrors.points
+                      ? "polygon-points-error"
+                      : "polygon-points-hint"}
+                    oninput={checkPolygonVertices}></textarea></label
+                >
+                {#if numericErrors.points}<span
+                    class="field-error"
+                    id="polygon-points-error"
+                    role="alert">{numericErrors.points}</span
+                  >{:else}<p class="numeric-hint" id="polygon-points-hint">
+                    枠の左上を原点とする実寸です。頂点の外接矩形が新しい枠になります。
+                  </p>{/if}
+              {/if}
               {#if selected.shape.type === "polyline"}
                 <label class="banto-field banto-field--stacked"
                   ><span class="banto-field-label">頂点（x,y を1行ずつ）</span
