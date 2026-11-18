@@ -20,7 +20,8 @@
 - 小札が指す condition の id は、しきい値なら `${alarmId}:${limit}`、bit なら `alarmId`（host の `alarm_project.rs` と同じ）。
 - 検査（TS の `parseProject` 経由の `validateAlarmBadges`、Rust の `crates/scada-model/src/alarms.rs` の `validate_badges`）: 指す定義が無い「警報の小札が指す警報の定義が見つかりません」、しきい値で限界が無い、限界が定義に無い「警報の小札が指す限界が警報の定義にありません」、bit で限界がある。
 - 編集コマンドも `parseProject` で検査されるので、小札が指す定義の削除や、指している限界を外す・bit へ変える更新は拒否される。警報の設定（`editor/alarm-handler.ts`）は、その前に「この警報は警報の小札で使用中です：画面／小札。先に小札を削除するか、小札が指す警報を変えてください。」と使用中の小札を示す。
-- 文字を含むので反転できない（`canFlip`）。clipboard のコピー・切り取り・貼り付けは未対応（警報の定義が別の Project に無いため）。同じ Project の中の配置の複製・画面の複製は使える。
+- 文字を含むので反転できない（`canFlip`）。
+- clipboard（2026-11-18 追加）: コピー・切り取りは、小札が指す警報の定義だけを clipboard の `project.alarms.definitions` に添える（`blinkUnacked` は添えない）。`parseClipboard` は、どの小札も指さない定義や `blinkUnacked` を含む clipboard を「clipboardの警報の定義の形式が不正です」で拒む。貼り付けでは定義を取り込まず、小札は貼付け先の **同じ id** の定義と限界を指す（`alarm-badge.ts` の `assertAlarmBadgePasteTarget`）。無ければ「貼り付け先の Project に、警報の小札が指す警報「T-01 温度 HH」の定義がありません。…」で貼り付け全体を拒む。警報の定義の id は Project 内で振るので、貼り付けられるのはコピー元の Project か、その定義を引き継いだ Project（複製した Project など）。埋込画面と一緒に取り込む画面の中の小札も同じく確かめる。Symbol 定義へは貼り付けない（従来どおり）。
 - schemaVersion は 0.37.0 を据え置いた。
 
 ## 状態の導出
@@ -70,8 +71,8 @@
 ## 検証
 
 - 共通の契約: `examples/alarm-badge-cases.json`（Rust `shared_alarm_badge_contract`、TS `alarm-badge.test.ts`。基は `examples/process.project.json`）。
-- 状態の導出: `alarm-view.test.ts`。追加・Inspector のフォーム・定義の削除と限界の削除の拒否・モックの feed: `alarm-badge.test.ts`。
-- ブラウザ: `e2e/alarm-badge.spec.ts`（モックなしで「不明」・定義の無い Project でボタンが無効・指す定義の削除の拒否、モックありで正常→未確認→確認済み→評価不能の印→復帰・未確認→正常→評価不能→Engine 単位の評価不能（不明）→別の Project（不明）、点滅と「動きを減らす」）。
+- 状態の導出: `alarm-view.test.ts`。追加・Inspector のフォーム・定義の削除と限界の削除の拒否・モックの feed・clipboard のコピーと貼り付け（同じ id の定義へ・定義や限界が無い貼付け先の拒否・余分な定義の拒否）: `alarm-badge.test.ts`。
+- ブラウザ: `e2e/alarm-badge.spec.ts`（モックなしで「不明」・定義の無い Project でボタンが無効・指す定義の削除の拒否、モックありで正常→未確認→確認済み→評価不能の印→復帰・未確認→正常→評価不能→Engine 単位の評価不能（不明）→別の Project（不明）、点滅と「動きを減らす」、メニューのコピー・貼り付けと、定義の無い Project への貼り付けの拒否）。
 
 ## 後続・未対応
 

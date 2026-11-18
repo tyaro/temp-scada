@@ -254,3 +254,45 @@ test("a badge follows the mocked alarm feed through every state", async ({
   await setSnapshot(snapshot(3, 1, { active: true, acked: false }));
   await name("未確認（発生中）");
 });
+
+test("a badge copies and pastes onto the same alarm, and is refused where the alarm is missing", async ({
+  page,
+}) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await openSample(page);
+  await addBadge(page);
+  const menu = async (name: string) => {
+    await page
+      .getByRole("menubar")
+      .getByRole("menuitem", { name: "編集", exact: true })
+      .click();
+    await page
+      .getByRole("menu", { name: "編集", exact: true })
+      .getByRole("menuitem", { name, exact: true })
+      .click();
+  };
+  await menu("コピー");
+  const text = await page.evaluate(() => navigator.clipboard.readText());
+  expect(JSON.parse(text).project.alarms.definitions).toHaveLength(1);
+  await menu("貼り付け");
+  await expect(badge(page)).toHaveCount(2);
+  await expect(badge(page).nth(1)).toHaveAccessibleName(
+    /^警報の小札 T-01 温度 HH: 不明/,
+  );
+
+  // 指す警報の定義が無い Project へは、警報の名前を示して貼り付けない。
+  const other = structuredClone(sample) as any;
+  other.manifest.projectId = "0199f6a1-0000-7000-8000-0000000009ff";
+  other.alarms.definitions = other.alarms.definitions.filter(
+    (definition: { id: string }) => definition.id !== TEMP,
+  );
+  await openSample(page, other);
+  await page.evaluate((value) => navigator.clipboard.writeText(value), text);
+  await menu("貼り付け");
+  await expect(
+    page
+      .getByText(/警報の小札が指す警報「T-01 温度 HH」の定義がありません/)
+      .first(),
+  ).toBeVisible();
+  await expect(badge(page)).toHaveCount(0);
+});

@@ -78,15 +78,22 @@ export function parseClipboard(text: string): ObjectClipboard {
     throw new Error(
       "トレンドを含む貼り付けは未対応です。配置の複製または画面の複製を使ってください。",
     );
-  if (
-    project.alarms ||
-    project.screens.some((s) =>
-      s.objects.some((o) => o.shape.type === "alarmBadge"),
-    )
-  )
-    throw new Error(
-      "警報の小札・警報の定義を含む貼り付けは未対応です。配置の複製を使ってください。",
+  // 警報の定義は小札が指すものだけを、照合のために添える。
+  if (project.alarms) {
+    const badgeAlarmIds = new Set(
+      project.screens.flatMap((s) =>
+        s.objects.flatMap((o) =>
+          o.shape.type === "alarmBadge" ? [o.shape.alarmId] : [],
+        ),
+      ),
     );
+    if (
+      project.alarms.blinkUnacked !== undefined ||
+      project.alarms.definitions.length !== badgeAlarmIds.size ||
+      project.alarms.definitions.some((d) => !badgeAlarmIds.has(d.id))
+    )
+      throw new Error("clipboardの警報の定義の形式が不正です");
+  }
   if (
     project.equipment?.length ||
     project.equipmentTypes?.length ||
@@ -249,14 +256,12 @@ export function copyObjectSnapshot(
     throw new Error(
       "トレンドを含むコピー・切り取りは未対応です。配置の複製または画面の複製を使ってください。",
     );
-  if (
-    [...objects, ...dependencyScreens.flatMap((s) => s.objects)].some(
-      (o) => o.shape.type === "alarmBadge",
-    )
-  )
-    throw new Error(
-      "警報の小札を含むコピー・切り取りは未対応です。配置の複製を使ってください。",
-    );
+  // 小札が指す警報の定義だけを clipboard に添える（貼付け先へは取り込まない）。
+  const badgeAlarmIds = new Set(
+    [...objects, ...dependencyScreens.flatMap((s) => s.objects)].flatMap((o) =>
+      o.shape.type === "alarmBadge" ? [o.shape.alarmId] : [],
+    ),
+  );
   if (
     [...objects, ...dependencyScreens.flatMap((screen) => screen.objects)].some(
       (object) => object.shape.type === "symbol" && object.shape.equipmentId,
@@ -346,6 +351,15 @@ export function copyObjectSnapshot(
       ...fragmentDependencies,
     ],
     symbols: project.symbols.filter((s) => dependencies.symbols.has(s.id)),
+    ...(badgeAlarmIds.size
+      ? {
+          alarms: {
+            definitions: (project.alarms?.definitions ?? []).filter(
+              (definition) => badgeAlarmIds.has(definition.id),
+            ),
+          },
+        }
+      : {}),
   };
   return {
     format: "banto-scada.objects",

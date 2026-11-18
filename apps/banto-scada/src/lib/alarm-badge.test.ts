@@ -18,6 +18,7 @@ import { objectFormValues } from "./designer/numeric-properties";
 import { canFlip } from "./flip";
 import { shapeSlotNames, shapeTagBindings } from "./shape-bindings";
 import { createMockAlarmFeed } from "./mock-alarm-feed";
+import { copyObjects, parseClipboard } from "./clipboard";
 import type { AlarmDefinition } from "./alarms";
 
 const TEMP = "0199f6a1-0000-7000-8000-000000000101";
@@ -193,6 +194,74 @@ describe("alarm badge editing", () => {
         "edit",
       ).alarms!.definitions[0],
     ).toEqual(other);
+  });
+  it("copies with only the definitions it points at, and pastes onto the same id", () => {
+    const { next, object } = added();
+    const text = copyObjects(next, screenId, [object.id], "a");
+    const fragment = parseClipboard(text);
+    expect(fragment.project.alarms).toEqual({
+      definitions: [next.alarms!.definitions.find((d) => d.id === TEMP)],
+    });
+    const paste = (base: Project, origin = "b") =>
+      applyCommand(
+        base,
+        { type: "paste", screenId, text, origin, center: { x: 10, y: 10 } },
+        "edit",
+      );
+    const pasted = paste(next).screens[0].objects.at(-1)!;
+    expect(pasted.id).not.toBe(object.id);
+    expect(pasted.shape).toEqual(object.shape);
+    // 定義は取り込まない。
+    expect(paste(next).alarms).toEqual(next.alarms);
+    // 貼付け先に同じ id の定義が無い・限界が無いときは、名前を示して拒む。
+    const without = structuredClone(next);
+    without.screens[0].objects = without.screens[0].objects.filter(
+      (o) => o.shape.type !== "alarmBadge",
+    );
+    without.alarms!.definitions = without.alarms!.definitions.filter(
+      (d) => d.id !== TEMP,
+    );
+    expect(() => paste(without)).toThrow(
+      "警報の小札が指す警報「T-01 温度 HH」の定義がありません",
+    );
+    const noLimit = structuredClone(next);
+    noLimit.screens[0].objects = noLimit.screens[0].objects.filter(
+      (o) => o.shape.type !== "alarmBadge",
+    );
+    const temp = noLimit.alarms!.definitions.find((d) => d.id === TEMP)!;
+    if (temp.source.kind !== "threshold") throw new Error("threshold");
+    delete temp.source.limits.hh;
+    expect(() => paste(noLimit)).toThrow("「T-01 温度 HH」の定義がありません");
+    // Symbol 定義へは貼り付けない。
+    expect(() =>
+      applyCommand(
+        next,
+        {
+          type: "paste",
+          screenId,
+          definitionId: next.symbols[0].id,
+          text,
+          origin: "b",
+          center: { x: 10, y: 10 },
+        },
+        "edit",
+      ),
+    ).toThrow("警報の小札");
+  });
+  it("rejects clipboard definitions no badge points at", () => {
+    const { next, object } = added();
+    const value = JSON.parse(copyObjects(next, screenId, [object.id], "a"));
+    value.project.alarms.definitions.push(
+      next.alarms!.definitions.find((d) => d.id === PUMP),
+    );
+    expect(() => parseClipboard(JSON.stringify(value))).toThrow(
+      "clipboardの警報の定義の形式が不正です",
+    );
+    const blink = JSON.parse(copyObjects(next, screenId, [object.id], "a"));
+    blink.project.alarms.blinkUnacked = true;
+    expect(() => parseClipboard(JSON.stringify(blink))).toThrow(
+      "clipboardの警報の定義の形式が不正です",
+    );
   });
 });
 
