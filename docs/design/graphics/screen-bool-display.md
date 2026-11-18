@@ -38,7 +38,7 @@
 
 - `true`／`false` の形は機器種別の bool slot の `boolDisplay` と同じ（文字は空でもよい、色は `#RRGGBB`）。`unknownColor` は取得不能の色。
 - `binding` が要る。`format` とは同時に持てない。共有 Symbol の定義の中の Text（slot は機器種別の定義に従う）と、ほかの図形には持たせない。
-- 評価は A2 の `evaluateSlotState` を bool の slot として使う。Good の bit タグは定義の文字と色。それ以外（未接続・未解決・Bad・Stale・数値型のタグ）は、読取の文字（理由）と `unknownColor`。直前の色や false の色を代用しない。SIM は前置する。
+- 評価は A2 の `evaluateSlotState` を bool の slot として使う。Good の bit タグは定義の文字と色。それ以外（未接続・未解決・Bad・Stale・数値型のタグ）は、読取の文字（理由）と `unknownColor`。直前の色や false の色を代用しない。SIM は前置する。数値型のタグは slot ではないので、文字は警報バナー・トレンドと同じ「`-- · 型不一致`」（slot の「slot型不一致」は使わない）。
 - Inspector の「bool の表示」で、使う／使わない、true／false の文字と色、取得不能の色を編集し、適用で 1 履歴にする。タグを外すと指定も同じ履歴で外す。
 
 ### A6-3 画面直下の図形・配管の状態色

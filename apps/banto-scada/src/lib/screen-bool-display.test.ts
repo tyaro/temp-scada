@@ -99,7 +99,7 @@ describe("presentScreenBool", () => {
     ["invalid", { state: "invalid" }, "-- · 値が不正"],
     ["stale", unavailable("stale"), "-- · 更新停止"],
     ["bad", unavailable("bad"), "-- · 不良"],
-    ["a Good number tag", goodNumber(1), "-- · slot型不一致"],
+    ["a Good number tag", goodNumber(1), "-- · 型不一致"],
     ["a Good non-finite number", goodNumber(Number.NaN), "-- · 値が不正"],
   ] as [string, NumericReading | undefined, string][])(
     "shows the reason and the unknown color for %s",
@@ -110,6 +110,13 @@ describe("presentScreenBool", () => {
       });
     },
   );
+  it("prefixes SIM on a simulated number tag", () => {
+    const reading = { ...goodNumber(1), provenance: provenance(true) };
+    expect(presentScreenBool(display, reading)).toMatchObject({
+      text: "SIM · -- · 型不一致",
+      color: "#d97706",
+    });
+  });
   it("prefixes SIM on an unavailable simulated reading", () => {
     expect(presentScreenBool(display, unavailable("bad", true))).toMatchObject({
       text: "SIM · -- · 不良",
