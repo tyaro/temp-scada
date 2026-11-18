@@ -50,7 +50,12 @@ Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v
   - `"run"`: 実行中のcopy・cut・paste（busy）。対象の変化では`invalidate`しない。OSのクリップボード書込みは止められないので、古い実行が終わるまで次の操作を受けない従来の動き（2つの書込みが競わない）を保つ。失効した実行がモデルを触らないことは`"target"`の確認が受け持つ。controllerの破棄で`dispose`する。
   - 変えていない点: Projectの版・下書き・選択の一致の確認は対象の失効と別の条件として残した。完了したOSの書込みは戻さない（失効しても「コピーしました。…切り取りは中止しました。」のとおり）。
   - 試験: `clipboard.svelte.test.ts`（実行中のbusyと次の操作の拒否、確定待ちの先送りと取消し、失敗の後始末、読取り中の版の変化）と、既存e2eの`clipboard`・`asset-clipboard`・`image-paste`・`screen-view-clipboard`・`symbol-usages`。対象の変化による失効はe2eで確かめる（vitestでは`$effect`が動かない）。
-  - 次は`catalog.svelte.ts`。1回の要求で複数のdeliveryを受ける流れで`createRequestOwner`の形に合うか先に確かめる。
+- #436の3段目（2026-11-18）: `designer/controllers/catalog.svelte.ts`のHost catalogの購読を`createRequestOwner`に載せた。sourceの`begin`1回を1つの要求とみなせば形に合う（同じkeyの次の`begin`で前のdeliveryが失効する）。keyを2つに分ける。
+  - `"scope"`: 1つの(Project, source)への購読。購読時に`begin`してすぐ`finish`する（busyにしない）。次の購読で上書きされ、effectの後始末と購読の失敗で`invalidate`する。従来の`active`の代わりで、購読をやめた古いsourceから遅れて来た`begin`が今の`"delivery"`を上書きしないための確認。
+  - `"delivery"`: Hostへの1回のcatalog要求。sourceの`begin`ごとに`begin`し、`close`・`fail`で`finish`する。古いdeliveryの`close`・`fail`は`finish()`がfalseを返すので何もしない。controllerの破棄で`dispose`する。
+  - 変えていない点: Project・sourceの同一性の比較は別の条件として残した（値が変わってからeffectが走り直すまでの間に届いた返事を採らないため）。`catalog-session.ts`のtokenによる古いdeliveryの拒否・payload検証もそのまま（純関数の単体試験を持つため二重の確認になる）。busyは使わない（読込中は従来どおりsessionのphaseで表す）。
+  - 試験: 既存e2eの`catalog-selection`（差し替えた古いsourceから遅れて来た`begin`が今のdeliveryを失効させない確認を追加）・`native-auth`・`native-read-path`・`slot-state-color`・`slot-state-display`・`symbol-equipment-check`・`table`と`catalog-session.test.ts`。vitestでは`$effect`が動かないので単体試験は足していない。
+  - #436の置き換えは`designer/controllers/`の3つで終わり。
 - Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらず、上流mainの`anchoredPopover.ts`の横clampも同じ式のまま。[tyaro/banto#668](https://github.com/tyaro/banto/issues/668)で報告した（2026-11-18）。
 - 置き換えの各区切りでは、既存の入力保護・資源解放・保存失敗のE2Eを通してから手元の実装を消す（[引渡しの方法](#引渡しの方法)の3）。
 - 新しい還元候補（パネルの幅・高さの保存と「標準レイアウトに戻す」、作業タブの入力保護など）は、上の採用で上流のAPIとの差が見えてから起票する。

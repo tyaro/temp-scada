@@ -31,7 +31,7 @@ async function entry(page: Page) {
         return () => {if(h.throwUnsubscribe) throw Error("test cleanup failure");};
       }});
       let source = makeSource();
-      h.replace = () => {h.previous = h.delivery; source = makeSource(); notify();};
+      h.replace = () => {h.previous = h.delivery; h.previousBegin = h.begin; source = makeSource(); notify();};
       h.restart = () => {h.previous = h.delivery; h.delivery = h.begin();};
       mount(App, {target: document.getElementById("app"), props: {get catalogSource() {track(); return source;}}});
     `;
@@ -196,6 +196,16 @@ for (const theme of ["light", "dark"] as const) {
       const h = (window as any).__catalogHarness;
       h.previous.close();
     });
+    await expect(boolButton).toBeEnabled();
+    // 差し替えた古いsourceから遅れて来た要求は、今のdeliveryを失効させない。
+    expect(
+      await page.evaluate(() => {
+        const h = (window as any).__catalogHarness;
+        const late = h.previousBegin();
+        late.fail();
+        return late.receive({});
+      }),
+    ).toBe(false);
     await expect(boolButton).toBeEnabled();
     await page.evaluate(() => {
       const h = (window as any).__catalogHarness;

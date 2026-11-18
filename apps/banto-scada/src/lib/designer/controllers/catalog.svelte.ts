@@ -1,3 +1,4 @@
+import { createRequestOwner } from "@banto/admin-core";
 import { untrack } from "svelte";
 import { parseProject, type Project } from "../../project";
 import {
@@ -16,10 +17,28 @@ export interface CatalogSource {
   subscribe(project: Project, begin: () => CatalogDelivery): () => void;
 }
 
+const inert: CatalogDelivery = Object.freeze({
+  receive: () => false,
+  close() {},
+  fail() {},
+});
+
 export function createCatalogController(
   getProject: () => Project,
   getSource: () => CatalogSource | undefined,
 ) {
+  // Two keys of one owner (Banto #436):
+  // - SCOPE: one subscription to one (project, source). Taken when the effect
+  //   subscribes and finished at once (never busy). The next subscription
+  //   supersedes it and the effect cleanup invalidates it, so a late begin()
+  //   from an unsubscribed source cannot supersede the live DELIVERY.
+  // - DELIVERY: one Host catalog request. Each begin() of the source starts a
+  //   new one and supersedes the previous; close() / fail() finish it.
+  // The project / source identity is still compared separately: it changes
+  // before the effect reruns, and a reply arriving in that gap must not land.
+  const requests = createRequestOwner();
+  const SCOPE = "scope";
+  const DELIVERY = "delivery";
   let selection = $state.raw<CatalogSelection>(sampleSelection);
   let boundSource: CatalogSource | undefined;
   $effect(() => {
@@ -31,25 +50,29 @@ export function createCatalogController(
         selection = sampleSelection;
         return;
       }
+      const scope = requests.begin(SCOPE);
+      scope.finish();
       const session = createCatalogSession(project);
-      let active = true;
       const current = () =>
-        active && getProject() === project && getSource() === source;
+        scope.isCurrent() && getProject() === project && getSource() === source;
       const publish = () => {
         const next = session.selection(project);
         selection = { ...next, isCurrent: () => current() && next.isCurrent() };
       };
       publish();
       const begin = (): CatalogDelivery => {
-        if (!current()) return { receive: () => false, close() {}, fail() {} };
+        if (!current()) return inert;
+        const request = requests.begin(DELIVERY);
         const token = session.begin();
         publish();
+        const live = () => request.isCurrent() && current();
         const end = (invalid: boolean) => {
-          if (current() && session.end(token, invalid)) publish();
+          if (request.finish() && current() && session.end(token, invalid))
+            publish();
         };
         return {
           receive(payload) {
-            if (!current()) return false;
+            if (!live()) return false;
             const accepted = session.receive(token, payload);
             publish();
             return accepted;
@@ -66,10 +89,11 @@ export function createCatalogController(
         );
       } catch {
         begin().fail();
-        active = false;
+        requests.invalidate(SCOPE);
       }
       return () => {
-        active = false;
+        requests.invalidate(SCOPE);
+        requests.invalidate(DELIVERY);
         session.begin();
         try {
           unsubscribe?.();
@@ -79,6 +103,7 @@ export function createCatalogController(
       };
     });
   });
+  $effect(() => () => requests.dispose());
   return {
     get selection() {
       const source = getSource();
