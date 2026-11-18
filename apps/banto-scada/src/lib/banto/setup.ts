@@ -18,6 +18,7 @@ import {
   type CredentialRevision,
 } from "@banto/admin-core";
 import { createToastStore } from "@banto/ui";
+import { createUiPreference, type UiPreference } from "./ui-preference";
 import {
   applyTheme,
   applyPreset,
@@ -45,224 +46,217 @@ const localFileAuth: AuthProvider = {
   credentialRevision: () => revision,
   onCredentialChanged: () => () => {},
 };
-let themeMode: ThemeMode = "dark";
-let menubarVisible = DEFAULT_PANEL_LAYOUT.menubar;
+function warn(message: string) {
+  toastStore.push("warning", message);
+}
+/** UI の好み1件。保存の順序と保存済みの値は上流の`createSavedSetting`が持つ。 */
+function preference<T>(
+  key: string,
+  options: {
+    parse: (raw: string) => T | undefined;
+    serialize: (value: T) => string;
+    fallback: () => T;
+    saveFailed: string;
+    loadFailed: string;
+  },
+) {
+  return createUiPreference({ provider: uiSettings, key, warn, ...options });
+}
+/** 従来どおり「false」だけを非表示とし、ほかの文字は表示として扱う。 */
+function visibility(key: string, fallback: boolean, label: string) {
+  return preference(key, {
+    parse: (raw) => raw !== "false",
+    serialize: String,
+    fallback: () => fallback,
+    saveFailed: `${label}の設定を保存できません。このタブだけに適用します。`,
+    loadFailed: `${label}の設定を読み込めません。初期表示を使います。`,
+  });
+}
 export type PaletteView = "icons" | "names";
-let paletteView: PaletteView = "icons";
-const PALETTE_VIEW_KEY = "scada.designer.palette-view";
+const paletteView = preference<PaletteView>("scada.designer.palette-view", {
+  parse: (raw) => (raw === "icons" || raw === "names" ? raw : undefined),
+  serialize: (value) => value,
+  fallback: () => "icons",
+  saveFailed: "部品の表示形式を保存できません。このタブだけに適用します。",
+  loadFailed: "部品の表示形式を読み込めません。アイコン一覧を使います。",
+});
 export function getPaletteView(): PaletteView {
-  return paletteView;
+  return paletteView.current;
 }
 export async function setPaletteView(view: PaletteView): Promise<void> {
-  paletteView = view;
-  try {
-    await uiSettings.set(PALETTE_VIEW_KEY, view);
-  } catch {
-    toastStore.push(
-      "warning",
-      "部品の表示形式を保存できません。このタブだけに適用します。",
-    );
-  }
+  await paletteView.update(view);
 }
-const INSPECTOR_PLACEMENT_KEY = "scada.designer.inspector-placement";
-let savedInspectorPlacement: InspectorPlacement | null = null;
+/**
+ * 浮動配置の保存枠。`saved` は保存に成功した配置だけで、保存の失敗では前の枠が残る。
+ * 保存は明示操作のときだけ。`null`は既定（何も保存していない）で、書き込まない。
+ */
+function placementSlot<T extends FloatingPanelPlacement>(
+  key: string,
+  parse: (raw: string) => T | null,
+  label: string,
+  standard: string,
+) {
+  return preference<T | null>(key, {
+    parse: (raw) => parse(raw) ?? undefined,
+    serialize: (value) => JSON.stringify(value),
+    fallback: () => null,
+    saveFailed: `${label}の配置を保存できません。現在の配置と以前の保存配置を保持します。`,
+    loadFailed: `${label}の保存配置を読み込めません。${standard}を使います。`,
+  });
+}
+function copyPlacement<T extends FloatingPanelPlacement>(
+  value: T | null | undefined,
+): T | null {
+  return value ? { ...value, rect: { ...value.rect } } : null;
+}
+function savePlacement<T extends FloatingPanelPlacement>(
+  slot: UiPreference<T | null>,
+  candidate: T | null,
+  label: string,
+): Promise<boolean> {
+  if (!candidate) {
+    warn(`${label}の配置を保存できません。配置の設定を確認してください。`);
+    return Promise.resolve(false);
+  }
+  return slot.update(candidate);
+}
+const inspectorPlacement = placementSlot(
+  "scada.designer.inspector-placement",
+  parseInspectorPlacement,
+  "プロパティ",
+  "右側の標準配置",
+);
 export function getSavedInspectorPlacement(): InspectorPlacement | null {
-  return savedInspectorPlacement
-    ? { ...savedInspectorPlacement, rect: { ...savedInspectorPlacement.rect } }
-    : null;
+  return copyPlacement(inspectorPlacement.saved);
 }
 /** Explicit save only; a failed write leaves the previous slot available. */
-export async function saveInspectorPlacement(
+export function saveInspectorPlacement(
   value: InspectorPlacement,
 ): Promise<boolean> {
-  const candidate = parseInspectorPlacement(JSON.stringify(value));
-  if (!candidate) {
-    toastStore.push(
-      "warning",
-      "プロパティの配置を保存できません。配置の設定を確認してください。",
-    );
-    return false;
-  }
-  try {
-    await uiSettings.set(INSPECTOR_PLACEMENT_KEY, JSON.stringify(candidate));
-    savedInspectorPlacement = candidate;
-    return true;
-  } catch {
-    toastStore.push(
-      "warning",
-      "プロパティの配置を保存できません。現在の配置と以前の保存配置を保持します。",
-    );
-    return false;
-  }
+  return savePlacement(
+    inspectorPlacement,
+    parseInspectorPlacement(JSON.stringify(value)),
+    "プロパティ",
+  );
 }
-const SIDEBAR_PLACEMENT_KEY = "scada.designer.sidebar-placement";
-let savedSidebarPlacement: FloatingPanelPlacement | null = null;
+const sidebarPlacement = placementSlot(
+  "scada.designer.sidebar-placement",
+  (raw) => parseFloatingPanelPlacement(raw, "sidebar"),
+  "作業パネル",
+  "左側の標準配置",
+);
 export function getSavedSidebarPlacement(): FloatingPanelPlacement | null {
-  return savedSidebarPlacement
-    ? { ...savedSidebarPlacement, rect: { ...savedSidebarPlacement.rect } }
-    : null;
+  return copyPlacement(sidebarPlacement.saved);
 }
 /** Explicit save only; a failed write leaves the previous slot available. */
-export async function saveSidebarPlacement(
+export function saveSidebarPlacement(
   value: FloatingPanelPlacement,
 ): Promise<boolean> {
-  const candidate = parseFloatingPanelPlacement(
-    JSON.stringify(value),
-    "sidebar",
+  return savePlacement(
+    sidebarPlacement,
+    parseFloatingPanelPlacement(JSON.stringify(value), "sidebar"),
+    "作業パネル",
   );
-  if (!candidate) {
-    toastStore.push(
-      "warning",
-      "作業パネルの配置を保存できません。配置の設定を確認してください。",
-    );
-    return false;
-  }
-  try {
-    await uiSettings.set(SIDEBAR_PLACEMENT_KEY, JSON.stringify(candidate));
-    savedSidebarPlacement = candidate;
-    return true;
-  } catch {
-    toastStore.push(
-      "warning",
-      "作業パネルの配置を保存できません。現在の配置と以前の保存配置を保持します。",
-    );
-    return false;
-  }
 }
-const PANEL_WIDTHS_KEY = "scada.designer.panel-widths";
-let panelWidths = { ...DEFAULT_PANEL_LAYOUT.widths };
+// 幅・高さ・お気に入りは、壊れた値を既定値へ丸める従来の解釈をそのまま使う。
+const panelWidths = preference<PanelWidths>("scada.designer.panel-widths", {
+  parse: parsePanelWidths,
+  serialize: (value) => JSON.stringify(value),
+  fallback: () => ({ ...DEFAULT_PANEL_LAYOUT.widths }),
+  saveFailed: "パネルの幅を保存できません。このタブだけに適用します。",
+  loadFailed: "パネルの幅を読み込めません。標準幅を使います。",
+});
 export function getPanelWidths(): PanelWidths {
-  return { ...panelWidths };
+  return { ...panelWidths.current };
 }
 export async function setPanelWidths(value: PanelWidths): Promise<void> {
-  panelWidths = parsePanelWidths(JSON.stringify(value));
-  try {
-    await uiSettings.set(PANEL_WIDTHS_KEY, JSON.stringify(panelWidths));
-  } catch {
-    toastStore.push(
-      "warning",
-      "パネルの幅を保存できません。このタブだけに適用します。",
-    );
-  }
+  await panelWidths.update(parsePanelWidths(JSON.stringify(value)));
 }
-const REFERENCE_HEIGHT_KEY = "scada.designer.reference-height";
-let referenceHeight = DEFAULT_PANEL_LAYOUT.referenceHeight;
+const referenceHeight = preference<number>("scada.designer.reference-height", {
+  parse: parseReferenceHeight,
+  serialize: String,
+  fallback: () => DEFAULT_PANEL_LAYOUT.referenceHeight,
+  saveFailed:
+    "タグ参照パネルの高さを保存できません。このタブだけに適用します。",
+  loadFailed: "タグ参照パネルの高さを読み込めません。標準の高さを使います。",
+});
 export function getReferenceHeight(): number {
-  return referenceHeight;
+  return referenceHeight.current;
 }
 export async function setReferenceHeight(value: number): Promise<void> {
-  referenceHeight = parseReferenceHeight(String(value));
-  try {
-    await uiSettings.set(REFERENCE_HEIGHT_KEY, String(referenceHeight));
-  } catch {
-    toastStore.push(
-      "warning",
-      "タグ参照パネルの高さを保存できません。このタブだけに適用します。",
-    );
-  }
+  await referenceHeight.update(parseReferenceHeight(String(value)));
 }
-const FAVORITES_KEY = "scada.designer.favorites";
-let favorites = [...DEFAULT_FAVORITES];
+const favorites = preference<string[]>("scada.designer.favorites", {
+  parse: parseFavorites,
+  serialize: (value) => JSON.stringify(value),
+  fallback: () => [...DEFAULT_FAVORITES],
+  saveFailed: "お気に入りを保存できません。このタブだけに適用します。",
+  loadFailed: "お気に入りを読み込めません。初期配置を使います。",
+});
 export function getFavorites(): string[] {
-  return [...favorites];
+  return [...favorites.current];
 }
 export async function setFavorites(value: string[]): Promise<void> {
-  favorites = parseFavorites(JSON.stringify(value));
-  try {
-    await uiSettings.set(FAVORITES_KEY, JSON.stringify(favorites));
-  } catch {
-    toastStore.push(
-      "warning",
-      "お気に入りを保存できません。このタブだけに適用します。",
-    );
-  }
+  await favorites.update(parseFavorites(JSON.stringify(value)));
 }
-const MINIMAP_KEY = "scada.designer.minimap";
-let minimapVisible = DEFAULT_PANEL_LAYOUT.minimap;
+const minimap = visibility(
+  "scada.designer.minimap",
+  DEFAULT_PANEL_LAYOUT.minimap,
+  "ミニマップ",
+);
 export function getMinimapVisible() {
-  return minimapVisible;
+  return minimap.current;
 }
 export async function setMinimapVisible(visible: boolean) {
-  minimapVisible = visible;
-  try {
-    await uiSettings.set(MINIMAP_KEY, String(visible));
-  } catch {
-    toastStore.push(
-      "warning",
-      "ミニマップの設定を保存できません。このタブだけに適用します。",
-    );
-  }
+  await minimap.update(visible);
 }
-const RULERS_KEY = "scada.designer.rulers";
-let rulersVisible = DEFAULT_PANEL_LAYOUT.rulers;
+const rulers = visibility(
+  "scada.designer.rulers",
+  DEFAULT_PANEL_LAYOUT.rulers,
+  "ルーラー",
+);
 export function getRulersVisible() {
-  return rulersVisible;
+  return rulers.current;
 }
 export async function setRulersVisible(visible: boolean) {
-  rulersVisible = visible;
-  try {
-    await uiSettings.set(RULERS_KEY, String(visible));
-  } catch {
-    toastStore.push(
-      "warning",
-      "ルーラーの設定を保存できません。このタブだけに適用します。",
-    );
-  }
+  await rulers.update(visible);
 }
-const MENUBAR_KEY = "scada.designer.menubar";
+const menubar = visibility(
+  "scada.designer.menubar",
+  DEFAULT_PANEL_LAYOUT.menubar,
+  "メニューバー",
+);
+/** 5項目を既定へ戻して保存する。失敗が何項目でも通知は1回。 */
 export async function resetDesignerLayoutPreferences(): Promise<boolean> {
-  panelWidths = { ...DEFAULT_PANEL_LAYOUT.widths };
-  referenceHeight = DEFAULT_PANEL_LAYOUT.referenceHeight;
-  menubarVisible = DEFAULT_PANEL_LAYOUT.menubar;
-  minimapVisible = DEFAULT_PANEL_LAYOUT.minimap;
-  rulersVisible = DEFAULT_PANEL_LAYOUT.rulers;
-  const settings: [string, string][] = [
-    [PANEL_WIDTHS_KEY, JSON.stringify(panelWidths)],
-    [REFERENCE_HEIGHT_KEY, String(referenceHeight)],
-    [MENUBAR_KEY, String(menubarVisible)],
-    [MINIMAP_KEY, String(minimapVisible)],
-    [RULERS_KEY, String(rulersVisible)],
-  ];
-  const results = await Promise.allSettled(
-    settings.map(async ([key, value]) => uiSettings.set(key, value)),
-  );
-  const saved = results.every((result) => result.status === "fulfilled");
+  const layout = [panelWidths, referenceHeight, menubar, minimap, rulers];
+  for (const item of layout) item.resetToDefault();
+  const results = await Promise.all(layout.map((item) => item.save()));
+  const saved = results.every(Boolean);
   if (!saved)
-    toastStore.push(
-      "warning",
+    warn(
       "レイアウトを保存できない項目があります。このタブの復元は維持します。",
     );
   return saved;
 }
 export function getMenubarVisible(): boolean {
-  return menubarVisible;
+  return menubar.current;
 }
 export async function setMenubarVisible(visible: boolean): Promise<void> {
-  menubarVisible = visible;
-  try {
-    await uiSettings.set(MENUBAR_KEY, String(visible));
-  } catch {
-    toastStore.push(
-      "warning",
-      "メニューバーの設定を保存できません。このタブだけに適用します。",
-    );
-  }
+  await menubar.update(visible);
 }
-const THEME_KEY = "scada.theme.mode";
+const themeMode = preference<ThemeMode>("scada.theme.mode", {
+  parse: (raw) => (isThemeMode(raw) ? raw : undefined),
+  serialize: (value) => value,
+  fallback: () => "dark",
+  saveFailed: "テーマ設定を保存できません。このタブだけに適用します。",
+  loadFailed: "テーマ設定を読み込めません。既定のテーマを使います。",
+});
 export function getThemeMode(): ThemeMode {
-  return themeMode;
+  return themeMode.current;
 }
 export async function setThemeMode(mode: ThemeMode): Promise<void> {
-  themeMode = mode;
   applyTheme(mode);
-  try {
-    await uiSettings.set(THEME_KEY, mode);
-  } catch {
-    toastStore.push(
-      "warning",
-      "テーマ設定を保存できません。このタブだけに適用します。",
-    );
-  }
+  await themeMode.update(mode);
 }
 /** `authProvider`: the desktop host's; the web version has no account. */
 export async function initializeBanto(
@@ -278,101 +272,24 @@ export async function initializeBanto(
     },
     resources: [],
   });
-  try {
-    const stored = await uiSettings.get(THEME_KEY);
-    if (isThemeMode(stored)) themeMode = stored;
-  } catch {
-    toastStore.push(
-      "warning",
-      "テーマ設定を読み込めません。既定のテーマを使います。",
-    );
-  }
-  applyTheme(themeMode);
+  await themeMode.load();
+  applyTheme(themeMode.current);
   applyPreset("standard");
   applyDensity("standard");
-  try {
-    menubarVisible = (await uiSettings.get(MENUBAR_KEY)) !== "false";
-  } catch {
-    toastStore.push(
-      "warning",
-      "メニューバーの設定を読み込めません。初期表示を使います。",
-    );
-  }
-  try {
-    const stored = await uiSettings.get(PALETTE_VIEW_KEY);
-    if (stored === "icons" || stored === "names") paletteView = stored;
-  } catch {
-    toastStore.push(
-      "warning",
-      "部品の表示形式を読み込めません。アイコン一覧を使います。",
-    );
-  }
-  try {
-    savedInspectorPlacement = parseInspectorPlacement(
-      await uiSettings.get(INSPECTOR_PLACEMENT_KEY),
-    );
-  } catch {
-    savedInspectorPlacement = null;
-    toastStore.push(
-      "warning",
-      "プロパティの保存配置を読み込めません。右側の標準配置を使います。",
-    );
-  }
-  try {
-    savedSidebarPlacement = parseFloatingPanelPlacement(
-      await uiSettings.get(SIDEBAR_PLACEMENT_KEY),
-      "sidebar",
-    );
-  } catch {
-    savedSidebarPlacement = null;
-    toastStore.push(
-      "warning",
-      "作業パネルの保存配置を読み込めません。左側の標準配置を使います。",
-    );
-  }
-  try {
-    panelWidths = parsePanelWidths(await uiSettings.get(PANEL_WIDTHS_KEY));
-  } catch {
-    toastStore.push(
-      "warning",
-      "パネルの幅を読み込めません。標準幅を使います。",
-    );
-  }
-  try {
-    referenceHeight = parseReferenceHeight(
-      await uiSettings.get(REFERENCE_HEIGHT_KEY),
-    );
-  } catch {
-    toastStore.push(
-      "warning",
-      "タグ参照パネルの高さを読み込めません。標準の高さを使います。",
-    );
-  }
-  try {
-    favorites = parseFavorites(await uiSettings.get(FAVORITES_KEY));
-  } catch {
-    toastStore.push(
-      "warning",
-      "お気に入りを読み込めません。初期配置を使います。",
-    );
-  }
-  try {
-    minimapVisible = (await uiSettings.get(MINIMAP_KEY)) !== "false";
-  } catch {
-    toastStore.push(
-      "warning",
-      "ミニマップの設定を読み込めません。初期表示を使います。",
-    );
-  }
-  try {
-    rulersVisible = (await uiSettings.get(RULERS_KEY)) !== "false";
-  } catch {
-    toastStore.push(
-      "warning",
-      "ルーラーの設定を読み込めません。初期表示を使います。",
-    );
-  }
+  // 読込みの失敗の通知は従来と同じ順に出す。
+  for (const item of [
+    menubar,
+    paletteView,
+    inspectorPlacement,
+    sidebarPlacement,
+    panelWidths,
+    referenceHeight,
+    favorites,
+    minimap,
+    rulers,
+  ])
+    await item.load();
   return watchSystemTheme(() => {
-    if (themeMode === "system") applyTheme("system");
+    if (themeMode.current === "system") applyTheme("system");
   });
 }

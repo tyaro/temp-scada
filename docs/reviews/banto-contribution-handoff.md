@@ -8,7 +8,7 @@ Banto main `ac571ebffa76db61e28230a7138223f069eee067`で再確認し、#432〜#4
 
 ## 2026-11-18の棚卸し：上流の版とSCADAの採用状況
 
-Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v6.8.0**で入った（計画書PR-1〜PR-14）。SCADAの固定依存はv7.2.0（#238）なので、`@banto/admin-core`・`@banto/ui`のAPIは依存を変えずに使える。`@banto/forms`・`@banto/dock-svelte`・`@banto/image-assets`はSCADAの依存に無い。SCADAのコード（`apps/banto-scada/src`）は下の上流APIを1つもimportしていない（2026-11-18にgrepで確認）。手元の対応先は名前と責務からの候補で、差分の照合はまだしていない。
+Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v6.8.0**で入った（計画書PR-1〜PR-14）。SCADAの固定依存はv7.2.0（#238）なので、`@banto/admin-core`・`@banto/ui`のAPIは依存を変えずに使える。`@banto/forms`・`@banto/dock-svelte`・`@banto/image-assets`はSCADAの依存に無い。SCADAのコード（`apps/banto-scada/src`）は下の上流APIを1つもimportしていなかった（2026-11-18にgrepで確認。以降#435・#437を採用、下の各段）。手元の対応先は名前と責務からの候補で、差分の照合はまだしていない。
 
 | Issue                                                                        | 上流の公開API（v6.8.0）                                                | パッケージ（SCADAの依存）                    | SCADAの手元の対応先（候補）                                               | 判断                                                                                               |
 | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
@@ -37,6 +37,11 @@ Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v
   - Ctrl+S・Shift+Ctrl+Sは2段目のまま`handleSaveShortcut`（層で止めない。共有の`project.save`の`enabled`は`menuBlocked`を見るので使わない）。
   - 項目の文言は共有の`title`（従来のメニュー・toolbarの文言）。メニューにキーを出すには`MenuItem`に表示欄が要るので、[tyaro/banto#671](https://github.com/tyaro/banto/issues/671)で上流へ依頼した。
   - 試験: `e2e/history.spec.ts`の「edit shortcuts share the toolbar's conditions」、`e2e/edit-lock.spec.ts`のロック中のCtrl+D。
+- #437（2026-11-18）: `banto/setup.ts`のUI設定11件（テーマ、メニューバー・ミニマップ・ルーラーの表示、部品の表示形式、パネルの幅、タグ参照パネルの高さ、お気に入り、プロパティ・作業パネルの浮動配置の保存枠）を、`@banto/admin-core`の`createSavedSetting`（`explicit`）に載せた。包みは`banto/ui-preference.ts`の`createUiPreference`で、通知の文言・既定値・壊れた値の解釈はSCADAに残す。
+  - 変わった点: 送信は1件ずつになり、送信中の変更は1回にまとめて最後の値を送る（従来は幅のドラッグなどで書込みが並行し、終わる順で古い値が残り得た）。まとめた保存が失敗したときの通知は1回（失敗した送信ごとに1回）。浮動配置の保存枠は、送信に成功した値だけを`saved`とする上流の契約で従来の「失敗時は前の枠を残す」を保つ。
+  - 変えていない点: 壊れた値の扱い（幅・高さ・お気に入りは既定値へ丸める従来の`parse`、表示の有無は`"false"`だけを非表示）、読込み失敗の通知の文言と順序、「標準レイアウトに戻す」の5項目は通知1回。
+  - 試験: `banto/ui-preference.test.ts`（まとめと順序、失敗の通知の数、壊れた値・読込み失敗）、既存e2eの`panel-widths`・`panel-height`・`inspector-floating`・`sidebar-floating`・`layout-reset`・`favorites`・`menubar`・`banto`・`palette-placement`。
+  - 上流との差: SCADAはUI設定の保存先が`createLocalUiSettings`だけで、Tauriの`createTauriUiSettings`へは移していない。読込みの`'invalid'`（壊れた値）は通知しない。
 - Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらず、上流mainの`anchoredPopover.ts`の横clampも同じ式のまま。[tyaro/banto#668](https://github.com/tyaro/banto/issues/668)で報告した（2026-11-18）。
 - 置き換えの各区切りでは、既存の入力保護・資源解放・保存失敗のE2Eを通してから手元の実装を消す（[引渡しの方法](#引渡しの方法)の3）。
 - 新しい還元候補（パネルの幅・高さの保存と「標準レイアウトに戻す」、作業タブの入力保護など）は、上の採用で上流のAPIとの差が見えてから起票する。
