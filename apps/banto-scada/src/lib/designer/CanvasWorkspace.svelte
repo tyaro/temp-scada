@@ -669,6 +669,7 @@
       (event.shiftKey && event.key === "F10")
     ) {
       event.preventDefault();
+      keyContextUntil = performance.now() + KEY_CONTEXT_ECHO_MS;
       requestContext();
       return;
     }
@@ -678,9 +679,19 @@
       space = true;
     }
   }
+  // Windows の Chromium（WebView2 を含む）は、ContextMenu キーを離したときにも
+  // contextmenu を出し、keydown の preventDefault では止まらない。キーで開いた
+  // 直後の右ボタン以外の contextmenu はそのこだまとして捨てる。対象が viewport
+  // なので、選択中の配置の操作を空白の操作で上書きしてしまうため。
+  const KEY_CONTEXT_ECHO_MS = 1000;
+  let keyContextUntil = 0;
   function requestContext(event?: MouseEvent) {
     if (!editable || !viewport) return;
     event?.preventDefault();
+    if (event && event.button !== 2 && performance.now() < keyContextUntil) {
+      keyContextUntil = 0;
+      return;
+    }
     if (range) {
       cancelRange();
       return;
@@ -728,6 +739,12 @@
   }
   function releaseSpace(event: KeyboardEvent) {
     if (event.code === "Space") space = false;
+    // こだまはキーを離した後に来るので、押し続けた場合も離した時点から待つ。
+    if (
+      keyContextUntil > 0 &&
+      (event.key === "ContextMenu" || event.key === "F10")
+    )
+      keyContextUntil = performance.now() + KEY_CONTEXT_ECHO_MS;
   }
   function down(event: PointerEvent) {
     if (!editable || !event.isPrimary || !viewport) return;
