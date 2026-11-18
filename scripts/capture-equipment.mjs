@@ -52,12 +52,21 @@ try {
     await expect(page.getByTestId("project-status")).toHaveText(
       "Project を読み込みました。",
     );
-    for (const label of ["画面", "タグ参照", "シンボル", "プロジェクト設定"]) {
+    for (const label of ["画面", "タグ参照", "シンボル", "設定"]) {
       await page
         .locator("summary")
         .filter({ has: page.getByText(label, { exact: true }) })
         .click();
     }
+    // 機器台帳は作業タブ「機器」にある（Issue #223 WT3）。
+    await page
+      .getByRole("menubar")
+      .getByRole("menuitem", { name: "表示", exact: true })
+      .click();
+    await page
+      .getByRole("menu", { name: "表示", exact: true })
+      .getByRole("menuitem", { name: "機器", exact: true })
+      .click();
     const library = page.getByRole("region", { name: "機器台帳", exact: true });
     await library
       .getByRole("button", {
@@ -75,9 +84,6 @@ try {
         .click();
       await page
         .getByRole("combobox", { name: "関連付ける機器", exact: true })
-        .scrollIntoViewIfNeeded();
-      await library
-        .getByRole("region", { name: "機器の使用先", exact: true })
         .scrollIntoViewIfNeeded();
     }
     if (copy) {

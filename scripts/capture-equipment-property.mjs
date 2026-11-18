@@ -30,6 +30,15 @@ try {
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(project)),
     });
+    // 機器台帳は作業タブ「機器」にある（Issue #223 WT3）。
+    await page
+      .getByRole("menubar")
+      .getByRole("menuitem", { name: "表示", exact: true })
+      .click();
+    await page
+      .getByRole("menu", { name: "表示", exact: true })
+      .getByRole("menuitem", { name: "機器", exact: true })
+      .click();
     const library = page.getByRole("region", { name: "機器台帳", exact: true });
     await library
       .getByRole("button", {

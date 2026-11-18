@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/symbol-slots.project.json" with { type: "json" };
-import { fileCommand } from "./helpers/designer";
+import { fileCommand, openEquipmentLedger } from "./helpers/designer";
 
 test("equipment search and bounded pages preserve the current draft and never enter Project", async ({
   page,
@@ -24,6 +24,7 @@ test("equipment search and bounded pages preserve the current draft and never en
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(project)),
     });
+    await openEquipmentLedger(page);
   }
   await load();
   const library = page.getByRole("region", { name: "機器台帳", exact: true });

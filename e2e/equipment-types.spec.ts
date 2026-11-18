@@ -1,6 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
 import sample from "../examples/symbol-slots.project.json" with { type: "json" };
-import { selectPanel, fileCommand, chooseTheme } from "./helpers/designer";
+import {
+  selectPanel,
+  fileCommand,
+  chooseTheme,
+  openEquipmentLedger,
+  returnToCanvas,
+} from "./helpers/designer";
 import { readFile } from "node:fs/promises";
 async function start(page: Page) {
   await page.setViewportSize({ width: 1920, height: 1080 });
@@ -11,6 +17,7 @@ async function start(page: Page) {
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(sample)),
   });
+  await openEquipmentLedger(page);
   const library = page.getByRole("region", { name: "機器台帳", exact: true });
   await library.getByRole("button", { name: "機器種別", exact: true }).click();
   return library;
@@ -92,6 +99,7 @@ for (const theme of ["light", "dark"] as const)
     await expect(
       editor.getByRole("button", { name: "この機器種別を削除", exact: true }),
     ).toBeDisabled();
+    await returnToCanvas(page);
     await selectPanel(page, "レイヤー");
     await page
       .locator(`button[data-layer-id="${sample.screens[0].objects[0].id}"]`)

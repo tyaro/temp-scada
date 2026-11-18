@@ -1,7 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import sample from "../examples/symbol-slots.project.json" with { type: "json" };
-import { chooseTheme, fileCommand } from "./helpers/designer";
+import {
+  chooseTheme,
+  fileCommand,
+  openEquipmentLedger,
+} from "./helpers/designer";
 async function save(page: Page) {
   const pending = page.waitForEvent("download");
   await fileCommand(page, "Project を保存");
@@ -22,6 +26,7 @@ async function open(page: Page, theme: string, project: unknown = sample) {
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify(project)),
   });
+  await openEquipmentLedger(page);
   await page
     .getByRole("region", { name: "機器台帳", exact: true })
     .getByRole("button", { name: "割付の一覧表", exact: true })

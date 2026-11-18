@@ -827,6 +827,13 @@ export function createDesignerActions(host: DesignerActionsHost) {
           },
           {
             label: host.view.workTabReason
+              ? `機器（${host.view.workTabReason}）`
+              : "機器",
+            disabled: host.view.menuBlocked || !!host.view.workTabReason,
+            run: () => host.view.openWorkTab("equipment"),
+          },
+          {
+            label: host.view.workTabReason
               ? `警報の定義（${host.view.workTabReason}）`
               : "警報の定義",
             disabled: host.view.menuBlocked || !!host.view.workTabReason,

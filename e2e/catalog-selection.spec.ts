@@ -1,7 +1,11 @@
 import { test, expect, type Page } from "@playwright/test";
 import fixture from "../examples/catalog-view.json" with { type: "json" };
 import equipment from "../examples/equipment.project.json" with { type: "json" };
-import { chooseTheme, selectPanel } from "./helpers/designer";
+import {
+  chooseTheme,
+  openEquipmentLedger,
+  selectPanel,
+} from "./helpers/designer";
 import { openProject, downloadBytes } from "./helpers/project-files";
 
 const dialog = (page: Page) =>
@@ -116,7 +120,7 @@ for (const theme of ["light", "dark"] as const) {
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(equipment)),
     });
-    await selectPanel(page, "プロジェクト");
+    await openEquipmentLedger(page);
     const library = page.getByRole("region", { name: "機器台帳", exact: true });
     await library
       .locator(`[data-equipment-choice="${equipment.equipment[0].id}"]`)

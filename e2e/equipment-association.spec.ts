@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { fileCommand } from "./helpers/designer";
+import { fileCommand, openEquipmentLedger } from "./helpers/designer";
 const sample = JSON.parse(
   readFileSync("examples/equipment-symbol.project.json", "utf8"),
 );
@@ -27,6 +27,7 @@ for (const theme of ["light", "dark"] as const) {
       mimeType: "application/json",
       buffer: Buffer.from(JSON.stringify(sample)),
     });
+    await openEquipmentLedger(page);
     const library = page.getByRole("region", { name: "機器台帳", exact: true });
     await library
       .getByRole("button", { name: "P-101 · 循環ポンプ", exact: true })
@@ -47,11 +48,17 @@ for (const theme of ["light", "dark"] as const) {
     await expect(select).toHaveValue(equipment.id);
     await select.selectOption("");
     await form.getByRole("button", { name: "変更を適用", exact: true }).click();
+    await openEquipmentLedger(page);
     await expect(usages).toContainText("図面の使用先 0 件");
     await expect(
       library.getByRole("button", { name: "この機器を削除", exact: true }),
     ).toBeEnabled();
     await page.getByRole("button", { name: "元に戻す", exact: true }).click();
+    await page
+      .getByRole("navigation", { name: "画面タブ", exact: true })
+      .getByRole("button")
+      .first()
+      .click();
     await expect(select).toHaveValue(equipment.id);
     const save = page.waitForEvent("download");
     await fileCommand(page, "Project を保存");

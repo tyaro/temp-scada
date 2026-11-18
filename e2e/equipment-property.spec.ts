@@ -1,6 +1,12 @@
 import { test, expect, type Page } from "@playwright/test";
 import sample from "../examples/equipment-property.project.json" with { type: "json" };
-import { selectPanel, chooseTheme, fileCommand } from "./helpers/designer";
+import {
+  selectPanel,
+  chooseTheme,
+  fileCommand,
+  openEquipmentLedger,
+  returnToCanvas,
+} from "./helpers/designer";
 import { readFile } from "node:fs/promises";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
@@ -71,6 +77,7 @@ test("ledger metadata applies once, supports Undo and does not expose drafts", a
   page,
 }) => {
   await open(page);
+  await openEquipmentLedger(page);
   const library = page.getByRole("region", { name: "機器台帳", exact: true });
   await library
     .getByRole("button", {
@@ -88,6 +95,7 @@ test("ledger metadata applies once, supports Undo and does not expose drafts", a
   await form
     .getByRole("button", { name: "機器情報と割付を適用", exact: true })
     .click();
+  await returnToCanvas(page);
   await expect(currentName(page)).toContainText(longName);
   await expect(currentName(page)).toHaveAttribute(
     "data-text-layout",
@@ -98,6 +106,7 @@ test("ledger metadata applies once, supports Undo and does not expose drafts", a
   await expect(currentName(page)).toContainText(sample.equipment[0].name);
   await button(page, "やり直す").click();
   await expect(currentName(page)).toContainText(longName);
+  await openEquipmentLedger(page);
   await library.getByRole("button", { name: "機器種別", exact: true }).click();
   const typeEditor = library.getByRole("region", {
     name: "機器種別の編集",
@@ -113,6 +122,7 @@ test("ledger metadata applies once, supports Undo and does not expose drafts", a
   await typeEditor
     .getByRole("button", { name: "機器種別を適用", exact: true })
     .click();
+  await returnToCanvas(page);
   await expect(
     canvas(page)
       .locator(
