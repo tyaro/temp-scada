@@ -91,7 +91,10 @@
   import { equipmentTypeFormCommand } from "./lib/designer/forms/equipment-type";
   import { equipmentFormCommand } from "./lib/designer/forms/equipment";
   import { groupNameFormCommand } from "./lib/designer/forms/group-name";
-  import { createDesignerActions } from "./lib/designer/controllers/designer-actions";
+  import {
+    createDesignerActions,
+    type DesignerCommandId,
+  } from "./lib/designer/controllers/designer-actions";
   import { createClipboardController } from "./lib/designer/controllers/clipboard.svelte";
   import { createImageImportController } from "./lib/designer/controllers/image-import.svelte";
   import { lineConnectionCommand } from "./lib/designer/forms/line-connection";
@@ -1003,9 +1006,6 @@
   }
   // enabled／run は event を受け取らないので、処理中の keydown の対象を控える。
   let shortcutTarget: EventTarget | null = null;
-  function editCommandsReady() {
-    return !busy && mode === "edit" && !drafts.pending && !replacement;
-  }
   function filePromptsReady() {
     return !busy && !drafts.pending && !replacement && !helpOpen;
   }
@@ -1022,143 +1022,98 @@
   }
   const shortcutDispatcher = createShortcutDispatcher();
   const menuScoped = { ownerLayer: menuOwnerLayer } as const;
-  const designerShortcuts: CommandSpec[] = [
-    {
-      id: "selection.show",
-      title: "選択範囲を表示",
-      shortcut: "F",
-      enabled: () => !helpOpen && clipboardScope(shortcutTarget),
-      run: showSelection,
-    },
-    {
-      // F1／F2 は入力欄の中でも効く（ブラウザのヘルプ等は常に止める）。
-      id: "help.open",
-      title: "ヘルプ",
-      shortcut: "F1",
+  // メニュー・toolbar と共有する操作（designer-actions の CommandSpec）にキーを付ける。
+  // 名前・実行・使える条件は共有側が決め、キーは自分だけの保護（when: 入力元・
+  // キャンバス上の対象・ヘルプやタグ選択の表示中など）を足すだけ。
+  type KeyOptions = Pick<
+    CommandSpec,
+    | "allowInEditable"
+    | "allowRepeat"
+    | "preventDefaultWhenDisabled"
+    | "ownerLayer"
+  > & { keyId?: string; when?: () => boolean; run?: () => void };
+  function keyCommand(
+    id: DesignerCommandId,
+    shortcut: string,
+    { keyId, when, run, ...flags }: KeyOptions = {},
+  ): CommandSpec {
+    const shared = designerActions.command(id);
+    return {
+      ...flags,
+      id: keyId ?? id,
+      title: shared.title,
+      shortcut,
+      visible: shared.visible,
+      enabled: () => (when?.() ?? true) && (shared.enabled?.() ?? true),
+      run: run ?? shared.run,
+    };
+  }
+  // designerActions の生成より後で呼ぶ（下の register）。
+  function designerShortcuts(): CommandSpec[] {
+    // F1／F2・Ctrl+N／O は入力欄の中でも効き、ブラウザのヘルプ等は常に止める。
+    const fileKey = {
       allowInEditable: true,
       preventDefaultWhenDisabled: true,
       ...menuScoped,
-      enabled: functionKeysReady,
-      run: () => {
-        helpOpen = true;
+    } as const;
+    return [
+      keyCommand("selection.show", "F", {
+        when: () => !helpOpen && clipboardScope(shortcutTarget),
+      }),
+      keyCommand("help.open", "F1", { ...fileKey, when: functionKeysReady }),
+      {
+        id: "object.rename",
+        title: "名前を変更",
+        shortcut: "F2",
+        ...fileKey,
+        enabled: functionKeysReady,
+        run: () => {
+          if (canvasActive && !positionPlacement) renameFocused(shortcutTarget);
+        },
       },
-    },
-    {
-      id: "object.rename",
-      title: "名前を変更",
-      shortcut: "F2",
-      allowInEditable: true,
-      preventDefaultWhenDisabled: true,
-      ...menuScoped,
-      enabled: functionKeysReady,
-      run: () => {
-        if (canvasActive && !positionPlacement) renameFocused(shortcutTarget);
-      },
-    },
-    {
-      id: "selection.remove",
-      title: "削除",
-      shortcut: "Delete",
-      ...menuScoped,
-      enabled: () =>
-        editCommandsReady() &&
-        !clipboard.busy &&
-        !positionPlacement &&
-        clipboardScope(shortcutTarget),
-      run: () => {
-        if (!hiddenCanvasMutation(shortcutTarget)) removeSelection();
-      },
-    },
-    {
-      id: "project.new",
-      title: "新規作成",
-      shortcut: "Mod+N",
-      allowInEditable: true,
-      preventDefaultWhenDisabled: true,
-      ...menuScoped,
-      enabled: filePromptsReady,
-      run: () => projectFiles.newProject(),
-    },
-    {
-      id: "project.open",
-      title: "開く",
-      shortcut: "Mod+O",
-      allowInEditable: true,
-      preventDefaultWhenDisabled: true,
-      ...menuScoped,
-      enabled: filePromptsReady,
-      run: () => projectFiles.openProjectFile(),
-    },
-    // 入力欄では標準の編集・Undo を優先する。押し続けの繰り返しは元に戻す・やり直しだけ。
-    {
-      id: "history.undo",
-      title: "元に戻す",
-      shortcut: "Mod+Z",
-      allowRepeat: true,
-      ...menuScoped,
-      enabled: editCommandsReady,
-      run: () => travel("undo"),
-    },
-    {
-      id: "history.redo",
-      title: "やり直す",
-      shortcut: "Mod+Shift+Z",
-      allowRepeat: true,
-      ...menuScoped,
-      enabled: editCommandsReady,
-      run: () => travel("redo"),
-    },
-    {
-      id: "history.redoY",
-      title: "やり直す",
-      shortcut: "Mod+Y",
-      allowRepeat: true,
-      ...menuScoped,
-      enabled: editCommandsReady,
-      run: () => travel("redo"),
-    },
-    // W4: Ctrl+A／G／D はキャンバスの表示中だけ。Undo／Redo は上で全体に効く。
-    {
-      id: "selection.all",
-      title: "すべて選択",
-      shortcut: "Mod+A",
-      ...menuScoped,
-      enabled: () => editCommandsReady() && canvasActive,
-      run: () =>
-        transition(
-          () =>
-            (selectedIds = canvasSelectionIds(
-              screen,
-              screen.objects.map((object) => object.id),
-            )),
-        ),
-    },
-    {
-      id: "selection.group",
-      title: "グループ化",
-      shortcut: "Mod+G",
-      ...menuScoped,
-      enabled: () => editCommandsReady() && canvasActive,
-      run: () => groupSelection(),
-    },
-    {
-      id: "selection.ungroup",
-      title: "グループ解除",
-      shortcut: "Mod+Shift+G",
-      ...menuScoped,
-      enabled: () => editCommandsReady() && canvasActive,
-      run: () => ungroupSelection(),
-    },
-    {
-      id: "selection.duplicate",
-      title: "複製",
-      shortcut: "Mod+D",
-      ...menuScoped,
-      enabled: () =>
-        editCommandsReady() && canvasActive && selectedIds.length > 0,
-      run: () => duplicateSelection(),
-    },
-  ];
+      keyCommand("selection.remove", "Delete", {
+        ...menuScoped,
+        when: () =>
+          !clipboard.busy &&
+          !positionPlacement &&
+          clipboardScope(shortcutTarget),
+        run: () => {
+          if (!hiddenCanvasMutation(shortcutTarget)) removeSelection();
+        },
+      }),
+      keyCommand("project.new", "Mod+N", {
+        ...fileKey,
+        when: filePromptsReady,
+      }),
+      keyCommand("project.open", "Mod+O", {
+        ...fileKey,
+        when: filePromptsReady,
+      }),
+      // 入力欄では標準の編集・Undo を優先する。押し続けの繰り返しは元に戻す・やり直しだけ。
+      keyCommand("history.undo", "Mod+Z", { allowRepeat: true, ...menuScoped }),
+      keyCommand("history.redo", "Mod+Shift+Z", {
+        allowRepeat: true,
+        ...menuScoped,
+      }),
+      keyCommand("history.redo", "Mod+Y", {
+        keyId: "history.redoY",
+        allowRepeat: true,
+        ...menuScoped,
+      }),
+      // W4: Ctrl+A／G／D はキャンバスの表示中だけ（共有側の canvasBlocked）。
+      // Ctrl+G はブラウザの「次を検索」を出さないよう、使えないときも既定を止める。
+      keyCommand("selection.all", "Mod+A", menuScoped),
+      keyCommand("selection.group", "Mod+G", {
+        preventDefaultWhenDisabled: true,
+        ...menuScoped,
+      }),
+      keyCommand("selection.ungroup", "Mod+Shift+G", {
+        preventDefaultWhenDisabled: true,
+        ...menuScoped,
+      }),
+      keyCommand("selection.duplicate", "Mod+D", menuScoped),
+    ];
+  }
   // Ctrl+S・Shift+Ctrl+S は dispatcher に載せず、層（モーダル・メニュー）では止めない。
   // 「Project を置き換えますか」の表示中に書き出してから破棄する流れがあり、また
   // メニューとモーダルが同時に残ると（メニュー→F1）上流の判定では互いに「上」になり、
@@ -1193,19 +1148,6 @@
       void command.run();
     return true;
   }
-  // 従来どおり Ctrl と Cmd（Meta）のどちらでも効かせる。上流の Mod は macOS では Cmd、
-  // それ以外では Ctrl だけなので、Mod+ の操作は Ctrl+ と Meta+ の二つに分けて登録する。
-  shortcutDispatcher.register(
-    "designer",
-    designerShortcuts.flatMap((command) =>
-      command.shortcut?.startsWith("Mod+")
-        ? (["Ctrl", "Meta"] as const).map((modifier) => ({
-            ...command,
-            shortcut: modifier + command.shortcut!.slice(3),
-          }))
-        : [command],
-    ),
-  );
   // 保護で断ったときもブラウザの既定（ヘルプ・新規ウィンドウ・ページ保存など）は止める。
   function reservedBrowserKey(event: KeyboardEvent) {
     if (event.altKey) return false;
@@ -4087,6 +4029,20 @@
       },
     },
   });
+  // 従来どおり Ctrl と Cmd（Meta）のどちらでも効かせる。上流の Mod は macOS では Cmd、
+  // それ以外では Ctrl だけなので、Mod+ の操作は Ctrl+ と Meta+ の二つに分けて登録する
+  // （tyaro/banto#669）。
+  shortcutDispatcher.register(
+    "designer",
+    designerShortcuts().flatMap((command) =>
+      command.shortcut?.startsWith("Mod+")
+        ? (["Ctrl", "Meta"] as const).map((modifier) => ({
+            ...command,
+            shortcut: modifier + command.shortcut!.slice(3),
+          }))
+        : [command],
+    ),
+  );
   const folderContextItems = $derived(designerActions.folderContext());
   const editToolbarGroups = $derived(designerActions.editGroups());
   const clipboardItems = $derived(designerActions.clipboardItems());

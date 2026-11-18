@@ -1,6 +1,6 @@
 import type { FloatingInspector } from "./floating-inspector.svelte";
 import type { ContextAction } from "../ContextActions.svelte";
-import type { ToolbarGroup } from "../EditToolbar.svelte";
+import type { ToolbarAction, ToolbarGroup } from "../EditToolbar.svelte";
 import type { DesignerMenu } from "../DesignerMenubar.svelte";
 import type { FolderOperation } from "../FolderDialog.svelte";
 import type { EditCommand, AddKind } from "../../editor";
@@ -8,7 +8,24 @@ import type { ScreenObject, Point } from "../../project";
 import { canFlip } from "../../flip";
 import { BUILTIN_PARTS } from "../../builtin-symbols";
 import type { WorkTabKind } from "./work-tabs.svelte";
+import type { CommandSpec } from "@banto/ui";
 const FLIP_LABELS = ["左右反転", "上下反転"];
+
+/** キー・メニュー・toolbar が共有する操作の id（Banto #435 の `CommandSpec.id`）。 */
+export type DesignerCommandId =
+  | "project.new"
+  | "project.open"
+  | "project.save"
+  | "project.saveAs"
+  | "history.undo"
+  | "history.redo"
+  | "selection.all"
+  | "selection.duplicate"
+  | "selection.remove"
+  | "selection.group"
+  | "selection.ungroup"
+  | "selection.show"
+  | "help.open";
 
 interface PanelVisibility {
   sidebar: boolean;
@@ -225,6 +242,145 @@ export function createDesignerActions(host: DesignerActionsHost) {
       selected.some((object) => object.locked || !canFlip(object))
     );
   }
+  /** 選べる配置（ロック・非表示を除く）が一つでもある。 */
+  function hasSelectable(): boolean {
+    return host.editing.objects.some(
+      (object) => !object.locked && object.visible !== false,
+    );
+  }
+  /**
+   * キー・メニュー・toolbar・コンテキストメニューが共有する操作（Banto #435 の
+   * `CommandSpec`）。名前・実行・使える条件はここだけで決め、メニュー・toolbar は
+   * `disabled = !enabled()`、キーは App の dispatcher がキー専用の保護（入力元・層・
+   * キャンバス上の対象）を足して使う。`enabled` は表示時と実行の直前に呼ばれる。
+   */
+  const commands: Record<DesignerCommandId, CommandSpec> = {
+    "project.new": {
+      id: "project.new",
+      title: "新しいProject",
+      enabled: () => !host.view.menuBlocked,
+      run: () => host.files.newProject(),
+    },
+    "project.open": {
+      id: "project.open",
+      title: "Project を開く",
+      enabled: () => !host.view.menuBlocked,
+      run: () => host.files.openProjectFile(),
+    },
+    "project.save": {
+      id: "project.save",
+      title: "Project を保存",
+      enabled: () => !host.view.menuBlocked,
+      run: () => host.files.save(),
+    },
+    "project.saveAs": {
+      id: "project.saveAs",
+      title: "名前を付けて保存",
+      visible: () => !!host.files.saveAs,
+      enabled: () => !host.view.menuBlocked,
+      run: () => host.files.saveAs?.(),
+    },
+    "history.undo": {
+      id: "history.undo",
+      title: "元に戻す",
+      enabled: () => !host.editing.editBlocked && !!host.editing.undoCount,
+      run: () => host.editing.travel("undo"),
+    },
+    "history.redo": {
+      id: "history.redo",
+      title: "やり直す",
+      enabled: () => !host.editing.editBlocked && !!host.editing.redoCount,
+      run: () => host.editing.travel("redo"),
+    },
+    "selection.all": {
+      id: "selection.all",
+      title: "すべて選択",
+      enabled: () =>
+        !host.editing.editBlocked &&
+        !host.editing.canvasBlocked &&
+        hasSelectable(),
+      run: () =>
+        host.editing.transition(
+          () =>
+            (host.editing.selectedIds =
+              host.groups?.selectableIds ??
+              host.editing.objects
+                .filter((o) => !o.locked && o.visible !== false)
+                .map((o) => o.id)),
+        ),
+    },
+    "selection.duplicate": {
+      id: "selection.duplicate",
+      title: "選択図形を複製",
+      enabled: () =>
+        !host.editing.mutationBlocked &&
+        !host.editing.canvasBlocked &&
+        !!host.editing.selectedIds.length,
+      run: () => host.editing.duplicateSelection(),
+    },
+    "selection.remove": {
+      id: "selection.remove",
+      title: "選択図形を削除",
+      enabled: () =>
+        !host.editing.mutationBlocked &&
+        !host.editing.canvasBlocked &&
+        !!host.editing.selectedIds.length,
+      run: () => host.editing.removeSelection(),
+    },
+    "selection.group": {
+      id: "selection.group",
+      title: "グループ化",
+      visible: () => !!host.groups,
+      enabled: () =>
+        !!host.groups &&
+        !host.editing.mutationBlocked &&
+        !host.editing.canvasBlocked &&
+        !host.groups.definition &&
+        !host.groups.containsGroups &&
+        host.editing.selectedIds.length >= 2,
+      run: () => host.groups?.create(),
+    },
+    "selection.ungroup": {
+      id: "selection.ungroup",
+      title: "グループ解除",
+      visible: () => !!host.groups,
+      enabled: () =>
+        !!host.groups &&
+        !host.editing.mutationBlocked &&
+        !host.editing.canvasBlocked &&
+        !!host.groups.groupId,
+      run: () => host.groups?.ungroup(),
+    },
+    "selection.show": {
+      id: "selection.show",
+      title: "選択範囲を表示",
+      enabled: () => !host.view.selectionViewReason,
+      run: () => host.view.showSelection(),
+    },
+    "help.open": {
+      id: "help.open",
+      title: "操作ガイド・アプリ情報",
+      run: () => {
+        host.view.helpOpen = true;
+      },
+    },
+  };
+  function command(id: DesignerCommandId): CommandSpec {
+    return commands[id];
+  }
+  /** 共有の操作から、メニュー・コンテキストメニューの項目を作る。 */
+  function commandItem(id: DesignerCommandId): ContextAction {
+    const spec = commands[id];
+    return {
+      label: spec.title,
+      disabled: spec.enabled ? !spec.enabled() : false,
+      run: () => void spec.run(),
+    };
+  }
+  /** 共有の操作から、toolbar の項目を作る。 */
+  function commandTool(id: DesignerCommandId, icon: string): ToolbarAction {
+    return { ...commandItem(id), icon };
+  }
   function editGroups(): ToolbarGroup[] {
     return editGroupItems().map((group) =>
       group.id === "history"
@@ -238,42 +394,21 @@ export function createDesignerActions(host: DesignerActionsHost) {
         id: "history",
         label: "編集履歴",
         items: [
-          {
-            label: "元に戻す",
-            icon: "M8 5L3 10L8 15M3 10H14A6 6 0 0 1 14 22",
-            disabled: host.editing.editBlocked || !host.editing.undoCount,
-            run: () => host.editing.travel("undo"),
-          },
-          {
-            label: "やり直す",
-            icon: "M16 5L21 10L16 15M21 10H10A6 6 0 0 0 10 22",
-            disabled: host.editing.editBlocked || !host.editing.redoCount,
-            run: () => host.editing.travel("redo"),
-          },
+          commandTool("history.undo", "M8 5L3 10L8 15M3 10H14A6 6 0 0 1 14 22"),
+          commandTool(
+            "history.redo",
+            "M16 5L21 10L16 15M21 10H10A6 6 0 0 0 10 22",
+          ),
         ],
       },
       {
         id: "selection",
         label: "選択と編集",
         items: [
-          {
-            label: "すべて選択",
-            icon: "M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M7 7H17V17H7Z",
-            disabled:
-              host.editing.editBlocked ||
-              !host.editing.objects.some(
-                (object) => !object.locked && object.visible !== false,
-              ),
-            run: () =>
-              host.editing.transition(
-                () =>
-                  (host.editing.selectedIds =
-                    host.groups?.selectableIds ??
-                    host.editing.objects
-                      .filter((o) => !o.locked && o.visible !== false)
-                      .map((o) => o.id)),
-              ),
-          },
+          commandTool(
+            "selection.all",
+            "M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M7 7H17V17H7Z",
+          ),
           {
             label: "選択解除",
             icon: "M3 8V3H8M16 3H21V8M21 16V21H16M8 21H3V16M8 8L16 16M16 8L8 16",
@@ -282,13 +417,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
             run: () =>
               host.editing.transition(() => (host.editing.selectedIds = [])),
           },
-          {
-            label: "選択図形を複製",
-            icon: "M9 9H21V21H9ZM15 5V3H3V15H5",
-            disabled:
-              host.editing.mutationBlocked || !host.editing.selectedIds.length,
-            run: host.editing.duplicateSelection,
-          },
+          commandTool("selection.duplicate", "M9 9H21V21H9ZM15 5V3H3V15H5"),
           {
             label: "配列複製",
             icon: "M3 3H9V9H3ZM15 3H21V9H15ZM3 15H9V21H3ZM15 15H21V21H15Z",
@@ -296,13 +425,10 @@ export function createDesignerActions(host: DesignerActionsHost) {
               host.editing.mutationBlocked || !host.editing.selectedIds.length,
             run: host.editing.openArrayCopy,
           },
-          {
-            label: "選択図形を削除",
-            icon: "M3 6H21M9 6V3H15V6M6 6L7 21H17L18 6M10 10V17M14 10V17",
-            disabled:
-              host.editing.mutationBlocked || !host.editing.selectedIds.length,
-            run: host.editing.removeSelection,
-          },
+          commandTool(
+            "selection.remove",
+            "M3 6H21M9 6V3H15V6M6 6L7 21H17L18 6M10 10V17M14 10V17",
+          ),
         ],
       },
       ...(host.groups
@@ -311,23 +437,14 @@ export function createDesignerActions(host: DesignerActionsHost) {
               id: "geometric-groups",
               label: "幾何グループ",
               items: [
-                {
-                  label: "グループ化",
-                  icon: "M3 3H10V10H3ZM14 14H21V21H14ZM1 1H23V23H1Z",
-                  disabled:
-                    host.editing.mutationBlocked ||
-                    host.groups.definition ||
-                    host.groups.containsGroups ||
-                    host.editing.selectedIds.length < 2,
-                  run: host.groups.create,
-                },
-                {
-                  label: "グループ解除",
-                  icon: "M3 3H10V10H3ZM14 14H21V21H14ZM1 8V1H8M16 1H23V8M23 16V23H16M8 23H1V16",
-                  disabled:
-                    host.editing.mutationBlocked || !host.groups.groupId,
-                  run: host.groups.ungroup,
-                },
+                commandTool(
+                  "selection.group",
+                  "M3 3H10V10H3ZM14 14H21V21H14ZM1 1H23V23H1Z",
+                ),
+                commandTool(
+                  "selection.ungroup",
+                  "M3 3H10V10H3ZM14 14H21V21H14ZM1 8V1H8M16 1H23V8M23 16V23H16M8 23H1V16",
+                ),
               ],
             },
           ]
@@ -740,30 +857,10 @@ export function createDesignerActions(host: DesignerActionsHost) {
       {
         label: "ファイル",
         items: [
-          {
-            label: "新しいProject",
-            disabled: host.view.menuBlocked,
-            run: host.files.newProject,
-          },
-          {
-            label: "Project を開く",
-            disabled: host.view.menuBlocked,
-            run: host.files.openProjectFile,
-          },
-          {
-            label: "Project を保存",
-            disabled: host.view.menuBlocked,
-            run: host.files.save,
-          },
-          ...(host.files.saveAs
-            ? [
-                {
-                  label: "名前を付けて保存",
-                  disabled: host.view.menuBlocked,
-                  run: host.files.saveAs,
-                },
-              ]
-            : []),
+          commandItem("project.new"),
+          commandItem("project.open"),
+          commandItem("project.save"),
+          ...(host.files.saveAs ? [commandItem("project.saveAs")] : []),
           {
             label: "画像を配置",
             disabled:
@@ -813,11 +910,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
       {
         label: "表示",
         items: [
-          {
-            label: "選択範囲を表示",
-            disabled: !!host.view.selectionViewReason,
-            run: host.view.showSelection,
-          },
+          commandItem("selection.show"),
           {
             label: host.view.workTabReason
               ? `プロジェクト設定（${host.view.workTabReason}）`
@@ -1125,14 +1218,16 @@ export function createDesignerActions(host: DesignerActionsHost) {
       },
       {
         label: "ヘルプ",
-        items: [
-          {
-            label: "操作ガイド・アプリ情報",
-            run: () => (host.view.helpOpen = true),
-          },
-        ],
+        items: [commandItem("help.open")],
       },
     ];
   }
-  return { folderContext, editGroups, clipboardItems, selectionContext, menus };
+  return {
+    command,
+    folderContext,
+    editGroups,
+    clipboardItems,
+    selectionContext,
+    menus,
+  };
 }

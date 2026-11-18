@@ -241,3 +241,43 @@ test("dispatcher shortcuts skip consumed keys, accept checkboxes, work beside a 
   await download;
   await expect(replacement).toBeVisible();
 });
+test("edit shortcuts share the toolbar's conditions", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const keydown = (key: string, shiftKey = false) =>
+    page.evaluate(
+      ({ key, shiftKey }) => {
+        const event = new KeyboardEvent("keydown", {
+          key,
+          ctrlKey: true,
+          shiftKey,
+          bubbles: true,
+          cancelable: true,
+        });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      },
+      { key, shiftKey },
+    );
+  // 元に戻すものが無いときは toolbar と同じく使えず、キーはブラウザに残す。
+  await expect(
+    page.getByRole("button", { name: "元に戻す", exact: true }),
+  ).toBeDisabled();
+  expect(await keydown("z")).toBe(false);
+  await selectPanel(page, "部品");
+  await page.getByRole("button", { name: "Rectangle を追加" }).click();
+  const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
+  await expect(svg.locator("[data-object-id]")).toHaveCount(4);
+  // 1つだけの選択ではグループ化できない。Ctrl+G はブラウザの検索も出さない。
+  await expect(
+    page.getByRole("button", { name: "グループ化", exact: true }),
+  ).toBeDisabled();
+  expect(await keydown("g")).toBe(true);
+  expect(await keydown("G", true)).toBe(true);
+  await expect(
+    page.getByRole("button", { name: "グループ解除", exact: true }),
+  ).toBeDisabled();
+  // 使えるときは同じ操作が走る。
+  expect(await keydown("z")).toBe(true);
+  await expect(svg.locator("[data-object-id]")).toHaveCount(3);
+});

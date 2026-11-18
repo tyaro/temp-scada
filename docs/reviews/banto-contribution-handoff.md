@@ -30,9 +30,14 @@ Banto v7.5.0のCHANGELOGで照合した。#432〜#438の公開APIはすべて**v
   - 保護で断ったときも、F1/F2・Ctrl+N/O・Ctrl+S（Shift付きを含む）はブラウザの既定を止める（`reservedBrowserKey`、従来と同じ）。
   - 変わった点: 先に`preventDefault`されたkeydownは操作しない。Ctrl・Cmd（Meta）は従来どおりどちらでも効く（上流の`Mod`はmacOSではCmdだけなので、`Mod+`の操作を`Ctrl+`と`Meta+`に分けて登録する。macOSで`Control+…`を送る既存e2eのため）。
   - 試験: `e2e/history.spec.ts`の「dispatcher shortcuts …」で、`defaultPrevented`、チェックボックスからのCtrl+Z/Y、コンテキストメニュー表示中のF1/F2・Ctrl+N/O、モーダルを閉じた後の復帰、置換の確認の表示中とメニュー・ヘルプが同時に残った状態でのCtrl+S・Shift+Ctrl+Sでの書き出し、Ctrl・Metaの両方を確かめる。
-  - 移行前からの残課題: メニューを開いたままF1でヘルプを開くと、メニューがヘルプの裏で開いたまま残り、最初のEscはメニューを閉じる（ヘルプはEsc 2回で閉じる）。
-  - メニュー・toolbar・コンテキストメニューの項目を同じ`CommandSpec`（id）から作る移行は、次の区切り（`designer-actions.ts`）。
-- Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらない。Banto Issueは未起票のまま。
+  - 移行前からの残課題: メニューを開いたままF1でヘルプを開くと、メニューがヘルプの裏で開いたまま残り、最初のEscはメニューを閉じる（ヘルプはEsc 2回で閉じる）。上流へ[tyaro/banto#670](https://github.com/tyaro/banto/issues/670)で報告した（メニューとモーダルの上下が決まらない件と合わせて）。
+  - `ownerLayer`でメニューを外す回避と、`Mod+`の複製は[tyaro/banto#669](https://github.com/tyaro/banto/issues/669)で上流へ相談した。
+- #435の3段目（2026-11-18）: メニュー・toolbar・コンテキストメニューの項目とキーを、同じ`CommandSpec`から作る。定義は`designer-actions.ts`の`commands`（`DesignerCommandId`の13件: Projectの新規・開く・保存・名前を付けて保存、元に戻す・やり直す、すべて選択・複製・削除・グループ化・グループ解除、選択範囲を表示、ヘルプ）。名前・実行・使える条件（`enabled`）はここだけで決め、メニュー・toolbarは`disabled = !enabled()`、`App.svelte`の`keyCommand`はキーだけの保護（`when`: 入力元・キャンバス上の対象・ヘルプやタグ選択の表示中など）を足す。F2（名前を変更）はメニューに無いのでキーだけの定義のまま。
+  - 条件はメニュー・toolbar側にそろえた（ユーザー判断）。キーで変わった点: 元に戻す・やり直すは戻せるものが無いと使えずキーをブラウザに残す、Ctrl+D・Deleteはロック中の選択や作業画面の表示中は効かない、Ctrl+Aは選べる配置が無いと効かない、Ctrl+N/O・Ctrl+Z/Y/A/G/Dは浮動パネルのドラッグ中・割付の一覧表の表示中も効かない（`menuBlocked`）。Ctrl+G・Shift+Ctrl+Gは使えないときもブラウザの既定（検索）を止める。
+  - Ctrl+S・Shift+Ctrl+Sは2段目のまま`handleSaveShortcut`（層で止めない。共有の`project.save`の`enabled`は`menuBlocked`を見るので使わない）。
+  - 項目の文言は共有の`title`（従来のメニュー・toolbarの文言）。メニューにキーを出すには`MenuItem`に表示欄が要るので、[tyaro/banto#671](https://github.com/tyaro/banto/issues/671)で上流へ依頼した。
+  - 試験: `e2e/history.spec.ts`の「edit shortcuts share the toolbar's conditions」、`e2e/edit-lock.spec.ts`のロック中のCtrl+D。
+- Menuの200px幅の左4pxはみ出し（下の節）は、v7.5.0までのCHANGELOGに該当する修正が見当たらず、上流mainの`anchoredPopover.ts`の横clampも同じ式のまま。[tyaro/banto#668](https://github.com/tyaro/banto/issues/668)で報告した（2026-11-18）。
 - 置き換えの各区切りでは、既存の入力保護・資源解放・保存失敗のE2Eを通してから手元の実装を消す（[引渡しの方法](#引渡しの方法)の3）。
 - 新しい還元候補（パネルの幅・高さの保存と「標準レイアウトに戻す」、作業タブの入力保護など）は、上の採用で上流のAPIとの差が見えてから起票する。
 
