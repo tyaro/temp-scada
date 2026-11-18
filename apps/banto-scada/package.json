@@ -13,10 +13,10 @@
     "benchmark:editor": "node --expose-gc scripts/benchmark-editor.mjs"
   },
   "dependencies": {
-    "@banto/admin-core": "github:tyaro/banto#v7.2.0&path:packages/admin-core",
-    "@banto/image-assets": "github:tyaro/banto#v7.2.0&path:packages/image-assets",
-    "@banto/theme": "github:tyaro/banto#v7.2.0&path:packages/theme",
-    "@banto/ui": "github:tyaro/banto#v7.2.0&path:packages/ui",
+    "@banto/admin-core": "github:tyaro/banto#v7.6.0&path:packages/admin-core",
+    "@banto/image-assets": "github:tyaro/banto#v7.6.0&path:packages/image-assets",
+    "@banto/theme": "github:tyaro/banto#v7.6.0&path:packages/theme",
+    "@banto/ui": "github:tyaro/banto#v7.6.0&path:packages/ui",
     "@tauri-apps/api": "^2.12.1",
     "ajv": "8.20.0",
     "fflate": "0.8.3",
