@@ -313,6 +313,31 @@ describe("project files on the desktop", () => {
     }
   });
 
+  it("ignores a second explicit apply until the first one finishes", async () => {
+    let finish!: (result: AlarmApplyResult) => void;
+    const apply = vi.fn(
+      () => new Promise<AlarmApplyResult>((resolve) => (finish = resolve)),
+    );
+    const { controller } = setup({
+      open: async () => null,
+      save: async () => ({ fileId: 12, fileName: "plant.json" }),
+      apply,
+    });
+    controller.save();
+    await settle();
+    const first = controller.applyAlarm();
+    expect(controller.alarmApplying).toBe(true);
+    await controller.applyAlarm();
+    expect(apply).toHaveBeenCalledTimes(1);
+    finish({ status: "applied" });
+    await first;
+    expect(controller.alarmApplying).toBe(false);
+    const second = controller.applyAlarm();
+    expect(apply).toHaveBeenCalledTimes(2);
+    finish({ status: "applied" });
+    await second;
+  });
+
   it("says why an apply after a save failed, with the host's code", async () => {
     const { controller, reports } = setup({
       open: async () => null,
