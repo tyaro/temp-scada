@@ -1,7 +1,12 @@
 <script lang="ts" module>
   export type DesignerMenu = {
     label: string;
-    items: { label: string; disabled?: boolean; run: () => void }[];
+    items: {
+      label: string;
+      shortcut?: string;
+      disabled?: boolean;
+      run: () => void;
+    }[];
   };
 </script>
 
@@ -66,6 +71,7 @@
         {#each group.items as item}
           <MenuItem
             label={item.label}
+            shortcut={item.shortcut}
             disabled={item.disabled}
             onSelect={item.run}
           />

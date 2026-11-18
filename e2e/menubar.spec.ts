@@ -246,3 +246,46 @@ test("file operations use menus with the menubar and sidebar hidden, preserving 
     "書き出し要求後の変更なし",
   );
 });
+
+test("menus show the shared keys, and Ctrl or Meta runs them with a menu open", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const bar = page.getByRole("menubar");
+  await bar.getByRole("menuitem", { name: "ファイル", exact: true }).click();
+  // The accessible name stays the label; the key goes to aria-keyshortcuts.
+  const save = page.getByRole("menuitem", {
+    name: "Project を保存",
+    exact: true,
+  });
+  await expect(save).toHaveAttribute("aria-keyshortcuts", "Control+S");
+  await expect(save).toContainText("Ctrl+S");
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await bar.getByRole("menuitem", { name: "挿入", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "Rectangle を追加", exact: true })
+    .click();
+  await bar.getByRole("menuitem", { name: "挿入", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "Rectangle を追加", exact: true })
+    .click();
+  const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
+  await expect(svg.locator("[data-object-id]")).toHaveCount(5);
+  const edit = page.getByRole("menu", { name: "編集", exact: true });
+  for (const [modifier, count] of [
+    ["Control", 4],
+    ["Meta", 3],
+  ] as const) {
+    await bar.getByRole("menuitem", { name: "編集", exact: true }).click();
+    const undo = edit.getByRole("menuitem", { name: "元に戻す", exact: true });
+    await expect(undo).toHaveAttribute("aria-keyshortcuts", "Control+Z");
+    await expect(undo).toContainText("Ctrl+Z");
+    await expect(
+      edit.getByRole("menuitem", { name: "やり直す", exact: true }),
+    ).toHaveAttribute("aria-keyshortcuts", "Control+Y");
+    await page.keyboard.press(`${modifier}+z`);
+    await expect(svg.locator("[data-object-id]")).toHaveCount(count);
+    if (await edit.isVisible()) await page.keyboard.press("Escape");
+  }
+});

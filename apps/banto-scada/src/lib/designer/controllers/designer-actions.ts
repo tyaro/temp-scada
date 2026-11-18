@@ -253,28 +253,34 @@ export function createDesignerActions(host: DesignerActionsHost) {
    * `CommandSpec`）。名前・実行・使える条件はここだけで決め、メニュー・toolbar は
    * `disabled = !enabled()`、キーは App の dispatcher がキー専用の保護（入力元・層・
    * キャンバス上の対象）を足して使う。`enabled` は表示時と実行の直前に呼ばれる。
+   * `shortcut` はメニューに出すキー（Banto #671）で、App の dispatcher も既定で
+   * これを登録する。やり直しの Mod+Shift+Z のような別のキーは App 側で足す。
    */
   const commands: Record<DesignerCommandId, CommandSpec> = {
     "project.new": {
       id: "project.new",
+      shortcut: "Mod+N",
       title: "新しいProject",
       enabled: () => !host.view.menuBlocked,
       run: () => host.files.newProject(),
     },
     "project.open": {
       id: "project.open",
+      shortcut: "Mod+O",
       title: "Project を開く",
       enabled: () => !host.view.menuBlocked,
       run: () => host.files.openProjectFile(),
     },
     "project.save": {
       id: "project.save",
+      shortcut: "Mod+S",
       title: "Project を保存",
       enabled: () => !host.view.menuBlocked,
       run: () => host.files.save(),
     },
     "project.saveAs": {
       id: "project.saveAs",
+      shortcut: "Mod+Shift+S",
       title: "名前を付けて保存",
       visible: () => !!host.files.saveAs,
       enabled: () => !host.view.menuBlocked,
@@ -282,18 +288,21 @@ export function createDesignerActions(host: DesignerActionsHost) {
     },
     "history.undo": {
       id: "history.undo",
+      shortcut: "Mod+Z",
       title: "元に戻す",
       enabled: () => !host.editing.editBlocked && !!host.editing.undoCount,
       run: () => host.editing.travel("undo"),
     },
     "history.redo": {
       id: "history.redo",
+      shortcut: "Mod+Y",
       title: "やり直す",
       enabled: () => !host.editing.editBlocked && !!host.editing.redoCount,
       run: () => host.editing.travel("redo"),
     },
     "selection.all": {
       id: "selection.all",
+      shortcut: "Mod+A",
       title: "すべて選択",
       enabled: () =>
         !host.editing.editBlocked &&
@@ -311,6 +320,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
     },
     "selection.duplicate": {
       id: "selection.duplicate",
+      shortcut: "Mod+D",
       title: "選択図形を複製",
       enabled: () =>
         !host.editing.mutationBlocked &&
@@ -320,6 +330,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
     },
     "selection.remove": {
       id: "selection.remove",
+      shortcut: "Delete",
       title: "選択図形を削除",
       enabled: () =>
         !host.editing.mutationBlocked &&
@@ -329,6 +340,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
     },
     "selection.group": {
       id: "selection.group",
+      shortcut: "Mod+G",
       title: "グループ化",
       visible: () => !!host.groups,
       enabled: () =>
@@ -342,6 +354,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
     },
     "selection.ungroup": {
       id: "selection.ungroup",
+      shortcut: "Mod+Shift+G",
       title: "グループ解除",
       visible: () => !!host.groups,
       enabled: () =>
@@ -353,12 +366,14 @@ export function createDesignerActions(host: DesignerActionsHost) {
     },
     "selection.show": {
       id: "selection.show",
+      shortcut: "F",
       title: "選択範囲を表示",
       enabled: () => !host.view.selectionViewReason,
       run: () => host.view.showSelection(),
     },
     "help.open": {
       id: "help.open",
+      shortcut: "F1",
       title: "操作ガイド・アプリ情報",
       run: () => {
         host.view.helpOpen = true;
@@ -373,6 +388,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
     const spec = commands[id];
     return {
       label: spec.title,
+      shortcut: spec.shortcut,
       disabled: spec.enabled ? !spec.enabled() : false,
       run: () => void spec.run(),
     };
@@ -626,6 +642,8 @@ export function createDesignerActions(host: DesignerActionsHost) {
     return canvasGate([
       {
         label: "切り取り",
+        // キーはブラウザの cut/copy/paste イベント（App の nativeClipboard）が受ける。
+        shortcut: "Mod+X",
         disabled:
           host.editing.mutationBlocked ||
           host.clipboard.busy ||
@@ -634,6 +652,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
       },
       {
         label: "コピー",
+        shortcut: "Mod+C",
         disabled:
           host.editing.editBlocked ||
           host.clipboard.busy ||
@@ -642,6 +661,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
       },
       {
         label: "貼り付け",
+        shortcut: "Mod+V",
         disabled: host.editing.editBlocked || host.clipboard.busy,
         run: () => host.clipboard.action("paste"),
       },
