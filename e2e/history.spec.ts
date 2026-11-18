@@ -96,3 +96,43 @@ test("keyboard history ignores inputs, clears redo on a new edit and is inactive
   await page.keyboard.press("Control+z");
   await expect(svg.locator("[data-object-id]")).toHaveCount(5);
 });
+test("edit shortcuts follow the shared guards for repeat, IME and modal layers", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  await selectPanel(page, "部品");
+  const add = page.getByRole("button", { name: "Rectangle を追加" });
+  await add.click();
+  const svg = page.getByRole("img", { name: "プロセス画面", exact: true });
+  await expect(svg.locator("[data-object-id]")).toHaveCount(4);
+  await add.focus();
+  // 押し続けの複製・IME 変換中のキーは操作しない。
+  for (const flags of [
+    { key: "d", repeat: true },
+    { key: "d", isComposing: true },
+    { key: "z", keyCode: 229 },
+  ])
+    await add.dispatchEvent("keydown", { ctrlKey: true, ...flags });
+  await expect(svg.locator("[data-object-id]")).toHaveCount(4);
+  // 元に戻すは押し続けでも効く。
+  await add.dispatchEvent("keydown", { key: "z", ctrlKey: true, repeat: true });
+  await expect(svg.locator("[data-object-id]")).toHaveCount(3);
+  await page.keyboard.press("Control+y");
+  await expect(svg.locator("[data-object-id]")).toHaveCount(4);
+  // モーダルの表示中は背後の編集履歴を動かさない。
+  await page.keyboard.press("F1");
+  const help = page.getByRole("dialog");
+  await expect(help).toBeVisible();
+  await page.evaluate(() =>
+    window.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "z",
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    ),
+  );
+  await expect(svg.locator("[data-object-id]")).toHaveCount(4);
+});
