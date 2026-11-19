@@ -519,7 +519,16 @@ async fn each_hub_answer_finishes_with_the_outcome_of_section_5() {
         assert_eq!(fx.hub.writes().len(), count + 1, "{case}");
         // A tripped or refused key stops the terminal (§7); the next case
         // starts from a registered key.
-        fx.log.key_registered(0, &fx.hub.url).await.unwrap();
+        fx.log
+            .key_registered(
+                0,
+                &crate::operation_db::KeyRef {
+                    endpoint: fx.hub.url.clone(),
+                    id: "test".into(),
+                },
+            )
+            .await
+            .unwrap();
     }
 }
 

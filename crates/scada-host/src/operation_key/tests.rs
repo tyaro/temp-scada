@@ -1,20 +1,27 @@
+use std::collections::BTreeMap;
 use std::sync::Mutex;
 
 use super::*;
-use crate::operation_db::{OperationDb, WriteState};
+use crate::operation_db::{KeyRef, OperationDb, WriteState};
 
 const HUB: &str = "http://127.0.0.1:8722";
 const SECRET: &str = "operation-write-test-only-key";
 
 #[derive(Default)]
 struct MemoryStore {
-    secret: Mutex<Option<String>>,
+    entries: Mutex<BTreeMap<String, String>>,
     fail: Mutex<bool>,
 }
 
 impl MemoryStore {
     fn fail(&self, fail: bool) {
         *self.fail.lock().unwrap() = fail;
+    }
+
+    /// The only secret kept, if exactly one entry is there.
+    fn only(&self) -> Option<String> {
+        let entries = self.entries.lock().unwrap();
+        (entries.len() == 1).then(|| entries.values().next().unwrap().clone())
     }
 
     fn check(&self) -> Result<(), KeyError> {
@@ -27,20 +34,23 @@ impl MemoryStore {
 }
 
 impl WriteKeyStore for MemoryStore {
-    fn get(&self) -> Result<Option<String>, KeyError> {
+    fn get(&self, id: &str) -> Result<Option<String>, KeyError> {
         self.check()?;
-        Ok(self.secret.lock().unwrap().clone())
+        Ok(self.entries.lock().unwrap().get(id).cloned())
     }
 
-    fn set(&self, secret: &str) -> Result<(), KeyError> {
+    fn set(&self, id: &str, secret: &str) -> Result<(), KeyError> {
         self.check()?;
-        *self.secret.lock().unwrap() = Some(secret.into());
+        self.entries
+            .lock()
+            .unwrap()
+            .insert(id.into(), secret.into());
         Ok(())
     }
 
-    fn delete(&self) -> Result<(), KeyError> {
+    fn delete(&self, id: &str) -> Result<(), KeyError> {
         self.check()?;
-        *self.secret.lock().unwrap() = None;
+        self.entries.lock().unwrap().remove(id);
         Ok(())
     }
 }
@@ -61,7 +71,7 @@ async fn a_registered_key_is_paired_with_the_read_endpoint_and_survives_a_restar
         .await
         .unwrap();
     assert_eq!(key.endpoint, HUB);
-    assert_eq!(store.secret.lock().unwrap().as_deref(), Some(SECRET));
+    assert_eq!(store.only().as_deref(), Some(SECRET));
     assert_eq!(log.write_status().state, WriteState::Ready);
     log.close().await;
 
@@ -89,7 +99,7 @@ async fn a_key_is_checked_before_anything_is_kept() {
             .err()
             .unwrap();
         assert_eq!(error.as_str(), code, "{secret:?} {endpoint:?}");
-        assert!(store.secret.lock().unwrap().is_none());
+        assert!(store.entries.lock().unwrap().is_empty());
         assert_eq!(log.key_endpoint(), None);
     }
     log.close().await;
@@ -158,8 +168,17 @@ async fn a_deleted_key_is_unpaired_first() {
     store.fail(false);
     assert_eq!(log.key_endpoint(), None);
     assert!(load(&store, &log).unwrap().is_none());
+    // The entry the keyring kept is never read again; deleting again is
+    // a no-op (the record has no key).
     delete(&store, &log).await.unwrap();
-    assert!(store.secret.lock().unwrap().is_none());
+    assert_eq!(store.only().as_deref(), Some(SECRET));
+    // A registered key is removed whole.
+    register(&store, &log, SECRET, Some(HUB), 2_000)
+        .await
+        .unwrap();
+    delete(&store, &log).await.unwrap();
+    assert_eq!(store.only().as_deref(), Some(SECRET));
+    assert!(load(&store, &log).unwrap().is_none());
     log.close().await;
 }
 
@@ -167,7 +186,15 @@ async fn a_deleted_key_is_unpaired_first() {
 async fn an_endpoint_without_a_secret_is_no_key() {
     let store = MemoryStore::default();
     let (log, _) = log().await;
-    log.key_registered(1_000, HUB).await.unwrap();
+    log.key_registered(
+        1_000,
+        &KeyRef {
+            endpoint: HUB.into(),
+            id: "missing".into(),
+        },
+    )
+    .await
+    .unwrap();
     assert!(load(&store, &log).unwrap().is_none());
     log.close().await;
 }
@@ -188,4 +215,70 @@ fn request() -> crate::operation_db::RequestRecord {
         tag: Some("Line1.P101.Command".into()),
         value: serde_json::json!(true),
     }
+}
+
+#[tokio::test]
+async fn a_replacement_that_fails_keeps_the_previous_key_whole() {
+    const OTHER_HUB: &str = "http://127.0.0.1:9999";
+    const OTHER: &str = "operation-write-other-hub-key";
+    let store = MemoryStore::default();
+    let (log, file) = log().await;
+    register(&store, &log, SECRET, Some(HUB), 1_000)
+        .await
+        .unwrap();
+    let first = log.key().unwrap();
+    // The record refuses the switch after the keyring took the new secret.
+    log.db()
+        .execute_for_test(
+            "CREATE TRIGGER fail_key BEFORE UPDATE ON terminal_write BEGIN SELECT RAISE(ABORT, 'disk full'); END",
+        )
+        .await;
+    let error = register(&store, &log, OTHER, Some(OTHER_HUB), 2_000)
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(error.as_str(), "record_failed");
+    // The new entry is dropped; the previous key is as it was.
+    assert_eq!(store.only().as_deref(), Some(SECRET));
+    assert_eq!(log.key(), Some(first.clone()));
+    log.close().await;
+
+    // After a restart too: the previous endpoint with its own secret, never
+    // the previous endpoint with the new secret.
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    assert_eq!(log.key(), Some(first.clone()));
+    assert_eq!(store.get(&first.id).unwrap().as_deref(), Some(SECRET));
+    assert_eq!(load(&store, &log).unwrap().unwrap().endpoint, HUB);
+    log.close().await;
+}
+
+#[tokio::test]
+async fn an_exit_before_the_switch_never_pairs_the_new_secret() {
+    // The process ends after the keyring took the new secret, before the
+    // record switched: the new entry is left behind but never read.
+    let store = MemoryStore::default();
+    let (log, _) = log().await;
+    register(&store, &log, SECRET, Some(HUB), 1_000)
+        .await
+        .unwrap();
+    store.set("left-behind", "operation-write-new-key").unwrap();
+    let key = log.key().unwrap();
+    assert_ne!(key.id, "left-behind");
+    assert_eq!(store.get(&key.id).unwrap().as_deref(), Some(SECRET));
+    log.close().await;
+}
+
+#[tokio::test]
+async fn a_replacement_removes_the_previous_entry() {
+    let store = MemoryStore::default();
+    let (log, _) = log().await;
+    register(&store, &log, SECRET, Some(HUB), 1_000)
+        .await
+        .unwrap();
+    register(&store, &log, "operation-write-second-key", Some(HUB), 2_000)
+        .await
+        .unwrap();
+    assert_eq!(store.only().as_deref(), Some("operation-write-second-key"));
+    log.close().await;
 }

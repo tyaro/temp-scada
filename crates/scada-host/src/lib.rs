@@ -111,38 +111,45 @@ impl BootstrapState for FileState {
 }
 
 /// The keyring of the write key (operation design §7): its own service,
-/// one secret per installation.
+/// one entry per registration (`<installation id>/<entry id>`).
 pub fn local_write_key_store() -> Result<Arc<dyn operation_key::WriteKeyStore>, &'static str> {
-    let account = local_installation_id()?;
-    Ok(Arc::new(WindowsWriteKey { account }))
+    let installation = local_installation_id()?;
+    Ok(Arc::new(WindowsWriteKey { installation }))
 }
 
 struct WindowsWriteKey {
-    account: String,
+    installation: String,
+}
+
+#[cfg(windows)]
+impl WindowsWriteKey {
+    fn entry(&self, id: &str) -> Result<keyring::Entry, operation_key::KeyError> {
+        keyring::Entry::new(
+            operation_key::WRITE_KEY_SERVICE,
+            &format!("{}/{id}", self.installation),
+        )
+        .map_err(|_| operation_key::KeyError::KeyStore)
+    }
 }
 
 #[cfg(windows)]
 impl operation_key::WriteKeyStore for WindowsWriteKey {
-    fn get(&self) -> Result<Option<String>, operation_key::KeyError> {
-        let entry = keyring::Entry::new(operation_key::WRITE_KEY_SERVICE, &self.account)
-            .map_err(|_| operation_key::KeyError::KeyStore)?;
-        match entry.get_password() {
+    fn get(&self, id: &str) -> Result<Option<String>, operation_key::KeyError> {
+        match self.entry(id)?.get_password() {
             Ok(key) => Ok(Some(key)),
             Err(keyring::Error::NoEntry) => Ok(None),
             Err(_) => Err(operation_key::KeyError::KeyStore),
         }
     }
 
-    fn set(&self, secret: &str) -> Result<(), operation_key::KeyError> {
-        keyring::Entry::new(operation_key::WRITE_KEY_SERVICE, &self.account)
-            .and_then(|entry| entry.set_password(secret))
+    fn set(&self, id: &str, secret: &str) -> Result<(), operation_key::KeyError> {
+        self.entry(id)?
+            .set_password(secret)
             .map_err(|_| operation_key::KeyError::KeyStore)
     }
 
-    fn delete(&self) -> Result<(), operation_key::KeyError> {
-        let entry = keyring::Entry::new(operation_key::WRITE_KEY_SERVICE, &self.account)
-            .map_err(|_| operation_key::KeyError::KeyStore)?;
-        match entry.delete_credential() {
+    fn delete(&self, id: &str) -> Result<(), operation_key::KeyError> {
+        match self.entry(id)?.delete_credential() {
             Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
             Err(_) => Err(operation_key::KeyError::KeyStore),
         }
@@ -151,13 +158,13 @@ impl operation_key::WriteKeyStore for WindowsWriteKey {
 
 #[cfg(not(windows))]
 impl operation_key::WriteKeyStore for WindowsWriteKey {
-    fn get(&self) -> Result<Option<String>, operation_key::KeyError> {
+    fn get(&self, _: &str) -> Result<Option<String>, operation_key::KeyError> {
         Err(operation_key::KeyError::KeyStore)
     }
-    fn set(&self, _: &str) -> Result<(), operation_key::KeyError> {
+    fn set(&self, _: &str, _: &str) -> Result<(), operation_key::KeyError> {
         Err(operation_key::KeyError::KeyStore)
     }
-    fn delete(&self) -> Result<(), operation_key::KeyError> {
+    fn delete(&self, _: &str) -> Result<(), operation_key::KeyError> {
         Err(operation_key::KeyError::KeyStore)
     }
 }

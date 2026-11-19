@@ -3,8 +3,10 @@
 //! `key_tripped`) and `key_invalid` after it refused the key (401). Kept in
 //! `operations.db` (table `terminal_write`, one row) so a restart does not
 //! resume writes; the in-memory copy lives in `OperationLog`. The same row
-//! keeps the Hub endpoint the write key was registered for (`key_endpoint`,
-//! §7, O2c-3a; the secret itself is in the keyring).
+//! keeps the registered write key (§7, O2c-3a): the Hub endpoint it was
+//! registered for and the id of its keyring entry, which hold the secret.
+//! Both change in one statement, so a secret never pairs with another
+//! registration's endpoint.
 use banto_tagclient::ErrorKind;
 use serde::Serialize;
 use sqlx::{Row, Sqlite, SqlitePool};
@@ -17,12 +19,21 @@ pub(super) const CREATE_TABLE: &str = "CREATE TABLE terminal_write (
        id INTEGER PRIMARY KEY CHECK (id = 1),
        state TEXT NOT NULL CHECK (state IN ('ready','stopped','key_invalid')),
        changed_at_ms INTEGER NOT NULL,
-       key_endpoint TEXT
+       key_endpoint TEXT,
+       key_id TEXT
      );";
 
-/// Format 2 to 3: the endpoint of the registered write key.
-pub(super) const ADD_KEY_ENDPOINT: &str =
-    "ALTER TABLE terminal_write ADD COLUMN key_endpoint TEXT;";
+/// Format 2 to 3: the registered write key.
+pub(super) const ADD_KEY: &str = "ALTER TABLE terminal_write ADD COLUMN key_endpoint TEXT;
+     ALTER TABLE terminal_write ADD COLUMN key_id TEXT;";
+
+/// The registered write key: the Hub endpoint it was registered for and the
+/// id of the keyring entry holding its secret (a new id per registration).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KeyRef {
+    pub endpoint: String,
+    pub id: String,
+}
 
 /// Whether this terminal may send writes (§7).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
@@ -79,14 +90,16 @@ pub struct WriteStatus {
     pub changed_at_ms: Option<i64>,
 }
 
-/// The state and the endpoint of the registered write key.
+/// The state and the registered write key (`None` unless both halves are
+/// there).
 pub(super) async fn load(
     pool: &SqlitePool,
-) -> Result<(WriteStatus, Option<String>), OperationDbError> {
-    let row =
-        sqlx::query("SELECT state, changed_at_ms, key_endpoint FROM terminal_write WHERE id = 1")
-            .fetch_optional(pool)
-            .await?;
+) -> Result<(WriteStatus, Option<KeyRef>), OperationDbError> {
+    let row = sqlx::query(
+        "SELECT state, changed_at_ms, key_endpoint, key_id FROM terminal_write WHERE id = 1",
+    )
+    .fetch_optional(pool)
+    .await?;
     let Some(row) = row else {
         return Ok((WriteStatus::default(), None));
     };
@@ -96,26 +109,30 @@ pub(super) async fn load(
             state: WriteState::parse(&state).ok_or(OperationDbError::InvalidRow)?,
             changed_at_ms: Some(row.try_get("changed_at_ms")?),
         },
-        row.try_get("key_endpoint")?,
+        match (row.try_get("key_endpoint")?, row.try_get("key_id")?) {
+            (Some(endpoint), Some(id)) => Some(KeyRef { endpoint, id }),
+            _ => None,
+        },
     ))
 }
 
-/// Save the state with the write key's endpoint (`None`: no key), as one
-/// statement: a registration (`ready` and the endpoint) or a deletion.
+/// Save the state with the write key (`None`: no key), as one statement: a
+/// registration (`ready` and the new key) or a deletion.
 pub(super) async fn save_key(
     pool: &SqlitePool,
     state: WriteState,
     changed_at_ms: i64,
-    key_endpoint: Option<&str>,
+    key: Option<&KeyRef>,
 ) -> Result<(), OperationDbError> {
     sqlx::query(
-        "INSERT INTO terminal_write (id, state, changed_at_ms, key_endpoint) VALUES (1, ?, ?, ?)
+        "INSERT INTO terminal_write (id, state, changed_at_ms, key_endpoint, key_id) VALUES (1, ?, ?, ?, ?)
          ON CONFLICT (id) DO UPDATE SET state = excluded.state, changed_at_ms = excluded.changed_at_ms,
-           key_endpoint = excluded.key_endpoint",
+           key_endpoint = excluded.key_endpoint, key_id = excluded.key_id",
     )
     .bind(state.as_str())
     .bind(changed_at_ms)
-    .bind(key_endpoint)
+    .bind(key.map(|key| key.endpoint.as_str()))
+    .bind(key.map(|key| key.id.as_str()))
     .execute(pool)
     .await?;
     Ok(())
