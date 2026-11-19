@@ -47,11 +47,17 @@
   let secondInstance = $state(false);
   let message = $state("");
 
+  // Hub connection and the read subscription fail separately: a failed
+  // subscription start leaves the Hub connected but values stopped, so it
+  // gets its own state and a retry that only re-creates the subscription.
+  let readFailed = $state(false);
+
   async function connect() {
     if (hubBusy) return;
     hubBusy = true;
     readSource = undefined;
     streamStatus = "";
+    readFailed = false;
     try {
       const status = await invoke<HubStatus>("runtime_hub_connect");
       hub = runtimeHubView({ ok: true, status });
@@ -60,19 +66,28 @@
     } finally {
       hubBusy = false;
     }
-    if (hub.connected)
-      readSource = nativeReadSource(runtimeReadStart, (phase) => {
-        streamStatus = phase;
-        if (phase === "認証が必要") {
-          readSource = undefined;
-          hub = {
-            connected: false,
-            needsEditor: false,
-            tagCount: 0,
-            text: "Hubの読取認証が失効しました",
-          };
-        }
-      });
+    if (hub.connected) startReading();
+  }
+
+  /** A new source object makes the read presentation subscribe again. */
+  function startReading() {
+    readFailed = false;
+    streamStatus = "";
+    readSource = nativeReadSource(runtimeReadStart, (phase) => {
+      streamStatus = phase;
+      if (phase === "認証が必要") {
+        readSource = undefined;
+        readFailed = false;
+        hub = {
+          connected: false,
+          needsEditor: false,
+          tagCount: 0,
+          text: "Hubの読取認証が失効しました",
+        };
+      } else if (phase === "購読開始失敗") {
+        readFailed = true;
+      }
+    });
   }
 
   async function checkAlarms() {
@@ -162,14 +177,18 @@
           variant={hubBusy
             ? "neutral"
             : hub.connected
-              ? "success"
+              ? readFailed
+                ? "warning"
+                : "success"
               : hub.needsEditor
                 ? "warning"
                 : "danger"}
           label={hubBusy
             ? "Hub 処理中"
             : hub.connected
-              ? `Hub 接続中（${hub.tagCount} 件）`
+              ? readFailed
+                ? "Hub 接続中・読取停止"
+                : `Hub 接続中（${hub.tagCount} 件）`
               : "Hub 未接続"}
         /></span
       >
@@ -182,7 +201,12 @@
         {/if}
       {/if}
       {#if streamStatus && hub.connected}
-        <span class="runtime-stream" role="status">読取: {streamStatus}</span>
+        <span class="runtime-stream" role="status" data-runtime-stream
+          >読取: {streamStatus}</span
+        >
+      {/if}
+      {#if readFailed && hub.connected && !hubBusy}
+        <button type="button" onclick={startReading}>読取を再試行</button>
       {/if}
       {#if alarmNotice}
         <span class="runtime-alarm-notice" role="status" data-runtime-alarm
@@ -193,7 +217,7 @@
         <span class="runtime-message" role="alert">{message}</span>
       {/if}
       <div class="runtime-auth">
-        <AuthControls session={authSession} align="end" />
+        <AuthControls session={authSession} align="end" runtime />
       </div>
     </header>
     <div class="runtime-stage">

@@ -9,6 +9,9 @@ interface RuntimeHostOptions {
   project?: "opened" | "unreadable" | "invalidBody";
   hub?: "connected" | "reconnectInEditor";
   alarm?: "notApplied" | "otherProject" | "differs" | "same";
+  /** `failOnce`: the first `runtime_read_start` fails, later ones succeed. */
+  readStart?: "ok" | "failOnce";
+  auth?: "operational" | "setup" | "transitioning";
 }
 
 async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
@@ -96,20 +99,41 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                 return { state: "connected", tagCount: 3 };
               case "runtime_read_start":
                 host.starts.push(args!);
+                if (
+                  options.readStart === "failOnce" &&
+                  host.starts.length === 1
+                )
+                  throw "hub_unavailable";
                 return null;
               case "hub_read_stop":
                 return null;
               case "runtime_alarm_status":
                 return options.alarm ?? "same";
               case "auth_phase":
-                return {
-                  phase: "operational",
-                  authDisabled: true,
-                  hasAdmin: true,
-                };
+                return options.auth === "setup"
+                  ? {
+                      phase: "initializing",
+                      authDisabled: true,
+                      hasAdmin: false,
+                    }
+                  : options.auth === "transitioning"
+                    ? {
+                        phase: "transitioning",
+                        authDisabled: true,
+                        hasAdmin: true,
+                      }
+                    : {
+                        phase: "operational",
+                        authDisabled: true,
+                        hasAdmin: true,
+                      };
               case "auth_resolve":
                 return {
-                  identity: { id: "local", name: "ローカル", role: "viewer" },
+                  identity: {
+                    id: "local",
+                    name: "ローカル",
+                    role: options.auth ? "admin" : "viewer",
+                  },
                   kind: "local",
                   checked: 1,
                   current: 1,
@@ -274,4 +298,89 @@ test("the authentication popover at the right of the bar stays inside the window
   const width = page.viewportSize()!.width;
   expect(box!.x).toBeGreaterThanOrEqual(0);
   expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+});
+
+test("a failed read subscription start is shown and can be retried", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { readStart: "failOnce" });
+  await page.goto("/runtime.html");
+  await expect(page.locator("[data-runtime-stream]")).toHaveText(
+    "読取: 購読開始失敗",
+  );
+  await expect(page.locator("[data-hub-status]")).toContainText(
+    "Hub 接続中・読取停止",
+  );
+  await expect(page.locator("[data-hub-status]")).not.toContainText(
+    "Hub 接続中（3 件）",
+  );
+  await page.getByRole("button", { name: "読取を再試行" }).click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => (window as any).__runtimeHost.starts.length),
+    )
+    .toBe(2);
+  await expect(page.locator("[data-hub-status]")).toContainText(
+    "Hub 接続中（3 件）",
+  );
+  await expect(page.getByRole("button", { name: "読取を再試行" })).toHaveCount(
+    0,
+  );
+  await expect(page.locator("[data-runtime-stream]")).not.toContainText(
+    "購読開始失敗",
+  );
+  const subscriptionId = await page.evaluate(
+    () => (window as any).__runtimeHost.starts[1].subscriptionId,
+  );
+  await page.evaluate(
+    (subscriptionId) =>
+      (window as any).__runtimeHost.emit("scada:read", {
+        subscriptionId,
+        update: { text: { connection: "live" } },
+      }),
+    subscriptionId,
+  );
+  await expect(page.locator("[data-runtime-stream]")).toHaveText(
+    /読取: (受信中|表示データを検証できません)/,
+  );
+  expect(await calls(page)).not.toContain("auth_config_apply");
+});
+
+test("the Runtime authentication popover leaves the move to operation and the settings to Editor", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { auth: "setup" });
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  await page.locator(".runtime-auth summary").click();
+  const popover = page.locator(".runtime-auth .auth-popover");
+  await expect(popover).toContainText(
+    "運用への移行は Editor で行ってください。",
+  );
+  await expect(popover.getByRole("button", { name: /運用へ移行/ })).toHaveCount(
+    0,
+  );
+  await expect(popover.getByRole("form", { name: "運用への移行" })).toHaveCount(
+    0,
+  );
+  await expect(popover.getByRole("button", { name: "認証設定…" })).toHaveCount(
+    0,
+  );
+  await expect(
+    popover.getByRole("button", { name: "利用者管理…" }),
+  ).toBeVisible();
+});
+
+test("a Runtime in the middle of the move asks to re-run it in Editor", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { auth: "transitioning" });
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  await page.locator(".runtime-auth summary").click();
+  const popover = page.locator(".runtime-auth .auth-popover");
+  await expect(popover.getByRole("alert")).toContainText(
+    "Editor で管理者の資格情報を使って移行を再実行してください",
+  );
+  await expect(popover.getByRole("button", { name: /移行/ })).toHaveCount(0);
 });
