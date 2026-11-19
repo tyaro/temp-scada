@@ -185,3 +185,90 @@ fn saved_identity_reads_package_manifest_without_validating_other_entries() {
     assert!(SavedAlarmProject::read(&path).is_err());
     std::fs::remove_file(path).unwrap();
 }
+
+fn saved(project: &Value) -> SavedAlarmProject {
+    SavedAlarmProject::from_bytes(
+        Path::new("saved.json"),
+        &serde_json::to_vec(project).unwrap(),
+    )
+    .unwrap()
+}
+
+fn applied_of(project: &Value) -> AppliedDefinitions {
+    saved(project).applied("http://127.0.0.1:8722".into(), "未ログイン".into(), 1)
+}
+
+#[test]
+fn comparison_with_the_applied_record_names_the_four_cases() {
+    let project = example();
+    let applied = applied_of(&project);
+    assert_eq!(
+        compare_with_applied(&saved(&project), None).unwrap(),
+        AlarmDefinitionMatch::NotApplied
+    );
+    assert_eq!(
+        compare_with_applied(&saved(&project), Some(&applied)).unwrap(),
+        AlarmDefinitionMatch::Same
+    );
+    let mut other = applied.clone();
+    other.project_id = "0199f200-0000-7000-8000-00000000ffff".into();
+    assert_eq!(
+        compare_with_applied(&saved(&project), Some(&other)).unwrap(),
+        AlarmDefinitionMatch::OtherProject
+    );
+}
+
+#[test]
+fn a_severity_only_change_differs() {
+    let project = example();
+    let applied = applied_of(&project);
+    let mut edited = project.clone();
+    let limits = &mut edited["alarms"]["definitions"][0]["source"]["limits"];
+    assert_eq!(limits["h"]["severity"], "medium");
+    limits["h"]["severity"] = json!("high");
+    let edited = saved(&edited);
+    // The evaluation is unchanged: only the display tells them apart.
+    assert_eq!(
+        edited
+            .applied(String::new(), String::new(), 0)
+            .condition_hashes,
+        applied.condition_hashes
+    );
+    assert_eq!(
+        compare_with_applied(&edited, Some(&applied)).unwrap(),
+        AlarmDefinitionMatch::Differs
+    );
+}
+
+#[test]
+fn a_disabled_or_evaluation_change_differs() {
+    let project = example();
+    let applied = applied_of(&project);
+    let mut limit = project.clone();
+    limit["alarms"]["definitions"][0]["source"]["limits"]["hh"]["value"] = json!(96);
+    assert_eq!(
+        compare_with_applied(&saved(&limit), Some(&applied)).unwrap(),
+        AlarmDefinitionMatch::Differs
+    );
+    let mut disabled = project.clone();
+    disabled["alarms"]["definitions"][0]["enabled"] = json!(false);
+    assert_eq!(
+        compare_with_applied(&saved(&disabled), Some(&applied)).unwrap(),
+        AlarmDefinitionMatch::Differs
+    );
+}
+
+#[test]
+fn identical_alarms_with_other_project_edits_are_the_same() {
+    let project = example();
+    let applied = applied_of(&project);
+    let mut edited = project.clone();
+    edited["manifest"]["name"] = json!("名前だけ変えた Project");
+    edited["manifest"]["projectRevision"] = json!(2);
+    let edited = saved(&edited);
+    assert_ne!(edited.file_hash, applied.file_hash);
+    assert_eq!(
+        compare_with_applied(&edited, Some(&applied)).unwrap(),
+        AlarmDefinitionMatch::Same
+    );
+}

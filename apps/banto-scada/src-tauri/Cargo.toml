@@ -10,6 +10,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+# One process per terminal, whatever the mode (Runtime mode design §7).
+tauri-plugin-single-instance = "2"
 scada-host = { path = "../../../crates/scada-host" }
 scada-runtime = { path = "../../../crates/scada-runtime" }
 scada-model = { path = "../../../crates/scada-model" }
