@@ -268,7 +268,7 @@ input / textarea / contenteditable の内部では、コピー・貼り付け等
 
 Banto v6.7.0 / 固定コミット `1ffe507da973ca5103ede93b5ca438cda7c28d4e` の公開 API を確認した。初期化・通知・設定は維持し、テーマ tokens / mode と Menu / Modal / Drawer / layering helpers は再利用候補。PageHeader や SurfaceCard を Designer の全領域に使うことを必須にせず、SCADA の shell とレイアウトを構成する。見た目を変えることを基盤撤去や認証の独自実装へ広げない。
 
-公開 entry には Tree / Tabs / Split / docking workspace がない。ただし、SCADA の配置・タグ選択をすべて Banto の共通責務へ移す理由にはならない。まず app 側のパネル契約と既存拡張点を設計し、ドッキング基盤は自前／既存ライブラリの Svelte adapter を、ライセンス・キーボード操作・状態保持・テーマ対応で比較する。依存の採用はまだ決めていない。
+公開 entry には Tree / Tabs / Split / docking workspace がない。ただし、SCADA の配置・タグ選択をすべて Banto の共通責務へ移す理由にはならない。まず app 側のパネル契約と既存拡張点を設計し、ドッキング基盤は自前／既存ライブラリの Svelte adapter を、ライセンス・キーボード操作・状態保持・テーマ対応で比較する。依存の採用はまだ決めていない。2026-11-20 に Banto v7.9.0 の `@banto/dock-svelte` を評価し、載せ替えの判断と段階を[開発計画](../../project/development-plan.md#designer-の-dock-載せ替えd02026-11-20日本時間)に記録した（着手は `App.svelte` のリファクタの後）。
 
 今回、新規 Issue は追加しない。現時点ではアプリ固有の提案で、複数製品に共通する不足が確定していないため。メニューバーの共通 keyboard helper、modeless layering、UI 設定保存、テーマの拡張点等で具体的な不足が確認できれば、最小再現と API 案を添えて Banto に起票する。共有 SDK の課題は既存 #682 を参照し、重複起票しない。
 
