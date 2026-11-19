@@ -551,6 +551,7 @@
         onopentrend={openTrend}
         onretiretrend={retireTrend}
         onopenalarms={openAlarmList}
+        onopenoperations={openOperationHistory}
         onsilencebuzzer={alarms.canSilence ? alarms.silenceBuzzer : undefined}
         {overlays}
         {operations}

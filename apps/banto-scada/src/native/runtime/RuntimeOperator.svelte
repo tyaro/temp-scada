@@ -23,6 +23,7 @@
     onopentrend,
     onretiretrend,
     onopenalarms,
+    onopenoperations,
     onsilencebuzzer,
     overlays,
     operations,
@@ -34,6 +35,7 @@
     onopentrend?: (screenId: string, objectId: string, token?: object) => void;
     onretiretrend?: (token: object) => void;
     onopenalarms?: () => void;
+    onopenoperations?: () => void;
     onsilencebuzzer?: () => void;
     /** The alarm list, alarm settings and history windows (top bar's entries). */
     overlays?: Snippet;
@@ -75,6 +77,7 @@
     {onopentrend}
     {onretiretrend}
     {onopenalarms}
+    {onopenoperations}
     {onsilencebuzzer}
     overlay={overlays}
     {operations}

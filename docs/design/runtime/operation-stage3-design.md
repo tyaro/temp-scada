@@ -389,3 +389,9 @@ O4b で決めたこと（2026-11-20）: 操作履歴の窓（§9 の照会）は
 - 答えは `projectId`・`rows`（`seq DESC`）・`nextBeforeSeq`（続きの行が残っていれば最後の行の `seq`、無ければ null。上限より 1 行多く読んで決める）。行は小窓の最後の 1 件と同じ形（`state`・`outcome`・`reason`・時刻・`tag`・`value`・`auditId`）に、`seq`・`user`・`equipmentId`・`equipmentCode`・`slot`・`input`・`repeatCount` を足した。`pending` の行は小窓と同じく host が `sending`／`unrecorded` に読み分け、区分 `pending` の絞り込みは記録の語で当てる（記録できなかった結果をこのプロセスが持っていても `pending` に入る）。
 - 記録を開けない・読めないときは `record_failed`、条件の形の誤り（`limit` の範囲外、空か 128 文字を超える `equipmentId`、知らない区分・項目）は `invalid_request` とし、どちらも記録しない。
 - 窓は上端の「操作履歴」のボタンから開き、開くたびに今の絞り込みで読み直す（自動の再読込みはしない）。列は受付時刻・利用者・機器（記録のコードと今の Project の名前）・操作（slot の `write` の見出し。無ければ slot 名）・書こうとした値・区分・理由・回数（`repeat_count` が 2 以上のときだけ「×n」）・所要時間・監査 id。区分・理由の文は小窓の結果の表示と同じ規則（`rowStatus`）で作る。値は記録どおりの値（無ければ入力の文字列）を出し、ボタンの名前は付けない。履歴は同じ Project ID の旧版の行も含み、今のボタン定義がその操作の時点と同じとは限らないため（#334 のレビュー）。「さらに読む」は最後に照会した条件の続きを読む。画面切替ボタンの行き先 `operationList` は O4c で足す。
+
+O4c で決めたこと（2026-11-20）: 画面切替ボタンの行き先に `operationList`（操作履歴の窓を開く）を足した。
+
+- Runtime は O4b の窓を開く（上端のボタンと同じ開き方・フォーカスの戻り先）。窓の無い Editor（表示プレビュー・運転表示）では押しても何もしない。無効の表示にはしない（`alarmList` と同じく押せる見た目のままで、Editor が窓を持たないだけ）。
+- 既定の文言は「操作履歴」。`navTargetLabel`・Inspector の選択肢（「操作履歴を開く」）・schema・Rust の検査・共通ケースを `alarmList` と同じ形で揃えた。
+- 配布の順: このボタンを使う Project を入れる前に、Runtime を対応版へ更新する。旧 Runtime の schema は `operationList` を知らないので、ボタンが無効になるのではなく Project の検証が通らない（#335 のレビュー）。

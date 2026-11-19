@@ -28,6 +28,7 @@ export function validateNavButtonShape(
       target.kind !== "back" &&
       target.kind !== "forward" &&
       target.kind !== "alarmList" &&
+      target.kind !== "operationList" &&
       target.kind !== "silenceBuzzer"
     )
       throw new Error("画面切替ボタンの行き先を選択してください");
@@ -96,7 +97,12 @@ export function navButtonAction(
 ): NavTarget | undefined {
   const target = shape.target;
   if (!preview || !target) return undefined;
-  if (target.kind === "screen" || target.kind === "alarmList") return target;
+  if (
+    target.kind === "screen" ||
+    target.kind === "alarmList" ||
+    target.kind === "operationList"
+  )
+    return target;
   if (target.kind === "silenceBuzzer") return buzzer ? target : undefined;
   if (target.kind === "back") return history?.canBack ? target : undefined;
   return history?.canForward ? target : undefined;
@@ -120,6 +126,7 @@ export function navTargetLabel(
   if (!target) return "行き先未設定";
   if (target.kind === "back") return "戻る";
   if (target.kind === "alarmList") return "アラーム一覧";
+  if (target.kind === "operationList") return "操作履歴";
   if (target.kind === "silenceBuzzer") return "ブザー停止";
   if (target.kind === "forward") return "進む";
   return (
