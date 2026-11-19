@@ -175,3 +175,33 @@ it("rejects state rows the schema or the duplicate check refuses, in the form an
     ).toThrow(applyReason);
   }
 });
+it("keeps a slot's operation when the type is saved; the schema refuses a bad one", () => {
+  const write = {
+    label: "回転数 設定",
+    input: { min: 0, max: 60 },
+    buttons: [{ label: "停止", value: 0 }],
+  };
+  const saved = [{ ...slots[0], write }];
+  const command = equipmentTypeFormCommand(
+    input("", JSON.stringify(saved)),
+    project,
+    3,
+  );
+  expect(command).toMatchObject({ slots: saved });
+  const next = applyCommand(project, command, "edit");
+  expect(next.equipmentTypes!.at(-1)!.slots).toEqual(saved);
+  expect(parseProject(serializeProject(next))).toEqual(next);
+  const reversed = equipmentTypeFormCommand(
+    input(
+      "",
+      JSON.stringify([
+        { ...slots[0], write: { ...write, input: { min: 60, max: 0 } } },
+      ]),
+    ),
+    project,
+    3,
+  );
+  expect(() => applyCommand(project, reversed, "edit")).toThrow(
+    /下限が上限より大きい/,
+  );
+});

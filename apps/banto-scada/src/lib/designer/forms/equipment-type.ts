@@ -63,6 +63,8 @@ export function equipmentTypeFormCommand(
       ...(extra.tagSuffix ? { tagSuffix: extra.tagSuffix } : {}),
       ...(extra.boolDisplay ? { boolDisplay: extra.boolDisplay } : {}),
       ...(extra.stateDisplay ? { stateDisplay: extra.stateDisplay } : {}),
+      // No editor for it yet (O1b); keep it so saving the type does not drop it.
+      ...(extra.write ? { write: extra.write } : {}),
     };
   });
   const seen = new Set<string>();

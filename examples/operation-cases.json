@@ -1,0 +1,1351 @@
+[
+  {
+    "name": "design example: bool buttons, number input, state buttons",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "run",
+            "type": "bool",
+            "direction": "read"
+          },
+          {
+            "name": "command",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "運転指令",
+              "buttons": [
+                {
+                  "label": "運転",
+                  "value": true
+                },
+                {
+                  "label": "停止",
+                  "value": false
+                }
+              ]
+            }
+          },
+          {
+            "name": "speedSp",
+            "type": "number",
+            "direction": "read",
+            "write": {
+              "label": "回転数 設定",
+              "input": {
+                "min": 0,
+                "max": 60
+              }
+            }
+          },
+          {
+            "name": "mode",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [],
+              "otherwise": {
+                "text": "不明",
+                "color": "#808080"
+              }
+            },
+            "write": {
+              "label": "運転モード",
+              "buttons": [
+                {
+                  "label": "手動",
+                  "value": 1
+                },
+                {
+                  "label": "自動",
+                  "value": 2
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "run",
+            "externalName": null
+          },
+          {
+            "slotName": "command",
+            "externalName": null
+          },
+          {
+            "slotName": "speedSp",
+            "externalName": null
+          },
+          {
+            "slotName": "mode",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "separate run and stop bits each write true",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "runCmd",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "運転",
+              "buttons": [
+                {
+                  "label": "運転",
+                  "value": true
+                }
+              ]
+            }
+          },
+          {
+            "name": "stopCmd",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "停止",
+              "buttons": [
+                {
+                  "label": "停止",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "runCmd",
+            "externalName": null
+          },
+          {
+            "slotName": "stopCmd",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "number buttons and input together; button outside the range",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "number",
+            "direction": "read",
+            "write": {
+              "label": "設定",
+              "input": {
+                "min": 10,
+                "max": 60
+              },
+              "buttons": [
+                {
+                  "label": "停止値",
+                  "value": -1.5
+                },
+                {
+                  "label": "最大",
+                  "value": 60
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "input with min equal to max",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "number",
+            "direction": "read",
+            "write": {
+              "label": "固定",
+              "input": {
+                "min": 5,
+                "max": 5
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "state button at the integer limits",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [],
+              "otherwise": {
+                "text": "不明",
+                "color": "#808080"
+              }
+            },
+            "write": {
+              "label": "番号",
+              "buttons": [
+                {
+                  "label": "零",
+                  "value": 0
+                },
+                {
+                  "label": "上限",
+                  "value": 2147483647
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "longest labels",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "ああああああああああああああああああああああああああああああああああああああああ",
+              "buttons": [
+                {
+                  "label": "いいいいいいいいいいいい",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "four buttons",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "number",
+            "direction": "read",
+            "write": {
+              "label": "段",
+              "buttons": [
+                {
+                  "label": "0",
+                  "value": 0
+                },
+                {
+                  "label": "1",
+                  "value": 1
+                },
+                {
+                  "label": "2",
+                  "value": 2
+                },
+                {
+                  "label": "3",
+                  "value": 3
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "write slot may allow unassigned",
+    "valid": true,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "allowUnassigned": true,
+            "write": {
+              "label": "運転指令",
+              "buttons": [
+                {
+                  "label": "運転",
+                  "value": true
+                },
+                {
+                  "label": "停止",
+                  "value": false
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "neither buttons nor input",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "運転指令"
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "empty buttons",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "運転指令",
+              "buttons": []
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "five buttons",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "number",
+            "direction": "read",
+            "write": {
+              "label": "段",
+              "buttons": [
+                {
+                  "label": "0",
+                  "value": 0
+                },
+                {
+                  "label": "1",
+                  "value": 1
+                },
+                {
+                  "label": "2",
+                  "value": 2
+                },
+                {
+                  "label": "3",
+                  "value": 3
+                },
+                {
+                  "label": "4",
+                  "value": 4
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "missing label",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "buttons": [
+                {
+                  "label": "運転",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "empty label",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "",
+              "buttons": [
+                {
+                  "label": "運転",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "label too long",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "あああああああああああああああああああああああああああああああああああああああああ",
+              "buttons": [
+                {
+                  "label": "運転",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "button label too long",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "運転指令",
+              "buttons": [
+                {
+                  "label": "いいいいいいいいいいいいい",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "label with surrounding space",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": " 運転指令",
+              "buttons": [
+                {
+                  "label": "運転",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "button label with a line break",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "運転指令",
+              "buttons": [
+                {
+                  "label": "運\n転",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "bool button with a number value",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "運転指令",
+              "buttons": [
+                {
+                  "label": "運転",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "number button with a boolean value",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "number",
+            "direction": "read",
+            "write": {
+              "label": "設定",
+              "buttons": [
+                {
+                  "label": "入",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "state button with a fraction",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [],
+              "otherwise": {
+                "text": "不明",
+                "color": "#808080"
+              }
+            },
+            "write": {
+              "label": "番号",
+              "buttons": [
+                {
+                  "label": "半",
+                  "value": 1.5
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "state button below zero",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [],
+              "otherwise": {
+                "text": "不明",
+                "color": "#808080"
+              }
+            },
+            "write": {
+              "label": "番号",
+              "buttons": [
+                {
+                  "label": "負",
+                  "value": -1
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "state button above the limit",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [],
+              "otherwise": {
+                "text": "不明",
+                "color": "#808080"
+              }
+            },
+            "write": {
+              "label": "番号",
+              "buttons": [
+                {
+                  "label": "超",
+                  "value": 2147483648
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "input on a bool slot",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "運転指令",
+              "input": {
+                "min": 0,
+                "max": 1
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "input on a state slot",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "state",
+            "direction": "read",
+            "stateDisplay": {
+              "source": "value",
+              "rows": [],
+              "otherwise": {
+                "text": "不明",
+                "color": "#808080"
+              }
+            },
+            "write": {
+              "label": "番号",
+              "input": {
+                "min": 0,
+                "max": 3
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "input without max",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "number",
+            "direction": "read",
+            "write": {
+              "label": "設定",
+              "input": {
+                "min": 0
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "input min above max",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "number",
+            "direction": "read",
+            "write": {
+              "label": "設定",
+              "input": {
+                "min": 60,
+                "max": 0
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "duplicate bool button values",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "運転指令",
+              "buttons": [
+                {
+                  "label": "運転",
+                  "value": true
+                },
+                {
+                  "label": "入",
+                  "value": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "duplicate number button values written differently",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "number",
+            "direction": "read",
+            "write": {
+              "label": "設定",
+              "buttons": [
+                {
+                  "label": "一",
+                  "value": 1
+                },
+                {
+                  "label": "壱",
+                  "value": 1.0
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "unknown write property",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "運転指令",
+              "buttons": [
+                {
+                  "label": "運転",
+                  "value": true
+                }
+              ],
+              "pulse": true
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "unknown button property",
+    "valid": false,
+    "equipmentTypes": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000101",
+        "name": "ポンプ",
+        "slots": [
+          {
+            "name": "target",
+            "type": "bool",
+            "direction": "read",
+            "write": {
+              "label": "運転指令",
+              "buttons": [
+                {
+                  "label": "運転",
+                  "value": true,
+                  "color": "#ff0000"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "equipment": [
+      {
+        "id": "0199f700-0000-7000-8000-000000000102",
+        "typeId": "0199f700-0000-7000-8000-000000000101",
+        "code": "P-101",
+        "name": "送水ポンプ1",
+        "bindings": [
+          {
+            "slotName": "target",
+            "externalName": null
+          }
+        ]
+      }
+    ]
+  }
+]

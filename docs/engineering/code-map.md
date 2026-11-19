@@ -167,7 +167,7 @@ G3でDesignerも接続した。`App.svelte`の選択・キー・mode境界を純
 
 型付き読取slotの契約・現在値の非永続化・後続Equipmentとの境界は[初回設計](../design/equipment/typed-read-slots-design.md)を参照。`slots.rs`が機器contextとplan、`projection.rs`が既存Textと共通のmetadata／値検証を所有し、`tests/sdk_projection.rs`で実SDKのloopback投影を確認する。
 
-Equipmentは`lib/equipment.ts`と`crates/scada-model/src/equipment.rs`が保存後の意味検証、`editor/equipment-handler.ts`が原子的な候補編集を担当する。初期UIは`EquipmentLibrary.svelte`、対象世代とFormDataの解釈は`forms/equipment.ts`。共通契約は`examples/equipment-cases.json`、UIの回帰は`e2e/equipment.spec.ts`。[契約と検証](../design/equipment/equipment-register-design.md)を参照する。
+Equipmentは`lib/equipment.ts`と`crates/scada-model/src/equipment.rs`が保存後の意味検証、`editor/equipment-handler.ts`が原子的な候補編集を担当する。初期UIは`EquipmentLibrary.svelte`、対象世代とFormDataの解釈は`forms/equipment.ts`。共通契約は`examples/equipment-cases.json`、UIの回帰は`e2e/equipment.spec.ts`。機器種別のslotの任意の`write`（段階3の操作O1、ボタンと数値の入力）は、形と値の型をschemaの`$defs/slotWrite`と`equipmentSlot`のslot型ごとの`if`、入力の上下限の順とボタンの値の重複を`equipment.ts`の`validateSlotWrite`／Rustの`validate_slot_write`が見る。共通契約は`examples/operation-cases.json`。編集画面はまだ無く、`forms/equipment-type.ts`は保存時に`write`をそのまま残し、`EquipmentTypes.svelte`の型の変更では外す。[契約と検証](../design/equipment/equipment-register-design.md)を参照する。
 
 [機器とSymbolの関連付け](../design/equipment/equipment-symbol-association.md)は`equipmentUsages()`が非永続の全画面参照索引を生成し、同じ意味検証をTS／Rustで実行する。`single-object-handler.ts`と既存objectフォームが関連付け、`equipment-handler.ts`が使用中削除拒否、`clipboard.ts`が機器移入の明示拒否を担当。`e2e/equipment-association.spec.ts`と共通`equipment-reference-cases.json`で検証する。
 

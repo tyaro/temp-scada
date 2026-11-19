@@ -74,11 +74,20 @@
     rows = rows.map((row) => (row.key === key ? { ...row, ...patch } : row));
     mark();
   }
-  /** Drop the display that no longer fits; a new state slot starts with only "otherwise". */
+  /**
+   * Drop the display and the operation that no longer fit (button values are
+   * typed by the slot type); a new state slot starts with only "otherwise".
+   */
   function retype(key: number, type: SlotType) {
     rows = rows.map((row) => {
       if (row.key !== key) return row;
-      const { boolDisplay, stateDisplay, allowUnassigned, ...rest } = row;
+      const {
+        boolDisplay,
+        stateDisplay,
+        allowUnassigned,
+        write: _,
+        ...rest
+      } = row;
       return {
         ...rest,
         type,

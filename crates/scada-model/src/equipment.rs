@@ -24,6 +24,7 @@ pub(crate) fn validate<'a>(project: &'a Value, ids: &mut HashSet<&'a str>) -> Re
                     return Err("状態の行の値（ビット）が重複しています".into());
                 }
             }
+            validate_slot_write(&slot["write"])?;
         }
     }
     let equipment_ids: HashSet<_> = project["equipment"]
@@ -80,6 +81,35 @@ pub(crate) fn validate<'a>(project: &'a Value, ids: &mut HashSet<&'a str>) -> Re
             if !bound.insert(name) {
                 return Err("slot割付が重複しています".into());
             }
+        }
+    }
+    Ok(())
+}
+
+/// The schema fixes each button value's type by the slot type; this checks
+/// what it cannot: the input range order and button values that repeat.
+fn validate_slot_write(write: &Value) -> Result<(), String> {
+    if let (Some(min), Some(max)) = (
+        write["input"]["min"].as_f64(),
+        write["input"]["max"].as_f64(),
+    ) {
+        if min > max {
+            return Err("操作の入力の下限が上限より大きいです".into());
+        }
+    }
+    let values: Vec<&Value> = write["buttons"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|button| &button["value"])
+        .collect();
+    for (index, value) in values.iter().enumerate() {
+        // JSON 1 and 1.0 are the same number, so compare numbers by value.
+        if values[..index].iter().any(|other| match (other, value) {
+            (Value::Number(a), Value::Number(b)) => a.as_f64() == b.as_f64(),
+            (a, b) => a == b,
+        }) {
+            return Err("操作のボタンの値が重複しています".into());
         }
     }
     Ok(())
@@ -145,8 +175,15 @@ mod tests {
     use super::*;
     #[test]
     fn shared_contract_and_roundtrip() {
-        let cases: Value =
-            serde_json::from_str(include_str!("../../../examples/equipment-cases.json")).unwrap();
+        for cases in [
+            include_str!("../../../examples/equipment-cases.json"),
+            include_str!("../../../examples/operation-cases.json"),
+        ] {
+            assert_shared_cases(cases);
+        }
+    }
+    fn assert_shared_cases(cases: &str) {
+        let cases: Value = serde_json::from_str(cases).unwrap();
         for case in cases.as_array().unwrap() {
             let mut project: Value =
                 serde_json::from_str(include_str!("../../../examples/minimal.project.json"))
