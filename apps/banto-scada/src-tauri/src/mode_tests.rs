@@ -93,8 +93,9 @@ fn the_command_list_is_generate_handler_without_gaps_or_duplicates() {
         "a handler is registered twice"
     );
     assert_eq!(registered, unique);
-    // 56 commands before the mode, `app_mode` and the 6 `runtime_*`.
-    assert_eq!(listed.len(), 63);
+    // 56 commands before the mode, `app_mode`, the 6 `runtime_*` and
+    // `operation_write`.
+    assert_eq!(listed.len(), 64);
 }
 
 #[test]
@@ -145,10 +146,10 @@ fn the_runtime_capability_holds_no_editor_command_and_creates_no_window() {
 }
 
 /// A fresh data dir under the OS temp dir, removed on drop.
-struct TempDir(PathBuf);
+pub(crate) struct TempDir(pub(crate) PathBuf);
 
 impl TempDir {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let dir = std::env::temp_dir().join(format!(
             "banto-scada-mode-{}-{}",
             std::process::id(),
@@ -187,7 +188,7 @@ fn fingerprint(dir: &Path) -> BTreeMap<PathBuf, (u64, std::time::SystemTime)> {
 }
 
 /// A first-start host with real auth, alarm and recording stores in `dir`.
-fn app(
+pub(crate) fn app(
     dir: &TempDir,
     mode: AppMode,
     label: &str,
@@ -195,7 +196,10 @@ fn app(
     let (auth, recording) =
         tauri::async_runtime::block_on(AuthState::start(&dir.0, "no_recording_run"));
     let alarm = tauri::async_runtime::block_on(alarm::AlarmState::open(Ok::<_, ()>(&dir.0)));
+    let operations =
+        tauri::async_runtime::block_on(operation::OperationState::open(&mode, Ok::<_, ()>(&dir.0)));
     let app = commands(mock_builder())
+        .manage(operations)
         .manage(StartupProject::load(&mode))
         .manage(mode)
         .manage(auth)
@@ -212,6 +216,7 @@ fn app(
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
             exiting: AtomicBool::new(false),
+            read_revision: Default::default(),
         })
         .build(mock_context(noop_assets()))
         .unwrap();
@@ -221,7 +226,11 @@ fn app(
     (app, webview)
 }
 
-fn invoke(webview: &WebviewWindow<MockRuntime>, cmd: &str, args: Value) -> Result<Value, Value> {
+pub(crate) fn invoke(
+    webview: &WebviewWindow<MockRuntime>,
+    cmd: &str,
+    args: Value,
+) -> Result<Value, Value> {
     invoke_body(webview, cmd, args).map(|body| body.deserialize::<Value>().unwrap())
 }
 
@@ -259,7 +268,7 @@ fn invoke_body(
     )
 }
 
-fn runtime_mode(dir: &TempDir) -> AppMode {
+pub(crate) fn runtime_mode(dir: &TempDir) -> AppMode {
     AppMode::Runtime {
         project_path: dir.0.join("plant.project.json"),
     }
@@ -478,6 +487,13 @@ fn runtime_only_calls() -> Vec<(&'static str, Value)> {
         ("runtime_history_context", json!({})),
         ("runtime_recording_context", json!({})),
         ("runtime_alarm_status", json!({})),
+        (
+            "operation_write",
+            json!({"request": {
+                "projectId": "p", "projectDigest": "d", "screenId": "s",
+                "objectId": "o", "equipmentId": "e", "slotName": "x",
+                "buttonIndex": 0, "expectedValue": true}}),
+        ),
     ];
     let named: BTreeSet<&str> = calls.iter().map(|(name, _)| *name).collect();
     assert_eq!(named, RUNTIME_ONLY.iter().copied().collect());
@@ -657,6 +673,13 @@ fn the_acl_refuses_runtime_only_commands_from_the_editor_window() {
         .unwrap();
 
     let refused = invoke(&editor, "runtime_project", json!({})).unwrap_err();
+    assert!(
+        refused
+            .as_str()
+            .is_some_and(|message| message.contains("not allowed")),
+        "{refused}"
+    );
+    let refused = invoke(&editor, "operation_write", json!({"request": {}})).unwrap_err();
     assert!(
         refused
             .as_str()

@@ -44,6 +44,9 @@ impl fmt::Debug for ReadSession {
 pub struct ReadHostFrame {
     session: ReadSession,
     pub sdk_generation: Option<u64>,
+    /// The catalog revision this frame was resolved against; `None` while
+    /// the SDK holds no catalog generation.
+    pub catalog_revision: Option<u64>,
     pub text: RuntimeView,
     pub slots: ReadSlotView,
 }
@@ -95,6 +98,7 @@ impl ReadPlan {
         Arc::new(ReadHostFrame {
             session,
             sdk_generation: None,
+            catalog_revision: None,
             text: RuntimeView::pending(&self.text, "stopped".into(), error.clone()),
             slots: ReadSlotView::pending(&self.slots, "stopped".into(), error),
         })
@@ -104,6 +108,7 @@ impl ReadPlan {
         Arc::new(ReadHostFrame {
             session,
             sdk_generation: state.snapshot().map(|snapshot| snapshot.generation),
+            catalog_revision: state.snapshot().map(|snapshot| snapshot.catalog.revision),
             text: project_view(&self.text, state),
             slots: read_slot_view(&self.slots, state),
         })

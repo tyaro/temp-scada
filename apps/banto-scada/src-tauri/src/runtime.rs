@@ -11,6 +11,7 @@ use std::path::Path;
 use scada_host::alarm_project::{
     compare_with_applied, file_hash, project_document, AlarmDefinitionMatch, SavedAlarmProject,
 };
+use scada_host::operation_write::AppliedProject;
 use scada_host::project_file::{frame, FileError, ProjectFiles};
 use scada_model::Project;
 use serde::Serialize;
@@ -105,6 +106,20 @@ impl StartupProject {
             project,
             alarms,
         })
+    }
+
+    /// The applied Project of the operation write (operation stage-3 design
+    /// §4-3): the startup file's id, digest and Project; `None` in Editor
+    /// mode or when the file could not be read (`project_changed`).
+    pub fn applied(&self) -> Option<AppliedProject<'_>> {
+        match self {
+            Self::Loaded(loaded) => Some(AppliedProject {
+                id: loaded.project.id(),
+                digest: &loaded.digest,
+                project: &loaded.project,
+            }),
+            _ => None,
+        }
     }
 
     /// The startup Project, or [`PROJECT_UNAVAILABLE`].

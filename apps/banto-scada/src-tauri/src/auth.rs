@@ -63,6 +63,12 @@ impl AuthState {
         Self(Err(reason))
     }
 
+    /// The shared auth, or `None` when it did not start (the operation
+    /// write's `auth_unavailable`, operation stage-3 design §4-2).
+    pub(crate) fn auth_host(&self) -> Option<Arc<AuthHost>> {
+        self.0.as_ref().ok().map(DesktopAuth::auth_host)
+    }
+
     pub(crate) fn get(&self) -> Result<&DesktopAuth, CommandError> {
         self.0
             .as_ref()

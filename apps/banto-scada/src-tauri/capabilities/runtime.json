@@ -13,6 +13,7 @@
     "allow-runtime-history-context",
     "allow-runtime-recording-context",
     "allow-runtime-alarm-status",
+    "allow-operation-write",
     "allow-app-mode",
     "allow-app-close-reply",
     "allow-hub-disconnect",

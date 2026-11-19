@@ -6,6 +6,7 @@ mod buzzer;
 mod close;
 mod control;
 mod history;
+mod operation;
 mod project;
 mod recording;
 mod runtime;
@@ -17,7 +18,7 @@ use scada_host::recording_gate::NO_RECORDING_RUN;
 use scada_host::recording_runtime::{RecordingRuntime, NO_DATA_DIR, STORE_UNAVAILABLE};
 use scada_host::{local_bootstrap, local_data_dir, local_installation_id, Bootstrapper, HubStatus};
 use scada_model::Project;
-use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost};
+use scada_runtime::{CatalogHost, ReadDisplayStream, ReadHost, ReadHostFrame};
 use serde::Serialize;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
@@ -32,6 +33,30 @@ struct NativeHost {
     active: Mutex<Active>,
     alarm_operation: Mutex<()>,
     exiting: AtomicBool,
+    read_revision: ReadRevision,
+}
+
+/// The frames of the current read subscription, kept outside [`Active`]
+/// (whose lock is held across Hub calls) so the operation write reads the
+/// catalog revision the subscription resolved against without waiting
+/// (operation stage-3 design §4.1).
+#[derive(Default)]
+struct ReadRevision(std::sync::Mutex<Option<tokio::sync::watch::Receiver<Arc<ReadHostFrame>>>>);
+
+impl ReadRevision {
+    fn set(&self, frames: Option<tokio::sync::watch::Receiver<Arc<ReadHostFrame>>>) {
+        *self.0.lock().unwrap_or_else(|e| e.into_inner()) = frames;
+    }
+
+    /// The revision of the latest frame; `None` with no subscription or no
+    /// catalog yet (`catalog_pending`).
+    fn get(&self) -> Option<u64> {
+        self.0
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+            .and_then(|frames| frames.borrow().catalog_revision)
+    }
 }
 
 #[derive(Default)]
@@ -65,7 +90,8 @@ struct ReadPacket {
     update: scada_runtime::ReadDisplayUpdate,
 }
 
-async fn stop_read(active: &mut Active) {
+async fn stop_read(state: &NativeHost, active: &mut Active) {
+    state.read_revision.set(None);
     if let Some(pump) = active.pump.take() {
         pump.abort();
         let _ = pump.await;
@@ -93,7 +119,7 @@ where
         return Err("exiting".into());
     }
     let mut active = state.active.lock().await;
-    stop_read(&mut active).await;
+    stop_read(state, &mut active).await;
     active.connected = false;
     let result = connect(state.bootstrap.clone()).await;
     active.connected = result.as_ref().is_ok_and(HubStatus::is_connected);
@@ -180,7 +206,7 @@ async fn runtime_hub_connect(
 async fn hub_disconnect(state: State<'_, NativeHost>) -> Result<(), String> {
     let mut active = state.active.lock().await;
     active.connected = false;
-    stop_read(&mut active).await;
+    stop_read(&state, &mut active).await;
     Ok(())
 }
 
@@ -232,7 +258,7 @@ async fn start_read<R: Runtime>(
     if !active.claim(&subscription_id) {
         return Err("subscription_retired".into());
     }
-    stop_read(&mut active).await;
+    stop_read(state, &mut active).await;
     if !active.connected {
         return Err("not_connected".into());
     }
@@ -280,6 +306,7 @@ async fn start_read<R: Runtime>(
             }
         }
     });
+    state.read_revision.set(Some(read.state_watch()));
     active.owner = Some(subscription_id);
     active.read = Some(read);
     active.pump = Some(pump);
@@ -293,7 +320,7 @@ async fn hub_read_stop(
 ) -> Result<(), String> {
     let mut active = state.active.lock().await;
     if active.retire(&subscription_id) {
-        stop_read(&mut active).await;
+        stop_read(&state, &mut active).await;
     }
     Ok(())
 }
@@ -333,6 +360,9 @@ mod project_tests;
 
 #[cfg(test)]
 mod mode_tests;
+
+#[cfg(test)]
+mod operation_tests;
 
 /// The commands by mode (`command_list.rs`, also read by `build.rs`).
 #[cfg(test)]
@@ -400,6 +430,7 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             hub_read_stop,
             hub_catalog,
             close::app_close_reply,
+            operation::operation_write,
             project::project_open,
             project::project_save,
             alarm::alarm_apply,
@@ -504,6 +535,7 @@ fn main() {
                 active: Mutex::new(Active::default()),
                 alarm_operation: Mutex::new(()),
                 exiting: AtomicBool::new(false),
+                read_revision: ReadRevision::default(),
             });
             app.manage(auth);
             app.manage(alarm);
@@ -512,6 +544,9 @@ fn main() {
             let mode = app.state::<AppMode>();
             // Runtime reads its Project once, here (design §6).
             app.manage(runtime::StartupProject::load(&mode));
+            app.manage(tauri::async_runtime::block_on(
+                operation::OperationState::open(&mode, local_data_dir()),
+            ));
             app_mode::create_window(app, &mode)?;
             alarm::start_events(app.handle().clone());
             Ok(())
@@ -550,6 +585,7 @@ fn on_exit<R: Runtime>() -> impl FnMut(&AppHandle<R>, RunEvent) {
                     if let Ok(alarm) = app.state::<alarm::AlarmState>().get() {
                         let _ = alarm.stop().await;
                     }
+                    app.state::<operation::OperationState>().close().await;
                     state.store(DONE, Ordering::SeqCst);
                     app.exit(0);
                 });

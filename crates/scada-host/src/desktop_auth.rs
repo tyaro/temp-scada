@@ -242,6 +242,15 @@ impl DesktopAuth {
         }
     }
 
+    /// The shared auth of this host, for the operation write (operation
+    /// stage-3 design §4: its send task outlives the command's borrow).
+    pub fn auth_host(&self) -> Arc<AuthHost> {
+        match &self.host {
+            Host::Auth(auth) => auth.clone(),
+            Host::Gate(gate) => gate.auth_host(),
+        }
+    }
+
     /// The recording gate the auth commands go through, if this host has
     /// one: its slot holds the recording registry (product-owner design §4).
     pub fn recording_gate(&self) -> Option<&Arc<RecordingGate>> {

@@ -57,6 +57,7 @@ fn app_with_alarm(
             active: Mutex::new(Active::default()),
             alarm_operation: Mutex::new(()),
             exiting: AtomicBool::new(false),
+            read_revision: Default::default(),
         })
         .build(mock_context(noop_assets()))
         .unwrap();
