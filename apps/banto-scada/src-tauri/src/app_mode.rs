@@ -276,11 +276,36 @@ fn same_file(a: &Path, b: &Path) -> bool {
     if let (Ok(a), Ok(b)) = (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
         return a == b;
     }
+    let (a, b) = (lexical(a), lexical(b));
     if cfg!(windows) {
         a.to_string_lossy().to_lowercase() == b.to_string_lossy().to_lowercase()
     } else {
         a == b
     }
+}
+
+/// `path` with `.` dropped and each `..` taking its parent away, without
+/// touching the file system (`std::path::absolute` keeps `..` on Unix).
+fn lexical(path: &Path) -> PathBuf {
+    use std::path::Component;
+    let mut out = PathBuf::new();
+    for component in path.components() {
+        match component {
+            Component::CurDir => {}
+            Component::ParentDir => {
+                if !matches!(out.components().next_back(), Some(Component::Normal(_))) {
+                    // At the root (or prefix) `..` stays where it is.
+                    if out.as_os_str().is_empty() {
+                        out.push(component);
+                    }
+                } else {
+                    out.pop();
+                }
+            }
+            other => out.push(other),
+        }
+    }
+    out
 }
 
 /// The single-instance callback in the first process: its window comes
@@ -378,6 +403,28 @@ mod tests {
             .chain(list.iter().copied())
             .map(str::to_owned)
             .collect()
+    }
+
+    #[test]
+    fn lexical_drops_dot_and_folds_parent_components() {
+        let root = cwd();
+        assert_eq!(
+            lexical(
+                &root
+                    .join("a")
+                    .join(".")
+                    .join("sub")
+                    .join("..")
+                    .join("plant.json")
+            ),
+            root.join("a").join("plant.json")
+        );
+        // `..` never climbs above the root.
+        let top: PathBuf = root.components().take(1).collect();
+        assert_eq!(
+            lexical(&top.join("..").join("plant.json")),
+            top.join("plant.json")
+        );
     }
 
     #[test]
