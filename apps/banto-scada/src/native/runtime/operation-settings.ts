@@ -16,11 +16,19 @@ export interface OperationKeyStatus {
   write: { state: WriteState; changedAtMs: number | null };
   /** 書込みの最小間隔（ミリ秒、O2c-4b）。 */
   minIntervalMs: number;
+  /** 記録の保持（O4a）。日数と件数の両方を当て、早く消える方が効く。 */
+  retention: { days: number; count: number };
+  /** 記録の行数と最古の依頼時刻。読めなければ null。 */
+  record: { rowCount: number; oldestRequestedAtMs: number | null } | null;
 }
 
 /** 最小間隔の範囲（host の `operation_db::valid_min_interval` と同じ）。 */
 export const MIN_INTERVAL_RANGE_MS = [100, 60_000] as const;
 export const MIN_INTERVAL_STEP_MS = 100;
+
+/** 記録の保持の範囲（host の `operation_db::RETENTION_*_RANGE` と同じ）。 */
+export const RETENTION_DAYS_RANGE = [1, 3_650] as const;
+export const RETENTION_COUNT_RANGE = [10_000, 10_000_000] as const;
 
 export type Invoke = <T>(
   command: string,
@@ -38,6 +46,11 @@ export function createOperationSettingsHost(invoke: Invoke) {
     setMinInterval: (minIntervalMs: number) =>
       invoke<OperationKeyStatus>("operation_min_interval_set", {
         minIntervalMs,
+      }),
+    setRetention: (retentionDays: number, retentionCount: number) =>
+      invoke<OperationKeyStatus>("operation_retention_set", {
+        retentionDays,
+        retentionCount,
       }),
   };
 }
@@ -158,6 +171,8 @@ export function operationSettingsReasonText(code: string): string {
       return "Hub の接続先が http ではないため、書き用キーを登録できません。";
     case "invalid_interval":
       return "最小間隔は 0.1〜60 秒（0.1 秒刻み）で入れてください。";
+    case "invalid_retention":
+      return "記録の保持は 1〜3650 日、10000〜10000000 件の整数で入れてください。";
     case "key_store":
       return "資格情報の保存先を使えないため、書き用キーを扱えません。";
     case "ipc_failed":
@@ -167,12 +182,14 @@ export function operationSettingsReasonText(code: string): string {
   }
 }
 
-/** 変更の結果の文（登録・削除・再開）。 */
+/** 変更の結果の文（登録・削除・再開・最小間隔・保持）。 */
 export function changeDoneText(
-  change: "register" | "remove" | "resume" | "interval",
+  change: "register" | "remove" | "resume" | "interval" | "retention",
   status: OperationKeyStatus,
 ): string {
   switch (change) {
+    case "retention":
+      return `記録の保持を ${status.retention.days} 日・${status.retention.count} 件にしました。古い記録はどちらかを超えたものから消します。`;
     case "interval":
       return `最小間隔を ${intervalSecondsText(status.minIntervalMs)} 秒にしました。次の書込みから使います。`;
     case "register":
@@ -214,4 +231,35 @@ export function parseIntervalSeconds(input: string): number | null {
 export function changedAtText(ms: number | null): string {
   if (ms === null) return "";
   return new Date(ms).toLocaleString("ja-JP");
+}
+
+/**
+ * 入れた保持の日数・件数を数にする。整数でない・範囲の外は null（host も
+ * 同じ規則で断る）。
+ */
+export function parseRetention(
+  daysInput: string,
+  countInput: string,
+): { days: number; count: number } | null {
+  const days = parseWhole(daysInput);
+  const count = parseWhole(countInput);
+  if (days === null || count === null) return null;
+  if (days < RETENTION_DAYS_RANGE[0] || days > RETENTION_DAYS_RANGE[1])
+    return null;
+  if (count < RETENTION_COUNT_RANGE[0] || count > RETENTION_COUNT_RANGE[1])
+    return null;
+  return { days, count };
+}
+
+function parseWhole(input: string): number | null {
+  const text = input.trim();
+  return /^\d{1,9}$/.test(text) ? Number(text) : null;
+}
+
+/** 記録の大きさの表示。読めなければ空。 */
+export function recordSizeText(record: OperationKeyStatus["record"]): string {
+  if (record === null) return "";
+  if (record.oldestRequestedAtMs === null)
+    return `今の記録: ${record.rowCount} 件`;
+  return `今の記録: ${record.rowCount} 件（最古 ${changedAtText(record.oldestRequestedAtMs)}）`;
 }

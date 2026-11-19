@@ -5,6 +5,8 @@ import {
   keyPairing,
   normalizeSecret,
   parseIntervalSeconds,
+  parseRetention,
+  recordSizeText,
   operationSettingsReasonText,
   settingsErrorCode,
   writeBadge,
@@ -25,6 +27,8 @@ function status(
     hubEndpoint,
     write: { state, changedAtMs: null },
     minIntervalMs: 1000,
+    retention: { days: 365, count: 100_000 },
+    record: { rowCount: 0, oldestRequestedAtMs: null },
   };
 }
 
@@ -87,12 +91,17 @@ describe("the command wrapper", () => {
     await host.remove();
     await host.resume();
     await host.setMinInterval(2500);
+    await host.setRetention(30, 20_000);
     expect(calls).toEqual([
       ["operation_key_status", undefined],
       ["operation_key_register", { secret: "abc" }],
       ["operation_key_delete", undefined],
       ["operation_write_resume", undefined],
       ["operation_min_interval_set", { minIntervalMs: 2500 }],
+      [
+        "operation_retention_set",
+        { retentionDays: 30, retentionCount: 20_000 },
+      ],
     ]);
   });
 
@@ -168,5 +177,52 @@ describe("parseIntervalSeconds", () => {
     expect(
       changeDoneText("interval", { ...status(HUB), minIntervalMs: 2500 }),
     ).toBe("最小間隔を 2.5 秒にしました。次の書込みから使います。");
+  });
+});
+
+describe("the record's retention", () => {
+  it("takes whole days and counts in the host's ranges", () => {
+    expect(parseRetention("365", "100000")).toEqual({
+      days: 365,
+      count: 100_000,
+    });
+    expect(parseRetention(" 1 ", "10000")).toEqual({ days: 1, count: 10_000 });
+    expect(parseRetention("3650", "10000000")).toEqual({
+      days: 3650,
+      count: 10_000_000,
+    });
+    for (const [days, count] of [
+      ["0", "100000"],
+      ["3651", "100000"],
+      ["365", "9999"],
+      ["365", "10000001"],
+      ["1.5", "100000"],
+      ["365", "1e5"],
+      ["-1", "100000"],
+      ["", "100000"],
+      ["365", "100,000"],
+    ])
+      expect(parseRetention(days, count), `${days} ${count}`).toBeNull();
+  });
+
+  it("names the retention it saved and the record's size", () => {
+    expect(
+      changeDoneText("retention", {
+        ...status(HUB),
+        retention: { days: 30, count: 20_000 },
+      }),
+    ).toBe(
+      "記録の保持を 30 日・20000 件にしました。古い記録はどちらかを超えたものから消します。",
+    );
+    expect(recordSizeText(null)).toBe("");
+    expect(recordSizeText({ rowCount: 0, oldestRequestedAtMs: null })).toBe(
+      "今の記録: 0 件",
+    );
+    expect(recordSizeText({ rowCount: 3, oldestRequestedAtMs: 0 })).toMatch(
+      /^今の記録: 3 件（最古 .+）$/,
+    );
+    expect(operationSettingsReasonText("invalid_retention")).toContain(
+      "1〜3650 日",
+    );
   });
 });

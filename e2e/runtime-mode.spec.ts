@@ -54,6 +54,11 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
             changedAtMs: null as null | number,
           },
           minIntervalMs: 1000,
+          retention: { days: 365, count: 100_000 },
+          record: {
+            rowCount: 2,
+            oldestRequestedAtMs: Date.UTC(2026, 0, 2) as null | number,
+          },
         },
         /** Secrets `operation_key_register` received. */
         keySecrets: [] as string[],
@@ -218,11 +223,19 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
               case "operation_key_register":
               case "operation_key_delete":
               case "operation_write_resume":
-              case "operation_min_interval_set": {
+              case "operation_min_interval_set":
+              case "operation_retention_set": {
                 if (host.keyRefusal) throw host.keyRefusal;
                 const status = host.keyStatus;
                 if (command === "operation_min_interval_set") {
                   status.minIntervalMs = args!.minIntervalMs as number;
+                  return structuredClone(status);
+                }
+                if (command === "operation_retention_set") {
+                  status.retention = {
+                    days: args!.retentionDays as number,
+                    count: args!.retentionCount as number,
+                  };
                   return structuredClone(status);
                 }
                 if (command === "operation_key_register") {
@@ -1399,7 +1412,9 @@ test.describe("the write terminal settings (operation stage 3, O2c-4a)", () => {
     const dialog = page.getByRole("dialog", { name: "書込みの端末設定" });
     const input = dialog.getByLabel("前の書込みからの最小の間隔（秒）");
     await expect(input).toHaveValue("1");
-    const save = dialog.getByRole("button", { name: "保存" });
+    const save = dialog
+      .locator("[data-operation-interval]")
+      .getByRole("button", { name: "保存" });
 
     await input.fill("0.05");
     await save.click();
@@ -1426,6 +1441,47 @@ test.describe("the write terminal settings (operation stage 3, O2c-4a)", () => {
     await page.keyboard.press("Escape");
     await page.locator(entry).click();
     await expect(input).toHaveValue("2.5");
+  });
+
+  test("the record's retention is saved as days and a count (O4a)", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page);
+    await page.goto("/runtime.html");
+    await page.locator(entry).click();
+    const dialog = page.getByRole("dialog", { name: "書込みの端末設定" });
+    const form = dialog.locator("[data-operation-retention]");
+    const days = form.getByLabel("日数");
+    const count = form.getByLabel("件数");
+    await expect(days).toHaveValue("365");
+    await expect(count).toHaveValue("100000");
+    await expect(form.locator("[data-operation-record-size]")).toContainText(
+      "今の記録: 2 件（最古",
+    );
+    const save = form.getByRole("button", { name: "保存" });
+
+    await count.fill("9999");
+    await save.click();
+    await expect(dialog.locator("[data-operation-settings-issue]")).toHaveText(
+      "記録の保持は 1〜3650 日、10000〜10000000 件の整数で入れてください。",
+    );
+    expect(
+      await page.evaluate(
+        () => (window as any).__runtimeHost.keyStatus.retention,
+      ),
+    ).toEqual({ days: 365, count: 100_000 });
+
+    await days.fill("30");
+    await count.fill("20000");
+    await save.click();
+    await expect(dialog.locator("[data-operation-settings-done]")).toHaveText(
+      "記録の保持を 30 日・20000 件にしました。古い記録はどちらかを超えたものから消します。",
+    );
+    // Opened again, the window shows the saved retention.
+    await page.keyboard.press("Escape");
+    await page.locator(entry).click();
+    await expect(days).toHaveValue("30");
+    await expect(count).toHaveValue("20000");
   });
 
   test("an empty key is not sent", async ({ page }) => {

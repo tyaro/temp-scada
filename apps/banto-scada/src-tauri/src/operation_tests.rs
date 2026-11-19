@@ -322,7 +322,9 @@ fn the_write_key_commands_work_login_free_before_operation() {
         status,
         json!({"keyEndpoint": null, "hubEndpoint": null,
             "write": {"state": "ready", "changedAtMs": null},
-            "minIntervalMs": 1_000})
+            "minIntervalMs": 1_000,
+            "retention": {"days": 365, "count": 100_000},
+            "record": {"rowCount": 0, "oldestRequestedAtMs": null}})
     );
     assert_eq!(
         invoke(
@@ -370,6 +372,37 @@ fn the_write_key_commands_work_login_free_before_operation() {
         invoke(&webview, "operation_key_status", json!({})).unwrap()["minIntervalMs"],
         2_500
     );
+    // The retention (O4a): out of either range is refused and changes
+    // nothing; a valid one is answered and kept with the interval.
+    for (days, count) in [
+        (0, 100_000),
+        (3_651, 100_000),
+        (365, 9_999),
+        (365, 10_000_001),
+        (-1, 100_000),
+    ] {
+        assert_eq!(
+            invoke(
+                &webview,
+                "operation_retention_set",
+                json!({"retentionDays": days, "retentionCount": count})
+            ),
+            Err(json!("invalid_retention")),
+            "{days} {count}"
+        );
+    }
+    let saved = invoke(
+        &webview,
+        "operation_retention_set",
+        json!({"retentionDays": 30, "retentionCount": 20_000}),
+    )
+    .unwrap();
+    assert_eq!(saved["retention"], json!({"days": 30, "count": 20_000}));
+    assert_eq!(saved["minIntervalMs"], 2_500);
+    assert_eq!(
+        invoke(&webview, "operation_key_status", json!({})).unwrap()["retention"],
+        json!({"days": 30, "count": 20_000})
+    );
 }
 
 /// In operation, changing the key or resuming needs a logged-in Admin; the
@@ -401,6 +434,10 @@ fn the_write_key_commands_need_an_admin_in_operation() {
             "operation_min_interval_set",
             json!({"minIntervalMs": 2_000}),
         ),
+        (
+            "operation_retention_set",
+            json!({"retentionDays": 30, "retentionCount": 20_000}),
+        ),
     ] {
         assert_eq!(
             invoke(&webview, command, args),
@@ -427,6 +464,10 @@ fn the_write_key_commands_without_the_record_are_record_failed() {
         (
             "operation_min_interval_set",
             json!({"minIntervalMs": 2_000}),
+        ),
+        (
+            "operation_retention_set",
+            json!({"retentionDays": 30, "retentionCount": 20_000}),
         ),
     ] {
         assert_eq!(

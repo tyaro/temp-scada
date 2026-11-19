@@ -20,6 +20,7 @@
     "allow-operation-key-delete",
     "allow-operation-write-resume",
     "allow-operation-min-interval-set",
+    "allow-operation-retention-set",
     "allow-app-mode",
     "allow-app-close-reply",
     "allow-hub-disconnect",
