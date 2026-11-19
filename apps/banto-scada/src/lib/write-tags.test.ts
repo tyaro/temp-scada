@@ -84,7 +84,7 @@ it("lists assigned write slots by name, keeps every use and reports unassigned o
 });
 
 it("writes one CSV row per use and guards free text from formulas", () => {
-  const csv = writeTagCsv(writeTagList(project()));
+  const { csv } = writeTagCsv(writeTagList(project()));
   expect(csv.split("\r\n")).toEqual([
     "﻿externalName,equipmentCode,equipmentName,slot,slotType,label",
     "A.B.cmd1,P-1,P-1の名前,command,bool,運転指令",
@@ -93,4 +93,18 @@ it("writes one CSV row per use and guards free text from formulas", () => {
     "",
   ]);
   expect(writeTagCsvFileName("a/b")).toBe("write-tags-a_b.csv");
+});
+
+it("leaves names a spreadsheet reads as formulas out of the CSV, not the copy", () => {
+  const next = project();
+  next.equipment![0].bindings[1].externalName = "=1+1";
+  next.equipment![2].bindings[0].externalName = "-A.B.sp";
+  const list = writeTagList(next);
+  const result = writeTagCsv(list);
+  expect(result.rows).toBe(1);
+  expect(result.formulaNames).toEqual(["=1+1", "-A.B.sp"]);
+  expect(result.csv.split("\r\n").slice(1, -1)).toEqual([
+    "A.B.sp,P-1,P-1の名前,speedSp,number,'=回転数",
+  ]);
+  expect(writeTagText(list)).toBe("=1+1\nA.B.sp\n-A.B.sp");
 });

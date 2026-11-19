@@ -29,11 +29,23 @@
   function exportCsv() {
     message = "";
     error = "";
+    const result = writeTagCsv(list);
+    const left = result.formulaNames.length
+      ? `先頭が = + - @ の${result.formulaNames.length}件（${result.formulaNames
+          .slice(0, 5)
+          .join(
+            "、",
+          )}${result.formulaNames.length > 5 ? " ほか" : ""}）は表計算ソフトで数式として読まれるため入れていません。外部名のコピーには入ります。`
+      : "";
+    if (!result.rows) {
+      message = `CSV に書き出す名前がありません。${left}`;
+      return;
+    }
     downloadBlob(
-      new Blob([writeTagCsv(list)], { type: "text/csv;charset=utf-8" }),
+      new Blob([result.csv], { type: "text/csv;charset=utf-8" }),
       writeTagCsvFileName(project.manifest.name),
     );
-    message = `書込みタグの一覧を CSV に書き出しました（${list.rows.length}件）。`;
+    message = `書込みタグの一覧を CSV に書き出しました（${result.rows}件）。${left}`;
   }
 </script>
 

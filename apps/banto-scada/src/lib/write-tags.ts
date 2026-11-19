@@ -82,22 +82,31 @@ export const WRITE_TAG_CSV_COLUMNS = [
 
 /**
  * One row per use, so a name written by several slots shows each of them. The
- * external name is kept exactly (it is the identity the Hub compares).
+ * external name is the identity the Hub compares, so it is never changed: a
+ * name a spreadsheet would read as a formula is left out (as the Hub tag CSV
+ * does) and returned in `formulaNames`; the copied text still has it.
  */
 export function writeTagCsv(list: WriteTagList) {
-  return serializeHubCsv([
-    [...WRITE_TAG_CSV_COLUMNS],
-    ...list.rows.flatMap((row) =>
-      row.uses.map((use) => [
-        row.externalName,
-        textCell(use.equipmentCode),
-        textCell(use.equipmentName),
-        use.slotName,
-        use.slotType,
-        textCell(use.label),
-      ]),
-    ),
-  ]);
+  const kept = list.rows.filter((row) => !FORMULA_START.test(row.externalName));
+  return {
+    csv: serializeHubCsv([
+      [...WRITE_TAG_CSV_COLUMNS],
+      ...kept.flatMap((row) =>
+        row.uses.map((use) => [
+          row.externalName,
+          textCell(use.equipmentCode),
+          textCell(use.equipmentName),
+          use.slotName,
+          use.slotType,
+          textCell(use.label),
+        ]),
+      ),
+    ]),
+    rows: kept.length,
+    formulaNames: list.rows
+      .filter((row) => FORMULA_START.test(row.externalName))
+      .map((row) => row.externalName),
+  };
 }
 
 export function writeTagCsvFileName(projectName: string) {
