@@ -3,10 +3,42 @@ import type { TableCellState } from "../../table";
 import { DEFAULT_BOOL_DISPLAY, parseBoolDisplay } from "./bool-display";
 
 /**
- * Inspector の「セルの状態表示」（Issue #303 第2段）。表のフォームの中に、選べる
- * セルごとの入力欄を名前を分けて置き、選んだセルの欄だけを見せる。下書きは
- * ほかの欄と同じく drafts.track が保ち、「変更を適用」で他の欄と一緒に 1 履歴にする。
+ * Inspector の「セルの状態表示」（Issue #303 第2段）。選べるセル全部の値を
+ * 「セルごとの欄の名前 → 値」の JSON にして、表のフォームの hidden の入力 1 つ
+ * （`TABLE_CELL_STATES_FIELD`）に持つ。実の入力欄は選んだセルの分だけ作り、
+ * その変更で JSON を書き換える（大きな表で欄が数万になるのを避ける）。下書きは
+ * ほかの欄と同じく drafts.track が hidden の入力から保ち、「変更を適用」で
+ * 他の欄と一緒に 1 履歴にする。
  */
+
+/** 全セルの状態表示の下書き（JSON）を持つ hidden の入力の名前。 */
+export const TABLE_CELL_STATES_FIELD = "tableCellStates";
+
+/** 下書きの JSON を読む（空や壊れた値は空の下書き）。 */
+export function readTableCellStateDraft(text: string): Record<string, string> {
+  if (!text) return {};
+  try {
+    const value: unknown = JSON.parse(text);
+    if (value === null || typeof value !== "object" || Array.isArray(value))
+      return {};
+    return Object.fromEntries(
+      Object.entries(value).filter(
+        (entry): entry is [string, string] => typeof entry[1] === "string",
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+/** 下書きの JSON の 1 欄を書き換える（ほかの欄の並びは保つ）。 */
+export function writeTableCellStateDraft(
+  text: string,
+  field: string,
+  value: string,
+): string {
+  return JSON.stringify({ ...readTableCellStateDraft(text), [field]: value });
+}
 
 /** 状態表示を編集できるセル（0 始まりの位置と、選択肢の名前）。 */
 export interface TableCellStateCandidate {
@@ -15,7 +47,7 @@ export interface TableCellStateCandidate {
   label: string;
 }
 
-/** セルごとの入力欄の名前。 */
+/** セルごとの欄の名前（下書きの JSON の項目名）。 */
 export function tableCellStateField(
   row: number,
   column: number,
@@ -44,7 +76,7 @@ export function tableCellStateCandidates(
   );
 }
 
-/** フォームの初期値（drafts.track に渡す）。 */
+/** フォームの初期値（drafts.track に渡す。hidden の入力 1 つ分）。 */
 export function tableCellStateValues(
   shape: TableShape,
   definition: boolean,
@@ -65,11 +97,11 @@ export function tableCellStateValues(
     values[field("falseColor")] = shown.false.color;
     values[field("unknownColor")] = shown.unknownColor;
   }
-  return values;
+  return { [TABLE_CELL_STATES_FIELD]: JSON.stringify(values) };
 }
 
 /**
- * フォームからセルごとの状態表示を読む（rows × columns の位置で対応させる）。
+ * フォームの下書きの JSON からセルごとの状態表示を読む（rows × columns の位置で対応させる）。
  * 欄のないセルは undefined。使えないセルの値を外すのは buildTableCells が行う。
  */
 export function parseTableCellStates(
@@ -78,10 +110,14 @@ export function parseTableCellStates(
   columns: number,
   definition: boolean,
 ): (TableCellState | undefined)[][] {
+  const stored = readTableCellStateDraft(
+    String(data.get(TABLE_CELL_STATES_FIELD) ?? ""),
+  );
+  const draft = { get: (name: string) => stored[name] ?? null };
   return Array.from({ length: rows }, (_, row) =>
     Array.from({ length: columns }, (_, column) => {
       const field = (key: string) => tableCellStateField(row, column, key);
-      const target = data.get(field("stateTarget"));
+      const target = draft.get(field("stateTarget"));
       if (target === null) return undefined;
       const where = `セルの状態表示の${row + 1}行${column + 1}列`;
       if (target !== "text" && target !== "fill")
@@ -89,7 +125,7 @@ export function parseTableCellStates(
       let boolDisplay;
       if (!definition)
         try {
-          boolDisplay = parseBoolDisplay(data, field) ?? undefined;
+          boolDisplay = parseBoolDisplay(draft, field) ?? undefined;
         } catch (error) {
           throw new Error(
             `${where}: ${error instanceof Error ? error.message : String(error)}`,

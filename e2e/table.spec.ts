@@ -563,6 +563,63 @@ test("the Inspector sets a bool display painted to a table cell's fill", async (
   await expect(cell.locator("rect")).toHaveAttribute("fill", STOP.color);
 });
 
+test("the Inspector keeps each table cell's state draft while switching cells", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const [OPEN, SHUT] = ["開", "閉"];
+  const project = tableProject();
+  const cells = project.screens[0].objects.at(-1).shape.cells;
+  cells[1][1] = { text: "", binding: { externalName: "Demo.RunA" } };
+  cells[2][1] = { text: "", binding: { externalName: "Demo.RunA" } };
+  await openProject(page, {
+    name: "table-state-drafts.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await selectPanel(page, "レイヤー");
+  await page.locator(`button[data-layer-id="${tableId}"]`).click();
+  const form = page.locator('form[data-editor-form="object"]');
+  const states = form.getByRole("region", { name: "セルの状態表示" });
+  const picker = states.getByLabel("状態表示のセル", { exact: true });
+  const mode = states.getByLabel("bool の表示を使う", { exact: true });
+  const trueText = states.getByLabel("true の文字", { exact: true });
+  const falseText = states.getByLabel("false の文字", { exact: true });
+  const target = states.getByLabel("状態の色の使い先", { exact: true });
+  // 実の欄は選んだセルの分だけ作る。
+  await expect(trueText).toHaveCount(1);
+  await mode.selectOption("enabled");
+  await trueText.fill(OPEN);
+  await picker.selectOption("2:1");
+  await expect(
+    states.locator("[data-table-cell-state-editor]"),
+  ).toHaveAttribute("data-table-cell-state-editor", "2:1");
+  await expect(mode).toHaveValue("disabled");
+  await expect(trueText).not.toHaveValue(OPEN);
+  await mode.selectOption("enabled");
+  await falseText.fill(SHUT);
+  await target.selectOption("fill");
+  // 前のセルへ戻っても下書きが残る。
+  await picker.selectOption("1:1");
+  await expect(mode).toHaveValue("enabled");
+  await expect(trueText).toHaveValue(OPEN);
+  await expect(target).toHaveValue("text");
+  await form.getByRole("button", { name: "変更を適用" }).click();
+  await expect(page.locator(".error")).toHaveCount(0);
+
+  const saved = (await save(page)).screens[0].objects.at(-1).shape.cells;
+  expect(saved[1][1].boolDisplay.true.text).toBe(OPEN);
+  expect(saved[1][1].stateTarget).toBeUndefined();
+  expect(saved[2][1].boolDisplay.false.text).toBe(SHUT);
+  expect(saved[2][1].stateTarget).toBe("fill");
+  // 元に戻すと、見えている欄も保存前の値へ戻る。
+  await page.keyboard.press("Control+z");
+  await expect(mode).toHaveValue("disabled");
+  await expect(trueText).not.toHaveValue(OPEN);
+});
+
 test("the Inspector sets where a Symbol table cell's state color goes", async ({
   page,
 }) => {
