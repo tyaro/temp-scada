@@ -112,7 +112,7 @@
   - `"fill"`: 状態の色をセルの塗りにし、文字色は状態に関わらず固定（`配置の単色 ?? セルの color ?? 配置の fill`）。既知で色のない状態（slot の状態の定義に色がない）はセルの `fill`（なければ塗らない）に戻す。取得不能は `unknownColor` で塗る。
 - 単色の Symbol 配置の中では、塗りに使う状態の色も定義の色のまま残す（今の「塗りは単色にしない」規則と同じ。状態が見分けられなくならないように）。
 - Symbol 定義の中の表のセル（`slotBinding`＋`stateColors`）は、`stateTarget` だけを足す。色は今の `slotStateColor` のまま。
-- `boolDisplay` のあるセルは `data-table-cell-state` に `presentScreenBool` の状態（既知なら `true`／`false`、不明ならその理由）を出す。塗りに使ったセルは `data-table-cell-state-fill` を持つ。
+- `boolDisplay` のあるセルは `data-table-cell-state` に `presentScreenBool` の状態（既知なら `true`／`false`、不明ならその理由）を出し、`<title>` の状態名も不明ならその理由にする（Good の数値タグでも「Good」と出さず「型不一致」）。塗りに使ったセルは `data-table-cell-state-fill` を持つ。
 
 ### 編集
 

@@ -132,10 +132,24 @@ export function tableCellView(
     title: slotView
       ? `${slotView.slotName} · ${slotView.label}`
       : binding && presentation
-        ? `${binding.externalName} · ${presentation.label}`
+        ? `${binding.externalName} · ${
+            screenBool?.evaluation.state === "unknown"
+              ? screenBoolUnknownLabel(screenBool.evaluation.reason)
+              : presentation.label
+          }`
         : undefined,
     textFill: stateFill ? normalText : (stateColor ?? normalText),
     rectFill: stateFill ? (stateColor ?? cell.fill) : cell.fill,
     stateFill,
   };
+}
+
+/**
+ * bool の表示のセルが取得不能のときのツールチップの状態名。読取が Good の
+ * 数値タグでも「Good」と出さず、表示の文字（`-- · 型不一致`）と揃える。
+ */
+function screenBoolUnknownLabel(reason: SlotStatus): string {
+  return reason === "typeMismatch"
+    ? "型不一致"
+    : slotPresentation(reason).label;
 }

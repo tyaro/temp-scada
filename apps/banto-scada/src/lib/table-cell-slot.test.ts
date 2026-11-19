@@ -212,6 +212,11 @@ describe("tableCellView", () => {
       textFill: UNKNOWN,
       rectFill: "#f1f5f9",
     });
+    // A Good number tag is not a Good bool: the tooltip says why, not "Good".
+    expect(number.title).toMatch(/ · 型不一致$/);
+    expect(unresolved.title).toMatch(
+      new RegExp(` · ${slotPresentation("unresolved").label}$`),
+    );
     expect(tableCellView(boolCell(), { textColor: TEXT }).state).toBe(
       "disconnected",
     );
