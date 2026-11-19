@@ -118,6 +118,8 @@ pub fn local_write_key_store() -> Result<Arc<dyn operation_key::WriteKeyStore>, 
 }
 
 struct WindowsWriteKey {
+    /// Read only on Windows; elsewhere the store refuses every call.
+    #[cfg_attr(not(windows), allow(dead_code))]
     installation: String,
 }
 
