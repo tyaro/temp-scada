@@ -27,6 +27,9 @@ import {
   parseTableCellStates,
   tableCellStateCandidates,
   tableCellStateField,
+  TABLE_CELL_STATES_FIELD,
+  readTableCellStateDraft,
+  writeTableCellStateDraft,
 } from "./designer/forms/table-cell-states";
 import { objectFormValues } from "./designer/numeric-properties";
 import { canFlip } from "./flip";
@@ -606,6 +609,17 @@ describe("table cell states in the Inspector", () => {
     const definition = project.symbols[0];
     return { project, definition, object: definition.objects.at(-1)! };
   }
+  // セルの欄は hidden の入力 1 つの JSON に持つので、その中の 1 欄を書き換える。
+  function setState(data: Map<string, string>, field: string, value: string) {
+    data.set(
+      TABLE_CELL_STATES_FIELD,
+      writeTableCellStateDraft(
+        data.get(TABLE_CELL_STATES_FIELD) ?? "",
+        field,
+        value,
+      ),
+    );
+  }
   function formOf(values: Record<string, string>) {
     const data = new Map(Object.entries(values));
     return {
@@ -670,8 +684,8 @@ describe("table cell states in the Inspector", () => {
       selected: object,
     };
     const field = (key: string) => tableCellStateField(0, 1, key);
-    data.set(field("trueText"), "開");
-    data.set(field("stateTarget"), "fill");
+    setState(data, field("trueText"), "開");
+    setState(data, field("stateTarget"), "fill");
     let cells = cellsAfter(project, objectFormCommand(form, context));
     expect(cells[0][1].boolDisplay!.true).toEqual({
       text: "開",
@@ -679,14 +693,14 @@ describe("table cell states in the Inspector", () => {
     });
     expect(cells[0][1].stateTarget).toBe("fill");
     // 使わないにすると bool の表示と使い先を外す。
-    data.set(field("boolDisplayMode"), "disabled");
+    setState(data, field("boolDisplayMode"), "disabled");
     cells = cellsAfter(project, objectFormCommand(form, context));
     expect(cells[0][1]).toEqual({
       text: "",
       binding: { externalName: "Demo.Running" },
     });
     // タグを外したセルは同じ適用で bool の表示・使い先も外す。
-    data.set(field("boolDisplayMode"), "enabled");
+    setState(data, field("boolDisplayMode"), "enabled");
     data.set("tableTags", "Demo.Running");
     cells = cellsAfter(project, objectFormCommand(form, context));
     expect(cells[0][1]).toEqual({ text: "" });
@@ -718,12 +732,12 @@ describe("table cell states in the Inspector", () => {
     expect(clearTableGridCell("\t1;℃", 0, 1)).toBe("");
     expect(clearTableGridCell("1;", 2, 0)).toBe("1;");
     // 使わないなら書式を持てる。
-    data.set(tableCellStateField(0, 1, "boolDisplayMode"), "disabled");
+    setState(data, tableCellStateField(0, 1, "boolDisplayMode"), "disabled");
     const cells = cellsAfter(project, objectFormCommand(form, context));
     expect(cells[0][1].format).toEqual({ decimals: 1, unit: "℃" });
     expect(cells[0][1].boolDisplay).toBeUndefined();
     // 入力の誤りはセルの位置を付けて返す。
-    data.set(tableCellStateField(0, 0, "trueColor"), "red");
+    setState(data, tableCellStateField(0, 0, "trueColor"), "red");
     expect(() => objectFormCommand(form, context)).toThrow(
       "セルの状態表示の1行1列: trueの色は #RRGGBB",
     );
@@ -732,7 +746,10 @@ describe("table cell states in the Inspector", () => {
   it("sets the state target of a Symbol cell only while it has an unknown color", () => {
     const { project, definition, object } = definitionTable();
     const { data, form } = formOf(objectFormValues(object, true));
-    expect(data.has(tableCellStateField(0, 0, "boolDisplayMode"))).toBe(false);
+    expect(
+      tableCellStateField(0, 0, "boolDisplayMode") in
+        readTableCellStateDraft(data.get(TABLE_CELL_STATES_FIELD)!),
+    ).toBe(false);
     const context = {
       screenId: project.screens[0].id,
       definition: true,
@@ -751,16 +768,16 @@ describe("table cell states in the Inspector", () => {
       return (after.symbols[0].objects.at(-1)!.shape as TableShape).cells;
     };
     expect(apply()).toEqual((object.shape as TableShape).cells);
-    data.set(tableCellStateField(0, 0, "stateTarget"), "text");
+    setState(data, tableCellStateField(0, 0, "stateTarget"), "text");
     expect(apply()[0][0].stateTarget).toBeUndefined();
     // 取得不能の色を消したセルは、同じ適用で使い先も外す。
-    data.set(tableCellStateField(0, 0, "stateTarget"), "fill");
+    setState(data, tableCellStateField(0, 0, "stateTarget"), "fill");
     data.set("tableUnknownColors", "");
     expect(apply()[0][0]).toEqual({
       text: "",
       slotBinding: { slotName: "running" },
     });
-    data.set(tableCellStateField(0, 0, "stateTarget"), "both");
+    setState(data, tableCellStateField(0, 0, "stateTarget"), "both");
     expect(() => objectFormCommand(form, context)).toThrow(
       "状態の色の使い先を選択してください",
     );
