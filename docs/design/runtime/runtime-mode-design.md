@@ -1,6 +1,6 @@
 # Runtime mode の設計（O0、#279）
 
-状態: **設計案（2026-11-19 作成、ユーザー確認待ち）**。Fable の通しレビュー 18 件を反映。[段階3 運転操作の設計](operation-stage3-design.md)の O0 で、Issue [#279](https://github.com/tyaro/temp-scada/issues/279) の範囲を具体化する。§10 の確認事項に回答を得てから実装する。
+状態: **設計（2026-11-19 ユーザー承認）**。2026-11-19 作成、Fable の通しレビュー 18 件と Codex P2 1 件を反映。§10 の確認事項 11 件は同日、すべて推奨のままと回答を得た。[段階3 運転操作の設計](operation-stage3-design.md)の O0 で、Issue [#279](https://github.com/tyaro/temp-scada/issues/279) の範囲を具体化する。実装は O0a（host）から進める。
 
 ## 1. 目的と範囲
 
@@ -141,7 +141,7 @@ O0 で記録の開始（`recording_initial_setup`）を Editor 専用にし、Ed
   - e2e（`mockNativeHost` の形で `app_mode` を Runtime にする）: 運転表示だけが出てメニューバー・作業タブ・ファイル操作が無いこと、キー操作で Editor へ移れないこと、Project が読めないときの画面、保存済みの接続先が無いときの表示、警報の定義の 3 つの場合分けの表示。Editor の既存 e2e が変わらず通ること。
 - 文書: code-map（mode の境界・一覧のファイル）、implementation-status、README の起動方法（`--runtime`）、development-plan（上流 §18 と ACL の差）、親設計の §4 の 8・§10・§11-9 の文言。
 
-## 10. 確認したいこと
+## 10. 確認したこと（2026-11-19 回答: すべて推奨のまま）
 
 1. **mode は CLI 引数だけで決める（推奨）**。配布設定のファイルはインストーラと一緒に決める。代案は今から `%ProgramData%` の設定も読むこと（どちらを優先するかの規則が要る）。
 2. **利用者管理・認証の設定・フェーズの遷移（`users_*`・`auth_config_*`・`auth_setup`・`auth_transition_to_operational`）**:
