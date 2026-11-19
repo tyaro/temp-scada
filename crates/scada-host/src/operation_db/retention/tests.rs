@@ -174,6 +174,27 @@ async fn the_log_answers_the_delay_of_the_next_round() {
 }
 
 #[tokio::test]
+async fn a_round_waits_for_a_save_and_deletes_by_the_saved_retention() {
+    // #333 review: a round must not read the retention while a save is in
+    // progress and then delete by the old, shorter one.
+    let now = 400 * DAY;
+    let log = std::sync::Arc::new(OperationLog::new(record_with(&[1, 2, 3, now]).await));
+    log.set_retention(limit(30, 10_000)).await.unwrap();
+    let saving = log.settings_lock.lock().await;
+    let round = tokio::spawn({
+        let log = log.clone();
+        async move { log.prune_at(now, 10).await }
+    });
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    assert!(!round.is_finished(), "the round waits for the save");
+    // The save finishes with a longer retention before the round reads it.
+    *log.retention.lock().unwrap() = limit(3_650, 10_000);
+    drop(saving);
+    assert_eq!(round.await.unwrap(), PRUNE_INTERVAL);
+    assert_eq!(log.retention_status().await.unwrap().row_count, 4);
+}
+
+#[tokio::test]
 async fn the_retention_is_the_default_until_saved_and_survives_a_restart() {
     let file = temp_file();
     let (db, _) = OperationDb::open(&file, 0).await.unwrap();

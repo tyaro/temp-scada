@@ -149,8 +149,13 @@ impl OperationLog {
     }
 
     /// One round at `now_ms`; returns the delay to the next one. A failure
-    /// is logged and retried at the next round.
+    /// is logged and retried at the next round. The round holds
+    /// `settings_lock` from reading the retention to the end of its
+    /// transaction, so it never deletes by a retention a save has already
+    /// replaced (#333 review): a save waits for the round, or the round
+    /// reads the saved retention.
     pub async fn prune_at(&self, now_ms: i64, batch: usize) -> Duration {
+        let _settings = self.settings_lock.lock().await;
         match self.db.prune(self.retention(), now_ms, batch).await {
             Ok(outcome) if outcome.reached_batch => PRUNE_CONTINUE,
             Ok(_) => PRUNE_INTERVAL,
