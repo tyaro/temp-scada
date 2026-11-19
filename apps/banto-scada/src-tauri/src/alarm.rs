@@ -121,7 +121,7 @@ pub(crate) async fn applied_user(auth: &AuthState) -> Result<String, String> {
     })
 }
 
-pub(crate) async fn verify_alarm_phase(auth: &AuthState) -> Result<(), String> {
+async fn verify_alarm_phase(auth: &AuthState) -> Result<(), String> {
     let phase = auth
         .get()
         .map_err(refusal)?

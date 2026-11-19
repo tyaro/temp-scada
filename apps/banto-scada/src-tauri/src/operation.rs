@@ -14,9 +14,12 @@
 //!   connection's is `hub_mismatch`.
 //! - The write key is registered and deleted, and writes resumed, by the
 //!   Runtime window's terminal settings (O2c-3b-2): Admin only, login-free
-//!   for the local auth-disabled Admin, in the phases the alarm settings
-//!   allow. One key change at a time (`key_lock`). The secret is never
-//!   answered back.
+//!   for the local auth-disabled Admin, in `initializing` and
+//!   `operational`. One key change at a time (`key_lock`, waited for
+//!   first); the phase and the Admin are then checked under the transition
+//!   lock, held until the change is done (`with_operation_settings`), so a
+//!   logout while waiting is never overtaken. The secret is never answered
+//!   back.
 //! - A record that could not be opened answers `refused` / `record_failed`
 //!   with `unrecorded: true`: nothing can be recorded, so nothing is sent.
 //! - `operation_view` (O3a) reads the faceplate's operation rows of one
@@ -27,6 +30,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use scada_host::desktop_auth::SettingsRefusal;
 use scada_host::operation_db::{OperationDb, OperationLog, Outcome, WriteStatus};
 use scada_host::operation_key::{self, WriteKey, WriteKeyStore};
 use scada_host::operation_write::{
@@ -38,7 +42,7 @@ use scada_host::recording_runtime::NO_DATA_DIR;
 use serde::Serialize;
 use tauri::State;
 
-use crate::alarm::{refusal, verify_alarm_phase};
+use crate::alarm::refusal;
 use crate::app_mode::AppMode;
 use crate::auth::AuthState;
 use crate::runtime::StartupProject;
@@ -66,7 +70,8 @@ pub struct OperationState {
     log: Mutex<Result<Arc<OperationLog>, &'static str>>,
     keys: Result<Arc<dyn WriteKeyStore>, &'static str>,
     /// Held by a registration and a deletion of the write key, so two never
-    /// interleave (the previous entry is read, then replaced).
+    /// interleave (the previous entry is read, then replaced). Waited for
+    /// before the transition lock.
     key_lock: tokio::sync::Mutex<()>,
 }
 
@@ -115,6 +120,12 @@ impl OperationState {
             keys: Err(NO_KEY_STORE),
             key_lock: tokio::sync::Mutex::new(()),
         }
+    }
+
+    /// Hold the key lock (tests keep a key change waiting with it).
+    #[cfg(test)]
+    pub(crate) async fn hold_key_lock_for_test(&self) -> tokio::sync::MutexGuard<'_, ()> {
+        self.key_lock.lock().await
     }
 
     pub(crate) fn log(&self) -> Result<Arc<OperationLog>, &'static str> {
@@ -308,15 +319,27 @@ fn read_endpoint(host: &NativeHost) -> Option<String> {
         .map(|record| record.endpoint)
 }
 
-/// Admin only (login-free for the local auth-disabled Admin), in the phases
-/// the alarm settings allow (§7).
-async fn authorize_settings(auth: &AuthState) -> Result<(), String> {
-    verify_alarm_phase(auth).await?;
-    auth.get()
+/// Run `change` as the current Admin (login-free for the local
+/// auth-disabled Admin), in `initializing` or `operational` (§7): checked
+/// and run under the transition lock, after the caller's own waits, so a
+/// logout, a user change or the move to operation is never between the
+/// check and the change. The lock order is the write's (transition lock,
+/// then the write state's).
+async fn as_admin<T, F, Fut>(auth: &AuthState, change: F) -> Result<T, String>
+where
+    F: FnOnce() -> Fut,
+    Fut: std::future::Future<Output = Result<T, String>>,
+{
+    match auth
+        .get()
         .map_err(refusal)?
-        .authorize_operation_settings()
+        .with_operation_settings(change)
         .await
-        .map_err(refusal)
+    {
+        Ok(done) => done,
+        Err(SettingsRefusal::Phase) => Err("auth_phase_unavailable".into()),
+        Err(SettingsRefusal::Auth(error)) => Err(refusal(error)),
+    }
 }
 
 fn open_log(operations: &OperationState) -> Result<Arc<OperationLog>, String> {
@@ -363,14 +386,16 @@ pub async fn operation_key_register(
     secret: String,
 ) -> Result<OperationKeyStatus, String> {
     mode.require_runtime()?;
-    authorize_settings(&auth).await?;
     let log = open_log(&operations)?;
     let store = key_store(&operations)?;
     let _keys = operations.key_lock.lock().await;
-    let endpoint = read_endpoint(&host);
-    operation_key::register(store.as_ref(), &log, &secret, endpoint.as_deref(), now_ms())
-        .await
-        .map_err(|error| error.as_str().to_owned())?;
+    as_admin(&auth, || async {
+        let endpoint = read_endpoint(&host);
+        operation_key::register(store.as_ref(), &log, &secret, endpoint.as_deref(), now_ms())
+            .await
+            .map_err(|error| error.as_str().to_owned())
+    })
+    .await?;
     Ok(key_status(&log, &host))
 }
 
@@ -385,13 +410,15 @@ pub async fn operation_key_delete(
     host: State<'_, NativeHost>,
 ) -> Result<OperationKeyStatus, String> {
     mode.require_runtime()?;
-    authorize_settings(&auth).await?;
     let log = open_log(&operations)?;
     let store = key_store(&operations)?;
     let _keys = operations.key_lock.lock().await;
-    operation_key::delete(store.as_ref(), &log)
-        .await
-        .map_err(|error| error.as_str().to_owned())?;
+    as_admin(&auth, || async {
+        operation_key::delete(store.as_ref(), &log)
+            .await
+            .map_err(|error| error.as_str().to_owned())
+    })
+    .await?;
     Ok(key_status(&log, &host))
 }
 
@@ -407,11 +434,13 @@ pub async fn operation_write_resume(
     host: State<'_, NativeHost>,
 ) -> Result<OperationKeyStatus, String> {
     mode.require_runtime()?;
-    authorize_settings(&auth).await?;
     let log = open_log(&operations)?;
-    log.resume(now_ms()).await.map_err(|error| {
-        eprintln!("[banto-scada] operation settings: the resume could not be saved: {error:?}");
-        reason::RECORD_FAILED.to_owned()
-    })?;
+    as_admin(&auth, || async {
+        log.resume(now_ms()).await.map_err(|error| {
+            eprintln!("[banto-scada] operation settings: the resume could not be saved: {error:?}");
+            reason::RECORD_FAILED.to_owned()
+        })
+    })
+    .await?;
     Ok(key_status(&log, &host))
 }

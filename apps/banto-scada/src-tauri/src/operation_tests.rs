@@ -402,3 +402,50 @@ fn the_write_key_commands_without_the_record_are_record_failed() {
         );
     }
 }
+
+/// #322 review: the Admin is checked after the wait for the key lock and
+/// held until the change is done. A deletion that waits while the Admin
+/// logs out is refused and changes nothing; one that waits while the
+/// Admin stays logged in goes through (the control of the same path).
+#[test]
+fn a_key_change_waiting_while_the_admin_logs_out_changes_nothing() {
+    for log_out in [true, false] {
+        let dir = TempDir::new();
+        let mode = runtime_mode(&dir);
+        startup(&mode);
+        let (app, webview) = app(&dir, mode, "runtime");
+        let auth = app.state::<crate::auth::AuthState>();
+        let host = auth.get().unwrap();
+        let operations = app.state::<OperationState>();
+        let log = operations.log().unwrap();
+        let key = scada_host::operation_db::KeyRef {
+            endpoint: "http://127.0.0.1:8722".into(),
+            id: "registered".into(),
+        };
+        tauri::async_runtime::block_on(async {
+            // The move signs the new Admin in.
+            host.transition_to_operational("admin", "Passw0rd!Passw0rd", "管理者")
+                .await
+                .unwrap();
+            log.key_registered(1_000, &key).await.unwrap();
+        });
+        let held = tauri::async_runtime::block_on(operations.hold_key_lock_for_test());
+        let result = std::thread::scope(|scope| {
+            let waiting = scope.spawn(|| invoke(&webview, "operation_key_delete", json!({})));
+            // Let the deletion reach the key lock.
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            if log_out {
+                tauri::async_runtime::block_on(host.logout()).unwrap();
+            }
+            drop(held);
+            waiting.join().unwrap()
+        });
+        if log_out {
+            assert_eq!(result, Err(json!("unauthorized")));
+            assert_eq!(log.key(), Some(key));
+        } else {
+            assert_eq!(result.unwrap()["keyEndpoint"], Value::Null);
+            assert_eq!(log.key(), None);
+        }
+    }
+}

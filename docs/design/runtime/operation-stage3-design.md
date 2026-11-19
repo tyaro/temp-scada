@@ -348,8 +348,9 @@ O2c-3b-2 で決めたこと（2026-11-20）: Tauri の command は次のとお�
   - `operation_key_delete`: キーを外す（書込み状態は変えない）。
   - `operation_write_resume`: 「書込みを再開」。`stopped` だけを `ready` にし、ほかの状態はそのまま答える。
   - 変える 3 つは、答えに `operation_key_status` と同じ形を返す。
-- 権限は、警報の端末設定と同じく、認証のフェーズが `initializing`・`operational` であること（それ以外は `auth_phase_unavailable`）と、Admin であること（`DesktopAuth::authorize_operation_settings`、`require_role(Role::Admin, "operation")`）。開発・初期設定では認証無効の Admin なのでログイン不要、運用ではログインした Admin だけ。
+- 権限は、認証のフェーズが `initializing`・`operational` であること（それ以外は `auth_phase_unavailable`）と、Admin であること（`require_role(Role::Admin, "operation")`）。開発・初期設定では認証無効の Admin なのでログイン不要、運用ではログインした Admin だけ。
+- 権限の確認と変更の確定は、認証の遷移のロック（`AuthHost::gate`）の下で 1 つの手順として行う（`DesktopAuth::with_operation_settings`。#322 のオーナー指摘）。ログアウト・利用者の変更・運用への移行も同じロックを取るので、確認と変更の間に入らない。登録・削除はキーの排他（下記）を待ってから、このロックを取って確認する（待っている間にログアウトしたら、変えずに `unauthorized`）。ロックを取る順は、書込みの送信の開始（8）と同じく、遷移のロック → 書込み状態の排他（`state_lock`）で、逆にしない。
 - 誤りは、権限の拒否（`unauthorized`・`forbidden`・`auth_unavailable`・`auth_failed`・`auth_phase_unavailable`）、記録を開けない `record_failed`、キーの誤り（`KeyError::as_str` の `no_hub`・`invalid_secret`・`invalid_endpoint`・`key_store`）。
-- 登録と削除は端末で 1 つずつにする（`OperationState::key_lock`）。前の項目を読んでから切り替えるので、同時の登録で消されない項目が残らないようにする。
+- 登録と削除は端末で 1 つずつにする（`OperationState::key_lock`。遷移のロックより先に取る）。前の項目を読んでから切り替えるので、同時の登録で消されない項目が残らないようにする。
 - 書込みと照会は、要求のたびに記録と keyring からキーを読む（`operation_key::load`）。keyring が読めないときはキーが無いものとし（`no_write_key`）、記録に残す。照会の `hub_mismatch` のため、照会にも読み用の接続先を渡す。
 - 秘密の入力の扱い（画面での伏せ字・貼り付け）と、登録の結果の文言は O2c-4 で決める。
