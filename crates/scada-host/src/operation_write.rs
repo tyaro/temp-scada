@@ -103,17 +103,16 @@ pub trait OperationEnv: Send + Sync + 'static {
 pub struct HubAccess<'a> {
     /// The Hub's identity for the record (`hub_endpoint`).
     pub endpoint: Option<String>,
-    /// The read-key client the catalog is fetched with; `None` is
-    /// `catalog_unavailable`.
-    pub catalog: Option<&'a RestClient>,
+    /// The read-key client the catalog (§4.1) and the Hub's status
+    /// (§11-8) are fetched with; `None` is `catalog_unavailable` for the
+    /// write and `hub_unsupported` for the view.
+    pub read: Option<&'a RestClient>,
     /// The catalog revision the terminal's subscription resolved against.
     pub subscribed_revision: Option<u64>,
-    /// Whether the Hub was confirmed to have the write contract (§11-8).
-    /// Always `false` in the product until upstream #1223 lands.
-    pub write_contract_confirmed: bool,
     /// The write-key client; `None` is `no_write_key` (§7).
     pub write: Option<Arc<RestClient>>,
-    /// The bound of the catalog fetch, the same as the write's.
+    /// The bound of the catalog and status fetches, the write's own for
+    /// the write.
     pub timeout: Duration,
 }
 
@@ -211,7 +210,7 @@ pub async fn operation_write(
         Err(code) => return refuse(context, &record, code).await,
     };
     // 5. The Hub's contract and the write key.
-    let client = match write_client(&context.hub) {
+    let client = match write_client(&context.hub).await {
         Ok(client) => client,
         Err(code) => return refuse(context, &record, code).await,
     };
@@ -345,11 +344,27 @@ async fn admission(env: &dyn OperationEnv, auth: Option<&AuthHost>) -> Admission
 /// Step 5: the Hub's write contract and the write key. Shared by the write
 /// and the view. TODO(O2c): `hub_mismatch`, `write_stopped`, `key_invalid`,
 /// `too_soon`.
-fn write_client(hub: &HubAccess<'_>) -> Result<Arc<RestClient>, &'static str> {
-    if !hub.write_contract_confirmed {
+async fn write_client(hub: &HubAccess<'_>) -> Result<Arc<RestClient>, &'static str> {
+    if !write_contract_confirmed(hub).await {
         return Err(reason::HUB_UNSUPPORTED);
     }
     hub.write.clone().ok_or(reason::NO_WRITE_KEY)
+}
+
+/// Whether the Hub lists the #1201 write contract (`write_contract_v1`) in
+/// `GET /api/v1/status` now (§11-8, upstream #1223). Asked on every write
+/// and view, like the catalog (§4.1), so a Hub replaced by an older one is
+/// not trusted from an earlier answer. A Hub that cannot be asked (no read
+/// client, an error, no answer within the bound) is not confirmed: never
+/// write to a Hub whose contract is unknown.
+async fn write_contract_confirmed(hub: &HubAccess<'_>) -> bool {
+    let Some(client) = hub.read else {
+        return false;
+    };
+    matches!(
+        tokio::time::timeout(hub.timeout, client.fetch_status()).await,
+        Ok(Ok(status)) if status.supports_write_contract()
+    )
 }
 
 /// Step 4: fetch the catalog within the write's bound and check the tag.
@@ -357,7 +372,7 @@ async fn fetch_and_check(
     hub: &HubAccess<'_>,
     resolved: &Resolved,
 ) -> Result<RequestedValue, &'static str> {
-    let client = hub.catalog.ok_or(reason::CATALOG_UNAVAILABLE)?;
+    let client = hub.read.ok_or(reason::CATALOG_UNAVAILABLE)?;
     let catalog = match tokio::time::timeout(hub.timeout, client.fetch_catalog()).await {
         Ok(Ok(catalog)) => catalog,
         _ => return Err(reason::CATALOG_UNAVAILABLE),

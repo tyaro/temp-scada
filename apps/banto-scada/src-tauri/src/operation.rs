@@ -6,9 +6,11 @@
 //!   (next to `alarm-terminal.json`, §9). It is opened at startup in Runtime
 //!   mode only: the command is Runtime-only and refused by the mode before
 //!   any request is taken, so Editor mode has nothing to record.
-//! - The product never sends to the Hub yet: `write_contract_confirmed` is
-//!   `false` and there is no write key, so a request that passes the checks
-//!   up to §4-4 is recorded as `hub_unsupported` (upstream #1223, O2c).
+//! - The Hub's write contract (§11-8) is asked with the read key of the
+//!   Hub connection (`GET /api/v1/status`, upstream #1223) on every write
+//!   and view. The product still never sends: there is no write key (O2c),
+//!   so a request that passes up to §4-4 is `hub_unsupported` on a Hub
+//!   before #1201 and `no_write_key` on one with the contract.
 //! - A record that could not be opened answers `refused` / `record_failed`
 //!   with `unrecorded: true`: nothing can be recorded, so nothing is sent.
 //! - `operation_view` (O3a) reads the faceplate's operation rows of one
@@ -17,7 +19,7 @@
 //!   transition lock nor the send slot.
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use scada_host::alarm_service::RestClient;
 use scada_host::operation_db::{OperationDb, OperationLog, Outcome};
@@ -33,9 +35,9 @@ use crate::auth::AuthState;
 use crate::runtime::StartupProject;
 use crate::NativeHost;
 
-/// Until upstream #1223 (§11-8) the Hub's write contract is never
-/// confirmed, so every write that gets that far is `hub_unsupported`.
-const WRITE_CONTRACT_CONFIRMED: bool = false;
+/// The bound of the view's status fetch: shorter than a write's, so a Hub
+/// that does not answer delays the faceplate's 2-second poll little.
+const VIEW_TIMEOUT: Duration = Duration::from_secs(3);
 
 /// The write key (O2c); none yet, so `no_write_key` behind the contract.
 fn write_key() -> Option<Arc<RestClient>> {
@@ -173,7 +175,7 @@ pub async fn operation_write(
         .ok()
         .flatten()
         .map(|record| record.endpoint);
-    let catalog = host.bootstrap.rest_client().ok().flatten();
+    let read = host.bootstrap.rest_client().ok().flatten();
     let context = OperationWrite {
         env: Arc::new(HostEnv {
             runtime: matches!(*mode, AppMode::Runtime { .. }),
@@ -183,10 +185,9 @@ pub async fn operation_write(
         project: startup.applied(),
         hub: HubAccess {
             endpoint,
-            catalog: catalog.as_ref(),
+            read: read.as_ref(),
             subscribed_revision: host.read_revision.get(),
-            // Until upstream #1223 and the write key (O2c): never sent.
-            write_contract_confirmed: WRITE_CONTRACT_CONFIRMED,
+            // Until the write key (O2c): never sent.
             write: write_key(),
             timeout: WRITE_TIMEOUT,
         },
@@ -206,9 +207,11 @@ pub async fn operation_view(
     startup: State<'_, StartupProject>,
     auth: State<'_, AuthState>,
     operations: State<'_, OperationState>,
+    host: State<'_, NativeHost>,
     request: OperationViewRequest,
 ) -> Result<OperationView, String> {
     mode.require_runtime()?;
+    let read = host.bootstrap.rest_client().ok().flatten();
     let context = ViewContext {
         env: Arc::new(HostEnv {
             runtime: matches!(*mode, AppMode::Runtime { .. }),
@@ -218,11 +221,10 @@ pub async fn operation_view(
         project: startup.applied(),
         hub: HubAccess {
             endpoint: None,
-            catalog: None,
+            read: read.as_ref(),
             subscribed_revision: None,
-            write_contract_confirmed: WRITE_CONTRACT_CONFIRMED,
             write: write_key(),
-            timeout: WRITE_TIMEOUT,
+            timeout: VIEW_TIMEOUT,
         },
     };
     operation_write::operation_view(&context, &request)
