@@ -86,7 +86,12 @@
     trends?: readonly TrendDefinition[];
     onopentrend?: (objectId: string) => void;
     /** 表示プレビューで、機器を関連付けた Symbol を押したときに呼ぶ。編集中は呼ばない。 */
-    onopenequipment?: (equipmentId: string, origin: SVGElement) => void;
+    /** `placement` は押した配置（段階3の運転操作の要求に使う）。 */
+    onopenequipment?: (
+      equipmentId: string,
+      origin: SVGElement,
+      placement: { screenId: string; objectId: string },
+    ) => void;
     /** 表示確認で、画面切替ボタンを押したときに行き先で呼ぶ。編集中は呼ばない。戻る・進むは `navHistory` で動けるときだけ。 */
     onnavigate?: (target: NavTarget) => void;
     /** 画面切替ボタンの強調に使う表示中の画面。省略時は描く画面自身（運転表示のヘッダー・フッターは主画面を渡す）。 */
@@ -185,9 +190,12 @@
     event.stopPropagation();
     onnavigate?.(target);
   }
-  function openEquipment(id: string, event: Event) {
+  function openEquipment(id: string, objectId: string, event: Event) {
     event.stopPropagation();
-    onopenequipment?.(id, event.currentTarget as SVGElement);
+    onopenequipment?.(id, event.currentTarget as SVGElement, {
+      screenId: screen.id,
+      objectId,
+    });
   }
   const background = $derived(
     "background" in screen ? screen.background : "#0b1220",
@@ -818,7 +826,7 @@
         ? `${linked.code} ${linked.name}の読取詳細を開く`
         : nav?.label}
       onclick={linked
-        ? (event) => openEquipment(linked.id, event)
+        ? (event) => openEquipment(linked.id, object.id, event)
         : nav
           ? (event) => navigate(nav.target, event)
           : undefined}
@@ -826,7 +834,7 @@
         ? (event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
-              if (linked) openEquipment(linked.id, event);
+              if (linked) openEquipment(linked.id, object.id, event);
               else if (nav) navigate(nav.target, event);
             }
           }
