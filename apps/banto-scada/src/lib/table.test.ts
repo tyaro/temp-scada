@@ -5,6 +5,7 @@ import { parseProject, serializeProject, type TableShape } from "./project";
 import { applyCommand, type EditCommand } from "./editor";
 import {
   buildTableCells,
+  clearTableGridCell,
   formatTableColors,
   formatTableFormats,
   formatTableSlots,
@@ -22,6 +23,11 @@ import {
   tableEdges,
 } from "./table";
 import { objectFormCommand } from "./designer/forms/object-form";
+import {
+  parseTableCellStates,
+  tableCellStateCandidates,
+  tableCellStateField,
+} from "./designer/forms/table-cell-states";
 import { objectFormValues } from "./designer/numeric-properties";
 import { canFlip } from "./flip";
 import { shapeSlotNames, shapeTagBindings } from "./shape-bindings";
@@ -574,5 +580,189 @@ describe("table cell slots", () => {
     expect(() =>
       copyObjects(project, project.symbols[0].id, [slotCase.object.id], "test"),
     ).toThrow("slot表示単体");
+  });
+});
+
+// Issue #303 第2段: Inspector の「セルの状態表示」。
+describe("table cell states in the Inspector", () => {
+  const caseObject = (name: string) =>
+    structuredClone(cases.find((c) => c.name === name)!.object);
+  function screenTable() {
+    const value = structuredClone(sample);
+    value.screens[0].objects.push(
+      caseObject("screen table with bool display cells") as any,
+    );
+    const project = parseProject(JSON.stringify(value));
+    return { project, object: project.screens[0].objects.at(-1)! };
+  }
+  function definitionTable() {
+    const value = structuredClone(sample);
+    value.symbols[0].objects.push(
+      caseObject(
+        "symbol table with a state colored cell painted to fill",
+      ) as any,
+    );
+    const project = parseProject(JSON.stringify(value));
+    const definition = project.symbols[0];
+    return { project, definition, object: definition.objects.at(-1)! };
+  }
+  function formOf(values: Record<string, string>) {
+    const data = new Map(Object.entries(values));
+    return {
+      data,
+      form: {
+        get: (key: string) => data.get(key) ?? null,
+        has: (key: string) => data.has(key),
+      },
+    };
+  }
+  const cellsAfter = (
+    project: ReturnType<typeof parseProject>,
+    command: EditCommand,
+  ) => {
+    const after = applyCommand(project, command, "edit");
+    return (after.screens[0].objects.at(-1)!.shape as TableShape).cells;
+  };
+
+  it("lists bound cells as candidates (screen tag, Symbol slot)", () => {
+    const { object } = screenTable();
+    const shape = object.shape as TableShape;
+    expect(tableCellStateCandidates(shape, false)).toEqual([
+      { row: 0, column: 0, label: "1:1 · Demo.Running" },
+      { row: 0, column: 1, label: "1:2 · Demo.Running" },
+    ]);
+    expect(tableCellStateCandidates(shape, true)).toEqual([]);
+    const slot = definitionTable().object.shape as TableShape;
+    expect(tableCellStateCandidates(slot, true)).toEqual([
+      { row: 0, column: 0, label: "1:1 · running" },
+    ]);
+    // 結合のない表には欄を出さない。
+    expect(
+      tableCellStateCandidates({ ...slot, cells: [[{ text: "a" }]] }, false),
+    ).toEqual([]);
+  });
+
+  it("keeps the bool display and state target through an apply of other fields", () => {
+    const { project, object } = screenTable();
+    const { data, form } = formOf(objectFormValues(object, false));
+    data.set("tableFills", "#334155");
+    const cells = cellsAfter(
+      project,
+      objectFormCommand(form, {
+        screenId: project.screens[0].id,
+        definition: false,
+        selected: object,
+      }),
+    );
+    const before = (object.shape as TableShape).cells[0];
+    expect(cells[0][0]).toEqual({ ...before[0], fill: "#334155" });
+    // 文字（既定）は項目を持たない。
+    const { stateTarget: _, ...second } = before[1];
+    expect(cells[0][1]).toEqual(second);
+  });
+
+  it("applies an edited cell state and drops it when the tag is removed", () => {
+    const { project, object } = screenTable();
+    const { data, form } = formOf(objectFormValues(object, false));
+    const context = {
+      screenId: project.screens[0].id,
+      definition: false,
+      selected: object,
+    };
+    const field = (key: string) => tableCellStateField(0, 1, key);
+    data.set(field("trueText"), "開");
+    data.set(field("stateTarget"), "fill");
+    let cells = cellsAfter(project, objectFormCommand(form, context));
+    expect(cells[0][1].boolDisplay!.true).toEqual({
+      text: "開",
+      color: "#16a34a",
+    });
+    expect(cells[0][1].stateTarget).toBe("fill");
+    // 使わないにすると bool の表示と使い先を外す。
+    data.set(field("boolDisplayMode"), "disabled");
+    cells = cellsAfter(project, objectFormCommand(form, context));
+    expect(cells[0][1]).toEqual({
+      text: "",
+      binding: { externalName: "Demo.Running" },
+    });
+    // タグを外したセルは同じ適用で bool の表示・使い先も外す。
+    data.set(field("boolDisplayMode"), "enabled");
+    data.set("tableTags", "Demo.Running");
+    cells = cellsAfter(project, objectFormCommand(form, context));
+    expect(cells[0][1]).toEqual({ text: "" });
+    expect(cells[0][0].boolDisplay).toBeDefined();
+    // 行・列が減ったら、残ったセルの欄だけを位置で読む。
+    data.set("tableText", "a");
+    data.set("tableColumns", "");
+    expect(parseTableCellStates(form, 1, 1, false)).toEqual([
+      [expect.objectContaining({ stateTarget: "fill" })],
+    ]);
+    cells = cellsAfter(project, objectFormCommand(form, context));
+    expect(cells).toEqual([[expect.objectContaining({ text: "a" })]]);
+  });
+
+  it("rejects a format together with a bool display and clears the format cell", () => {
+    const { project, object } = screenTable();
+    const { data, form } = formOf(objectFormValues(object, false));
+    const context = {
+      screenId: project.screens[0].id,
+      definition: false,
+      selected: object,
+    };
+    data.set("tableFormats", "\t1;℃");
+    expect(() => objectFormCommand(form, context)).toThrow(
+      "セルの書式の1行2列はbool の表示を使うセルです",
+    );
+    // 使うにしたとき、Inspector はそのセルの書式を下書きから消す。
+    expect(clearTableGridCell("1;\t1;℃\n;kPa", 0, 1)).toBe("1;\n;kPa");
+    expect(clearTableGridCell("\t1;℃", 0, 1)).toBe("");
+    expect(clearTableGridCell("1;", 2, 0)).toBe("1;");
+    // 使わないなら書式を持てる。
+    data.set(tableCellStateField(0, 1, "boolDisplayMode"), "disabled");
+    const cells = cellsAfter(project, objectFormCommand(form, context));
+    expect(cells[0][1].format).toEqual({ decimals: 1, unit: "℃" });
+    expect(cells[0][1].boolDisplay).toBeUndefined();
+    // 入力の誤りはセルの位置を付けて返す。
+    data.set(tableCellStateField(0, 0, "trueColor"), "red");
+    expect(() => objectFormCommand(form, context)).toThrow(
+      "セルの状態表示の1行1列: trueの色は #RRGGBB",
+    );
+  });
+
+  it("sets the state target of a Symbol cell only while it has an unknown color", () => {
+    const { project, definition, object } = definitionTable();
+    const { data, form } = formOf(objectFormValues(object, true));
+    expect(data.has(tableCellStateField(0, 0, "boolDisplayMode"))).toBe(false);
+    const context = {
+      screenId: project.screens[0].id,
+      definition: true,
+      readSlots: definition.readSlots,
+      selected: object,
+    };
+    const apply = () => {
+      const after = applyCommand(
+        project,
+        {
+          ...objectFormCommand(form, context),
+          definitionId: definition.id,
+        } as EditCommand,
+        "edit",
+      );
+      return (after.symbols[0].objects.at(-1)!.shape as TableShape).cells;
+    };
+    expect(apply()).toEqual((object.shape as TableShape).cells);
+    data.set(tableCellStateField(0, 0, "stateTarget"), "text");
+    expect(apply()[0][0].stateTarget).toBeUndefined();
+    // 取得不能の色を消したセルは、同じ適用で使い先も外す。
+    data.set(tableCellStateField(0, 0, "stateTarget"), "fill");
+    data.set("tableUnknownColors", "");
+    expect(apply()[0][0]).toEqual({
+      text: "",
+      slotBinding: { slotName: "running" },
+    });
+    data.set(tableCellStateField(0, 0, "stateTarget"), "both");
+    expect(() => objectFormCommand(form, context)).toThrow(
+      "状態の色の使い先を選択してください",
+    );
   });
 });

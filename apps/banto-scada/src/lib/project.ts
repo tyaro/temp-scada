@@ -171,6 +171,16 @@ export interface TableCell {
   stateColors?: StateTextColors;
   /** Numeric format; requires `binding` or `slotBinding`. */
   format?: NumericFormat;
+  /**
+   * The bound tag shown as a bool (screen tables only; requires `binding`,
+   * never together with `format`). Same form as a screen Text's `boolDisplay`.
+   */
+  boolDisplay?: TextBoolDisplay;
+  /**
+   * Where the state color goes: the text (absent or `"text"`) or the cell
+   * fill (`"fill"`). Only on a cell with `boolDisplay` or `stateColors`.
+   */
+  stateTarget?: "text" | "fill";
 }
 /**
  * A grid of fixed-text cells. `columns` and `rows` are relative weights that
@@ -658,6 +668,12 @@ export function parseProject(json: string): Project {
         shape.binding
       )
         throw new Error("Symbol 定義内の直接タグ割り当てには対応していません");
+      if (
+        project.symbols.includes(owner) &&
+        shape.type === "table" &&
+        shape.cells.some((row) => row.some((cell) => cell.boolDisplay))
+      )
+        throw new Error("Symbol 定義内の表のセルにはbool表示を設定できません");
       if (
         project.symbols.includes(owner) &&
         shape.type === "table" &&

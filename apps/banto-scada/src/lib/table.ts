@@ -3,6 +3,7 @@ import type {
   TableCell,
   TableShape,
   TagBinding,
+  TextBoolDisplay,
 } from "./project";
 import {
   MAX_FORMAT_DECIMALS,
@@ -90,6 +91,21 @@ export function validateTableShape(shape: TableShape) {
       if (cell.stateColors !== undefined && cell.slotBinding === undefined)
         throw new Error(
           "表のセルの取得不能の色はslotのあるセルだけに付けられます",
+        );
+      if (
+        cell.boolDisplay !== undefined &&
+        (cell.binding === undefined || cell.format !== undefined)
+      )
+        throw new Error(
+          "表のセルのbool表示はタグのあるセルだけに付けられ、書式と同時に持てません",
+        );
+      if (
+        cell.stateTarget !== undefined &&
+        cell.boolDisplay === undefined &&
+        cell.stateColors === undefined
+      )
+        throw new Error(
+          "状態の色の使い先はbool表示か状態の色のあるセルだけに付けられます",
         );
     }
 }
@@ -382,10 +398,18 @@ export interface TableSlotGrids {
   isStateSlot: (slotName: string) => boolean;
 }
 
+/** Inspector の「セルの状態表示」で編集した、1 セルの bool の表示と状態の色の使い先。 */
+export interface TableCellState {
+  boolDisplay?: TextBoolDisplay;
+  stateTarget?: "text" | "fill";
+}
+
 /**
- * 文字・色・タグ・書式（Symbol 定義では slot・取得不能の色）の行列から cells を
- * 組み立てる（値のない key は保存しない）。タグも slot もないセルの書式、
- * bool・state 以外の slot のセルの取得不能の色は誤り。
+ * 文字・色・タグ・書式（Symbol 定義では slot・取得不能の色）・状態表示の行列から
+ * cells を組み立てる（値のない key は保存しない）。タグも slot もないセルの書式、
+ * bool・state 以外の slot のセルの取得不能の色、bool の表示と書式の両方を持つ
+ * セルは誤り。タグを外したセルの bool の表示、bool の表示も取得不能の色もない
+ * セルの状態の色の使い先は同じ適用で外す。
  */
 export function buildTableCells(
   texts: string[][],
@@ -394,6 +418,7 @@ export function buildTableCells(
   tags: (TagBinding | undefined)[][] = [],
   formats: (NumericFormat | undefined)[][] = [],
   slotGrids?: TableSlotGrids,
+  states: (TableCellState | undefined)[][] = [],
 ): TableCell[][] {
   return texts.map((row, r) =>
     row.map((text, c) => {
@@ -402,6 +427,16 @@ export function buildTableCells(
       const unknownColor = slotGrids?.unknownColors[r]?.[c];
       const format = formats[r]?.[c];
       const where = `${r + 1}行${c + 1}列`;
+      const state = states[r]?.[c];
+      // bool の表示は画面の表のタグのあるセルだけ（Symbol 定義では持たない）。
+      const boolDisplay =
+        !slotGrids && binding ? state?.boolDisplay : undefined;
+      const stateTarget =
+        boolDisplay || unknownColor ? state?.stateTarget : undefined;
+      if (boolDisplay && format && Object.keys(format).length)
+        throw new Error(
+          `セルの書式の${where}はbool の表示を使うセルです。書式を消すか、bool の表示を使わないにしてください`,
+        );
       if (format && !binding && !slotBinding)
         throw new Error(
           slotGrids
@@ -423,9 +458,24 @@ export function buildTableCells(
         ...(slotBinding ? { slotBinding } : {}),
         ...(unknownColor ? { stateColors: { unknownColor } } : {}),
         ...(format && Object.keys(format).length ? { format } : {}),
+        ...(boolDisplay ? { boolDisplay } : {}),
+        ...(stateTarget ? { stateTarget } : {}),
       };
     }),
   );
+}
+
+/**
+ * タブ区切りの入力欄の文字から、1 セル（r 行 c 列、0 始まり）の値を消す。
+ * bool の表示を使うにしたセルの書式を消すのに使う。末尾の空のセル・行は落とす。
+ */
+export function clearTableGridCell(text: string, r: number, c: number): string {
+  const lines = text.split(/\r?\n/).map((line) => line.split("\t"));
+  if (lines[r]?.[c] === undefined || lines[r][c] === "") return text;
+  lines[r][c] = "";
+  const joined = lines.map((cells) => cells.join("\t").replace(/\t+$/, ""));
+  while (joined.length > 0 && joined[joined.length - 1] === "") joined.pop();
+  return joined.join("\n");
 }
 
 /** 表のセルが結合した slot 名（行優先の順、重複を含む）。 */

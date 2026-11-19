@@ -72,6 +72,69 @@
 - 入力の変換・位置・編集コマンド・フォーム、セルのタグ・書式の入力、`shapeTagBindings`・参照一覧・一括置換・Symbol への貼り付けの拒否、セルの slot・取得不能の色の入力と拒否、`shapeSlotNames`・`symbolSlotUsages`・slot の状態一覧・使用中の slot の削除の拒否・コピーの拒否: `table.test.ts`。セルの表示の解決（既知の状態の文字と色・不明の色・数値の書式）: `table-cell-slot.test.ts`。
 - ブラウザ: `e2e/table.spec.ts`（明暗の両テーマでセルの位置・塗り・文字色・罫線、Inspector のタブ入力と色の表の拒否・保存、部品パネルからの追加と反転の無効、結合したセルの書式付きの値・未解決・更新停止、Inspector でのセルのタグ・書式の入力と拒否、Symbol 内の表のセルの slot の状態の文字・色・書式付きの数値・取得不能）。
 
+## 状態の小表（Issue #303）
+
+追記: 2026-11-20（日本時間）。状態: **実装済み（第1段・第2段）**。「連動起動可／連動運転中」のように bit ごとに点く・消える小表を、表 1 つ（配置 1 つ）で描けるようにする。Issue の「決めること」は次のように決めた。
+
+### 保存の形
+
+セルに 2 つの任意の項目を足す。
+
+| 項目          | 型                                   | 置けるセル                                                                      |
+| ------------- | ------------------------------------ | ------------------------------------------------------------------------------- |
+| `boolDisplay` | `$defs.textBoolDisplay`              | 画面の表で `binding` のあるセル。`format` とは同時に持てない                    |
+| `stateTarget` | `"text"` か `"fill"`（ないとき文字） | `boolDisplay` のあるセルか、`stateColors` のあるセル（Symbol 定義の中の表）だけ |
+
+```json
+{
+  "text": "",
+  "binding": { "externalName": "conn.group.pump1_run" },
+  "boolDisplay": {
+    "true": { "text": "運転", "color": "#16a34a" },
+    "false": { "text": "停止", "color": "#334155" },
+    "unknownColor": "#d97706"
+  },
+  "stateTarget": "fill"
+}
+```
+
+- 決めること 1（保存の形）: `boolDisplay` は画面直下の Text（[A6-2](screen-bool-display.md#a6-2-画面直下の-text-の-bool-表示)）と同じ形にし、状態の色を文字と塗りのどちらに使うかを別の項目 `stateTarget` で持つ。状態ごとに文字色と塗りを別々に持つ形は、機器種別の slot の `boolDisplay`／`stateDisplay`（色は 1 つ）と分かれ、Symbol 定義の中の表に効かせられないので採らない。
+- 決めること 2（`format`）: Text と同じく、`boolDisplay` と `format` は同時に持てない（schema の `not` と Rust・TS）。
+- Symbol 定義の中の表のセルの `boolDisplay` は拒否する（状態の定義は機器種別の slot に従う。Text と同じ）。
+- `stateTarget` は `boolDisplay` も `stateColors` もないセルでは拒否する（schema の `dependentRequired` では「どちらか」を書けないので、Rust・TS で検査する）。
+- schemaVersion は据え置く。旧形式の読込・移行はない（足すだけなので旧形式はそのまま読める）。
+
+### 表示の規則
+
+- 画面の表で `boolDisplay` のあるセルは、画面直下の Text と同じ `presentScreenBool`（`evaluateSlotState` を bool の slot として使う）で文字と色を決める。Good の bit のタグは定義の文字と色、それ以外（未接続・未解決・Bad・Stale・数値型のタグ）は理由の文字と `unknownColor`。直前の色・false の色を代用しない。SIM は前置する。
+- 色の使い先:
+  - `stateTarget` がない・`"text"`: 状態の色を文字色にする（今の `stateColors` と同じ）。塗りはセルの `fill` のまま。
+  - `"fill"`: 状態の色をセルの塗りにし、文字色は状態に関わらず固定（`配置の単色 ?? セルの color ?? 配置の fill`）。既知で色のない状態（slot の状態の定義に色がない）はセルの `fill`（なければ塗らない）に戻す。取得不能は `unknownColor` で塗る。
+- 単色の Symbol 配置の中では、塗りに使う状態の色も定義の色のまま残す（今の「塗りは単色にしない」規則と同じ。状態が見分けられなくならないように）。
+- Symbol 定義の中の表のセル（`slotBinding`＋`stateColors`）は、`stateTarget` だけを足す。色は今の `slotStateColor` のまま。
+- `boolDisplay` のあるセルは `data-table-cell-state` に `presentScreenBool` の状態（既知なら `true`／`false`、不明ならその理由）を出し、`<title>` の状態名も不明ならその理由にする（Good の数値タグでも「Good」と出さず「型不一致」）。塗りに使ったセルは `data-table-cell-state-fill` を持つ。
+
+### 編集
+
+決めること 3（入口）: 状態の文字と色はタブ区切りに乗せにくい（1 セルに 5 値）ので、Inspector に「セルの状態表示」の欄を足し、セルを選んで編集する。
+
+- 「セル」の選択肢は、画面の表なら `binding` のあるセル、Symbol 定義の表なら `slotBinding` のあるセル（「行:列 · タグ名／slot 名」、1 始まりで表示）。該当のセルがなければ欄を出さない。
+- 画面の表: Text の「bool の表示」と同じ部品（`BoolDisplay.svelte`）で、使う／使わない、true／false の文字と色、取得不能の色。使うにすると、そのセルの書式は消える（同時に持てないため。欄に注記する）。
+- 「状態の色の使い先」: 文字／塗り。画面の表は bool の表示を使うセル、Symbol 定義の表は取得不能の色のあるセル（`stateColors`）でだけ選べる。
+- 今の欄と同じく「変更を適用」で他の欄と一緒に 1 履歴にする。タブ区切りの「セルのタグ」でタグを外したセル、「セルの取得不能の色」を消したセルは、同じ適用で `boolDisplay`・`stateTarget` も外す。
+- 実装での決め: 書式とbool の表示の両方を持つセルは適用で拒否する（「セルの書式のN行M列はbool の表示を使うセルです…」。Text の「数値の書式を持つTextには bool の表示を設定できません」と同じく黙って捨てない）。代わりに「使う」を選んだ時点で、そのセルの書式を下書きから消す。状態の色の使い先の欄はセルごとに常に出し、使えないセル（bool の表示を使わない・取得不能の色がない）では適用で外す。使い先の「文字」は既定なので `stateTarget` を保存しない（保存済みの `"text"` も適用で外れる）。
+
+### 検証
+
+- 契約（第1段）: `examples/table-cases.json` の `screen table with bool display cells`・`symbol table with a state colored cell painted to fill`（受理）、`bool display without binding in a cell`・`bool display with format in a cell`・`bool display cell inside a symbol definition`・`state target without bool display or state colors`・`unknown state target value`（拒否）。Rust `shared_table_contract` と TS `table.test.ts` が読む。
+- 表示（第1段）: `table-cell-slot.test.ts` の `tableCellView`（bool の文字と色、文字への適用、塗りへの適用と単色の配置、取得不能・型不一致・未接続、Symbol の slot のセルの塗りと既知で色なしの戻り）。e2e `table.spec.ts` の `bool table cells change text, text color and fill by bit in light／dark`（4 行 × 2 列の小表が true／false／未解決で文字・文字色・塗りを変える）と `slot-bound table cells in a Symbol show the state text, colors and numbers`（`stateTarget: "fill"` のセルが機器ごとに違う色で塗られる）。
+- Inspector（第2段）: `table.test.ts` の `table cell states in the Inspector`（選択肢の作り方、他の欄の適用で bool の表示・使い先を保つ、編集の適用・使わない・タグを外したセルからの除去・行列が減ったときの位置の対応、書式との同時指定の拒否と書式の消去、Symbol 定義の表で取得不能の色を消したセルからの使い先の除去と不正値の拒否）。e2e `table.spec.ts` の `the Inspector sets a bool display painted to a table cell's fill`（セルを選んで bool の表示と塗りを設定 → 書式が消える → 適用・保存の形 → 表示プレビューで文字と塗りが bit で変わる）と `the Inspector sets where a Symbol table cell's state color goes`（Symbol 定義の表で使い先を塗りにして保存）。
+
+### 対象外（この Issue）
+
+- 数値のしきい値によるセルの色（#304 と合わせて考える）、画面直下の多値（ワード）の状態、点滅（#310）、セルの結合・セルごとの文字揃え。
+- 決めること 4: 表のセルを状態色の配色元（`stateColor` の追従元）にすること（下の後続のまま）。
+
 ## 後続・未対応
 
 - Symbol 定義の中の表のセルを状態色の配色元（`stateColor` の追従元）にすることはできない（配色元は Text だけ）。

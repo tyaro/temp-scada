@@ -544,7 +544,29 @@ impl Project {
                     }) {
                         return Err("表のセルの書式はタグかslotのあるセルだけに付けられます".into());
                     }
+                    if table_cells().any(|cell| {
+                        cell.get("boolDisplay").is_some()
+                            && (cell.get("binding").is_none() || cell.get("format").is_some())
+                    }) {
+                        return Err(
+                            "表のセルのbool表示はタグのあるセルだけに付けられ、書式と同時に持てません"
+                                .into(),
+                        );
+                    }
+                    if table_cells().any(|cell| {
+                        cell.get("stateTarget").is_some()
+                            && cell.get("boolDisplay").is_none()
+                            && cell.get("stateColors").is_none()
+                    }) {
+                        return Err(
+                            "状態の色の使い先はbool表示か状態の色のあるセルだけに付けられます"
+                                .into(),
+                        );
+                    }
                     let in_symbol = symbols.contains(screen["id"].as_str().unwrap());
+                    if in_symbol && table_cells().any(|cell| cell.get("boolDisplay").is_some()) {
+                        return Err("Symbol 定義内の表のセルにはbool表示を設定できません".into());
+                    }
                     if in_symbol && table_cells().any(|cell| cell.get("binding").is_some()) {
                         return Err("Symbol 定義内の直接タグ割り当てには対応していません".into());
                     }

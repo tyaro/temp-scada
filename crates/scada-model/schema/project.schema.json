@@ -509,13 +509,21 @@
                         "binding": { "$ref": "#/$defs/tableCellBinding" },
                         "format": { "$ref": "#/$defs/numericFormat" },
                         "slotBinding": { "$ref": "#/$defs/slotBinding" },
-                        "stateColors": { "$ref": "#/$defs/stateTextColors" }
+                        "stateColors": { "$ref": "#/$defs/stateTextColors" },
+                        "boolDisplay": { "$ref": "#/$defs/textBoolDisplay" },
+                        "stateTarget": { "enum": ["text", "fill"] }
                       },
                       "required": ["text"],
                       "dependentRequired": {
-                        "stateColors": ["slotBinding"]
+                        "stateColors": ["slotBinding"],
+                        "boolDisplay": ["binding"]
                       },
-                      "not": { "required": ["binding", "slotBinding"] },
+                      "not": {
+                        "anyOf": [
+                          { "required": ["binding", "slotBinding"] },
+                          { "required": ["boolDisplay", "format"] }
+                        ]
+                      },
                       "additionalProperties": false
                     }
                   }

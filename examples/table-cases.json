@@ -1099,6 +1099,249 @@
     }
   },
   {
+    "name": "screen table with bool display cells",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000860",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1, 1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": { "externalName": "Demo.Running" },
+              "boolDisplay": {
+                "true": { "text": "運転", "color": "#16a34a" },
+                "false": { "text": "停止", "color": "#334155" },
+                "unknownColor": "#d97706"
+              },
+              "stateTarget": "fill"
+            },
+            {
+              "text": "",
+              "binding": { "externalName": "Demo.Running" },
+              "boolDisplay": {
+                "true": { "text": "ON", "color": "#16a34a" },
+                "false": { "text": "OFF", "color": "#334155" },
+                "unknownColor": "#d97706"
+              },
+              "stateTarget": "text"
+            }
+          ]
+        ],
+        "style": { "fontSize": 14, "fontWeight": "normal", "align": "center" }
+      }
+    }
+  },
+  {
+    "name": "symbol table with a state colored cell painted to fill",
+    "target": "/symbols/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000861",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "slotBinding": { "slotName": "running" },
+              "stateColors": { "unknownColor": "#64748b" },
+              "stateTarget": "fill"
+            }
+          ]
+        ],
+        "style": { "fontSize": 14, "fontWeight": "normal", "align": "center" }
+      }
+    }
+  },
+  {
+    "name": "bool display without binding in a cell",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000862",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "boolDisplay": {
+                "true": { "text": "運転", "color": "#16a34a" },
+                "false": { "text": "停止", "color": "#334155" },
+                "unknownColor": "#d97706"
+              }
+            }
+          ]
+        ],
+        "style": { "fontSize": 14, "fontWeight": "normal", "align": "center" }
+      }
+    }
+  },
+  {
+    "name": "bool display with format in a cell",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000863",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": { "externalName": "Demo.Running" },
+              "format": { "decimals": 1 },
+              "boolDisplay": {
+                "true": { "text": "運転", "color": "#16a34a" },
+                "false": { "text": "停止", "color": "#334155" },
+                "unknownColor": "#d97706"
+              }
+            }
+          ]
+        ],
+        "style": { "fontSize": 14, "fontWeight": "normal", "align": "center" }
+      }
+    }
+  },
+  {
+    "name": "bool display cell inside a symbol definition",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000864",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": { "externalName": "Demo.Running" },
+              "boolDisplay": {
+                "true": { "text": "運転", "color": "#16a34a" },
+                "false": { "text": "停止", "color": "#334155" },
+                "unknownColor": "#d97706"
+              }
+            }
+          ]
+        ],
+        "style": { "fontSize": 14, "fontWeight": "normal", "align": "center" }
+      }
+    }
+  },
+  {
+    "name": "state target without bool display or state colors",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000865",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": { "externalName": "Demo.Running" },
+              "stateTarget": "fill"
+            }
+          ]
+        ],
+        "style": { "fontSize": 14, "fontWeight": "normal", "align": "center" }
+      }
+    }
+  },
+  {
+    "name": "unknown state target value",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-000000000866",
+      "order": 900,
+      "x": 10,
+      "y": 10,
+      "width": 240,
+      "height": 60,
+      "rotation": 0,
+      "fill": "#e5e7eb",
+      "shape": {
+        "type": "table",
+        "columns": [1],
+        "rows": [1],
+        "cells": [
+          [
+            {
+              "text": "",
+              "binding": { "externalName": "Demo.Running" },
+              "boolDisplay": {
+                "true": { "text": "運転", "color": "#16a34a" },
+                "false": { "text": "停止", "color": "#334155" },
+                "unknownColor": "#d97706"
+              },
+              "stateTarget": "border"
+            }
+          ]
+        ],
+        "style": { "fontSize": 14, "fontWeight": "normal", "align": "center" }
+      }
+    }
+  },
+  {
     "name": "empty external name in a cell",
     "target": "/screens/0/objects",
     "valid": false,

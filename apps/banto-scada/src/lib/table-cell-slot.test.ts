@@ -7,7 +7,9 @@ import {
   type SlotPresentation,
   type SlotValue,
 } from "./slot-presentation";
-import { tableCellSlotView } from "./table-cell-slot";
+import { presentScreenBool } from "./screen-bool-display";
+import { tableCellSlotView, tableCellView } from "./table-cell-slot";
+import type { NumericReading, TagReadings } from "./tag-presentation";
 
 const provenance: SlotProvenance = {
   catalogRevision: 3,
@@ -110,5 +112,155 @@ describe("tableCellSlotView", () => {
     expect(view.text).toBe("12.3 A");
     expect(view.state).toBe("good");
     expect(view.stateColor).toBeUndefined();
+  });
+});
+
+describe("tableCellView", () => {
+  const TEXT = "#111827";
+  const boolCell = (stateTarget?: "text" | "fill"): TableCell => ({
+    text: "",
+    fill: "#f1f5f9",
+    color: "#0f172a",
+    binding: { externalName: "pump1_run" },
+    boolDisplay: { true: run, false: stop, unknownColor: UNKNOWN },
+    ...(stateTarget ? { stateTarget } : {}),
+  });
+  const bit = (value: boolean): NumericReading => ({
+    state: "resolved",
+    quality: "good",
+    numericValue: null,
+    boolValue: value,
+  });
+  const readings = (reading?: NumericReading): TagReadings =>
+    new Map(reading ? [["pump1_run", reading]] : []);
+
+  it("keeps a plain cell's text and colors", () => {
+    expect(
+      tableCellView({ text: "固定", fill: "#eeeeee" }, { textColor: TEXT }),
+    ).toEqual({
+      text: "固定",
+      state: undefined,
+      title: undefined,
+      textFill: TEXT,
+      rectFill: "#eeeeee",
+      stateFill: false,
+    });
+  });
+  it("shows a bit's bool text and puts its color on the text by default", () => {
+    for (const target of [undefined, "text"] as const) {
+      const view = tableCellView(boolCell(target), {
+        readings: readings(bit(true)),
+        textColor: TEXT,
+      });
+      expect(view).toMatchObject({
+        text: "運転",
+        state: "true",
+        textFill: run.color,
+        rectFill: "#f1f5f9",
+        stateFill: false,
+      });
+    }
+    expect(
+      tableCellView(boolCell(), {
+        readings: readings(bit(false)),
+        textColor: TEXT,
+      }),
+    ).toMatchObject({ text: "停止", state: "false", textFill: stop.color });
+  });
+  it("paints the state color as the fill with a fixed text color", () => {
+    const on = tableCellView(boolCell("fill"), {
+      readings: readings(bit(true)),
+      textColor: TEXT,
+    });
+    expect(on).toMatchObject({
+      text: "運転",
+      textFill: "#0f172a",
+      rectFill: run.color,
+      stateFill: true,
+    });
+    const off = tableCellView(boolCell("fill"), {
+      readings: readings(bit(false)),
+      textColor: TEXT,
+      color: "#ff0000",
+    });
+    // A monochrome Symbol color only fixes the text; the fill keeps the state.
+    expect(off).toMatchObject({ textFill: "#ff0000", rectFill: stop.color });
+  });
+  it("paints the unknown color for an unresolved or number tag", () => {
+    const unresolved = tableCellView(boolCell("fill"), {
+      readings: readings({ state: "unresolved" }),
+      textColor: TEXT,
+    });
+    expect(unresolved).toMatchObject({
+      text: presentScreenBool(boolCell().boolDisplay!, {
+        state: "unresolved",
+      }).text,
+      state: "unresolved",
+      textFill: "#0f172a",
+      rectFill: UNKNOWN,
+    });
+    const number = tableCellView(boolCell(), {
+      readings: readings({
+        state: "resolved",
+        quality: "good",
+        numericValue: 1,
+      }),
+      textColor: TEXT,
+    });
+    expect(number).toMatchObject({
+      state: "typeMismatch",
+      textFill: UNKNOWN,
+      rectFill: "#f1f5f9",
+    });
+    // A Good number tag is not a Good bool: the tooltip says why, not "Good".
+    expect(number.title).toMatch(/ · 型不一致$/);
+    expect(unresolved.title).toMatch(
+      new RegExp(` · ${slotPresentation("unresolved").label}$`),
+    );
+    expect(tableCellView(boolCell(), { textColor: TEXT }).state).toBe(
+      "disconnected",
+    );
+  });
+  it("paints a symbol slot cell's state color and falls back to the cell fill without one", () => {
+    const cell: TableCell = {
+      ...stateCell,
+      fill: "#e2e8f0",
+      stateTarget: "fill",
+    };
+    const on = tableCellView(cell, {
+      slots: () => ({
+        display: good({ type: "bool", value: true }, "true"),
+        slot: boolSlot,
+      }),
+      textColor: TEXT,
+    });
+    expect(on).toMatchObject({
+      rectFill: run.color,
+      textFill: TEXT,
+      stateFill: true,
+    });
+    const uncolored = tableCellView(cell, {
+      slots: () => ({
+        display: good({ type: "bool", value: true }, "true"),
+        slot: { name: "running", type: "bool", direction: "read" },
+      }),
+      textColor: TEXT,
+    });
+    expect(uncolored).toMatchObject({ rectFill: "#e2e8f0", stateFill: true });
+    const unbound = tableCellView(cell, { textColor: TEXT });
+    expect(unbound).toMatchObject({ rectFill: UNKNOWN, textFill: TEXT });
+  });
+  it("ignores the state target on a slot cell without state colors", () => {
+    const view = tableCellView(
+      { text: "", fill: "#e2e8f0", slotBinding: { slotName: "current" } },
+      {
+        slots: () => ({
+          display: slotPresentation("unbound"),
+          slot: numberSlot,
+        }),
+        textColor: TEXT,
+      },
+    );
+    expect(view.stateFill).toBe(false);
   });
 });
