@@ -14,6 +14,7 @@ import {
   reasonText,
   SENDING_TEXT,
   UNRECORDED_TEXT,
+  type OperationView,
 } from "./operation";
 
 const SCREEN = "0199d301-0000-7000-8000-000000000001";
@@ -262,4 +263,41 @@ it("has a text for every host reason code and names an unknown code", async () =
     expect(reasonText(code), code).not.toMatch(/^不明な理由/);
   expect(reasonText("from_the_future")).toBe("不明な理由（from_the_future）");
   expect(reasonText("toString")).toBe("不明な理由（toString）");
+});
+
+it("types the host's operation_view answer as it is on the wire", () => {
+  // The JSON of the host test the_view_lists_the_write_slots_with_their_last_requests
+  // (auditId is Rust Option<i64>) and of the answer without an applied Project.
+  const found = {
+    projectId: "p",
+    projectDigest: "d",
+    blocked: null,
+    phase: "initializing",
+    slots: [
+      {
+        slot: "command",
+        latest: {
+          id: "0199d301-0000-7000-8000-0000000000aa",
+          state: "finished",
+          outcome: "ok",
+          reason: null,
+          requestedAtMs: 1,
+          finishedAtMs: 2,
+          tag: "PUMP.CMD",
+          value: false,
+          auditId: 42,
+        },
+      },
+      { slot: "speedSp", latest: null },
+    ],
+  } satisfies OperationView;
+  const noProject = {
+    projectId: null,
+    projectDigest: null,
+    blocked: "project_changed",
+    phase: "initializing",
+    slots: [],
+  } satisfies OperationView;
+  expect(typeof found.slots[0].latest?.auditId).toBe("number");
+  expect(noProject.projectId).toBeNull();
 });
