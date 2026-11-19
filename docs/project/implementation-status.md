@@ -12,6 +12,8 @@ GitHub Pages のデモ（2026-11-18）: ブラウザだけで動くデモの土�
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
+Runtime mode（2026-11-19、[設計](../design/runtime/runtime-mode-design.md) §9）: O0a（host の mode・窓・capability・`runtime_*`・単一起動）と O0b-1（webview の入口）を実装した。`--runtime <Project>` の窓は `runtime.html` で、起動時の Project の運転表示と上端（Hub の状態・ログイン・警報の定義の適用状態・2 つ目の起動の知らせ）だけを出し、Editor の画面・キー操作の経路を持たない。読めない Project はファイル名と理由だけを出す。IPC を模した `e2e/runtime-mode.spec.ts` で確認した。Tauri の実窓での受入は未確認。残り O0b-2: 上端の警報一覧の窓・履歴トレンドの窓・記録の状態の入口。
+
 ## 実Hub・S7接続の着手方針（2026-11-05）
 
 サイドチャットの[実Hub・S7接続計画](real-hub-connection-plan.md)を採用し、ユーザー申告によりSOAK終了待ちを外した。C0の上流契約・対象環境・接続条件確認とC1の通常App読取接続を実施した。ローカル編集はオフラインのまま、デスクトップだけがread専用の製品host・IPCを使う。運用時の認証・管理操作は後続で確定する。

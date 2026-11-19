@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import sample from "../../../../examples/read-presentation.project.json";
 import { parseProject } from "../lib/project";
-import { nativeSources } from "./sources";
+import { nativeReadSource, nativeSources, runtimeReadStart } from "./sources";
 
 const tauri = vi.hoisted(() => ({
   invoke: vi.fn(),
@@ -83,4 +83,22 @@ it("retires an in-flight start before starting the replacement", async () => {
     "hub_read_stop",
     "hub_read_start",
   ]);
+});
+
+it("starts a Runtime read without sending the Project", async () => {
+  const project = parseProject(JSON.stringify(sample));
+  nativeReadSource(runtimeReadStart).subscribe(project, () => ({
+    receive: vi.fn(),
+    close: vi.fn(),
+    fail: vi.fn(),
+  }));
+  await vi.waitFor(() =>
+    expect(tauri.invoke).toHaveBeenCalledWith("runtime_read_start", {
+      subscriptionId: expect.any(String),
+    }),
+  );
+  expect(tauri.invoke).not.toHaveBeenCalledWith(
+    "hub_read_start",
+    expect.anything(),
+  );
 });

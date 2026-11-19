@@ -45,7 +45,8 @@
     >;
     readings?: TagReadings;
     equipmentContext?: EquipmentContext;
-    onclose: () => void;
+    /** 運転表示を閉じる。Runtime の窓（窓いっぱいに出し、閉じない）では渡さない。 */
+    onclose?: () => void;
     onmessage: (message: string) => void;
     /** トレンドの配置から履歴の窓を開く（主画面・枠・画面の小窓のどれからでも）。 */
     onopentrend?: (screenId: string, objectId: string, token?: object) => void;
@@ -101,6 +102,7 @@
   }
   function escape(event: KeyboardEvent) {
     if (
+      !onclose ||
       event.key !== "Escape" ||
       event.defaultPrevented ||
       event.isComposing ||
@@ -160,6 +162,7 @@
 
 <div
   class="operator-view"
+  class:embedded={!onclose}
   bind:this={root}
   role="region"
   aria-label="運転表示"
@@ -177,7 +180,9 @@
           >アラーム一覧</button
         >{/if}
       <PreviewFullscreen scope="operator" onactive={() => {}} {onmessage} />
-      <button type="button" onclick={onclose}>運転表示を終了（Esc）</button>
+      {#if onclose}<button type="button" onclick={onclose}
+          >運転表示を終了（Esc）</button
+        >{/if}
     </div>
   </div>
   <div
@@ -205,7 +210,9 @@
       </div>
     {:else if !main}
       <p class="missing" role="status">
-        表示する画面が見つかりません。運転表示を終了してください。
+        表示する画面が見つかりません。{onclose
+          ? "運転表示を終了してください。"
+          : ""}
       </p>
     {/if}
     <PreviewPopups
@@ -232,6 +239,11 @@
     background: #000;
     color: #f8fafc;
     outline: none;
+  }
+  /* Runtime: fills its container below the top bar instead of the window. */
+  .operator-view.embedded {
+    position: absolute;
+    z-index: auto;
   }
   .operator-bar {
     display: flex;
