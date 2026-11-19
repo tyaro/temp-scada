@@ -1082,6 +1082,18 @@ async fn a_minimum_interval_out_of_range_or_off_its_step_changes_nothing() {
     log.set_min_interval(100).await.unwrap();
     log.set_min_interval(60_000).await.unwrap();
     assert_eq!(log.min_interval(), Duration::from_secs(60));
+    // The table refuses the same values (#324 owner's review).
+    for ms in [150, 99, 60_100] {
+        assert!(
+            sqlx::query("UPDATE terminal_settings SET min_interval_ms = ? WHERE id = 1")
+                .bind(ms)
+                .execute(&log.db().pool)
+                .await
+                .is_err(),
+            "{ms}"
+        );
+    }
+    assert_eq!(log.min_interval(), Duration::from_secs(60));
     log.close().await;
 }
 

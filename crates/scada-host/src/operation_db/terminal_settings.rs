@@ -16,7 +16,8 @@ pub const MIN_INTERVAL_STEP_MS: i64 = 100;
 /// The table, created with the record (format 4) or added to an older file.
 pub(super) const CREATE_TABLE: &str = "CREATE TABLE terminal_settings (
        id INTEGER PRIMARY KEY CHECK (id = 1),
-       min_interval_ms INTEGER NOT NULL CHECK (min_interval_ms BETWEEN 100 AND 60000)
+       min_interval_ms INTEGER NOT NULL
+         CHECK (min_interval_ms BETWEEN 100 AND 60000 AND min_interval_ms % 100 = 0)
      );";
 
 /// Whether `ms` may be saved as the minimum interval.

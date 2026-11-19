@@ -283,8 +283,9 @@ struct Fixture {
     project: scada_model::Project,
     read: RestClient,
     write: Arc<RestClient>,
-    /// `Duration::ZERO` unless a test checks the interval.
-    min_interval: Duration,
+    /// `Some(Duration::ZERO)` unless a test checks the interval; `None` is
+    /// the product's (the log's terminal setting).
+    min_interval: Option<Duration>,
     _dir: TempDir,
 }
 
@@ -316,7 +317,7 @@ impl Fixture {
             project: project(),
             read,
             write,
-            min_interval: Duration::ZERO,
+            min_interval: Some(Duration::ZERO),
             _dir: dir,
         }
     }
@@ -1295,7 +1296,7 @@ async fn a_refused_key_makes_later_writes_key_invalid() {
 #[tokio::test]
 async fn a_write_inside_the_minimum_interval_is_too_soon() {
     let mut fx = Fixture::new().await;
-    fx.min_interval = Duration::from_secs(60);
+    fx.min_interval = Some(Duration::from_secs(60));
     let command = button("command", 0, json!(true));
     assert_eq!(fx.run(&command).await.outcome, Outcome::Ok);
     assert_refused_after_send(&fx, &command, reason::TOO_SOON).await;
@@ -1303,7 +1304,31 @@ async fn a_write_inside_the_minimum_interval_is_too_soon() {
     // request comes.
     assert_eq!(fx.view().await.blocked, None);
     // With no interval the next write goes.
-    fx.min_interval = Duration::ZERO;
+    fx.min_interval = Some(Duration::ZERO);
+    assert_eq!(fx.run(&command).await.outcome, Outcome::Ok);
+}
+
+/// The product reads the terminal setting at the check (O2c-4b, #324
+/// owner's review): an interval saved while a write waits for the catalog
+/// applies to that write, which has not been checked yet.
+#[tokio::test]
+async fn an_interval_saved_while_a_write_waits_for_the_catalog_applies_to_it() {
+    let mut fx = Fixture::new().await;
+    fx.min_interval = None;
+    fx.log.set_min_interval(100).await.unwrap();
+    let command = button("command", 0, json!(true));
+    assert_eq!(fx.run(&command).await.outcome, Outcome::Ok);
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    let sent = fx.hub.writes().len();
+    let result = run_with_change_before_sending(&fx, &command, async {
+        fx.log.set_min_interval(60_000).await.unwrap();
+    })
+    .await;
+    assert_eq!(result.outcome, Outcome::Refused, "{result:?}");
+    assert_eq!(result.reason.as_deref(), Some(reason::TOO_SOON));
+    assert_eq!(fx.hub.writes().len(), sent);
+    // Back to the short interval, the next write goes.
+    fx.log.set_min_interval(100).await.unwrap();
     assert_eq!(fx.run(&command).await.outcome, Outcome::Ok);
 }
 
@@ -1339,7 +1364,7 @@ async fn a_key_of_another_hub_is_never_used() {
             read: Some(&fx.read),
             subscribed_revision: Some(REVISION),
             write: context.hub.write.clone(),
-            min_interval: Duration::ZERO,
+            min_interval: Some(Duration::ZERO),
             timeout: LONG,
         },
     })

@@ -129,9 +129,11 @@ pub struct HubAccess<'a> {
     /// The registered write key; `None` is `no_write_key`, one registered
     /// for another endpoint than `endpoint` is `hub_mismatch` (§7).
     pub write: Option<WriteKey>,
-    /// The minimum interval between sends (§7, [`MIN_WRITE_INTERVAL`] in
-    /// the product).
-    pub min_interval: Duration,
+    /// The minimum interval between sends (§7). `None` (the product) is the
+    /// terminal setting, read from the log at each check (5 and 6), so a
+    /// write not yet checked uses an interval saved while it waited for
+    /// the catalog (O2c-4b). `Some` fixes it (tests).
+    pub min_interval: Option<Duration>,
     /// The bound of the catalog and status fetches, the write's own for
     /// the write.
     pub timeout: Duration,
@@ -238,7 +240,7 @@ pub async fn operation_write(
     // 6. The `pending` row; `busy` when another write holds the send slot.
     let id = match context
         .log
-        .begin(&record, context.hub.min_interval, &key_id)
+        .begin(&record, min_interval(&context.hub, &context.log), &key_id)
         .await
     {
         Ok(id) => id,
@@ -393,11 +395,17 @@ async fn write_client(
     }
     let found = (key.client.clone(), key.id.clone());
     let min_interval = match interval {
-        Interval::Check => hub.min_interval,
+        Interval::Check => min_interval(hub, log),
         Interval::Skip => Duration::ZERO,
     };
     log.gate(min_interval).map_err(gate_reason)?;
     Ok(found)
+}
+
+/// The minimum interval at this check: the fixed one, or the terminal
+/// setting as the log has it now.
+fn min_interval(hub: &HubAccess<'_>, log: &OperationLog) -> Duration {
+    hub.min_interval.unwrap_or_else(|| log.min_interval())
 }
 
 /// The refusal code of a gate (§4-5).

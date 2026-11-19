@@ -228,7 +228,6 @@ pub async fn operation_write(
     };
     let endpoint = read_endpoint(&host);
     let write = operations.write_key(&log);
-    let min_interval = log.min_interval();
     let read = host.bootstrap.rest_client().ok().flatten();
     let context = OperationWrite {
         env: Arc::new(HostEnv {
@@ -241,7 +240,8 @@ pub async fn operation_write(
             endpoint,
             read: read.as_ref(),
             subscribed_revision: host.read_revision.get(),
-            min_interval,
+            // The terminal setting, read at the check (O2c-4b).
+            min_interval: None,
             write,
             timeout: WRITE_TIMEOUT,
         },
@@ -268,9 +268,6 @@ pub async fn operation_view(
     let read = host.bootstrap.rest_client().ok().flatten();
     let log = operations.log().ok();
     let write = log.as_deref().and_then(|log| operations.write_key(log));
-    let min_interval = log
-        .as_deref()
-        .map_or(Duration::ZERO, OperationLog::min_interval);
     let context = ViewContext {
         env: Arc::new(HostEnv {
             runtime: matches!(*mode, AppMode::Runtime { .. }),
@@ -282,7 +279,8 @@ pub async fn operation_view(
             endpoint: read_endpoint(&host),
             read: read.as_ref(),
             subscribed_revision: None,
-            min_interval,
+            // The terminal setting, read at the check (O2c-4b).
+            min_interval: None,
             write,
             timeout: VIEW_TIMEOUT,
         },
