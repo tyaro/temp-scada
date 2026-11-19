@@ -20,11 +20,12 @@ use crate::durable;
 mod tests;
 mod write_state;
 
-pub use write_state::{WriteState, WriteStatus};
+pub use write_state::{KeyRef, WriteState, WriteStatus};
 
-/// Format 2 added `terminal_write` (O2c-2); a format-1 file gets the table
+/// Format 2 added `terminal_write` (O2c-2), format 3 its write key
+/// (`key_endpoint`, `key_id`; O2c-3a); an older file is brought up to date
 /// when opened.
-const FORMAT: i64 = 2;
+const FORMAT: i64 = 3;
 const PENDING: &str = "pending";
 
 /// Identical refusals of a slot are one row for this long after the row's
@@ -187,6 +188,8 @@ pub struct OperationDb {
     pool: SqlitePool,
     /// The write state as the file had it when opened (§7).
     write_status: WriteStatus,
+    /// The registered write key when opened (§7).
+    key: Option<KeyRef>,
 }
 
 /// Finish a `pending` row; `InvalidRow` when it is not `pending`.
@@ -212,14 +215,14 @@ where
     }
 }
 
-/// Format 1 to 2: the write state's table (§7, O2c-2).
+/// Format 0 or 1 to 3: the write state's table (§7, O2c-2, O2c-3a).
 async fn add_write_state(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
 ) -> Result<(), OperationDbError> {
     sqlx::raw_sql(write_state::CREATE_TABLE)
         .execute(&mut **tx)
         .await?;
-    sqlx::raw_sql("PRAGMA user_version = 2;")
+    sqlx::raw_sql("PRAGMA user_version = 3;")
         .execute(&mut **tx)
         .await?;
     Ok(())
@@ -246,7 +249,7 @@ impl OperationDb {
         let version: i64 = sqlx::query_scalar("PRAGMA user_version")
             .fetch_one(&pool)
             .await?;
-        if version != 0 && version != 1 && version != FORMAT {
+        if !(0..=FORMAT).contains(&version) {
             pool.close().await;
             return Err(OperationDbError::UnsupportedFormat);
         }
@@ -291,9 +294,18 @@ impl OperationDb {
             .await?;
             add_write_state(&mut tx).await?;
             tx.commit().await?;
-        } else if version == 1 {
+        } else if version < FORMAT {
             let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-            add_write_state(&mut tx).await?;
+            if version == 1 {
+                add_write_state(&mut tx).await?;
+            } else {
+                sqlx::raw_sql(write_state::ADD_KEY)
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::raw_sql("PRAGMA user_version = 3;")
+                    .execute(&mut *tx)
+                    .await?;
+            }
             tx.commit().await?;
         }
         sqlx::query("PRAGMA journal_mode = WAL")
@@ -307,8 +319,15 @@ impl OperationDb {
         .execute(&pool)
         .await?
         .rows_affected();
-        let write_status = write_state::load(&pool).await?;
-        Ok((Self { pool, write_status }, recovered))
+        let (write_status, key) = write_state::load(&pool).await?;
+        Ok((
+            Self {
+                pool,
+                write_status,
+                key,
+            },
+            recovered,
+        ))
     }
 
     /// Run raw SQL against the record (tests make writes fail with it).
@@ -570,6 +589,8 @@ struct InFlight {
     /// When the last send slot was taken, on the monotonic clock (a wall
     /// clock that goes back must not hold writes back).
     last_begin: Option<Instant>,
+    /// The registered write key; `None` when no key is registered (§7).
+    key: Option<KeyRef>,
 }
 
 impl InFlight {
@@ -627,10 +648,12 @@ pub struct OperationLog {
 impl OperationLog {
     pub fn new(db: OperationDb) -> Self {
         let write = db.write_status;
+        let key = db.key.clone();
         Self {
             db,
             in_flight: Mutex::new(InFlight {
                 write,
+                key,
                 ..InFlight::default()
             }),
             state_lock: tokio::sync::Mutex::new(()),
@@ -652,18 +675,56 @@ impl OperationLog {
             .gate(min_interval)
     }
 
-    /// A write key was registered again (§7): any state becomes `ready`
-    /// once the file has it. Called by the key's registration (O2c-3).
-    pub async fn key_registered(&self, now_ms: i64) -> Result<(), OperationDbError> {
+    /// The Hub endpoint the write key was registered for (§7), `None`
+    /// when no key is registered.
+    pub fn key_endpoint(&self) -> Option<String> {
+        self.key().map(|key| key.endpoint)
+    }
+
+    /// The registered write key (§7).
+    pub fn key(&self) -> Option<KeyRef> {
+        self.in_flight
+            .lock()
+            .expect("operation log lock")
+            .key
+            .clone()
+    }
+
+    /// A write key was registered (§7): the key (endpoint and keyring
+    /// entry) replaces the previous one and any state becomes `ready`, once
+    /// the file has them in one statement. Called by
+    /// `operation_key::register` after the keyring took the secret under
+    /// the new entry.
+    pub async fn key_registered(&self, now_ms: i64, key: &KeyRef) -> Result<(), OperationDbError> {
         let _state = self.state_lock.lock().await;
-        write_state::save(&self.db.pool, WriteState::Ready, now_ms).await?;
+        write_state::save_key(&self.db.pool, WriteState::Ready, now_ms, Some(key)).await?;
         let mut in_flight = self.in_flight.lock().expect("operation log lock");
         in_flight.write = WriteStatus {
             state: WriteState::Ready,
             changed_at_ms: Some(now_ms),
         };
         in_flight.write_unsaved = false;
+        in_flight.key = Some(key.clone());
         Ok(())
+    }
+
+    /// The write key is being deleted (§7): the key is dropped once the file
+    /// has it, so no write finds a key even if the keyring still holds the
+    /// secret. The state is kept (a new key makes it `ready`). Returns the
+    /// key that was registered, whose keyring entry the caller removes.
+    pub async fn key_deleted(&self) -> Result<Option<KeyRef>, OperationDbError> {
+        let _state = self.state_lock.lock().await;
+        let status = self.write_status();
+        write_state::save_key(
+            &self.db.pool,
+            status.state,
+            status.changed_at_ms.unwrap_or_default(),
+            None,
+        )
+        .await?;
+        let mut in_flight = self.in_flight.lock().expect("operation log lock");
+        in_flight.write_unsaved = false;
+        Ok(in_flight.key.take())
     }
 
     /// Resume a stopped terminal (§7 「書込みを再開」): `stopped` becomes

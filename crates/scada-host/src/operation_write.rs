@@ -15,8 +15,8 @@
 //! `key_invalid`) and the minimum interval (`too_soon`) are the log's gate
 //! (§7, O2c-2), checked at step 5 and again when step 6 takes the slot.
 //!
-//! TODO(O2c-3): the write key's registration and its pairing with the Hub
-//! (`hub_mismatch`).
+//! The write key and its pairing with the Hub (`no_write_key`,
+//! `hub_mismatch`) come from `operation_key` (§7, O2c-3a).
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -29,6 +29,7 @@ use crate::auth_phase::{AuthHost, AuthPhase};
 use crate::operation_db::{
     BeginError, Finish, Gate, OperationDbError, OperationLog, Outcome, RequestRecord, INTERRUPTED,
 };
+use crate::operation_key::WriteKey;
 
 mod catalog;
 mod resolve;
@@ -72,6 +73,7 @@ pub mod reason {
     pub const TYPE_MISMATCH: &str = "type_mismatch";
     pub const HUB_UNSUPPORTED: &str = "hub_unsupported";
     pub const NO_WRITE_KEY: &str = "no_write_key";
+    pub const HUB_MISMATCH: &str = "hub_mismatch";
     pub const WRITE_STOPPED: &str = "write_stopped";
     pub const KEY_INVALID: &str = "key_invalid";
     pub const TOO_SOON: &str = "too_soon";
@@ -120,8 +122,9 @@ pub struct HubAccess<'a> {
     pub read: Option<&'a RestClient>,
     /// The catalog revision the terminal's subscription resolved against.
     pub subscribed_revision: Option<u64>,
-    /// The write-key client; `None` is `no_write_key` (§7).
-    pub write: Option<Arc<RestClient>>,
+    /// The registered write key; `None` is `no_write_key`, one registered
+    /// for another endpoint than `endpoint` is `hub_mismatch` (§7).
+    pub write: Option<WriteKey>,
     /// The minimum interval between sends (§7, [`MIN_WRITE_INTERVAL`] in
     /// the product).
     pub min_interval: Duration,
@@ -366,7 +369,7 @@ enum Interval {
 
 /// Step 5: the Hub's write contract, the write key and the terminal's gate
 /// (§7: the write state, then the minimum interval). Shared by the write
-/// and the view. TODO(O2c-3): `hub_mismatch`.
+/// and the view.
 async fn write_client(
     hub: &HubAccess<'_>,
     log: &OperationLog,
@@ -375,7 +378,11 @@ async fn write_client(
     if !write_contract_confirmed(hub).await {
         return Err(reason::HUB_UNSUPPORTED);
     }
-    let client = hub.write.clone().ok_or(reason::NO_WRITE_KEY)?;
+    let key = hub.write.as_ref().ok_or(reason::NO_WRITE_KEY)?;
+    if hub.endpoint.as_deref() != Some(key.endpoint.as_str()) {
+        return Err(reason::HUB_MISMATCH);
+    }
+    let client = key.client.clone();
     let min_interval = match interval {
         Interval::Check => hub.min_interval,
         Interval::Skip => Duration::ZERO,

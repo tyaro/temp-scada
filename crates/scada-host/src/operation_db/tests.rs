@@ -147,7 +147,7 @@ async fn reopening_finishes_rows_an_earlier_process_left_pending() {
 async fn a_file_of_another_format_is_refused_without_changing_it() {
     // A file of a later format, and a foreign SQLite file without our
     // version, both in rollback-journal mode.
-    for setup in ["PRAGMA user_version = 3", "CREATE TABLE foreign_data (x)"] {
+    for setup in ["PRAGMA user_version = 4", "CREATE TABLE foreign_data (x)"] {
         let file = temp_file();
         let mut connection = <sqlx::sqlite::SqliteConnection as sqlx::Connection>::connect_with(
             &SqliteConnectOptions::new()
@@ -594,6 +594,13 @@ async fn a_fold_that_cannot_be_written_is_an_error() {
     log.close().await;
 }
 
+fn key_ref(id: &str) -> KeyRef {
+    KeyRef {
+        endpoint: "http://127.0.0.1:8722".into(),
+        id: id.into(),
+    }
+}
+
 fn hub_error(outcome: Outcome, kind: ErrorKind, at: i64) -> Finish {
     Finish {
         outcome,
@@ -666,7 +673,7 @@ async fn a_refused_key_is_cleared_only_by_registering_it_again() {
     assert_eq!(log.gate(Duration::ZERO), Err(Gate::KeyInvalid));
     assert!(!log.resume(2_100).await.unwrap());
     assert_eq!(log.write_status().state, WriteState::KeyInvalid);
-    log.key_registered(2_200).await.unwrap();
+    log.key_registered(2_200, &key_ref("k1")).await.unwrap();
     assert_eq!(log.gate(Duration::ZERO), Ok(()));
     // Other outcomes leave the state alone.
     for finish in [
@@ -794,9 +801,70 @@ async fn a_format_1_file_gets_the_write_state_and_keeps_its_rows() {
         .fetch_one(&db.pool)
         .await
         .unwrap();
-    assert_eq!(version, 2);
+    assert_eq!(version, 3);
     let log = OperationLog::new(db);
     assert_eq!(log.write_status(), WriteStatus::default());
+    assert_eq!(log.key_endpoint(), None);
     assert!(log.db().row(&id).await.unwrap().is_some());
+    log.close().await;
+}
+
+#[tokio::test]
+async fn a_format_2_file_gets_the_key_endpoint_and_keeps_its_state() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let request = request("command");
+    let id = log.begin(&request, Duration::ZERO).await.unwrap();
+    log.complete(
+        &id,
+        hub_error(Outcome::Stopped, ErrorKind::KeyTripped, 2_000),
+    )
+    .await
+    .unwrap();
+    // Back to format 2: the table without `key_endpoint`.
+    log.db()
+        .execute_for_test(
+            "ALTER TABLE terminal_write DROP COLUMN key_endpoint; ALTER TABLE terminal_write DROP COLUMN key_id; PRAGMA user_version = 2;",
+        )
+        .await;
+    log.close().await;
+
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    assert_eq!(log.write_status().state, WriteState::Stopped);
+    assert_eq!(log.key_endpoint(), None);
+    log.key_registered(3_000, &key_ref("k1")).await.unwrap();
+    log.close().await;
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    assert_eq!(log.key(), Some(key_ref("k1")));
+    assert_eq!(log.write_status().state, WriteState::Ready);
+    log.close().await;
+}
+
+#[tokio::test]
+async fn a_deleted_key_keeps_the_state_and_drops_the_endpoint() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    log.key_registered(1_000, &key_ref("k1")).await.unwrap();
+    let request = request("command");
+    let id = log.begin(&request, Duration::ZERO).await.unwrap();
+    log.complete(
+        &id,
+        hub_error(Outcome::Stopped, ErrorKind::KeyTripped, 2_000),
+    )
+    .await
+    .unwrap();
+    // A trip keeps the key's endpoint.
+    assert_eq!(log.key_endpoint().as_deref(), Some("http://127.0.0.1:8722"));
+    assert_eq!(log.key_deleted().await.unwrap(), Some(key_ref("k1")));
+    assert_eq!(log.key_endpoint(), None);
+    log.close().await;
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    assert_eq!(log.key_endpoint(), None);
+    assert_eq!(log.write_status().state, WriteState::Stopped);
     log.close().await;
 }

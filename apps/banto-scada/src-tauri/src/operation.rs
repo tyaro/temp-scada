@@ -21,8 +21,8 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use scada_host::alarm_service::RestClient;
 use scada_host::operation_db::{OperationDb, OperationLog, Outcome};
+use scada_host::operation_key::WriteKey;
 use scada_host::operation_write::{
     self, check_shape, reason, HubAccess, OperationEnv, OperationView, OperationViewRequest,
     OperationWrite, OperationWriteRequest, ViewContext, WriteResult, MIN_WRITE_INTERVAL,
@@ -40,8 +40,9 @@ use crate::NativeHost;
 /// that does not answer delays the faceplate's 2-second poll little.
 const VIEW_TIMEOUT: Duration = Duration::from_secs(3);
 
-/// The write key (O2c); none yet, so `no_write_key` behind the contract.
-fn write_key() -> Option<Arc<RestClient>> {
+/// The write key (O2c-3b registers it); none yet, so `no_write_key`
+/// behind the contract.
+fn write_key() -> Option<WriteKey> {
     None
 }
 
