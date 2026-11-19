@@ -430,10 +430,13 @@ async fn a_dropped_begin_frees_the_send_slot() {
     let request = request("command");
     {
         let mut begin = Box::pin(log.begin(&request));
-        // The SQLite worker answers on another thread: the first poll waits.
+        // Hold the pool's only connection, so the INSERT surely waits.
+        let held = log.db().pool.acquire().await.unwrap();
         let first = futures_util::poll!(begin.as_mut());
         assert!(first.is_pending());
         assert!(log.in_flight.lock().unwrap().sending.is_some());
+        drop(begin);
+        drop(held);
     }
     assert!(log.in_flight.lock().unwrap().sending.is_none());
     log.begin(&request).await.unwrap();
