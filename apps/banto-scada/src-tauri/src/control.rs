@@ -4,6 +4,7 @@
 //! stop and the owner rebind; and the exit sequence (§6). Thin adapters
 //! only: the behavior is `scada_host::recording_control`, tested there with
 //! plain `cargo test`.
+use crate::app_mode::{AppMode, Guarded};
 use crate::auth::AuthState;
 use crate::NativeHost;
 use scada_host::recording_control::{self, ControlError};
@@ -20,12 +21,14 @@ fn project(project_json: &str) -> Result<Project, ControlError> {
 /// The RecordingManagementContext v1 of this host for the Project (Viewer).
 #[tauri::command]
 pub async fn recording_context(
+    mode: State<'_, AppMode>,
     auth: State<'_, AuthState>,
     runtime: State<'_, RecordingRuntime>,
     project_json: String,
-) -> Result<Value, ControlError> {
+) -> Result<Value, Guarded<ControlError>> {
+    mode.require_editor()?;
     let project = project(&project_json)?;
-    recording_control::context(auth.get()?, &runtime, &project).await
+    Ok(recording_control::context(auth.get()?, &runtime, &project).await?)
 }
 
 /// One RecordingInspectionResponse v1 for `request` (Viewer).
@@ -44,15 +47,17 @@ pub async fn recording_status(
 /// recording (design §8-6).
 #[tauri::command]
 pub async fn recording_initial_setup(
+    mode: State<'_, AppMode>,
     auth: State<'_, AuthState>,
     runtime: State<'_, RecordingRuntime>,
     native: State<'_, NativeHost>,
     project_json: String,
-) -> Result<Value, ControlError> {
+) -> Result<Value, Guarded<ControlError>> {
+    mode.require_editor()?;
     let project = project(&project_json)?;
     let client = || native.bootstrap.rest_client().ok().flatten();
     let clients = client().zip(client());
-    recording_control::initial_setup(auth.get()?, &runtime, &project, clients).await
+    Ok(recording_control::initial_setup(auth.get()?, &runtime, &project, clients).await?)
 }
 
 /// Resume the plan the store has applied (Admin), after the registry's
@@ -61,15 +66,17 @@ pub async fn recording_initial_setup(
 /// recording each take a new client of the saved Hub.
 #[tauri::command]
 pub async fn recording_resume(
+    mode: State<'_, AppMode>,
     auth: State<'_, AuthState>,
     runtime: State<'_, RecordingRuntime>,
     native: State<'_, NativeHost>,
     project_json: String,
-) -> Result<Value, ControlError> {
+) -> Result<Value, Guarded<ControlError>> {
+    mode.require_editor()?;
     let project = project(&project_json)?;
     let client = || native.bootstrap.rest_client().ok().flatten();
     let clients = client().zip(client());
-    recording_control::resume(auth.get()?, &runtime, &project, clients).await
+    Ok(recording_control::resume(auth.get()?, &runtime, &project, clients).await?)
 }
 
 /// Apply the Project's recording plan while recording is stopped and no
@@ -77,14 +84,16 @@ pub async fn recording_resume(
 /// when the plan's members need a new mapping.
 #[tauri::command]
 pub async fn recording_reconfigure(
+    mode: State<'_, AppMode>,
     auth: State<'_, AuthState>,
     runtime: State<'_, RecordingRuntime>,
     native: State<'_, NativeHost>,
     project_json: String,
-) -> Result<Value, ControlError> {
+) -> Result<Value, Guarded<ControlError>> {
+    mode.require_editor()?;
     let project = project(&project_json)?;
     let client = native.bootstrap.rest_client().ok().flatten();
-    recording_control::reconfigure(auth.get()?, &runtime, &project, client).await
+    Ok(recording_control::reconfigure(auth.get()?, &runtime, &project, client).await?)
 }
 
 /// The registry slot (Viewer): `{"state": "installed", "generation",
@@ -101,10 +110,12 @@ pub async fn recording_slot(
 /// is handed off first; while it is unsettled the stop is `busy`.
 #[tauri::command]
 pub async fn recording_stop(
+    mode: State<'_, AppMode>,
     auth: State<'_, AuthState>,
     runtime: State<'_, RecordingRuntime>,
-) -> Result<Value, ControlError> {
-    recording_control::stop(auth.get()?, &runtime).await
+) -> Result<Value, Guarded<ControlError>> {
+    mode.require_editor()?;
+    Ok(recording_control::stop(auth.get()?, &runtime).await?)
 }
 
 /// Give the running recording a new root whose operations context is the
@@ -112,12 +123,14 @@ pub async fn recording_stop(
 /// not stopped; an unsettled root is `busy`.
 #[tauri::command]
 pub async fn recording_owner_rebind(
+    mode: State<'_, AppMode>,
     auth: State<'_, AuthState>,
     runtime: State<'_, RecordingRuntime>,
     project_json: String,
-) -> Result<Value, ControlError> {
+) -> Result<Value, Guarded<ControlError>> {
+    mode.require_editor()?;
     let project = project(&project_json)?;
-    recording_control::owner_rebind(auth.get()?, &runtime, &project).await
+    Ok(recording_control::owner_rebind(auth.get()?, &runtime, &project).await?)
 }
 
 /// How long the exit waits for the recording to stop (design §8-3). Past

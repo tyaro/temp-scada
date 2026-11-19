@@ -1,0 +1,442 @@
+//! The mode boundary (Runtime mode design §4, §5, §9 O0a):
+//!
+//! - the one command list against `generate_handler!` and the two
+//!   capabilities, and the invariants of `runtime.json`;
+//! - the host's own check: in Runtime mode every Editor-only command is
+//!   refused with `"editorOnly"` before it touches anything (through the IPC
+//!   of a mock app, where capabilities are not enforced);
+//! - the ACL of the real capabilities by window label
+//!   (`tauri::generate_context!()`).
+use super::*;
+use crate::app_mode::AppMode;
+use crate::command_list::{BOTH, EDITOR_ONLY, RUNTIME_ONLY};
+use banto_hub_bootstrap::state::memory::{MemoryKeyStore, MemoryState};
+use serde_json::{json, Value};
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
+use tauri::ipc::{CallbackFn, InvokeBody};
+use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, INVOKE_KEY};
+use tauri::webview::{InvokeRequest, WebviewWindow};
+use tauri::{test::MockRuntime, App, WebviewWindowBuilder};
+
+const CORE: [&str; 3] = [
+    "core:default",
+    "core:event:default",
+    "core:window:allow-set-title",
+];
+
+fn manifest(path: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join(path)
+}
+
+/// The commands of `generate_handler!` in `main.rs`, without module paths.
+fn handler_commands() -> Vec<String> {
+    let source = std::fs::read_to_string(manifest("src/main.rs")).unwrap();
+    let start = source
+        .find("generate_handler![")
+        .expect("generate_handler!")
+        + 18;
+    let end = start + source[start..].find(']').unwrap();
+    source[start..end]
+        .split(',')
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .map(|name| name.rsplit("::").next().unwrap().to_owned())
+        .collect()
+}
+
+fn all_listed() -> Vec<&'static str> {
+    EDITOR_ONLY
+        .iter()
+        .chain(BOTH)
+        .chain(RUNTIME_ONLY)
+        .copied()
+        .collect()
+}
+
+fn allow(names: &[&str]) -> BTreeSet<String> {
+    names
+        .iter()
+        .map(|name| format!("allow-{}", name.replace('_', "-")))
+        .collect()
+}
+
+fn capability(name: &str) -> Value {
+    let path = manifest(&format!("capabilities/{name}.json"));
+    serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
+}
+
+fn permissions(capability: &Value) -> Vec<String> {
+    capability["permissions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|permission| permission.as_str().expect("plain permission").to_owned())
+        .collect()
+}
+
+#[test]
+fn the_command_list_is_generate_handler_without_gaps_or_duplicates() {
+    let listed = all_listed();
+    let unique: BTreeSet<&str> = listed.iter().copied().collect();
+    assert_eq!(unique.len(), listed.len(), "a command is listed twice");
+    let handlers = handler_commands();
+    let registered: BTreeSet<&str> = handlers.iter().map(String::as_str).collect();
+    assert_eq!(
+        registered.len(),
+        handlers.len(),
+        "a handler is registered twice"
+    );
+    assert_eq!(registered, unique);
+    // 56 commands before the mode, and `app_mode`.
+    assert_eq!(listed.len(), 57);
+}
+
+#[test]
+fn the_capabilities_are_the_command_list() {
+    let only: Vec<String> = std::fs::read_dir(manifest("capabilities"))
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    assert_eq!(only, ["editor.json", "runtime.json"]);
+
+    let editor = capability("editor");
+    assert_eq!(editor["windows"], json!(["editor"]));
+    let runtime = capability("runtime");
+    assert_eq!(runtime["windows"], json!(["runtime"]));
+
+    for (capability, commands) in [
+        (&editor, [EDITOR_ONLY, BOTH].concat()),
+        (&runtime, [RUNTIME_ONLY, BOTH].concat()),
+    ] {
+        let permissions = permissions(capability);
+        let set: BTreeSet<String> = permissions.iter().cloned().collect();
+        assert_eq!(set.len(), permissions.len(), "a permission is listed twice");
+        let (core, apps): (BTreeSet<String>, BTreeSet<String>) = set
+            .into_iter()
+            .partition(|permission| permission.contains(':'));
+        // No plugin permission (`dialog:*` …) and nothing beyond today's core.
+        assert_eq!(core, CORE.iter().map(|p| p.to_string()).collect());
+        assert_eq!(apps, allow(&commands));
+    }
+}
+
+#[test]
+fn the_runtime_capability_holds_no_editor_command_and_creates_no_window() {
+    let permissions = permissions(&capability("runtime"));
+    let editor = allow(EDITOR_ONLY);
+    for permission in &permissions {
+        assert!(!editor.contains(permission), "{permission}");
+        // `core:window:allow-create`, `core:webview:allow-create-webview*`.
+        let core_create = permission.starts_with("core:") && permission.contains("create");
+        assert!(!core_create, "{permission}");
+        assert!(
+            !permission.contains(':') || CORE.contains(&permission.as_str()),
+            "{permission}"
+        );
+    }
+}
+
+/// A fresh data dir under the OS temp dir, removed on drop.
+struct TempDir(PathBuf);
+
+impl TempDir {
+    fn new() -> Self {
+        let dir = std::env::temp_dir().join(format!(
+            "banto-scada-mode-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        Self(dir)
+    }
+}
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
+/// Every file under `dir` with its size and modification time.
+fn fingerprint(dir: &Path) -> BTreeMap<PathBuf, (u64, std::time::SystemTime)> {
+    let mut files = BTreeMap::new();
+    let mut pending = vec![dir.to_path_buf()];
+    while let Some(dir) = pending.pop() {
+        for entry in std::fs::read_dir(&dir).unwrap() {
+            let entry = entry.unwrap();
+            let meta = entry.metadata().unwrap();
+            if meta.is_dir() {
+                pending.push(entry.path());
+            } else {
+                files.insert(entry.path(), (meta.len(), meta.modified().unwrap()));
+            }
+        }
+    }
+    files
+}
+
+/// A first-start host with real auth, alarm and recording stores in `dir`.
+fn app(
+    dir: &TempDir,
+    mode: AppMode,
+    label: &str,
+) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
+    let (auth, recording) =
+        tauri::async_runtime::block_on(AuthState::start(&dir.0, "no_recording_run"));
+    let alarm = tauri::async_runtime::block_on(alarm::AlarmState::open(Ok::<_, ()>(&dir.0)));
+    let app = commands(mock_builder())
+        .manage(mode)
+        .manage(auth)
+        .manage(recording)
+        .manage(alarm)
+        .manage(RecordingRuntime::start(&dir.0, "deployment-a"))
+        .manage(NativeHost {
+            bootstrap: Arc::new(Bootstrapper::new(
+                "temp-scada-test",
+                "11111111-2222-4333-8444-555555555555",
+                Arc::new(MemoryKeyStore::new()),
+                Arc::new(MemoryState::new()),
+            )),
+            active: Mutex::new(Active::default()),
+            alarm_operation: Mutex::new(()),
+            exiting: AtomicBool::new(false),
+        })
+        .build(mock_context(noop_assets()))
+        .unwrap();
+    let webview = WebviewWindowBuilder::new(&app, label, Default::default())
+        .build()
+        .unwrap();
+    (app, webview)
+}
+
+fn invoke(webview: &WebviewWindow<MockRuntime>, cmd: &str, args: Value) -> Result<Value, Value> {
+    get_ipc_response(
+        webview,
+        InvokeRequest {
+            cmd: cmd.into(),
+            callback: CallbackFn(0),
+            error: CallbackFn(1),
+            url: if cfg!(windows) {
+                "http://tauri.localhost"
+            } else {
+                "tauri://localhost"
+            }
+            .parse()
+            .unwrap(),
+            body: InvokeBody::Json(args),
+            headers: Default::default(),
+            invoke_key: INVOKE_KEY.to_string(),
+        },
+    )
+    .map(|body| body.deserialize::<Value>().unwrap())
+}
+
+fn runtime_mode(dir: &TempDir) -> AppMode {
+    AppMode::Runtime {
+        project_path: dir.0.join("plant.project.json"),
+    }
+}
+
+/// Well-formed arguments of every Editor-only command: a refusal must come
+/// from the mode, not from a missing argument.
+fn editor_only_calls() -> Vec<(&'static str, Value)> {
+    let project = include_str!("../../../../examples/minimal.project.json");
+    let request = json!({});
+    let calls = vec![
+        ("project_open", json!({})),
+        ("project_save", json!({})),
+        (
+            "alarm_apply",
+            json!({"fileId": 1, "confirmed": [], "confirmedSwitchFrom": null}),
+        ),
+        ("alarm_sound_import", json!({})),
+        ("hub_connect", json!({"endpoint": "http://127.0.0.1:1"})),
+        ("hub_catalog", json!({"projectJson": project})),
+        (
+            "hub_read_start",
+            json!({"projectJson": project, "subscriptionId": "s"}),
+        ),
+        ("history_context", json!({"projectJson": project})),
+        ("recording_context", json!({"projectJson": project})),
+        ("recording_initial_setup", json!({"projectJson": project})),
+        ("recording_reconfigure", json!({"projectJson": project})),
+        ("recording_owner_rebind", json!({"projectJson": project})),
+        ("recording_resume", json!({"projectJson": project})),
+        ("recording_stop", json!({})),
+        ("recording_workflow_reserve", json!({"request": request})),
+        ("recording_workflow_resumption", json!({})),
+        (
+            "recording_workflow_lease",
+            json!({"stage": "reserve", "operationId": null, "request": request}),
+        ),
+        ("recording_lease", json!({"request": request})),
+        ("recording_admission", json!({"request": request})),
+        (
+            "recording_admission_inspection",
+            json!({"request": request}),
+        ),
+        ("recording_observation", json!({"request": request})),
+        ("recording_cancel", json!({"request": request})),
+        ("recording_call_inspection", json!({"request": request})),
+        ("recording_attach", json!({"request": request})),
+        ("recording_control", json!({"request": request})),
+        (
+            "auth_transition_to_operational",
+            json!({"username": "admin", "password": "Passw0rd!Passw0rd", "displayName": "管理者"}),
+        ),
+        (
+            "auth_config_apply",
+            json!({"disabled": false, "disabledRole": "admin"}),
+        ),
+    ];
+    let named: BTreeSet<&str> = calls.iter().map(|(name, _)| *name).collect();
+    assert_eq!(named, EDITOR_ONLY.iter().copied().collect());
+    calls
+}
+
+#[test]
+fn runtime_mode_refuses_every_editor_only_command_before_touching_anything() {
+    let dir = TempDir::new();
+    let (app, webview) = app(&dir, runtime_mode(&dir), "runtime");
+    let config = invoke(&webview, "auth_config_get", json!({})).unwrap();
+    let phase = invoke(&webview, "auth_phase", json!({})).unwrap();
+    let slot = invoke(&webview, "recording_slot", json!({})).unwrap();
+    let files = fingerprint(&dir.0);
+
+    for (command, args) in editor_only_calls() {
+        assert_eq!(
+            invoke(&webview, command, args),
+            Err(json!("editorOnly")),
+            "{command}"
+        );
+    }
+
+    // No auth, alarm or recording DB, Project file or Hub record changed.
+    assert_eq!(fingerprint(&dir.0), files);
+    assert_eq!(
+        invoke(&webview, "auth_config_get", json!({})).unwrap(),
+        config
+    );
+    assert_eq!(invoke(&webview, "auth_phase", json!({})).unwrap(), phase);
+    assert_eq!(invoke(&webview, "recording_slot", json!({})).unwrap(), slot);
+    assert_eq!(
+        invoke(&webview, "hub_saved_endpoint", json!({})),
+        Ok(Value::Null)
+    );
+    assert!(app
+        .state::<NativeHost>()
+        .active
+        .try_lock()
+        .is_ok_and(|a| !a.connected));
+}
+
+#[test]
+fn runtime_mode_serves_the_shared_commands() {
+    let dir = TempDir::new();
+    let (_app, webview) = app(&dir, runtime_mode(&dir), "runtime");
+    assert_eq!(
+        invoke(&webview, "app_mode", json!({})),
+        Ok(json!("runtime"))
+    );
+    assert!(invoke(&webview, "auth_status", json!({})).is_ok());
+    assert!(invoke(&webview, "auth_config_get", json!({})).is_ok());
+    assert!(invoke(&webview, "alarm_snapshot", json!({})).is_ok());
+    assert!(invoke(&webview, "alarm_settings_get", json!({})).is_ok());
+    assert_eq!(
+        invoke(&webview, "hub_saved_endpoint", json!({})),
+        Ok(Value::Null)
+    );
+    assert_eq!(
+        invoke(&webview, "hub_disconnect", json!({})),
+        Ok(Value::Null)
+    );
+}
+
+#[test]
+fn editor_mode_serves_the_editor_only_commands() {
+    let dir = TempDir::new();
+    let (_app, webview) = app(&dir, AppMode::Editor, "editor");
+    assert_eq!(invoke(&webview, "app_mode", json!({})), Ok(json!("editor")));
+    // Past the mode check: the command's own answer.
+    assert_eq!(
+        invoke(&webview, "history_context", json!({"projectJson": "{}"})),
+        Err(json!("invalid_project"))
+    );
+    assert_eq!(
+        invoke(&webview, "hub_catalog", json!({"projectJson": "{}"})),
+        Err(json!("invalid_project"))
+    );
+    assert_eq!(
+        invoke(&webview, "recording_context", json!({"projectJson": "{}"})),
+        Err(json!({"kind": "invalid_project"}))
+    );
+    assert_eq!(
+        invoke(
+            &webview,
+            "auth_config_apply",
+            json!({"disabled": false, "disabledRole": "admin"})
+        ),
+        Err(json!({"kind": "not_allowed"}))
+    );
+    assert_ne!(
+        invoke(&webview, "recording_stop", json!({})),
+        Err(json!("editorOnly"))
+    );
+}
+
+/// The real capabilities of `tauri.conf.json`, enforced by window label:
+/// an Editor-only command from the `runtime` window is refused by the ACL
+/// before the host's own check, and passes it from the `editor` window.
+#[test]
+fn the_acl_refuses_editor_only_commands_from_the_runtime_window() {
+    let dir = TempDir::new();
+    let (auth, recording) =
+        tauri::async_runtime::block_on(AuthState::start(&dir.0, "no_recording_run"));
+    let app = commands(mock_builder())
+        // Editor: a refusal from the `runtime` window is the ACL's alone.
+        .manage(AppMode::Editor)
+        .manage(auth)
+        .manage(recording)
+        .manage(RecordingRuntime::start(&dir.0, "deployment-a"))
+        .build(tauri::generate_context!())
+        .unwrap();
+    let editor = WebviewWindowBuilder::new(&app, "editor", Default::default())
+        .build()
+        .unwrap();
+    let runtime = WebviewWindowBuilder::new(&app, "runtime", Default::default())
+        .build()
+        .unwrap();
+    let project = json!({"projectJson": "{}"});
+
+    let refused = invoke(&runtime, "history_context", project.clone()).unwrap_err();
+    assert!(
+        refused
+            .as_str()
+            .is_some_and(|message| message.contains("not allowed")),
+        "{refused}"
+    );
+    let refused = invoke(
+        &runtime,
+        "auth_config_apply",
+        json!({"disabled": false, "disabledRole": "admin"}),
+    )
+    .unwrap_err();
+    assert!(
+        refused
+            .as_str()
+            .is_some_and(|message| message.contains("not allowed")),
+        "{refused}"
+    );
+    assert_eq!(
+        invoke(&editor, "history_context", project),
+        Err(json!("invalid_project"))
+    );
+    assert_eq!(invoke(&runtime, "app_mode", json!({})), Ok(json!("editor")));
+    assert_eq!(invoke(&editor, "app_mode", json!({})), Ok(json!("editor")));
+}

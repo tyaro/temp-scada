@@ -179,6 +179,7 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
         .unwrap();
     assert!(adopted.status.is_connected(), "{:?}", adopted.status);
     let app = tauri::test::mock_builder()
+        .manage(crate::app_mode::AppMode::Editor)
         .manage(alarm::AlarmState::unavailable())
         .manage(NativeHost {
             bootstrap: std::sync::Arc::new(bootstrap),
@@ -194,16 +195,24 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
             .send(serde_json::from_str(event.payload()).unwrap())
             .unwrap();
     });
-    let status = hub_connect(app.state(), app.state(), hub.url.clone())
+    let status = hub_connect(app.state(), app.state(), app.state(), hub.url.clone())
         .await
         .unwrap();
     assert!(status.is_connected());
     let project = include_str!("../../../../examples/read-presentation.project.json").to_owned();
-    let catalog = hub_catalog(app.state(), project.clone()).await.unwrap();
-    assert_eq!(catalog.tags.len(), 2);
-    hub_read_start(app.handle().clone(), app.state(), project, "first".into())
+    let catalog = hub_catalog(app.state(), app.state(), project.clone())
         .await
         .unwrap();
+    assert_eq!(catalog.tags.len(), 2);
+    hub_read_start(
+        app.handle().clone(),
+        app.state(),
+        app.state(),
+        project,
+        "first".into(),
+    )
+    .await
+    .unwrap();
     let mut socket = timeout(Duration::from_secs(5), hub.sockets.recv())
         .await
         .unwrap()
@@ -273,6 +282,7 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
 
     // A new native owner reuses the protected key and starts with no old stream.
     let restarted = tauri::test::mock_builder()
+        .manage(crate::app_mode::AppMode::Editor)
         .manage(alarm::AlarmState::unavailable())
         .manage(NativeHost {
             bootstrap: std::sync::Arc::new(Bootstrapper::new(
@@ -293,14 +303,18 @@ async fn real_tauri_commands_and_events_reach_mock_hub_and_clear_denied_values()
             .send(serde_json::from_str(event.payload()).unwrap())
             .unwrap();
     });
-    assert!(
-        hub_connect(restarted.state(), restarted.state(), hub.url.clone())
-            .await
-            .unwrap()
-            .is_connected()
-    );
+    assert!(hub_connect(
+        restarted.state(),
+        restarted.state(),
+        restarted.state(),
+        hub.url.clone()
+    )
+    .await
+    .unwrap()
+    .is_connected());
     hub_read_start(
         restarted.handle().clone(),
+        restarted.state(),
         restarted.state(),
         include_str!("../../../../examples/read-presentation.project.json").into(),
         "restarted".into(),
@@ -357,6 +371,7 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
         .status
         .is_connected());
     let app = tauri::test::mock_builder()
+        .manage(crate::app_mode::AppMode::Editor)
         .manage(alarm::AlarmState::open(Ok::<_, ()>(&dir)).await)
         .manage(NativeHost {
             bootstrap: std::sync::Arc::new(bootstrap),
@@ -366,10 +381,12 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
         })
         .build(tauri::test::mock_context(tauri::test::noop_assets()))
         .unwrap();
-    assert!(hub_connect(app.state(), app.state(), hub.url.clone())
-        .await
-        .unwrap()
-        .is_connected());
+    assert!(
+        hub_connect(app.state(), app.state(), app.state(), hub.url.clone())
+            .await
+            .unwrap()
+            .is_connected()
+    );
 
     let mut project: Value = serde_json::from_str(include_str!(
         "../../../../examples/read-presentation.project.json"
@@ -411,10 +428,12 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
     ));
     let first = service.snapshot().await.unwrap().engine.unwrap().session;
 
-    assert!(hub_connect(app.state(), app.state(), hub.url.clone())
-        .await
-        .unwrap()
-        .is_connected());
+    assert!(
+        hub_connect(app.state(), app.state(), app.state(), hub.url.clone())
+            .await
+            .unwrap()
+            .is_connected()
+    );
     assert_eq!(
         service.snapshot().await.unwrap().engine.unwrap().session,
         first
@@ -427,10 +446,12 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
         .unwrap()
         .status
         .is_connected());
-    assert!(hub_connect(app.state(), app.state(), hub.url.clone())
-        .await
-        .unwrap()
-        .is_connected());
+    assert!(
+        hub_connect(app.state(), app.state(), app.state(), hub.url.clone())
+            .await
+            .unwrap()
+            .is_connected()
+    );
     let rotated = service.snapshot().await.unwrap().engine.unwrap().session;
     assert_ne!(rotated.id, first.id);
     assert!(rotated.generation > first.generation);
@@ -441,25 +462,32 @@ async fn hub_reconnect_keeps_alarm_session_until_the_credential_changes() {
     let previous_record = record.clone();
     record.endpoint = "http://127.0.0.1:1".into();
     saved_state.save(&record).unwrap();
-    assert!(!hub_connect(app.state(), app.state(), record.endpoint)
-        .await
-        .unwrap()
-        .is_connected());
-    assert!(service.snapshot().await.unwrap().engine.is_none());
-
-    saved_state.save(&previous_record).unwrap();
-    assert!(hub_connect(app.state(), app.state(), hub.url.clone())
-        .await
-        .unwrap()
-        .is_connected());
-    assert!(service.snapshot().await.unwrap().engine.is_some());
-    saved_state.clear().unwrap();
     assert!(
-        !hub_connect(app.state(), app.state(), "http://127.0.0.1:1".into())
+        !hub_connect(app.state(), app.state(), app.state(), record.endpoint)
             .await
             .unwrap()
             .is_connected()
     );
+    assert!(service.snapshot().await.unwrap().engine.is_none());
+
+    saved_state.save(&previous_record).unwrap();
+    assert!(
+        hub_connect(app.state(), app.state(), app.state(), hub.url.clone())
+            .await
+            .unwrap()
+            .is_connected()
+    );
+    assert!(service.snapshot().await.unwrap().engine.is_some());
+    saved_state.clear().unwrap();
+    assert!(!hub_connect(
+        app.state(),
+        app.state(),
+        app.state(),
+        "http://127.0.0.1:1".into()
+    )
+    .await
+    .unwrap()
+    .is_connected());
     let without_record = service.snapshot().await.unwrap();
     assert!(without_record.engine.is_none());
     assert_eq!(without_record.status, "noHub");
