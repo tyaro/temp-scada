@@ -78,4 +78,34 @@ describe("上端の警報の状態", () => {
       "警報: 監視中",
     );
   });
+
+  it("張り直した後の snapshot を受け取るまでは再同期中にする", () => {
+    expect(alarmStatusLabel(base, null, null, "project-a", null, true)).toBe(
+      "警報: 再同期中",
+    );
+    expect(alarmHealthy(base, "project-a", null, true)).toBe(false);
+    // 取得前は確認中のまま（初回の購読）。
+    expect(alarmStatusLabel(null, null, null, "project-a", null, true)).toBe(
+      "警報: 確認中",
+    );
+    // 取り直しに失敗したら、取得の失敗を出す。
+    expect(alarmStatusLabel(base, "busy", null, "project-a", null, true)).toBe(
+      "警報: 状態を取得できません",
+    );
+    // 購読を張れない方を先に出す。
+    expect(
+      alarmStatusLabel(base, null, null, "project-a", "offline", true),
+    ).toBe("警報: 変化を受け取れません");
+    // 古い snapshot の「停止中」なども、同期するまでは出さない。
+    expect(
+      alarmStatusLabel(
+        { ...base, status: "stopped" } as AlarmSnapshot,
+        null,
+        null,
+        "project-a",
+        null,
+        true,
+      ),
+    ).toBe("警報: 再同期中");
+  });
 });

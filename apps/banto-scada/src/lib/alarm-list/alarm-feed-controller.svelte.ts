@@ -12,6 +12,8 @@ import type { AlarmFeed } from "../project-file-service";
  * - feed が変わるたびに購読し直す。change は mirror に当て、追えないときは取り直す。
  * - 購読に失敗したら `subscribeError` を持ち、間隔を延ばしながら張り直す。`refresh()` でもすぐ試す。
  *   その間も snapshot は取る（一覧・帯は出す）が、張り直せるまで上端は「変化を受け取れません」のまま。
+ * - 張れた（張り直せた）後は、その後に取り始めた snapshot を受け取るまで「再同期中」にする
+ *   （購読していない間の警報は変化として届き直さないので、それまでの一覧・帯は古いかもしれない）。
  * - 取得した snapshot を画面側の表示（小札・帯）へ配る（`setAlarmViewSnapshot`）。
  *
  * 部品の初期化中（`$effect` を張れる所）で作ること。
@@ -34,6 +36,11 @@ export function createAlarmFeedController(options: {
   /** 購読が張れていなければ張り直す（feed ごとの effect が入れる）。 */
   let ensureSubscribed: (() => void) | null = null;
   let unavailableReason = $state<string | null>(null);
+  /**
+   * 購読を張った（張り直した）後に取り始めた snapshot をまだ受け取っていない。
+   * 購読の回復と表示の同期を分ける（購読していない間の警報は変化として届き直さない）。
+   */
+  let resyncing = $state(true);
 
   const label = $derived(
     alarmStatusLabel(
@@ -42,11 +49,12 @@ export function createAlarmFeedController(options: {
       unavailableReason,
       options.projectId(),
       subscribeError,
+      resyncing,
     ),
   );
   /** 監視中で、知らせることが何も無い。 */
   const healthy = $derived(
-    alarmHealthy(snapshot, options.projectId(), subscribeError),
+    alarmHealthy(snapshot, options.projectId(), subscribeError, resyncing),
   );
   const soundNotice = $derived(alarmSoundFallbackNotice(snapshot?.buzzerSound));
 
@@ -60,11 +68,18 @@ export function createAlarmFeedController(options: {
   $effect(() => {
     const feed = options.feed();
     if (!feed) return;
+    /**
+     * 購読が張れた時点で始まっていた読取の数。これより後に始まった読取の結果を
+     * 受け取ったら同期できた（張れるまでは無限大で、どの結果でも終わらない）。
+     */
+    let syncAfter = Number.POSITIVE_INFINITY;
+    resyncing = true;
     const current = new AlarmRefreshQueue(
       () => feed.snapshot(),
-      (next) => {
+      (next, seq) => {
         readError = null;
         if (mirror.acceptSnapshot(next)) snapshot = mirror.current;
+        if (seq > syncAfter) resyncing = false;
       },
       (error) => (readError = String(error)),
     );
@@ -96,6 +111,9 @@ export function createAlarmFeedController(options: {
             unsubscribe = off;
             subscribeError = null;
             retryDelay = ALARM_SUBSCRIBE_RETRY_MS.first;
+            // 張る前から走っている読取では同期を終えない（queue は後から必ず読み直す）。
+            syncAfter = current.started;
+            resyncing = true;
             current.refresh();
           },
           (error) => {
@@ -118,6 +136,7 @@ export function createAlarmFeedController(options: {
       if (queue === current) queue = null;
       if (ensureSubscribed === subscribe) ensureSubscribed = null;
       subscribeError = null;
+      resyncing = true;
       unsubscribe?.();
     };
   });
