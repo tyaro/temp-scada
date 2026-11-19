@@ -442,3 +442,149 @@ async fn a_dropped_begin_frees_the_send_slot() {
     log.begin(&request).await.unwrap();
     log.close().await;
 }
+
+#[tokio::test]
+async fn identical_refusals_of_a_slot_are_one_row_for_a_minute() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let mut first = request("command");
+    let id = log.refuse(&first, "write_stopped", 1_010).await.unwrap();
+    let mut again = first.clone();
+    again.requested_at_ms = 1_000 + FOLD_WINDOW_MS - 1;
+    assert_eq!(
+        log.refuse(&again, "write_stopped", 61_000).await.unwrap(),
+        id
+    );
+    let row = log.db().row(&id).await.unwrap().unwrap();
+    assert_eq!(row.repeat_count, 2);
+    // The first request's time stays; the end is the last refusal's.
+    assert_eq!(row.request.requested_at_ms, 1_000);
+    assert_eq!(row.finish.unwrap().finished_at_ms, 61_000);
+    // A minute after the row's first request: a new row.
+    again.requested_at_ms = 1_000 + FOLD_WINDOW_MS;
+    let next = log.refuse(&again, "write_stopped", 61_010).await.unwrap();
+    assert_ne!(next, id);
+    assert_eq!(log.db().row(&next).await.unwrap().unwrap().repeat_count, 1);
+    // A clock that went back does not fold into a later row.
+    first.requested_at_ms = 900;
+    assert_ne!(
+        log.refuse(&first, "write_stopped", 61_020).await.unwrap(),
+        next
+    );
+    log.close().await;
+}
+
+#[tokio::test]
+async fn a_clock_that_went_back_inside_the_window_starts_a_new_row() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let mut refusal = request("command");
+    refusal.requested_at_ms = 1_000;
+    let id = log.refuse(&refusal, "write_stopped", 1_000).await.unwrap();
+    refusal.requested_at_ms = 20_000;
+    assert_eq!(
+        log.refuse(&refusal, "write_stopped", 20_000).await.unwrap(),
+        id
+    );
+    // Back to 15 s: after the row's first request, but before its end.
+    refusal.requested_at_ms = 15_000;
+    let back = log.refuse(&refusal, "write_stopped", 15_000).await.unwrap();
+    assert_ne!(back, id);
+    let row = log.db().row(&id).await.unwrap().unwrap();
+    assert_eq!(row.repeat_count, 2);
+    assert_eq!(row.finish.unwrap().finished_at_ms, 20_000);
+    // The same end as the row's still folds.
+    assert_eq!(
+        log.refuse(&refusal, "write_stopped", 15_000).await.unwrap(),
+        back
+    );
+    log.close().await;
+}
+
+/// One field of a request changed.
+type Change = fn(&mut RequestRecord);
+
+#[tokio::test]
+async fn a_refusal_that_differs_in_any_field_is_its_own_row() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let base = request("command");
+    let changes: Vec<(&str, Change)> = vec![
+        ("user", |r| r.user = "operator".into()),
+        ("phase", |r| r.phase = "operational".into()),
+        ("hub_endpoint", |r| r.hub_endpoint = None),
+        ("project_digest", |r| r.project_digest = "b".repeat(64)),
+        ("screen_id", |r| r.screen_id = "sub".into()),
+        ("object_id", |r| r.object_id = "pump2".into()),
+        ("equipment_code", |r| r.equipment_code = None),
+        ("tag", |r| r.tag = None),
+        ("value", |r| r.value = json!(false)),
+    ];
+    for (field, change) in changes {
+        let id = log.refuse(&base, "too_soon", 1_010).await.unwrap();
+        let mut other = base.clone();
+        change(&mut other);
+        assert_ne!(
+            log.refuse(&other, "too_soon", 1_020).await.unwrap(),
+            id,
+            "{field}"
+        );
+    }
+    // The reason, and the typed text of an input with the same value.
+    let id = log.refuse(&base, "too_soon", 1_030).await.unwrap();
+    assert_ne!(log.refuse(&base, "write_stopped", 1_040).await.unwrap(), id);
+    let mut typed = request("speedSp");
+    typed.value = json!({"value": 12.5, "input": "12.5"});
+    let id = log.refuse(&typed, "too_soon", 1_050).await.unwrap();
+    typed.value = json!({"value": 12.5, "input": "12.50"});
+    assert_ne!(log.refuse(&typed, "too_soon", 1_060).await.unwrap(), id);
+    log.close().await;
+}
+
+#[tokio::test]
+async fn only_the_newest_row_of_the_slot_is_folded_into() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let run = request("command");
+    let mut stop = run.clone();
+    stop.value = json!(false);
+    // Another slot in between does not matter.
+    let id = log.refuse(&run, "write_stopped", 1_010).await.unwrap();
+    log.refuse(&request("speedSp"), "write_stopped", 1_020)
+        .await
+        .unwrap();
+    assert_eq!(log.refuse(&run, "write_stopped", 1_030).await.unwrap(), id);
+    // 「運転」, 「停止」, 「運転」: three rows, so the slot's last row is the
+    // last request.
+    log.refuse(&stop, "write_stopped", 1_040).await.unwrap();
+    let last = log.refuse(&run, "write_stopped", 1_050).await.unwrap();
+    assert_ne!(last, id);
+    // A sent request is never folded into.
+    let sent = log.begin(&run).await.unwrap();
+    log.complete(&sent, finish(Outcome::Ok, 1_060))
+        .await
+        .unwrap();
+    assert_ne!(
+        log.refuse(&run, "write_stopped", 1_070).await.unwrap(),
+        sent
+    );
+    log.close().await;
+}
+
+#[tokio::test]
+async fn a_fold_that_cannot_be_written_is_an_error() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let run = request("command");
+    let id = log.refuse(&run, "too_soon", 1_010).await.unwrap();
+    fail_updates(log.db(), true).await;
+    assert!(log.refuse(&run, "too_soon", 1_020).await.is_err());
+    fail_updates(log.db(), false).await;
+    assert_eq!(log.db().row(&id).await.unwrap().unwrap().repeat_count, 1);
+    log.close().await;
+}

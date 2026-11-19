@@ -27,9 +27,11 @@ const REVISION: u64 = 5;
 /// Bounds far beyond any loopback answer, so no case depends on timing.
 const LONG: Duration = Duration::from_secs(20);
 /// `GET /api/v1/status` of a Hub with the #1201 write contract (#1223) and
-/// of one before it, which omits `capabilities` (§11-8).
+/// of one before it, which omits `capabilities` (§11-8). Both carry the
+/// same `version` (upstream did not change it across #1201 and #1224), so
+/// only `capabilities` can tell them apart.
 const WITH_CONTRACT: &str =
-    r#"{"version": "0.3.0-alpha.3", "capabilities": ["write_contract_v1"]}"#;
+    r#"{"version": "0.3.0-alpha.2", "capabilities": ["write_contract_v1"]}"#;
 const BEFORE_CONTRACT: &str = r#"{"version": "0.3.0-alpha.2"}"#;
 
 struct TempDir(PathBuf);
