@@ -27,7 +27,7 @@ use banto_admin_services::settings::AuthSettings;
 use banto_admin_services::users::{UserIdentity, UserSummary};
 
 use crate::auth::{BantoError, DesktopSession, LoginOutcome, Role, Verified};
-use crate::auth_phase::{AuthHost, StartupError, TransitionError, Transitioned};
+use crate::auth_phase::{AuthHost, AuthPhase, StartupError, TransitionError, Transitioned};
 use crate::recording_gate::{AuthChangeError, RecordingGate};
 use crate::user_admin;
 
@@ -210,6 +210,16 @@ impl From<UserIdentity> for CreatedUser {
     }
 }
 
+/// Why a change of the operation settings was refused
+/// (`DesktopAuth::with_operation_settings`).
+#[derive(Debug)]
+pub enum SettingsRefusal {
+    /// The auth phase is neither `initializing` nor `operational`.
+    Phase,
+    /// The current session is not an Admin (or the auth could not answer).
+    Auth(CommandError),
+}
+
 /// The desktop auth commands of one host.
 pub struct DesktopAuth {
     host: Host,
@@ -322,6 +332,43 @@ impl DesktopAuth {
             .require_role(Role::Admin, "alarm")
             .await?;
         Ok(())
+    }
+
+    /// Run `change` as a change of the operation settings: registering or
+    /// deleting the write key, resuming writes (operation design §7). They
+    /// are terminal settings, not equipment operations: Admin only,
+    /// login-free for the local auth-disabled Admin (development / initial
+    /// setup), in `initializing` and `operational` only.
+    ///
+    /// The phase and the Admin are checked under the transition lock and
+    /// `change` runs while it is still held, so a logout, a user change or
+    /// the move to operation (which all take it) is ordered before the
+    /// check or after the change, never in between. The caller waits for
+    /// its own locks before this (`change` takes only locks taken after the
+    /// transition lock elsewhere too, like the write's send start).
+    pub async fn with_operation_settings<F, Fut>(
+        &self,
+        change: F,
+    ) -> Result<Fut::Output, SettingsRefusal>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future,
+    {
+        let guard = self.auth().gate().await;
+        if !matches!(
+            guard.phase(),
+            AuthPhase::Initializing | AuthPhase::Operational
+        ) {
+            return Err(SettingsRefusal::Phase);
+        }
+        self.auth()
+            .auth()
+            .require_role(Role::Admin, "operation")
+            .await
+            .map_err(|error| SettingsRefusal::Auth(error.into()))?;
+        let done = change().await;
+        drop(guard);
+        Ok(done)
     }
 
     /// `auth_login`. A refusal (wrong credentials, auth-disabled mode, a

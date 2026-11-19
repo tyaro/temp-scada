@@ -339,3 +339,18 @@ O2c-3b の分け方と O2c-3b-1 で決めたこと（2026-11-20）: O2c-3b は h
 - 送信枠は送ったキーの id を持ち、結果で書込み状態を変える（`stopped`・`key_invalid`）のは、そのキーが結果の確定の時にもまだ登録されているときだけとする。登録し直した・削除した後に返った前のキーの結果は、区分と理由をそのまま行に残し、書込み状態は変えない。照合は書込み状態の排他（`state_lock`）の下で行うので、登録・削除と順が入れ替わらない。
 - 8 で送信のタスクを起動する直前にも、同じ照合をもう一度行う（#321 のオーナー指摘。6 の後、`pending` の行・別タスクの起動・遷移のロックの待ちの間に登録し直す・削除することがある）。最後の照合と送信のタスクの起動は、登録・削除と同じ排他（`state_lock`）の下で 1 つの手順として行い、違えば送らずに `key_changed` で行を確定する。排他は起動までで、Hub の応答は待たない。
 - 送信を始めた後に登録し直しても送信は取り消さない（「タスク起動＝取り消さない境界」）。前のキーで Hub に届いた書込みの結果は、その行に残る。
+
+O2c-3b-2 で決めたこと（2026-11-20）: Tauri の command は次のとおりにした。画面（O2c-4）はまだ無い。
+
+- command は 4 つで、どれも Runtime の窓だけ（ACL の `runtime.json`、`require_runtime`）。`operations.db` は Runtime mode でだけ開くので、Editor では扱わない。
+  - `operation_key_status`: 答えは `keyEndpoint`（キーを組にした接続先。無ければ null）・`hubEndpoint`（保存した読み用の接続先。無ければ null。`keyEndpoint` と違えば書込みは `hub_mismatch`）・`write`（`state`・`changedAtMs`）。秘密は返さない。権限の検査はしない。
+  - `operation_key_register(secret)`: 保存した読み用の接続先と組にして登録する（O2c-3a の `register`。書込み状態は `ready`）。
+  - `operation_key_delete`: キーを外す（書込み状態は変えない）。
+  - `operation_write_resume`: 「書込みを再開」。`stopped` だけを `ready` にし、ほかの状態はそのまま答える。
+  - 変える 3 つは、答えに `operation_key_status` と同じ形を返す。
+- 権限は、認証のフェーズが `initializing`・`operational` であること（それ以外は `auth_phase_unavailable`）と、Admin であること（`require_role(Role::Admin, "operation")`）。開発・初期設定では認証無効の Admin なのでログイン不要、運用ではログインした Admin だけ。
+- 権限の確認と変更の確定は、認証の遷移のロック（`AuthHost::gate`）の下で 1 つの手順として行う（`DesktopAuth::with_operation_settings`。#322 のオーナー指摘）。ログアウト・利用者の変更・運用への移行も同じロックを取るので、確認と変更の間に入らない。登録・削除はキーの排他（下記）を待ってから、このロックを取って確認する（待っている間にログアウトしたら、変えずに `unauthorized`）。ロックを取る順は、書込みの送信の開始（8）と同じく、遷移のロック → 書込み状態の排他（`state_lock`）で、逆にしない。
+- 誤りは、権限の拒否（`unauthorized`・`forbidden`・`auth_unavailable`・`auth_failed`・`auth_phase_unavailable`）、記録を開けない `record_failed`、キーの誤り（`KeyError::as_str` の `no_hub`・`invalid_secret`・`invalid_endpoint`・`key_store`）。
+- 登録と削除は端末で 1 つずつにする（`OperationState::key_lock`。遷移のロックより先に取る）。前の項目を読んでから切り替えるので、同時の登録で消されない項目が残らないようにする。
+- 書込みと照会は、要求のたびに記録と keyring からキーを読む（`operation_key::load`）。keyring が読めないときはキーが無いものとし（`no_write_key`）、記録に残す。照会の `hub_mismatch` のため、照会にも読み用の接続先を渡す。
+- 秘密の入力の扱い（画面での伏せ字・貼り付け）と、登録の結果の文言は O2c-4 で決める。

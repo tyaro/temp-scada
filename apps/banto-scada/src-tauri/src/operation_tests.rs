@@ -305,3 +305,147 @@ fn editor_mode_refuses_the_view() {
         Err(json!("runtimeOnly"))
     );
 }
+
+/// The terminal settings' commands (§7, O2c-3b-2): the status answers the
+/// state and no secret; in development / initial setup the local Admin
+/// needs no login. With no saved Hub there is no endpoint to pair a key
+/// with (`no_hub`), and nothing is written to the keyring or the record.
+#[test]
+fn the_write_key_commands_work_login_free_before_operation() {
+    let dir = TempDir::new();
+    let mode = runtime_mode(&dir);
+    startup(&mode);
+    let (_app, webview) = app(&dir, mode, "runtime");
+
+    let status = invoke(&webview, "operation_key_status", json!({})).unwrap();
+    assert_eq!(
+        status,
+        json!({"keyEndpoint": null, "hubEndpoint": null,
+            "write": {"state": "ready", "changedAtMs": null}})
+    );
+    assert_eq!(
+        invoke(
+            &webview,
+            "operation_key_register",
+            json!({"secret": "write-key"})
+        ),
+        Err(json!("no_hub"))
+    );
+    assert_eq!(
+        invoke(&webview, "operation_key_status", json!({})).unwrap(),
+        status
+    );
+    // Deleting no key and resuming a ready terminal change nothing.
+    assert_eq!(
+        invoke(&webview, "operation_key_delete", json!({})).unwrap(),
+        status
+    );
+    assert_eq!(
+        invoke(&webview, "operation_write_resume", json!({})).unwrap(),
+        status
+    );
+}
+
+/// In operation, changing the key or resuming needs a logged-in Admin; the
+/// status is still answered.
+#[test]
+fn the_write_key_commands_need_an_admin_in_operation() {
+    let dir = TempDir::new();
+    let mode = runtime_mode(&dir);
+    startup(&mode);
+    let (app, webview) = app(&dir, mode, "runtime");
+    // The move is the Editor's command; the host's own call stands for it.
+    let auth = app.state::<crate::auth::AuthState>();
+    let host = auth.get().unwrap();
+    tauri::async_runtime::block_on(async {
+        host.transition_to_operational("admin", "Passw0rd!Passw0rd", "管理者")
+            .await
+            .unwrap();
+        host.logout().await.unwrap();
+    });
+    assert_eq!(
+        invoke(&webview, "auth_phase", json!({})).unwrap()["phase"],
+        "operational"
+    );
+    for (command, args) in [
+        ("operation_key_register", json!({"secret": "write-key"})),
+        ("operation_key_delete", json!({})),
+        ("operation_write_resume", json!({})),
+    ] {
+        assert_eq!(
+            invoke(&webview, command, args),
+            Err(json!("unauthorized")),
+            "{command}"
+        );
+    }
+    assert!(invoke(&webview, "operation_key_status", json!({})).is_ok());
+}
+
+/// The record could not be opened: the settings answer `record_failed`.
+#[test]
+fn the_write_key_commands_without_the_record_are_record_failed() {
+    let dir = TempDir::new();
+    let mode = runtime_mode(&dir);
+    startup(&mode);
+    let (app, webview) = app(&dir, mode, "runtime");
+    tauri::async_runtime::block_on(app.state::<OperationState>().close());
+    for (command, args) in [
+        ("operation_key_status", json!({})),
+        ("operation_key_register", json!({"secret": "write-key"})),
+        ("operation_key_delete", json!({})),
+        ("operation_write_resume", json!({})),
+    ] {
+        assert_eq!(
+            invoke(&webview, command, args),
+            Err(json!("record_failed")),
+            "{command}"
+        );
+    }
+}
+
+/// #322 review: the Admin is checked after the wait for the key lock and
+/// held until the change is done. A deletion that waits while the Admin
+/// logs out is refused and changes nothing; one that waits while the
+/// Admin stays logged in goes through (the control of the same path).
+#[test]
+fn a_key_change_waiting_while_the_admin_logs_out_changes_nothing() {
+    for log_out in [true, false] {
+        let dir = TempDir::new();
+        let mode = runtime_mode(&dir);
+        startup(&mode);
+        let (app, webview) = app(&dir, mode, "runtime");
+        let auth = app.state::<crate::auth::AuthState>();
+        let host = auth.get().unwrap();
+        let operations = app.state::<OperationState>();
+        let log = operations.log().unwrap();
+        let key = scada_host::operation_db::KeyRef {
+            endpoint: "http://127.0.0.1:8722".into(),
+            id: "registered".into(),
+        };
+        tauri::async_runtime::block_on(async {
+            // The move signs the new Admin in.
+            host.transition_to_operational("admin", "Passw0rd!Passw0rd", "管理者")
+                .await
+                .unwrap();
+            log.key_registered(1_000, &key).await.unwrap();
+        });
+        let held = tauri::async_runtime::block_on(operations.hold_key_lock_for_test());
+        let result = std::thread::scope(|scope| {
+            let waiting = scope.spawn(|| invoke(&webview, "operation_key_delete", json!({})));
+            // Let the deletion reach the key lock.
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            if log_out {
+                tauri::async_runtime::block_on(host.logout()).unwrap();
+            }
+            drop(held);
+            waiting.join().unwrap()
+        });
+        if log_out {
+            assert_eq!(result, Err(json!("unauthorized")));
+            assert_eq!(log.key(), Some(key));
+        } else {
+            assert_eq!(result.unwrap()["keyEndpoint"], Value::Null);
+            assert_eq!(log.key(), None);
+        }
+    }
+}

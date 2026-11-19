@@ -432,6 +432,10 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             close::app_close_reply,
             operation::operation_write,
             operation::operation_view,
+            operation::operation_key_status,
+            operation::operation_key_register,
+            operation::operation_key_delete,
+            operation::operation_write_resume,
             project::project_open,
             project::project_save,
             alarm::alarm_apply,
@@ -546,7 +550,11 @@ fn main() {
             // Runtime reads its Project once, here (design §6).
             app.manage(runtime::StartupProject::load(&mode));
             app.manage(tauri::async_runtime::block_on(
-                operation::OperationState::open(&mode, local_data_dir()),
+                operation::OperationState::open(
+                    &mode,
+                    local_data_dir(),
+                    scada_host::local_write_key_store(),
+                ),
             ));
             app_mode::create_window(app, &mode)?;
             alarm::start_events(app.handle().clone());

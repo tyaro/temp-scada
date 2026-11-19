@@ -90,7 +90,7 @@ fn apply_failure_reason(error: &AlarmServiceError) -> String {
     }
 }
 
-fn refusal(error: CommandError) -> String {
+pub(crate) fn refusal(error: CommandError) -> String {
     match error {
         CommandError::Banto(BantoError::Unauthorized) => "unauthorized",
         CommandError::Banto(BantoError::Forbidden) => "forbidden",
