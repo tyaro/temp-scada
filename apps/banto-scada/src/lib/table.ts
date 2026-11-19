@@ -91,6 +91,21 @@ export function validateTableShape(shape: TableShape) {
         throw new Error(
           "表のセルの取得不能の色はslotのあるセルだけに付けられます",
         );
+      if (
+        cell.boolDisplay !== undefined &&
+        (cell.binding === undefined || cell.format !== undefined)
+      )
+        throw new Error(
+          "表のセルのbool表示はタグのあるセルだけに付けられ、書式と同時に持てません",
+        );
+      if (
+        cell.stateTarget !== undefined &&
+        cell.boolDisplay === undefined &&
+        cell.stateColors === undefined
+      )
+        throw new Error(
+          "状態の色の使い先はbool表示か状態の色のあるセルだけに付けられます",
+        );
     }
 }
 

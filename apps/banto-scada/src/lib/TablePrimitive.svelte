@@ -2,8 +2,8 @@
   import type { TableShape } from "./project";
   import { tableCellBoxes, tableEdges } from "./table";
   import { TEXT_FONT } from "./text-layout";
-  import { presentNumeric, type TagReadings } from "./tag-presentation";
-  import { tableCellSlotView, type TableSlotResolver } from "./table-cell-slot";
+  import type { TagReadings } from "./tag-presentation";
+  import { tableCellView, type TableSlotResolver } from "./table-cell-slot";
   let {
     shape,
     width,
@@ -67,16 +67,12 @@
       fill={shape.background}
     />{/if}
   {#each boxes as box (`${box.row}:${box.column}`)}
-    {@const binding = box.cell.binding}
-    {@const presentation = binding
-      ? presentNumeric(readings?.get(binding.externalName), box.cell.format)
-      : undefined}
-    {@const slotView = tableCellSlotView(box.cell, slots)}
-    {@const text = slotView
-      ? slotView.text
-      : presentation
-        ? presentation.text
-        : box.cell.text}
+    {@const view = tableCellView(box.cell, {
+      readings,
+      slots,
+      textColor,
+      color,
+    })}
     <svg
       x={box.x}
       y={box.y}
@@ -84,20 +80,18 @@
       height={box.height}
       overflow="hidden"
       data-table-cell={`${box.row}:${box.column}`}
-      data-table-cell-tag={binding?.externalName}
-      data-table-cell-slot={slotView?.slotName}
-      data-table-cell-state={slotView?.state ?? presentation?.state}
+      data-table-cell-tag={box.cell.binding?.externalName}
+      data-table-cell-slot={box.cell.slotBinding?.slotName}
+      data-table-cell-state={view.state}
+      data-table-cell-state-fill={view.stateFill ? "" : undefined}
     >
-      {#if slotView}<title>{slotView.slotName} · {slotView.label}</title
-        >{:else if binding && presentation}<title
-          >{binding.externalName} · {presentation.label}</title
-        >{/if}
-      {#if box.cell.fill}<rect
+      {#if view.title}<title>{view.title}</title>{/if}
+      {#if view.rectFill}<rect
           width={box.width}
           height={box.height}
-          fill={box.cell.fill}
+          fill={view.rectFill}
         />{/if}
-      {#if text}<text
+      {#if view.text}<text
           data-table-text
           x={textX(box.width)}
           y={box.height / 2}
@@ -106,8 +100,8 @@
           font-family={TEXT_FONT}
           font-size={shape.style.fontSize}
           font-weight={shape.style.fontWeight}
-          fill={slotView?.stateColor ?? color ?? box.cell.color ?? textColor}
-          fill-opacity={textAlpha}>{text}</text
+          fill={view.textFill}
+          fill-opacity={textAlpha}>{view.text}</text
         >{/if}
     </svg>
   {/each}

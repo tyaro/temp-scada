@@ -314,6 +314,138 @@ test("bound table cells show the reading with their format and missing readings"
   await expect(page.locator(".error")).toHaveCount(0);
 });
 
+// #303 第1段: bit のセルは画面直下の Text と同じ bool 表示で文字と色を変え、
+// stateTarget が fill なら状態の色をセルの塗りに使う（文字色は固定）。
+const RUN = { text: "運転", color: "#16a34a" };
+const STOP = { text: "停止", color: "#334155" };
+const UNKNOWN = "#d97706";
+async function sendBits(
+  page: Page,
+  sequence: number,
+  bits: Record<string, boolean | "unresolved">,
+) {
+  const update = structuredClone(
+    fixtures.find((fixture) => fixture.name === "good")!.update,
+  ) as any;
+  update.sequence = sequence;
+  for (const [name, value] of Object.entries(bits)) {
+    // Good の読取には由来が要る（Demo.Number と同じ由来を使う）。
+    if (value !== "unresolved")
+      update.text.provenance[name] = update.text.provenance["Demo.Number"];
+    update.text.readings[name] =
+      value === "unresolved"
+        ? { state: "unresolved" }
+        : {
+            state: "resolved",
+            quality: "good",
+            numericValue: null,
+            boolValue: value,
+          };
+  }
+  return page.evaluate(
+    (update) => (window as any).__readHarness.delivery.receive(update),
+    update,
+  );
+}
+for (const theme of ["light", "dark"] as const)
+  test(`bool table cells change text, text color and fill by bit in ${theme}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await fixtureEntry(page);
+    await page.goto("/");
+    await chooseTheme(page, theme);
+    const project = tableProject();
+    const shape = project.screens[0].objects.at(-1).shape;
+    const boolDisplay = { true: RUN, false: STOP, unknownColor: UNKNOWN };
+    const bit = (externalName: string, stateTarget?: "fill") => ({
+      text: "",
+      fill: "#f1f5f9",
+      color: "#0f172a",
+      binding: { externalName },
+      boolDisplay,
+      ...(stateTarget ? { stateTarget } : {}),
+    });
+    shape.columns = [1, 1];
+    shape.rows = [1, 1, 1, 1];
+    shape.cells = [
+      [{ text: "連動起動可" }, bit("Demo.RunA", "fill")],
+      [{ text: "連動運転中" }, bit("Demo.RunB", "fill")],
+      [{ text: "未解決" }, bit("Demo.Missing", "fill")],
+      [{ text: "文字色" }, bit("Demo.RunA")],
+    ];
+    await openProject(page, {
+      name: "table-bool.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(JSON.stringify(project)),
+    });
+    await page
+      .getByRole("button", { name: "表示プレビュー", exact: true })
+      .click();
+    const table = mainCanvas(page).locator(
+      `[data-object-id="${tableId}"] [data-table]`,
+    );
+    const cell = (row: number) => table.locator(`[data-table-cell="${row}:1"]`);
+    const expectCell = async (
+      row: number,
+      text: string,
+      state: string,
+      textFill: string,
+      rectFill: string,
+    ) => {
+      await expect(cell(row).locator("[data-table-text]")).toHaveText(text);
+      await expect(cell(row)).toHaveAttribute("data-table-cell-state", state);
+      await expect(cell(row).locator("[data-table-text]")).toHaveAttribute(
+        "fill",
+        textFill,
+      );
+      await expect(cell(row).locator("rect")).toHaveAttribute("fill", rectFill);
+    };
+
+    expect(
+      await sendBits(page, 1, {
+        "Demo.RunA": true,
+        "Demo.RunB": false,
+        "Demo.Missing": "unresolved",
+      }),
+    ).toBe(true);
+    // 塗りに使うセル: 状態の色で塗り、文字色はセルの色のまま。
+    await expectCell(0, RUN.text, "true", "#0f172a", RUN.color);
+    await expectCell(1, STOP.text, "false", "#0f172a", STOP.color);
+    // 取得不能は理由の文字と unknownColor の塗り（false の色を代用しない）。
+    await expectCell(2, "-- · 未解決", "unresolved", "#0f172a", UNKNOWN);
+    // 文字に使うセル: 状態の色を文字色にし、塗りはセルの塗りのまま。
+    await expectCell(3, RUN.text, "true", RUN.color, "#f1f5f9");
+    for (const row of [0, 1, 2])
+      await expect(cell(row)).toHaveAttribute("data-table-cell-state-fill", "");
+    await expect(
+      table.locator('[data-table-cell="3:1"][data-table-cell-state-fill]'),
+    ).toHaveCount(0);
+    await expect(cell(0).locator("title")).toHaveText("Demo.RunA · Good");
+
+    expect(
+      await sendBits(page, 2, {
+        "Demo.RunA": false,
+        "Demo.RunB": true,
+        "Demo.Missing": "unresolved",
+      }),
+    ).toBe(true);
+    await expectCell(0, STOP.text, "false", "#0f172a", STOP.color);
+    await expectCell(1, RUN.text, "true", "#0f172a", RUN.color);
+    await expectCell(3, STOP.text, "false", STOP.color, "#f1f5f9");
+
+    expect(
+      await sendBits(page, 3, {
+        "Demo.RunA": "unresolved",
+        "Demo.RunB": true,
+        "Demo.Missing": "unresolved",
+      }),
+    ).toBe(true);
+    await expectCell(0, "-- · 未解決", "unresolved", "#0f172a", UNKNOWN);
+    await expectCell(3, "-- · 未解決", "unresolved", UNKNOWN, "#f1f5f9");
+    await expect(page.locator(".error")).toHaveCount(0);
+  });
+
 test("the Inspector binds table cells to tags with a format", async ({
   page,
 }) => {
@@ -373,7 +505,7 @@ test("slot-bound table cells in a Symbol show the state text, colors and numbers
       fill: "#111827",
       shape: {
         type: "table",
-        columns: [1, 1],
+        columns: [1, 1, 1],
         rows: [1],
         cells: [
           [
@@ -386,6 +518,13 @@ test("slot-bound table cells in a Symbol show the state text, colors and numbers
               text: "",
               slotBinding: { slotName: "current" },
               format: { decimals: 1, unit: "A" },
+            },
+            {
+              text: "",
+              fill: "#e2e8f0",
+              slotBinding: { slotName: "running" },
+              stateColors: { unknownColor: "#d97706" },
+              stateTarget: "fill",
             },
           ],
         ],
@@ -473,6 +612,8 @@ test("slot-bound table cells in a Symbol show the state text, colors and numbers
             fill: node
               ?.querySelector("[data-table-text]")
               ?.getAttribute("fill"),
+            rect: node?.querySelector("rect")?.getAttribute("fill"),
+            stateFill: node?.hasAttribute("data-table-cell-state-fill"),
           };
         });
     const result = {
@@ -480,6 +621,8 @@ test("slot-bound table cells in a Symbol show the state text, colors and numbers
       p101Current: read(p101.id, "0:1"),
       p102Run: read(p102.id, "0:0"),
       p102Current: read(p102.id, "0:1"),
+      p101Fill: read(p101.id, "0:2"),
+      p102Fill: read(p102.id, "0:2"),
       bad: slotPresentation("bad"),
       disconnected: slotPresentation("disconnected"),
     };
@@ -525,4 +668,22 @@ test("slot-bound table cells in a Symbol show the state text, colors and numbers
       state: "disconnected",
       text: cells.disconnected.text,
     });
+  // stateTarget fill: 機器ごとに状態の色で塗り、文字色は配置の色のまま。
+  expect(cells.p101Fill.length).toBeGreaterThan(0);
+  expect(cells.p102Fill.length).toBeGreaterThan(0);
+  for (const cell of cells.p101Fill)
+    expect(cell).toMatchObject({
+      state: "bad",
+      rect: "#d97706",
+      stateFill: true,
+    });
+  for (const cell of cells.p102Fill)
+    expect(cell).toMatchObject({
+      state: "good",
+      text: "運転",
+      rect: "#16a34a",
+      stateFill: true,
+    });
+  for (const cell of [...cells.p101Fill, ...cells.p102Fill])
+    expect(["#d97706", "#16a34a"]).not.toContain(cell.fill);
 });
