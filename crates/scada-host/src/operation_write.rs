@@ -10,10 +10,12 @@
 //! so a caller that goes away never leaves the send slot held or the row it
 //! started unfinished.
 //!
+//! Repeated refusals are folded into one row by `OperationLog::refuse`
+//! (`repeat_count`, §7, O2c-1).
+//!
 //! TODO(O2c): the write key's registration and its pairing with the Hub
 //! (`hub_mismatch`), the terminal's write state (`write_stopped`,
-//! `key_invalid`), the minimum interval (`too_soon`) and the folding of
-//! repeated refusals (`repeat_count`, §7).
+//! `key_invalid`) and the minimum interval (`too_soon`).
 use std::sync::Arc;
 use std::time::Duration;
 

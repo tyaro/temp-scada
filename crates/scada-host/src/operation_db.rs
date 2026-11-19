@@ -20,6 +20,11 @@ mod tests;
 
 const FORMAT: i64 = 1;
 const PENDING: &str = "pending";
+
+/// Identical refusals of a slot are one row for this long after the row's
+/// first request (§7, after upstream #711's folding).
+pub const FOLD_WINDOW_MS: i64 = 60_000;
+
 /// The reason of a row left `pending` by an earlier process (§9).
 pub const INTERRUPTED: &str = "interrupted";
 
@@ -277,6 +282,52 @@ impl OperationDb {
         self.insert(id, request, None).await
     }
 
+    /// Fold a refusal into the slot's newest row when that row is a
+    /// `refused` with the very same content (§7: every field of the request,
+    /// the value with its typed text, and the reason) requested less than
+    /// [`FOLD_WINDOW_MS`] before it: `repeat_count` goes up by one and
+    /// `finished_at_ms` becomes this refusal's. Only the slot's newest row
+    /// is a candidate, so the slot's last row stays the last request.
+    /// Returns the folded row's id, or `None` when a new row is needed. One
+    /// statement, so two refusals never fold into a row that changed.
+    pub async fn fold_refusal(
+        &self,
+        request: &RequestRecord,
+        finish: &Finish,
+    ) -> Result<Option<String>, OperationDbError> {
+        let id = sqlx::query_scalar(
+            "UPDATE operation SET repeat_count = repeat_count + 1, finished_at_ms = ?
+             WHERE seq = (SELECT max(seq) FROM operation
+                          WHERE project_id = ? AND equipment_id = ? AND slot = ?)
+               AND outcome = 'refused' AND reason IS ?
+               AND user = ? AND phase = ? AND hub_endpoint IS ? AND project_digest = ?
+               AND screen_id = ? AND object_id = ? AND equipment_code IS ?
+               AND tag IS ? AND value = ?
+               AND requested_at_ms <= ? AND ? - requested_at_ms < ?
+             RETURNING id",
+        )
+        .bind(finish.finished_at_ms)
+        .bind(&request.project_id)
+        .bind(&request.equipment_id)
+        .bind(&request.slot)
+        .bind(finish.reason.as_deref())
+        .bind(&request.user)
+        .bind(&request.phase)
+        .bind(&request.hub_endpoint)
+        .bind(&request.project_digest)
+        .bind(&request.screen_id)
+        .bind(&request.object_id)
+        .bind(&request.equipment_code)
+        .bind(&request.tag)
+        .bind(serde_json::to_string(&request.value)?)
+        .bind(request.requested_at_ms)
+        .bind(request.requested_at_ms)
+        .bind(FOLD_WINDOW_MS)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(id)
+    }
+
     /// Write a row finished at once (a §4 refusal: nothing is sent).
     pub async fn insert_finished(
         &self,
@@ -512,21 +563,29 @@ impl OperationLog {
         Ok(id)
     }
 
-    /// Write a refusal that never reserved the send slot (§4 2–5).
+    /// Write a refusal that never reserved the send slot (§4 2–5). A
+    /// repeat of the slot's last refusal within [`FOLD_WINDOW_MS`] is folded
+    /// into that row (`repeat_count`, §7) and its id returned.
     pub async fn refuse(
         &self,
         request: &RequestRecord,
         reason: &str,
         finished_at_ms: i64,
     ) -> Result<String, OperationDbError> {
-        let id = uuid::Uuid::now_v7().to_string();
         let finish = Finish {
             outcome: Outcome::Refused,
             reason: Some(reason.into()),
             audit_id: None,
             finished_at_ms,
         };
-        self.db.insert_finished(&id, request, &finish).await?;
+        let id = match self.db.fold_refusal(request, &finish).await? {
+            Some(id) => id,
+            None => {
+                let id = uuid::Uuid::now_v7().to_string();
+                self.db.insert_finished(&id, request, &finish).await?;
+                id
+            }
+        };
         self.retry_unrecorded().await;
         Ok(id)
     }
