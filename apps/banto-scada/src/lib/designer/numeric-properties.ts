@@ -1,3 +1,4 @@
+import { tableCellStateValues } from "./forms/table-cell-states";
 import { placementColor } from "../project";
 import type { ScreenObject } from "../project";
 import { alarmBadgeConditionId } from "../alarm-badge";
@@ -111,6 +112,7 @@ export function objectFormValues(
     values.tableBorderWidth = String(shape.border?.width ?? 1);
     values.tableBackgroundMode = shape.background ? "color" : "none";
     values.tableBackground = shape.background ?? "#0f172a";
+    Object.assign(values, tableCellStateValues(shape, definition));
   }
   if (object.shape.type === "symbol") {
     values.symbolId = object.shape.symbolId;

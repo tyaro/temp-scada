@@ -26,9 +26,10 @@ function label(
   data: Pick<FormData, "get">,
   key: "true" | "false",
   name: string,
+  field: (key: string) => string,
 ): SlotStateLabel {
-  const text = String(data.get(`${key}Text`) ?? "");
-  const color = String(data.get(`${key}Color`) ?? "");
+  const text = String(data.get(field(`${key}Text`)) ?? "");
+  const color = String(data.get(field(`${key}Color`)) ?? "");
   if ([...text].length > MAX_BOOL_LABEL_LENGTH)
     throw new Error(
       `${name}の文字は${MAX_BOOL_LABEL_LENGTH}文字以内にしてください。`,
@@ -40,20 +41,24 @@ function label(
   return { text, color };
 }
 
-/** The display from the form; null when "使用しない" is chosen (the display is removed). */
+/**
+ * The display from the form; null when "使用しない" is chosen (the display is removed).
+ * `field` maps the item names (the table cells prefix them per cell).
+ */
 export function parseBoolDisplay(
   data: Pick<FormData, "get">,
+  field: (key: string) => string = (key) => key,
 ): TextBoolDisplay | null {
-  const mode = data.get("boolDisplayMode");
+  const mode = data.get(field("boolDisplayMode"));
   if (mode === "disabled") return null;
   if (mode !== "enabled")
     throw new Error("bool の表示の使用を選択してください。");
-  const unknownColor = String(data.get("unknownColor") ?? "");
+  const unknownColor = String(data.get(field("unknownColor")) ?? "");
   if (!COLOR.test(unknownColor))
     throw new Error("取得不能の色は #RRGGBB で指定してください。");
   return {
-    true: label(data, "true", "true"),
-    false: label(data, "false", "false"),
+    true: label(data, "true", "true", field),
+    false: label(data, "false", "false", field),
     unknownColor,
   };
 }

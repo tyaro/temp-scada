@@ -323,11 +323,14 @@ async function sendBits(
   page: Page,
   sequence: number,
   bits: Record<string, boolean | "unresolved">,
+  projectRevision = 1,
 ) {
   const update = structuredClone(
     fixtures.find((fixture) => fixture.name === "good")!.update,
   ) as any;
   update.sequence = sequence;
+  // 編集で上がった Project の版に合わせる。
+  update.text.projectRevision = update.slots.projectRevision = projectRevision;
   for (const [name, value] of Object.entries(bits)) {
     // Good の読取には由来が要る（Demo.Number と同じ由来を使う）。
     if (value !== "unresolved")
@@ -476,6 +479,156 @@ test("the Inspector binds table cells to tags with a format", async ({
     color: "#22c55e",
     binding: { externalName: "Demo.Number" },
     format: { decimals: 1, unit: "℃" },
+  });
+});
+
+// #303 第2段: Inspector の「セルの状態表示」で bool の表示と塗りを設定し、描画に反映する。
+test("the Inspector sets a bool display painted to a table cell's fill", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await fixtureEntry(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const project = tableProject();
+  const cells = project.screens[0].objects.at(-1).shape.cells;
+  cells[1][1] = {
+    text: "",
+    fill: "#f1f5f9",
+    color: "#0f172a",
+    binding: { externalName: "Demo.RunA" },
+    format: { decimals: 1 },
+  };
+  await openProject(page, {
+    name: "table-states.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await selectPanel(page, "レイヤー");
+  await page.locator(`button[data-layer-id="${tableId}"]`).click();
+  const form = page.locator('form[data-editor-form="object"]');
+  const states = form.getByRole("region", { name: "セルの状態表示" });
+  await expect(
+    states.getByLabel("状態表示のセル", { exact: true }),
+  ).toHaveValue("1:1");
+  await expect(
+    states.getByRole("option", { name: "2:2 · Demo.RunA", exact: true }),
+  ).toHaveCount(1);
+  const editor = states.locator('[data-table-cell-state-editor="1:1"]');
+  await editor
+    .getByLabel("bool の表示を使う", { exact: true })
+    .selectOption("enabled");
+  // 使うにすると、そのセルの書式を下書きから消す（同時に持てない）。
+  await expect(form.getByLabel("セルの書式", { exact: true })).toHaveValue("");
+  await editor.getByLabel("true の文字", { exact: true }).fill(RUN.text);
+  await editor.getByLabel("true の色", { exact: true }).fill(RUN.color);
+  await editor.getByLabel("false の文字", { exact: true }).fill(STOP.text);
+  await editor.getByLabel("false の色", { exact: true }).fill(STOP.color);
+  await editor.getByLabel("取得不能の色", { exact: true }).fill(UNKNOWN);
+  await editor
+    .getByLabel("状態の色の使い先", { exact: true })
+    .selectOption("fill");
+  await form.getByRole("button", { name: "変更を適用" }).click();
+  await expect(page.locator(".error")).toHaveCount(0);
+  await expect(
+    editor.getByLabel("状態の色の使い先", { exact: true }),
+  ).toHaveValue("fill");
+
+  // 保存した形を確かめ、表示プレビューで描画を確かめる。
+  const saved = await save(page);
+  expect(saved.screens[0].objects.at(-1).shape.cells[1][1]).toEqual({
+    text: "",
+    fill: "#f1f5f9",
+    color: "#0f172a",
+    binding: { externalName: "Demo.RunA" },
+    boolDisplay: { true: RUN, false: STOP, unknownColor: UNKNOWN },
+    stateTarget: "fill",
+  });
+  const revision = saved.manifest.projectRevision;
+  await page
+    .getByRole("button", { name: "表示プレビュー", exact: true })
+    .click();
+  const cell = mainCanvas(page).locator(
+    `[data-object-id="${tableId}"] [data-table] [data-table-cell="1:1"]`,
+  );
+  expect(await sendBits(page, 1, { "Demo.RunA": true }, revision)).toBe(true);
+  await expect(cell.locator("[data-table-text]")).toHaveText(RUN.text);
+  await expect(cell.locator("[data-table-text]")).toHaveAttribute(
+    "fill",
+    "#0f172a",
+  );
+  await expect(cell.locator("rect")).toHaveAttribute("fill", RUN.color);
+  expect(await sendBits(page, 2, { "Demo.RunA": false }, revision)).toBe(true);
+  await expect(cell.locator("[data-table-text]")).toHaveText(STOP.text);
+  await expect(cell.locator("rect")).toHaveAttribute("fill", STOP.color);
+});
+
+test("the Inspector sets where a Symbol table cell's state color goes", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "編集", exact: true }).click();
+  const project = tableProject();
+  const cellId = "0199f6aa-0000-7000-8000-000000000902";
+  project.symbols[0].objects.push({
+    id: cellId,
+    order: 900,
+    x: 0,
+    y: 0,
+    width: 60,
+    height: 20,
+    rotation: 0,
+    fill: "#e5e7eb",
+    shape: {
+      type: "table",
+      columns: [1],
+      rows: [1],
+      cells: [
+        [
+          {
+            text: "",
+            slotBinding: { slotName: "running" },
+            stateColors: { unknownColor: "#64748b" },
+          },
+        ],
+      ],
+      style: { fontSize: 12, fontWeight: "normal", align: "center" },
+    },
+  });
+  await openProject(page, {
+    name: "table-symbol-states.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await selectPanel(page, "プロジェクト");
+  await page
+    .getByRole("button", { name: "定義を編集", exact: true })
+    .first()
+    .click();
+  await selectPanel(page, "レイヤー");
+  await page.locator(`button[data-layer-id="${cellId}"]`).click();
+  const form = page.locator('form[data-editor-form="object"]');
+  const states = form.getByRole("region", { name: "セルの状態表示" });
+  await expect(
+    states.getByRole("option", { name: "1:1 · running", exact: true }),
+  ).toHaveCount(1);
+  // Symbol 定義の表は bool の表示を持たない（slot の状態の定義に従う）。
+  await expect(states.getByLabel("bool の表示を使う")).toHaveCount(0);
+  await states
+    .getByLabel("状態の色の使い先", { exact: true })
+    .selectOption("fill");
+  await form.getByRole("button", { name: "変更を適用" }).click();
+  await expect(page.locator(".error")).toHaveCount(0);
+  const saved = await save(page);
+  const table = saved.symbols[0].objects.find(
+    (object: { id: string }) => object.id === cellId,
+  );
+  expect(table.shape.cells[0][0]).toEqual({
+    text: "",
+    slotBinding: { slotName: "running" },
+    stateColors: { unknownColor: "#64748b" },
+    stateTarget: "fill",
   });
 });
 

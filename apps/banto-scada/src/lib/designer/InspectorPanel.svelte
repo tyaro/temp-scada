@@ -27,6 +27,7 @@
   import { isStateSlotType } from "../equipment";
   import StateTextColor from "./StateTextColor.svelte";
   import BoolDisplay from "./BoolDisplay.svelte";
+  import TableCellStates from "./TableCellStates.svelte";
   import NumericFormat from "./NumericFormat.svelte";
   import SymbolColorMode from "./SymbolColorMode.svelte";
   import TagPicker from "./TagPicker.svelte";
@@ -1503,6 +1504,12 @@
                       onkeydown={tableAreaKey}></textarea></label
                   >
                 {/if}
+                <div class="full-width">
+                  <TableCellStates
+                    shape={selected.shape}
+                    definition={activeDefinition}
+                  />
+                </div>
                 <label class="banto-field banto-field--stacked"
                   ><span class="banto-field-label">文字サイズ</span><input
                     class="banto-field-control"

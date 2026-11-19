@@ -74,7 +74,7 @@
 
 ## 状態の小表（Issue #303）
 
-追記: 2026-11-20（日本時間）。状態: **第1段（保存の形・表示）実装済み、Inspector は未実装**。「連動起動可／連動運転中」のように bit ごとに点く・消える小表を、表 1 つ（配置 1 つ）で描けるようにする。Issue の「決めること」は次のように決めた。
+追記: 2026-11-20（日本時間）。状態: **実装済み（第1段・第2段）**。「連動起動可／連動運転中」のように bit ごとに点く・消える小表を、表 1 つ（配置 1 つ）で描けるようにする。Issue の「決めること」は次のように決めた。
 
 ### 保存の形
 
@@ -122,12 +122,13 @@
 - 画面の表: Text の「bool の表示」と同じ部品（`BoolDisplay.svelte`）で、使う／使わない、true／false の文字と色、取得不能の色。使うにすると、そのセルの書式は消える（同時に持てないため。欄に注記する）。
 - 「状態の色の使い先」: 文字／塗り。画面の表は bool の表示を使うセル、Symbol 定義の表は取得不能の色のあるセル（`stateColors`）でだけ選べる。
 - 今の欄と同じく「変更を適用」で他の欄と一緒に 1 履歴にする。タブ区切りの「セルのタグ」でタグを外したセル、「セルの取得不能の色」を消したセルは、同じ適用で `boolDisplay`・`stateTarget` も外す。
+- 実装での決め: 書式とbool の表示の両方を持つセルは適用で拒否する（「セルの書式のN行M列はbool の表示を使うセルです…」。Text の「数値の書式を持つTextには bool の表示を設定できません」と同じく黙って捨てない）。代わりに「使う」を選んだ時点で、そのセルの書式を下書きから消す。状態の色の使い先の欄はセルごとに常に出し、使えないセル（bool の表示を使わない・取得不能の色がない）では適用で外す。使い先の「文字」は既定なので `stateTarget` を保存しない（保存済みの `"text"` も適用で外れる）。
 
 ### 検証
 
 - 契約（第1段）: `examples/table-cases.json` の `screen table with bool display cells`・`symbol table with a state colored cell painted to fill`（受理）、`bool display without binding in a cell`・`bool display with format in a cell`・`bool display cell inside a symbol definition`・`state target without bool display or state colors`・`unknown state target value`（拒否）。Rust `shared_table_contract` と TS `table.test.ts` が読む。
 - 表示（第1段）: `table-cell-slot.test.ts` の `tableCellView`（bool の文字と色、文字への適用、塗りへの適用と単色の配置、取得不能・型不一致・未接続、Symbol の slot のセルの塗りと既知で色なしの戻り）。e2e `table.spec.ts` の `bool table cells change text, text color and fill by bit in light／dark`（4 行 × 2 列の小表が true／false／未解決で文字・文字色・塗りを変える）と `slot-bound table cells in a Symbol show the state text, colors and numbers`（`stateTarget: "fill"` のセルが機器ごとに違う色で塗られる）。
-- 予定（第2段）: Inspector での編集と拒否。
+- Inspector（第2段）: `table.test.ts` の `table cell states in the Inspector`（選択肢の作り方、他の欄の適用で bool の表示・使い先を保つ、編集の適用・使わない・タグを外したセルからの除去・行列が減ったときの位置の対応、書式との同時指定の拒否と書式の消去、Symbol 定義の表で取得不能の色を消したセルからの使い先の除去と不正値の拒否）。e2e `table.spec.ts` の `the Inspector sets a bool display painted to a table cell's fill`（セルを選んで bool の表示と塗りを設定 → 書式が消える → 適用・保存の形 → 表示プレビューで文字と塗りが bit で変わる）と `the Inspector sets where a Symbol table cell's state color goes`（Symbol 定義の表で使い先を塗りにして保存）。
 
 ### 対象外（この Issue）
 

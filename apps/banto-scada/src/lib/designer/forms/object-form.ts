@@ -1,3 +1,4 @@
+import { parseTableCellStates } from "./table-cell-states";
 import { parseLineArrow } from "../../line-arrow";
 import { normalizeTextNewlines } from "../../text-content";
 import { isEquipmentPropertyField } from "../../equipment-property";
@@ -233,6 +234,8 @@ export function objectFormCommand(
                 ) ?? false,
             }
           : undefined,
+
+        parseTableCellStates(data, rows, columns, context.definition),
       ),
       style: { fontSize, fontWeight, align },
       ...(border ? { border } : {}),
