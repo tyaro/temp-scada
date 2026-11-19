@@ -18,6 +18,7 @@
     faceplateNotice,
     ipcErrorText,
     OPERATION_VIEW_REFRESH_MS,
+    writeErrorText,
     operationTimeText,
     rowStatus,
     type OperationHost,
@@ -57,16 +58,20 @@
     content: ConfirmationContent;
   } | null>(null);
   let cancelButton = $state<HTMLButtonElement>();
-  let issued = 0;
+  let issued = 0,
+    reading = 0;
 
   async function refresh() {
     const ticket = ++issued;
+    reading++;
     try {
       const view = await host.view(equipmentId);
       if (ticket === issued) viewState = { status: "ready", view };
     } catch (error) {
       if (ticket === issued)
         viewState = { status: "error", message: ipcErrorText(error) };
+    } finally {
+      reading--;
     }
   }
   $effect(() => {
@@ -82,7 +87,11 @@
   $effect(() => {
     equipmentId;
     host;
-    const timer = setInterval(() => void refresh(), OPERATION_VIEW_REFRESH_MS);
+    // 照会が終わる前に次を始めない（遅い応答が新しい照会で古い扱いになり、
+    // いつまでも読込中のままになるのを避ける）。
+    const timer = setInterval(() => {
+      if (!reading) void refresh();
+    }, OPERATION_VIEW_REFRESH_MS);
     return () => clearInterval(timer);
   });
 
@@ -146,6 +155,7 @@
     pending = null;
     sending = true;
     const slot = target.row.slotName;
+    const before = latestOf(slot)?.id ?? null;
     try {
       const result = await host.write(
         buildOperationRequest({
@@ -161,7 +171,11 @@
       );
       answers[slot] = { kind: "result", result, atMs: Date.now() };
     } catch (error) {
-      answers[slot] = { kind: "error", message: ipcErrorText(error) };
+      answers[slot] = {
+        kind: "error",
+        message: writeErrorText(error),
+        before,
+      };
     } finally {
       sending = false;
     }

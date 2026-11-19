@@ -41,6 +41,10 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
         latest: null as null | Record<string, unknown>,
         /** Overrides what `operation_view` answers in `blocked` when set. */
         operationBlocked: undefined as undefined | null | string,
+        /** Milliseconds `operation_view` takes to answer. */
+        viewDelayMs: 0,
+        /** `operation_write` rejects without an answer (a lost IPC answer). */
+        writeLost: false,
         seq: 1,
         starts: [] as Record<string, unknown>[],
         acks: [] as unknown[],
@@ -165,6 +169,10 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                 );
               }
               case "operation_view": {
+                if (host.viewDelayMs)
+                  await new Promise((done) =>
+                    setTimeout(done, host.viewDelayMs),
+                  );
                 const ready = options.operation === "ready";
                 return {
                   projectId: options.projectId,
@@ -184,6 +192,7 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
               }
               case "operation_write": {
                 host.writes.push(structuredClone(args!.request));
+                if (host.writeLost) throw new Error("the answer was lost");
                 host.latest = {
                   id: `record-${host.writes.length}`,
                   state: "finished",
@@ -1108,5 +1117,48 @@ test.describe("the faceplate's operation rows (operation stage 3, O3c-1)", () =>
       (window as any).__runtimeHost.operationBlocked = null;
     });
     await expect(run).toBeEnabled({ timeout: 10_000 });
+  });
+
+  test("a faceplate whose reads take longer than the refresh still loads", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page, { operation: "ready" });
+    await page.addInitScript(() => {
+      const wait = setInterval(() => {
+        const host = (window as any).__runtimeHost;
+        if (host) {
+          host.viewDelayMs = 2_500;
+          clearInterval(wait);
+        }
+      });
+    });
+    await page.goto("/runtime.html");
+    await page.locator(pump).first().click();
+    const rows = page.getByRole("region", { name: "機器の操作" });
+    await expect(
+      rows.getByRole("button", { name: "運転", exact: true }),
+    ).toBeEnabled({ timeout: 10_000 });
+  });
+
+  test("a write whose answer is lost reads as unknown, not as refused", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page, { operation: "ready" });
+    await page.goto("/runtime.html");
+    await page.evaluate(() => {
+      (window as any).__runtimeHost.writeLost = true;
+    });
+    await page.locator(pump).first().click();
+    const rows = page.getByRole("region", { name: "機器の操作" });
+    await rows.getByRole("button", { name: "運転", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "操作の確認" });
+    await dialog.getByRole("button", { name: "実行" }).click();
+    const result = rows.locator(
+      "[data-operation-slot='running'] [data-operation-result]",
+    );
+    await expect(result).toContainText(
+      "結果不明。現在値と実行記録を確認してください",
+    );
+    await expect(result).not.toContainText("受け付けませんでした");
   });
 });

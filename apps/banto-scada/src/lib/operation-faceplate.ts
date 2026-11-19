@@ -113,10 +113,31 @@ export function faceplateNotice(
   return { disabled: sending ? SENDING_TEXT : null, banner };
 }
 
-/** この小窓から送った書込みの答え、または IPC の失敗。 */
+/**
+ * 書込みの応答が取れないときの文。host が処理したか（送ったか）は画面から
+ * 決められないので、受け付けられなかった前提で押し直しを誘わない（§5 の
+ * 結果不明と同じ扱い）。自動の再送はしない。
+ */
+export const WRITE_UNKNOWN_TEXT =
+  "結果不明。現在値と実行記録を確認してください";
+/**
+ * command `operation_write` の失敗を文にする。host が送る前に断ると決まって
+ * いる誤りは `"runtimeOnly"`（O2b-2b）だけで、それ以外の失敗（応答の欠落・
+ * IPC の断）はすべて結果不明とする。
+ */
+export function writeErrorText(error: unknown): string {
+  return error === "runtimeOnly"
+    ? "送っていません（Runtime の窓でだけ書込みできます）"
+    : WRITE_UNKNOWN_TEXT;
+}
+
+/**
+ * この小窓から送った書込みの答え、または応答が取れなかったこと。`before` は
+ * 送る前に見ていた記録の最後の行の id（無ければ null）。
+ */
 export type RowAnswer =
   | { kind: "result"; result: WriteResult; atMs: number }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string; before: string | null };
 
 /** 操作の行に出す結果（§8）。`atMs` は区分が確定した時刻。 */
 export interface RowStatus {
@@ -151,7 +172,10 @@ export function rowStatus(
   answer: RowAnswer | null,
 ): RowStatus | null {
   if (answer?.kind === "error")
-    return { texts: [answer.message], reason: null, atMs: null };
+    // 送った後に新しい記録の行が読めたら、その行が結果を示す。
+    return latest && latest.id !== answer.before
+      ? latestStatus(latest)
+      : { texts: [answer.message], reason: null, atMs: null };
   if (
     answer &&
     (answer.result.unrecorded ||

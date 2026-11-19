@@ -4,6 +4,8 @@ import {
   faceplateNotice,
   INITIALIZING_TEXT,
   ipcErrorText,
+  writeErrorText,
+  WRITE_UNKNOWN_TEXT,
   LOADING_TEXT,
   NO_PLACEMENT_TEXT,
   rowStatus,
@@ -173,9 +175,23 @@ describe("rowStatus", () => {
         atMs: 9,
       })?.texts,
     ).toEqual(["書けたか分かりません。現在値を確かめてください", "記録に失敗"]);
-    expect(
-      rowStatus(latest(), { kind: "error", message: "host に届きません" }),
-    ).toEqual({ texts: ["host に届きません"], reason: null, atMs: null });
+    // The write's answer was lost: unknown until a new record row is read.
+    const lost = {
+      kind: "error" as const,
+      message: WRITE_UNKNOWN_TEXT,
+      before: latest().id,
+    };
+    expect(rowStatus(latest(), lost)).toEqual({
+      texts: [WRITE_UNKNOWN_TEXT],
+      reason: null,
+      atMs: null,
+    });
+    expect(rowStatus({ ...latest(), id: "newer" }, lost)?.texts).toEqual([
+      "書込みました",
+    ]);
+    expect(rowStatus(null, { ...lost, before: null })?.texts).toEqual([
+      WRITE_UNKNOWN_TEXT,
+    ]);
   });
 });
 
@@ -205,5 +221,12 @@ describe("host", () => {
       "host が受け付けませんでした（不明な理由（runtimeOnly））",
     );
     expect(ipcErrorText(undefined)).toBe("host に届きません");
+  });
+  it("calls a lost write answer unknown, never not sent", () => {
+    expect(writeErrorText("runtimeOnly")).toBe(
+      "送っていません（Runtime の窓でだけ書込みできます）",
+    );
+    for (const error of [undefined, new Error("ipc"), "something"])
+      expect(writeErrorText(error)).toBe(WRITE_UNKNOWN_TEXT);
   });
 });
