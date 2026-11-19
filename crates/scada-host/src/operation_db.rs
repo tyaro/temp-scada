@@ -286,7 +286,9 @@ impl OperationDb {
     /// `refused` with the very same content (§7: every field of the request,
     /// the value with its typed text, and the reason) requested less than
     /// [`FOLD_WINDOW_MS`] before it: `repeat_count` goes up by one and
-    /// `finished_at_ms` becomes this refusal's. Only the slot's newest row
+    /// `finished_at_ms` becomes this refusal's. A refusal that ends before
+    /// the row's end (a clock that went back) is a new row, so the row's
+    /// end never moves back. Only the slot's newest row
     /// is a candidate, so the slot's last row stays the last request.
     /// Returns the folded row's id, or `None` when a new row is needed. One
     /// statement, so two refusals never fold into a row that changed.
@@ -304,6 +306,7 @@ impl OperationDb {
                AND screen_id = ? AND object_id = ? AND equipment_code IS ?
                AND tag IS ? AND value = ?
                AND requested_at_ms <= ? AND ? - requested_at_ms < ?
+               AND finished_at_ms <= ?
              RETURNING id",
         )
         .bind(finish.finished_at_ms)
@@ -323,6 +326,7 @@ impl OperationDb {
         .bind(request.requested_at_ms)
         .bind(request.requested_at_ms)
         .bind(FOLD_WINDOW_MS)
+        .bind(finish.finished_at_ms)
         .fetch_optional(&self.pool)
         .await?;
         Ok(id)

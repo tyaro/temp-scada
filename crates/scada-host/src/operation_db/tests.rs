@@ -475,6 +475,34 @@ async fn identical_refusals_of_a_slot_are_one_row_for_a_minute() {
     log.close().await;
 }
 
+#[tokio::test]
+async fn a_clock_that_went_back_inside_the_window_starts_a_new_row() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let mut refusal = request("command");
+    refusal.requested_at_ms = 1_000;
+    let id = log.refuse(&refusal, "write_stopped", 1_000).await.unwrap();
+    refusal.requested_at_ms = 20_000;
+    assert_eq!(
+        log.refuse(&refusal, "write_stopped", 20_000).await.unwrap(),
+        id
+    );
+    // Back to 15 s: after the row's first request, but before its end.
+    refusal.requested_at_ms = 15_000;
+    let back = log.refuse(&refusal, "write_stopped", 15_000).await.unwrap();
+    assert_ne!(back, id);
+    let row = log.db().row(&id).await.unwrap().unwrap();
+    assert_eq!(row.repeat_count, 2);
+    assert_eq!(row.finish.unwrap().finished_at_ms, 20_000);
+    // The same end as the row's still folds.
+    assert_eq!(
+        log.refuse(&refusal, "write_stopped", 15_000).await.unwrap(),
+        back
+    );
+    log.close().await;
+}
+
 /// One field of a request changed.
 type Change = fn(&mut RequestRecord);
 
