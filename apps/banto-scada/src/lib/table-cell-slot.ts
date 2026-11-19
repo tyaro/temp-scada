@@ -5,7 +5,11 @@ import {
   type SlotPresentation,
   type SlotStatus,
 } from "./slot-presentation";
-import { definedSlotState, slotStateText } from "./slot-state";
+import {
+  definedSlotState,
+  slotStateText,
+  type SlotStateEvaluation,
+} from "./slot-state";
 import { slotStateColor } from "./state-color";
 import { presentScreenBool } from "./screen-bool-display";
 import {
@@ -148,7 +152,9 @@ export function tableCellView(
  * bool の表示のセルが取得不能のときのツールチップの状態名。読取が Good の
  * 数値タグでも「Good」と出さず、表示の文字（`-- · 型不一致`）と揃える。
  */
-function screenBoolUnknownLabel(reason: SlotStatus): string {
+function screenBoolUnknownLabel(
+  reason: Extract<SlotStateEvaluation, { state: "unknown" }>["reason"],
+): string {
   return reason === "typeMismatch"
     ? "型不一致"
     : slotPresentation(reason).label;
