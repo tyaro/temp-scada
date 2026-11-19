@@ -2,20 +2,27 @@
 //! `ready`, `stopped` after the Hub tripped the write key (403
 //! `key_tripped`) and `key_invalid` after it refused the key (401). Kept in
 //! `operations.db` (table `terminal_write`, one row) so a restart does not
-//! resume writes; the in-memory copy lives in `OperationLog`.
+//! resume writes; the in-memory copy lives in `OperationLog`. The same row
+//! keeps the Hub endpoint the write key was registered for (`key_endpoint`,
+//! §7, O2c-3a; the secret itself is in the keyring).
 use banto_tagclient::ErrorKind;
 use serde::Serialize;
 use sqlx::{Row, Sqlite, SqlitePool};
 
 use super::{Finish, OperationDbError, Outcome};
 
-/// The table of the state, created with the record (format 2) or added to
+/// The table of the state, created with the record (format 3) or added to
 /// a format-1 file.
 pub(super) const CREATE_TABLE: &str = "CREATE TABLE terminal_write (
        id INTEGER PRIMARY KEY CHECK (id = 1),
        state TEXT NOT NULL CHECK (state IN ('ready','stopped','key_invalid')),
-       changed_at_ms INTEGER NOT NULL
+       changed_at_ms INTEGER NOT NULL,
+       key_endpoint TEXT
      );";
+
+/// Format 2 to 3: the endpoint of the registered write key.
+pub(super) const ADD_KEY_ENDPOINT: &str =
+    "ALTER TABLE terminal_write ADD COLUMN key_endpoint TEXT;";
 
 /// Whether this terminal may send writes (§7).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
@@ -72,22 +79,50 @@ pub struct WriteStatus {
     pub changed_at_ms: Option<i64>,
 }
 
-pub(super) async fn load(pool: &SqlitePool) -> Result<WriteStatus, OperationDbError> {
-    let row = sqlx::query("SELECT state, changed_at_ms FROM terminal_write WHERE id = 1")
-        .fetch_optional(pool)
-        .await?;
+/// The state and the endpoint of the registered write key.
+pub(super) async fn load(
+    pool: &SqlitePool,
+) -> Result<(WriteStatus, Option<String>), OperationDbError> {
+    let row =
+        sqlx::query("SELECT state, changed_at_ms, key_endpoint FROM terminal_write WHERE id = 1")
+            .fetch_optional(pool)
+            .await?;
     let Some(row) = row else {
-        return Ok(WriteStatus::default());
+        return Ok((WriteStatus::default(), None));
     };
     let state: String = row.try_get("state")?;
-    Ok(WriteStatus {
-        state: WriteState::parse(&state).ok_or(OperationDbError::InvalidRow)?,
-        changed_at_ms: Some(row.try_get("changed_at_ms")?),
-    })
+    Ok((
+        WriteStatus {
+            state: WriteState::parse(&state).ok_or(OperationDbError::InvalidRow)?,
+            changed_at_ms: Some(row.try_get("changed_at_ms")?),
+        },
+        row.try_get("key_endpoint")?,
+    ))
+}
+
+/// Save the state with the write key's endpoint (`None`: no key), as one
+/// statement: a registration (`ready` and the endpoint) or a deletion.
+pub(super) async fn save_key(
+    pool: &SqlitePool,
+    state: WriteState,
+    changed_at_ms: i64,
+    key_endpoint: Option<&str>,
+) -> Result<(), OperationDbError> {
+    sqlx::query(
+        "INSERT INTO terminal_write (id, state, changed_at_ms, key_endpoint) VALUES (1, ?, ?, ?)
+         ON CONFLICT (id) DO UPDATE SET state = excluded.state, changed_at_ms = excluded.changed_at_ms,
+           key_endpoint = excluded.key_endpoint",
+    )
+    .bind(state.as_str())
+    .bind(changed_at_ms)
+    .bind(key_endpoint)
+    .execute(pool)
+    .await?;
+    Ok(())
 }
 
 /// Save the state with `executor`: the pool, or the transaction that also
-/// finishes the row whose outcome moved it.
+/// finishes the row whose outcome moved it. The key's endpoint is kept.
 pub(super) async fn save<'e, E>(
     executor: E,
     state: WriteState,

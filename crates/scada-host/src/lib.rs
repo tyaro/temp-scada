@@ -12,6 +12,7 @@ pub mod desktop_auth;
 pub mod desktop_recording;
 mod durable;
 pub mod operation_db;
+pub mod operation_key;
 pub mod operation_write;
 pub mod project_file;
 pub mod recording_control;
@@ -106,6 +107,58 @@ impl BootstrapState for FileState {
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
             Err(_) => Err(Error::new(ErrorKind::State)),
         }
+    }
+}
+
+/// The keyring of the write key (operation design §7): its own service,
+/// one secret per installation.
+pub fn local_write_key_store() -> Result<Arc<dyn operation_key::WriteKeyStore>, &'static str> {
+    let account = local_installation_id()?;
+    Ok(Arc::new(WindowsWriteKey { account }))
+}
+
+struct WindowsWriteKey {
+    account: String,
+}
+
+#[cfg(windows)]
+impl operation_key::WriteKeyStore for WindowsWriteKey {
+    fn get(&self) -> Result<Option<String>, operation_key::KeyError> {
+        let entry = keyring::Entry::new(operation_key::WRITE_KEY_SERVICE, &self.account)
+            .map_err(|_| operation_key::KeyError::KeyStore)?;
+        match entry.get_password() {
+            Ok(key) => Ok(Some(key)),
+            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(_) => Err(operation_key::KeyError::KeyStore),
+        }
+    }
+
+    fn set(&self, secret: &str) -> Result<(), operation_key::KeyError> {
+        keyring::Entry::new(operation_key::WRITE_KEY_SERVICE, &self.account)
+            .and_then(|entry| entry.set_password(secret))
+            .map_err(|_| operation_key::KeyError::KeyStore)
+    }
+
+    fn delete(&self) -> Result<(), operation_key::KeyError> {
+        let entry = keyring::Entry::new(operation_key::WRITE_KEY_SERVICE, &self.account)
+            .map_err(|_| operation_key::KeyError::KeyStore)?;
+        match entry.delete_credential() {
+            Ok(()) | Err(keyring::Error::NoEntry) => Ok(()),
+            Err(_) => Err(operation_key::KeyError::KeyStore),
+        }
+    }
+}
+
+#[cfg(not(windows))]
+impl operation_key::WriteKeyStore for WindowsWriteKey {
+    fn get(&self) -> Result<Option<String>, operation_key::KeyError> {
+        Err(operation_key::KeyError::KeyStore)
+    }
+    fn set(&self, _: &str) -> Result<(), operation_key::KeyError> {
+        Err(operation_key::KeyError::KeyStore)
+    }
+    fn delete(&self) -> Result<(), operation_key::KeyError> {
+        Err(operation_key::KeyError::KeyStore)
     }
 }
 

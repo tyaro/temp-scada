@@ -22,9 +22,9 @@ mod write_state;
 
 pub use write_state::{WriteState, WriteStatus};
 
-/// Format 2 added `terminal_write` (O2c-2); a format-1 file gets the table
-/// when opened.
-const FORMAT: i64 = 2;
+/// Format 2 added `terminal_write` (O2c-2), format 3 its `key_endpoint`
+/// (O2c-3a); an older file is brought up to date when opened.
+const FORMAT: i64 = 3;
 const PENDING: &str = "pending";
 
 /// Identical refusals of a slot are one row for this long after the row's
@@ -187,6 +187,8 @@ pub struct OperationDb {
     pool: SqlitePool,
     /// The write state as the file had it when opened (§7).
     write_status: WriteStatus,
+    /// The endpoint of the registered write key when opened (§7).
+    key_endpoint: Option<String>,
 }
 
 /// Finish a `pending` row; `InvalidRow` when it is not `pending`.
@@ -212,14 +214,14 @@ where
     }
 }
 
-/// Format 1 to 2: the write state's table (§7, O2c-2).
+/// Format 0 or 1 to 3: the write state's table (§7, O2c-2, O2c-3a).
 async fn add_write_state(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
 ) -> Result<(), OperationDbError> {
     sqlx::raw_sql(write_state::CREATE_TABLE)
         .execute(&mut **tx)
         .await?;
-    sqlx::raw_sql("PRAGMA user_version = 2;")
+    sqlx::raw_sql("PRAGMA user_version = 3;")
         .execute(&mut **tx)
         .await?;
     Ok(())
@@ -246,7 +248,7 @@ impl OperationDb {
         let version: i64 = sqlx::query_scalar("PRAGMA user_version")
             .fetch_one(&pool)
             .await?;
-        if version != 0 && version != 1 && version != FORMAT {
+        if !(0..=FORMAT).contains(&version) {
             pool.close().await;
             return Err(OperationDbError::UnsupportedFormat);
         }
@@ -291,9 +293,18 @@ impl OperationDb {
             .await?;
             add_write_state(&mut tx).await?;
             tx.commit().await?;
-        } else if version == 1 {
+        } else if version < FORMAT {
             let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-            add_write_state(&mut tx).await?;
+            if version == 1 {
+                add_write_state(&mut tx).await?;
+            } else {
+                sqlx::raw_sql(write_state::ADD_KEY_ENDPOINT)
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::raw_sql("PRAGMA user_version = 3;")
+                    .execute(&mut *tx)
+                    .await?;
+            }
             tx.commit().await?;
         }
         sqlx::query("PRAGMA journal_mode = WAL")
@@ -307,8 +318,15 @@ impl OperationDb {
         .execute(&pool)
         .await?
         .rows_affected();
-        let write_status = write_state::load(&pool).await?;
-        Ok((Self { pool, write_status }, recovered))
+        let (write_status, key_endpoint) = write_state::load(&pool).await?;
+        Ok((
+            Self {
+                pool,
+                write_status,
+                key_endpoint,
+            },
+            recovered,
+        ))
     }
 
     /// Run raw SQL against the record (tests make writes fail with it).
@@ -570,6 +588,9 @@ struct InFlight {
     /// When the last send slot was taken, on the monotonic clock (a wall
     /// clock that goes back must not hold writes back).
     last_begin: Option<Instant>,
+    /// The Hub endpoint the write key was registered for; `None` when no
+    /// key is registered (§7).
+    key_endpoint: Option<String>,
 }
 
 impl InFlight {
@@ -627,10 +648,12 @@ pub struct OperationLog {
 impl OperationLog {
     pub fn new(db: OperationDb) -> Self {
         let write = db.write_status;
+        let key_endpoint = db.key_endpoint.clone();
         Self {
             db,
             in_flight: Mutex::new(InFlight {
                 write,
+                key_endpoint,
                 ..InFlight::default()
             }),
             state_lock: tokio::sync::Mutex::new(()),
@@ -652,17 +675,52 @@ impl OperationLog {
             .gate(min_interval)
     }
 
-    /// A write key was registered again (§7): any state becomes `ready`
-    /// once the file has it. Called by the key's registration (O2c-3).
-    pub async fn key_registered(&self, now_ms: i64) -> Result<(), OperationDbError> {
+    /// The Hub endpoint the write key was registered for (§7), `None`
+    /// when no key is registered.
+    pub fn key_endpoint(&self) -> Option<String> {
+        self.in_flight
+            .lock()
+            .expect("operation log lock")
+            .key_endpoint
+            .clone()
+    }
+
+    /// A write key was registered for `endpoint` (§7): the endpoint is kept
+    /// and any state becomes `ready`, once the file has both. Called by
+    /// `operation_key::register` after the keyring took the secret.
+    pub async fn key_registered(
+        &self,
+        now_ms: i64,
+        endpoint: &str,
+    ) -> Result<(), OperationDbError> {
         let _state = self.state_lock.lock().await;
-        write_state::save(&self.db.pool, WriteState::Ready, now_ms).await?;
+        write_state::save_key(&self.db.pool, WriteState::Ready, now_ms, Some(endpoint)).await?;
         let mut in_flight = self.in_flight.lock().expect("operation log lock");
         in_flight.write = WriteStatus {
             state: WriteState::Ready,
             changed_at_ms: Some(now_ms),
         };
         in_flight.write_unsaved = false;
+        in_flight.key_endpoint = Some(endpoint.into());
+        Ok(())
+    }
+
+    /// The write key is being deleted (§7): the endpoint is dropped once the
+    /// file has it, so no write finds a key even if the keyring still holds
+    /// the secret. The state is kept (a new key makes it `ready`).
+    pub async fn key_deleted(&self) -> Result<(), OperationDbError> {
+        let _state = self.state_lock.lock().await;
+        let status = self.write_status();
+        write_state::save_key(
+            &self.db.pool,
+            status.state,
+            status.changed_at_ms.unwrap_or_default(),
+            None,
+        )
+        .await?;
+        let mut in_flight = self.in_flight.lock().expect("operation log lock");
+        in_flight.write_unsaved = false;
+        in_flight.key_endpoint = None;
         Ok(())
     }
 

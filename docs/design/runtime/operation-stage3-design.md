@@ -322,3 +322,12 @@ O2c-2 で決めたこと（2026-11-20）: 設計に書いていなかった所�
 - 最小間隔は、送信枠を取った時刻（4-6）からの経過で測る。壁時計の巻き戻りで書込みが止まらないよう、process の単調時計を使う。8 の照合で止めた要求も枠を取っていれば数える。再起動すると数え直す。間隔は host の `HubAccess::min_interval`（製品は `MIN_WRITE_INTERVAL`＝1 秒）。端末設定で変えるのは O2c-4。
 - 5 の順は `hub_unsupported`・`no_write_key`・（O2c-3 の `hub_mismatch`）・`write_stopped`・`key_invalid`・`too_soon`・`busy`。6 で送信枠を取ったときにも書込み状態と間隔をもう一度確かめる（5 と 6 の間に前の書込みが終わって止まった場合）。その場合は `busy` が先に出る。
 - 小窓の照会の `blocked` は `write_stopped`・`key_invalid` を出し、`too_soon` は出さない（次の要求がいつ来るかで決まるため）。
+
+O2c-3 の分け方と O2c-3a で決めたこと（2026-11-20）: O2c-3 は host の書き用キー（O2c-3a）と Tauri の登録・削除・再開の command・ACL（O2c-3b）に分ける。O2c-3a で設計に書いていなかった所は次のとおりにした。
+
+- 秘密は keyring のサービス `temp-scada-hub-write` に、アカウントを端末の installation id として 1 本持つ。値は webview へ戻さない。
+- 組にする接続先は、読み用の接続の記録（`hub-read.json`）の `endpoint` の文字列そのもの（警報が Hub の同一性に使うものと同じ）。`operations.db` の `terminal_write` に `key_endpoint` として書込み状態と並べて持つ（形式 3。形式 2 の file は開くときに列を足す）。読み用の接続先がこれと違う、または読み用の接続が無いときは `hub_mismatch`。
+- 登録は、秘密の形式（空でない印字可能な ASCII）と接続先（`http` だけ。製品の読み用の接続も TLS の pin を持たない）を確かめてから、keyring に書き、そのあと記録に接続先と `ready` を書く。削除は、記録から接続先を外してから keyring の秘密を消す。どちらも途中で失敗すると「キーが無い」状態になり、別の Hub と組になったキーが残ることは無い。秘密と接続先の片方だけがあるときもキーが無いとする。
+- 書き用キーは write スコープだけで Hub を読めないので、登録のときに Hub へ確かめない。最初の書込みで確かめる（401 は `key_invalid`）。
+- 削除は書込み状態を変えない（停止中のまま削除しても、次の登録で `ready` になる）。
+- 権限（開発・初期設定はログイン不要、運用は Admin）は O2c-3b の command で確かめる。

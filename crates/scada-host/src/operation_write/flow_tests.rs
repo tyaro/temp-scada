@@ -20,6 +20,7 @@ use super::tests::{
 use super::*;
 use crate::auth_phase::AuthHost;
 use crate::operation_db::{OperationDb, RecordState};
+use crate::operation_key::WriteKey;
 
 const READ_KEY: &str = "operation-read-test-only-key";
 const WRITE_KEY: &str = "operation-write-test-only-key";
@@ -320,7 +321,10 @@ impl Fixture {
                 endpoint: Some(self.hub.url.clone()),
                 read: Some(&self.read),
                 subscribed_revision: Some(REVISION),
-                write: Some(self.write.clone()),
+                write: Some(WriteKey {
+                    endpoint: self.hub.url.clone(),
+                    client: self.write.clone(),
+                }),
                 timeout: LONG,
                 min_interval: self.min_interval,
             },
@@ -515,7 +519,7 @@ async fn each_hub_answer_finishes_with_the_outcome_of_section_5() {
         assert_eq!(fx.hub.writes().len(), count + 1, "{case}");
         // A tripped or refused key stops the terminal (§7); the next case
         // starts from a registered key.
-        fx.log.key_registered(0).await.unwrap();
+        fx.log.key_registered(0, &fx.hub.url).await.unwrap();
     }
 }
 
@@ -1294,4 +1298,34 @@ async fn assert_refused_after_send(fx: &Fixture, request: &OperationWriteRequest
     let (row, _) = fx.latest(&request.slot_name).await.unwrap();
     assert_eq!(Some(row.id), result.record_id, "{code}");
     assert_eq!(fx.hub.writes().len(), sent, "{code}: sent");
+}
+
+#[tokio::test]
+async fn a_key_of_another_hub_is_never_used() {
+    let fx = Fixture::new().await;
+    let command = button("command", 0, json!(true));
+    let mut context = fx.context();
+    context.hub.write.as_mut().unwrap().endpoint = "http://127.0.0.1:1".into();
+    let result = operation_write(&context, &command).await;
+    assert_eq!(result.reason.as_deref(), Some(reason::HUB_MISMATCH));
+    // No read connection: no endpoint to match either.
+    context.hub.endpoint = None;
+    context.hub.write.as_mut().unwrap().endpoint = fx.hub.url.clone();
+    let view = view_with(&ViewContext {
+        env: context.env.clone(),
+        auth: context.auth.clone(),
+        log: Some(context.log.clone()),
+        project: context.project,
+        hub: HubAccess {
+            endpoint: None,
+            read: Some(&fx.read),
+            subscribed_revision: Some(REVISION),
+            write: context.hub.write.clone(),
+            min_interval: Duration::ZERO,
+            timeout: LONG,
+        },
+    })
+    .await;
+    assert_eq!(view.blocked, Some(reason::HUB_MISMATCH));
+    assert!(fx.hub.writes().is_empty());
 }
