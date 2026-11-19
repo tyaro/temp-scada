@@ -11,14 +11,19 @@
 //!   up to §4-4 is recorded as `hub_unsupported` (upstream #1223, O2c).
 //! - A record that could not be opened answers `refused` / `record_failed`
 //!   with `unrecorded: true`: nothing can be recorded, so nothing is sent.
+//! - `operation_view` (O3a) reads the faceplate's operation rows of one
+//!   equipment (§8): the write slots, their last request and why a write
+//!   would be refused now. It records nothing and takes neither the
+//!   transition lock nor the send slot.
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use scada_host::alarm_service::RestClient;
 use scada_host::operation_db::{OperationDb, OperationLog, Outcome};
 use scada_host::operation_write::{
-    self, check_shape, reason, HubAccess, OperationEnv, OperationWrite, OperationWriteRequest,
-    WriteResult, WRITE_TIMEOUT,
+    self, check_shape, reason, HubAccess, OperationEnv, OperationView, OperationViewRequest,
+    OperationWrite, OperationWriteRequest, ViewContext, WriteResult, WRITE_TIMEOUT,
 };
 use scada_host::recording_runtime::NO_DATA_DIR;
 use tauri::State;
@@ -27,6 +32,15 @@ use crate::app_mode::AppMode;
 use crate::auth::AuthState;
 use crate::runtime::StartupProject;
 use crate::NativeHost;
+
+/// Until upstream #1223 (§11-8) the Hub's write contract is never
+/// confirmed, so every write that gets that far is `hub_unsupported`.
+const WRITE_CONTRACT_CONFIRMED: bool = false;
+
+/// The write key (O2c); none yet, so `no_write_key` behind the contract.
+fn write_key() -> Option<Arc<RestClient>> {
+    None
+}
 
 /// The record's file name in the terminal's data dir (§9).
 pub const OPERATIONS_DB: &str = "operations.db";
@@ -172,10 +186,46 @@ pub async fn operation_write(
             catalog: catalog.as_ref(),
             subscribed_revision: host.read_revision.get(),
             // Until upstream #1223 and the write key (O2c): never sent.
-            write_contract_confirmed: false,
-            write: None,
+            write_contract_confirmed: WRITE_CONTRACT_CONFIRMED,
+            write: write_key(),
             timeout: WRITE_TIMEOUT,
         },
     };
     Ok(operation_write::operation_write(&context, &request).await)
+}
+
+/// `operation_view`: the operation rows of one equipment for the Runtime
+/// faceplate (§8, O3a). The Project is the host's applied one. The answer
+/// is `OperationView` (`projectId`, `projectDigest`, `blocked`, `phase`,
+/// `slots`); the errors are `"runtimeOnly"`, `"invalid_request"` (an id not
+/// of 1–128 characters) and `"unknown_equipment"`. A record that is not open
+/// is `blocked: "record_failed"` with the slots listed without rows.
+#[tauri::command]
+pub async fn operation_view(
+    mode: State<'_, AppMode>,
+    startup: State<'_, StartupProject>,
+    auth: State<'_, AuthState>,
+    operations: State<'_, OperationState>,
+    request: OperationViewRequest,
+) -> Result<OperationView, String> {
+    mode.require_runtime()?;
+    let context = ViewContext {
+        env: Arc::new(HostEnv {
+            runtime: matches!(*mode, AppMode::Runtime { .. }),
+        }),
+        auth: auth.auth_host(),
+        log: operations.log().ok(),
+        project: startup.applied(),
+        hub: HubAccess {
+            endpoint: None,
+            catalog: None,
+            subscribed_revision: None,
+            write_contract_confirmed: WRITE_CONTRACT_CONFIRMED,
+            write: write_key(),
+            timeout: WRITE_TIMEOUT,
+        },
+    };
+    operation_write::operation_view(&context, &request)
+        .await
+        .map_err(str::to_owned)
 }

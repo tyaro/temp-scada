@@ -29,6 +29,7 @@ use crate::operation_db::{
 
 mod catalog;
 mod resolve;
+mod view;
 
 #[cfg(test)]
 mod flow_tests;
@@ -39,6 +40,10 @@ pub use catalog::{check_catalog, hub_value, MAX_SAFE_INTEGER};
 pub use resolve::{
     check_shape, parse_input, resolve, slot_decimals, AppliedProject, Known, OperationWriteRequest,
     Resolved, SlotType, WriteValue, MAX_ID_CHARS, MAX_INPUT_CHARS,
+};
+pub use view::{
+    operation_view, LatestRow, LatestState, OperationView, OperationViewRequest, SlotView,
+    ViewContext,
 };
 
 /// The refusal codes of §4 (the `reason` of a `refused` row).
@@ -78,6 +83,10 @@ pub const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// The user name of a write in the development / initial-setup phase (§6).
 pub const NOT_LOGGED_IN: &str = "未ログイン";
+
+/// The phase word of a record (and of the view) when the auth DB could not
+/// be opened.
+pub const PHASE_UNKNOWN: &str = "unknown";
 
 /// Upper bound of `on_behalf_of` (§4-7, the Hub's limit).
 pub const MAX_OPERATOR_CHARS: usize = 128;
@@ -166,7 +175,7 @@ pub async fn operation_write(
     let mut record = RequestRecord {
         requested_at_ms: context.env.now_ms(),
         user: NOT_LOGGED_IN.into(),
-        phase: "unknown".into(),
+        phase: PHASE_UNKNOWN.into(),
         hub_endpoint: context.hub.endpoint.clone(),
         project_id: request.project_id.clone(),
         project_digest: request.project_digest.clone(),
@@ -201,13 +210,10 @@ pub async fn operation_write(
         Ok(value) => value,
         Err(code) => return refuse(context, &record, code).await,
     };
-    // 5. The Hub's contract and the write key. TODO(O2c): `hub_mismatch`,
-    // `write_stopped`, `key_invalid`, `too_soon`.
-    if !context.hub.write_contract_confirmed {
-        return refuse(context, &record, reason::HUB_UNSUPPORTED).await;
-    }
-    let Some(client) = context.hub.write.clone() else {
-        return refuse(context, &record, reason::NO_WRITE_KEY).await;
+    // 5. The Hub's contract and the write key.
+    let client = match write_client(&context.hub) {
+        Ok(client) => client,
+        Err(code) => return refuse(context, &record, code).await,
     };
     // 6. The `pending` row; `busy` when another write holds the send slot.
     let id = match context.log.begin(&record).await {
@@ -272,37 +278,78 @@ async fn admit(
     context: &OperationWrite<'_>,
     record: &mut RequestRecord,
 ) -> Result<Admitted, &'static str> {
-    let Some(auth) = context.auth.as_deref() else {
-        return Err(if context.env.is_runtime() {
+    let admission = admission(&*context.env, context.auth.as_deref()).await;
+    if let Some(phase) = admission.phase {
+        record.phase = phase.as_str().into();
+    }
+    if let Some(user) = admission.user {
+        record.user = user;
+    }
+    admission.result
+}
+
+/// What step 2 found: the phase (`None` when the auth DB could not be
+/// opened), the logged-in user when known, and whether the request may go
+/// on. Shared by the write and the view (`operation_view`) so their rules
+/// cannot drift.
+struct Admission {
+    phase: Option<AuthPhase>,
+    user: Option<String>,
+    result: Result<Admitted, &'static str>,
+}
+
+/// The rules of step 2 (§4-2, §6), without a request.
+async fn admission(env: &dyn OperationEnv, auth: Option<&AuthHost>) -> Admission {
+    let refused = |phase, user, code| Admission {
+        phase,
+        user,
+        result: Err(code),
+    };
+    let Some(auth) = auth else {
+        let code = if env.is_runtime() {
             reason::AUTH_UNAVAILABLE
         } else {
             reason::NOT_RUNTIME
-        });
+        };
+        return refused(None, None, code);
     };
     let phase = auth.phase().await;
-    record.phase = phase.as_str().into();
-    if !context.env.is_runtime() {
-        return Err(reason::NOT_RUNTIME);
+    if !env.is_runtime() {
+        return refused(Some(phase), None, reason::NOT_RUNTIME);
     }
-    let session = auth
-        .auth()
-        .current()
-        .await
-        .map_err(|_| reason::AUTH_UNAVAILABLE)?;
+    let Ok(session) = auth.auth().current().await else {
+        return refused(Some(phase), None, reason::AUTH_UNAVAILABLE);
+    };
     match phase {
-        AuthPhase::Bootstrapping | AuthPhase::Transitioning => Err(reason::PHASE_UNAVAILABLE),
+        AuthPhase::Bootstrapping | AuthPhase::Transitioning => {
+            refused(Some(phase), None, reason::PHASE_UNAVAILABLE)
+        }
         // §6: only users with `equipment.operate`, which needs
         // tyaro/banto#697. Until then nobody (no fallback to Admin).
         // TODO(O5): admit `equipment.operate`.
         AuthPhase::Operational => {
-            if let Some(current) = &session {
-                record.user = current.session.identity().username.clone();
-            }
-            Err(reason::NOT_AUTHORIZED)
+            let user = session
+                .as_ref()
+                .map(|current| current.session.identity().username.clone());
+            refused(Some(phase), user, reason::NOT_AUTHORIZED)
         }
         // Development / initial setup: no login (§6).
-        AuthPhase::Initializing => Ok(Admitted { phase, session }),
+        AuthPhase::Initializing => Admission {
+            phase: Some(phase),
+            user: None,
+            result: Ok(Admitted { phase, session }),
+        },
     }
+}
+
+/// Step 5: the Hub's write contract and the write key. Shared by the write
+/// and the view. TODO(O2c): `hub_mismatch`, `write_stopped`, `key_invalid`,
+/// `too_soon`.
+fn write_client(hub: &HubAccess<'_>) -> Result<Arc<RestClient>, &'static str> {
+    if !hub.write_contract_confirmed {
+        return Err(reason::HUB_UNSUPPORTED);
+    }
+    hub.write.clone().ok_or(reason::NO_WRITE_KEY)
 }
 
 /// Step 4: fetch the catalog within the write's bound and check the tag.

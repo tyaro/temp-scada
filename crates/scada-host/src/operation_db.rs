@@ -584,6 +584,16 @@ impl OperationLog {
         }
     }
 
+    /// Whether a write of this terminal holds the send slot now (`busy`,
+    /// §4-6). A read for the screen; `begin` decides under the same lock.
+    pub fn is_sending(&self) -> bool {
+        self.in_flight
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .sending
+            .is_some()
+    }
+
     /// The last request of one slot, with its `pending` state resolved (§9).
     pub async fn latest(
         &self,
