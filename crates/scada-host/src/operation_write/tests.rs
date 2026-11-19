@@ -509,3 +509,107 @@ fn the_operator_claim_follows_the_hub_rules() {
     assert!(!valid_operator("op\nerator"));
     assert!(!valid_operator("op\u{7f}"));
 }
+
+/// The webview checks a typed input with the same rules before it sends
+/// (O3b, `apps/banto-scada/src/lib/operation.ts`); both read these cases.
+/// Each case runs through `check_shape` and `resolve` on the fixture Project,
+/// with the case's slot type, input range and Symbol text decimals.
+#[test]
+fn inputs_match_the_shared_cases() {
+    let cases: Value = serde_json::from_str(include_str!(
+        "../../../../examples/operation-input-cases.json"
+    ))
+    .unwrap();
+    for case in cases.as_array().unwrap() {
+        let name = &case["name"];
+        let mut doc = project().as_value().clone();
+        let slot_name = match case["slotType"].as_str().unwrap() {
+            "number" => "speedSp",
+            "bool" => "command",
+            "state" => "mode",
+            other => panic!("{name}: slot type {other}"),
+        };
+        let pump_type = doc["equipment"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|item| item["id"] == PUMP)
+            .unwrap()["typeId"]
+            .clone();
+        let write = doc["equipmentTypes"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|kind| kind["id"] == pump_type)
+            .unwrap()["slots"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|slot| slot["name"] == slot_name)
+            .unwrap()["write"]
+            .as_object_mut()
+            .unwrap();
+        if case["input"].is_null() {
+            write.remove("input");
+        } else if slot_name == "speedSp" {
+            write.insert("input".into(), case["input"].clone());
+        }
+        if let Some(decimals) = case["decimals"].as_u64() {
+            let symbol_id = doc["screens"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|screen| screen["id"] == SCREEN)
+                .unwrap()["objects"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|object| object["id"] == PLACEMENT)
+                .unwrap()["shape"]["symbolId"]
+                .clone();
+            let symbol = doc["symbols"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .find(|symbol| symbol["id"] == symbol_id)
+                .unwrap();
+            symbol["readSlots"]
+                .as_array_mut()
+                .unwrap()
+                .push(json!({"name": "speedSp", "type": "number", "direction": "read"}));
+            symbol["objects"].as_array_mut().unwrap().push(json!({
+                "id": "0199d3ff-0000-7000-8000-0000000000f0", "order": 99, "rotation": 0,
+                "x": 0, "y": 0, "width": 10, "height": 10, "fill": "#e2e8f0",
+                "shape": {"type": "text", "text": "0", "style": {"fontSize": 13, "fontWeight": "normal", "align": "left"},
+                    "slotBinding": {"slotName": "speedSp"},
+                    "format": {"decimals": decimals}}}));
+        }
+        let project = scada_model::Project::from_json(&doc.to_string())
+            .unwrap_or_else(|error| panic!("{name}: {error:?}"));
+        let expected = &case["expect"];
+        let mut request = input(
+            case["text"].as_str().unwrap(),
+            expected.get("value").cloned().unwrap_or(json!(0)),
+        );
+        request.slot_name = slot_name.into();
+        let result = check_shape(&request)
+            .map_err(|_| reason::INVALID_REQUEST)
+            .and_then(|()| resolve_with(&project, &request).0);
+        match expected.get("reason") {
+            Some(code) => assert_eq!(result.err(), code.as_str(), "{name}"),
+            None => {
+                let resolved = result.unwrap_or_else(|code| panic!("{name}: {code}"));
+                assert_eq!(
+                    resolved.value,
+                    WriteValue::Number(expected["value"].as_f64().unwrap()),
+                    "{name}"
+                );
+                assert_eq!(
+                    resolved.fractional,
+                    expected["fractional"].as_bool().unwrap(),
+                    "{name}"
+                );
+            }
+        }
+    }
+}
