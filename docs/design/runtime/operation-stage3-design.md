@@ -265,3 +265,12 @@ host の SQLite（端末に 1 つのファイル `operations.db`。警報 DB と
 O2a からは Tauri 実機と実 Hub の確認が要り、ブラウザの e2e では host を通らない。書込みの区分の正しさは O2b の host の試験で確かめる。各区切りの検証は[差分文書§5.5](../editor/flow-diagram-gap-2026-11-12.md#55-各-pr-の検証)に従う。
 
 O2b の分け方（2026-11-19）: O2b-1 は実行記録（`operations.db` の行、§5 の区分の対応表、起動時の `pending` の直し、送信中・記録できなかった行の区別、端末で送信中を 1 つにする予約）だけで、Hub へは送らない。O2b-2 は `operation_write` の検査の順（§4）とモック Hub の各応答の試験、Tauri の command。書き用キー（O2c）と書込み契約の確認（§11-8）が無い間、O2b-2 の command は `no_write_key`／`hub_unsupported` で拒み、実 Hub へは送らない。
+
+O2b-2 の分け方と O2b-2a で決めたこと（2026-11-19）: O2b-2a は host の `operation_write`（§4 の 1〜8、§4.1、§4.2、§5、§6）とその試験、O2b-2b は Tauri の command。設計に書いていなかった所は次のとおりにした。O3 の小窓（TS）も同じ規則に揃える。
+
+- 入力の小数桁の上限（§3）: slot は書式を持たないので、押した配置の Symbol の中でその slot を `slotBinding` で表示する文字・表のセルの `format.decimals` の最大とする。表示が無ければ桁を制限しない。
+- 入力の文字列は 128 文字までとし、超えたら 1 の `invalid_request`（記録しない）。
+- 8 の再照合で mode が Runtime でなくなっていたら、2 と同じ `not_runtime` で確定する。
+- 適用中の Project が無いときは 3 の `project_changed`、購読の catalog の revision が無いときは 4 の `catalog_pending`。認証を開けなかった host は `auth_unavailable`（記録のフェーズは `unknown`）。
+- 記録の `value` は、ボタンなら `{"button": 番号, "value": 値}`、入力なら `{"input": "入力の文字列", "value": 値}`。値を解決する前に止めたものは `value` を持たない。
+- 送信のタスクが異常終了したときは `uncertain`（理由 `interrupted`）とする。

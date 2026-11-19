@@ -12,6 +12,7 @@ pub mod desktop_auth;
 pub mod desktop_recording;
 mod durable;
 pub mod operation_db;
+pub mod operation_write;
 pub mod project_file;
 pub mod recording_control;
 pub mod recording_epoch;
