@@ -28,9 +28,9 @@ pub use write_state::{KeyRef, WriteState, WriteStatus};
 
 /// Format 2 added `terminal_write` (O2c-2), format 3 its write key
 /// (`key_endpoint`, `key_id`; O2c-3a), format 4 `terminal_settings` (the
-/// minimum interval; O2c-4b); an older file is brought up to date when
-/// opened.
-const FORMAT: i64 = 4;
+/// minimum interval; O2c-4b), format 5 its integer CHECK; an older file is
+/// brought up to date when opened.
+const FORMAT: i64 = 5;
 const PENDING: &str = "pending";
 
 /// Identical refusals of a slot are one row for this long after the row's
@@ -224,9 +224,10 @@ where
     }
 }
 
-/// Bring a format 0 (just created), 1, 2 or 3 file to [`FORMAT`]: the
+/// Bring a format 0 (just created), 1, 2, 3 or 4 file to [`FORMAT`]: the
 /// write state's table (O2c-2) or its write key (O2c-3a), then the
-/// terminal settings (O2c-4b).
+/// terminal settings (O2c-4b), or their table again with the integer
+/// CHECK (format 4).
 async fn upgrade(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     version: i64,
@@ -240,12 +241,20 @@ async fn upgrade(
             .execute(&mut **tx)
             .await?;
     }
-    if version <= 3 {
-        sqlx::raw_sql(terminal_settings::CREATE_TABLE)
+    if version == 4 {
+        sqlx::raw_sql(terminal_settings::REBUILD_TABLE)
             .execute(&mut **tx)
             .await?;
     }
-    sqlx::raw_sql("PRAGMA user_version = 4;")
+    sqlx::raw_sql(terminal_settings::CREATE_TABLE)
+        .execute(&mut **tx)
+        .await?;
+    if version == 4 {
+        sqlx::raw_sql(terminal_settings::COPY_FROM_4)
+            .execute(&mut **tx)
+            .await?;
+    }
+    sqlx::raw_sql("PRAGMA user_version = 5;")
         .execute(&mut **tx)
         .await?;
     Ok(())

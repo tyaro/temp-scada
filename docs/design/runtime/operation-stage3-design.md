@@ -365,8 +365,8 @@ O2c-4 の分け方と O2c-4a で決めたこと（2026-11-20）: O2c-4 は、書
 
 O2c-4b で決めたこと（2026-11-20）: 最小間隔（§7、§11-10）の端末設定は次のとおりにした。
 
-- 保存先は `operations.db` の表 `terminal_settings`（1 行、`min_interval_ms`。形式 4、形式 1〜3 の file は開くときに表を足す）。書込み状態の行（`terminal_write`）とは分け、間隔を保存しても書込み状態とその時刻を変えない。行が無ければ既定の 1 秒。別の設定 file は足さない（Runtime だけが開く記録と同じ 1 か所で持つ）。
-- 範囲は 0.1〜60 秒（100〜60,000 ms）で 0.1 秒刻み（`operation_db::valid_min_interval`、表の CHECK も上下限と刻みの両方）。範囲の外を保存しようとすると `invalid_interval` で何も変えない。読んだ値が範囲の外なら既定に戻す。
+- 保存先は `operations.db` の表 `terminal_settings`（1 行、`min_interval_ms`。形式 4 で足し、形式 1〜3 の file は開くときに表を足す）。書込み状態の行（`terminal_write`）とは分け、間隔を保存しても書込み状態とその時刻を変えない。行が無ければ既定の 1 秒。別の設定 file は足さない（Runtime だけが開く記録と同じ 1 か所で持つ）。
+- 範囲は 0.1〜60 秒（100〜60,000 ms）で 0.1 秒刻み（`operation_db::valid_min_interval`、表の CHECK も整数・上下限・刻みのすべて。SQLite は INTEGER の列に実数を残し、`%` は整数に丸めるので、`typeof` で整数を確かめる。整数の CHECK は形式 5 で足し、形式 4 の file は開くときに表を作り直して、新しい CHECK に合う値だけ残す）。範囲の外を保存しようとすると `invalid_interval` で何も変えない。読んだ値が範囲の外なら既定に戻す。
 - host は間隔をメモリに持ち（`OperationLog::min_interval`）、file に書けたときだけ変える。書込みは、要求の受付ではなく 5 と 6 の間隔の検査のときに今の値を読む（カタログの取得を待つ間に保存した間隔も、その書込みに効く。#324 のオーナー指摘）。検査を過ぎた書込みは、検査のときの間隔のまま進む。
 - command は `operation_min_interval_set(minIntervalMs)`（Runtime だけ、Admin。権限・`record_failed` の扱いは O2c-3b-2 の 3 つと同じ）。答えは `operation_key_status` と同じ形で、`minIntervalMs` を足した。
 - 画面は「書込みの端末設定」の窓に「書込みの最小間隔」の欄（秒で入れる文字の欄と「保存」）を置き、範囲と刻みを host と同じ規則で先に確かめる。
