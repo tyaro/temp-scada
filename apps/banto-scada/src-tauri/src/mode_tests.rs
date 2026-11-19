@@ -94,8 +94,8 @@ fn the_command_list_is_generate_handler_without_gaps_or_duplicates() {
     );
     assert_eq!(registered, unique);
     // 56 commands before the mode, `app_mode`, the 6 `runtime_*` and
-    // `operation_write`.
-    assert_eq!(listed.len(), 64);
+    // `operation_write` and `operation_view`.
+    assert_eq!(listed.len(), 65);
 }
 
 #[test]
@@ -494,6 +494,7 @@ fn runtime_only_calls() -> Vec<(&'static str, Value)> {
                 "objectId": "o", "equipmentId": "e", "slotName": "x",
                 "buttonIndex": 0, "expectedValue": true}}),
         ),
+        ("operation_view", json!({"request": {"equipmentId": "e"}})),
     ];
     let named: BTreeSet<&str> = calls.iter().map(|(name, _)| *name).collect();
     assert_eq!(named, RUNTIME_ONLY.iter().copied().collect());
@@ -679,13 +680,15 @@ fn the_acl_refuses_runtime_only_commands_from_the_editor_window() {
             .is_some_and(|message| message.contains("not allowed")),
         "{refused}"
     );
-    let refused = invoke(&editor, "operation_write", json!({"request": {}})).unwrap_err();
-    assert!(
-        refused
-            .as_str()
-            .is_some_and(|message| message.contains("not allowed")),
-        "{refused}"
-    );
+    for command in ["operation_write", "operation_view"] {
+        let refused = invoke(&editor, command, json!({"request": {}})).unwrap_err();
+        assert!(
+            refused
+                .as_str()
+                .is_some_and(|message| message.contains("not allowed")),
+            "{command}: {refused}"
+        );
+    }
     let (header, _) = invoke_frame(&runtime, "runtime_project");
     assert_eq!(header["status"], "opened");
     assert_eq!(header["projectDigest"], sha256_hex(MINIMAL.as_bytes()));

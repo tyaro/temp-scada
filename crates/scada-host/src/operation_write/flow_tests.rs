@@ -940,3 +940,258 @@ async fn a_panicked_send_whose_outcome_cannot_be_written_reads_as_unrecorded() {
     let next = fx.run(&button("mode", 0, json!(1))).await;
     assert_ne!(next.reason.as_deref(), Some(reason::BUSY), "{next:?}");
 }
+
+// The operation rows of the faceplate (`operation_view`, §8, O3a).
+
+impl Fixture {
+    fn view_context(&self) -> ViewContext<'_> {
+        let write = self.context();
+        ViewContext {
+            env: write.env,
+            auth: write.auth,
+            log: Some(write.log),
+            project: write.project,
+            hub: write.hub,
+        }
+    }
+
+    async fn view(&self) -> OperationView {
+        view_with(&self.view_context()).await
+    }
+}
+
+async fn view_with(context: &ViewContext<'_>) -> OperationView {
+    let request = OperationViewRequest {
+        equipment_id: PUMP.into(),
+    };
+    operation_view(context, &request).await.unwrap()
+}
+
+fn slot<'a>(view: &'a OperationView, name: &str) -> Option<&'a LatestRow> {
+    view.slots
+        .iter()
+        .find(|slot| slot.slot == name)
+        .expect("a write slot")
+        .latest
+        .as_ref()
+}
+
+#[tokio::test]
+async fn the_view_lists_the_write_slots_with_their_last_requests() {
+    let fx = Fixture::new().await;
+    let view = fx.view().await;
+    assert_eq!(view.project_id.as_deref(), Some(PROJECT_ID));
+    assert_eq!(view.project_digest.as_deref(), Some(DIGEST));
+    assert_eq!(view.blocked, None);
+    assert_eq!(view.phase, "initializing");
+    let names: Vec<&str> = view.slots.iter().map(|slot| slot.slot.as_str()).collect();
+    assert_eq!(names, ["command", "speedSp", "mode", "spare"]);
+    assert!(view.slots.iter().all(|slot| slot.latest.is_none()));
+    // Reading records nothing.
+    assert!(fx.latest("command").await.is_none());
+
+    let sent = fx.run(&button("command", 0, json!(true))).await;
+    fx.run(&button("command", 1, json!(false))).await;
+    fx.run(&button("spare", 0, json!(true))).await;
+    let view = fx.view().await;
+    let command = slot(&view, "command").unwrap();
+    assert_ne!(Some(command.id.clone()), sent.record_id, "the last one");
+    assert_eq!(command.state, LatestState::Finished);
+    assert_eq!(command.outcome, Some(Outcome::Ok));
+    assert_eq!(command.reason, None);
+    assert_eq!(command.audit_id, Some(42));
+    assert_eq!(command.tag.as_deref(), Some(COMMAND_TAG));
+    assert_eq!(command.value, Some(json!(false)));
+    assert!(command.finished_at_ms.unwrap() >= command.requested_at_ms);
+    let spare = slot(&view, "spare").unwrap();
+    assert_eq!(spare.outcome, Some(Outcome::Refused));
+    assert_eq!(spare.reason.as_deref(), Some(reason::UNBOUND));
+    assert_eq!(spare.tag, None);
+    assert!(slot(&view, "mode").is_none());
+    // The webview's shape.
+    let json = serde_json::to_value(&view).unwrap();
+    assert_eq!(json["blocked"], Value::Null);
+    assert_eq!(json["slots"][0]["latest"]["state"], "finished");
+    assert_eq!(json["slots"][0]["latest"]["outcome"], "ok");
+    assert_eq!(json["slots"][0]["latest"]["auditId"], 42);
+    assert!(json["slots"][0]["latest"]["finishedAtMs"].is_i64());
+    assert_eq!(json["slots"][1]["latest"], Value::Null);
+}
+
+#[tokio::test]
+async fn the_view_hides_every_row_when_one_cannot_be_read() {
+    let fx = Fixture::new().await;
+    fx.run(&button("command", 0, json!(true))).await;
+    fx.run(&button("spare", 0, json!(true))).await;
+    // `spare` (the last slot) holds a user that is not text: unreadable.
+    fx.log
+        .db()
+        .execute_for_test("UPDATE operation SET user = X'FF' WHERE slot = 'spare'")
+        .await;
+    let view = fx.view().await;
+    assert_eq!(view.blocked, Some(reason::RECORD_FAILED));
+    assert_eq!(view.slots.len(), 4);
+    // `command` was read before `spare` failed, and is not shown either.
+    assert!(view.slots.iter().all(|slot| slot.latest.is_none()));
+}
+
+#[tokio::test]
+async fn the_view_shows_the_row_being_sent_and_busy() {
+    let fx = Fixture::new().await;
+    let hold = &fx.hub.state.write_hold;
+    hold.on.store(true, Ordering::SeqCst);
+    let request = button("command", 0, json!(true));
+    let (result, view) = tokio::join!(fx.run(&request), async {
+        hold.arrived.notified().await;
+        hold.on.store(false, Ordering::SeqCst);
+        let view = fx.view().await;
+        hold.release.notify_one();
+        view
+    });
+    assert_eq!(view.blocked, Some(reason::BUSY));
+    let command = slot(&view, "command").unwrap();
+    assert_eq!(Some(command.id.clone()), result.record_id);
+    assert_eq!(command.state, LatestState::Sending);
+    assert_eq!(command.outcome, None);
+    assert_eq!(command.finished_at_ms, None);
+    assert_eq!(command.value, Some(json!(true)));
+    let view = fx.view().await;
+    assert_eq!(view.blocked, None);
+    assert_eq!(slot(&view, "command").unwrap().state, LatestState::Finished);
+}
+
+#[tokio::test]
+async fn the_view_shows_unrecorded_rows_with_and_without_their_outcome() {
+    let fx = Fixture::new().await;
+    fx.log
+        .db()
+        .execute_for_test("CREATE TRIGGER fail_update BEFORE UPDATE ON operation BEGIN SELECT RAISE(ABORT, 'disk full'); END")
+        .await;
+    let result = fx.run(&button("command", 0, json!(true))).await;
+    assert!(result.unrecorded);
+    // A row an earlier process left `pending`.
+    let mut earlier = fx.latest("command").await.unwrap().0.request;
+    earlier.slot = "mode".into();
+    fx.log
+        .db()
+        .insert_pending("earlier", &earlier)
+        .await
+        .unwrap();
+
+    let view = fx.view().await;
+    let command = slot(&view, "command").unwrap();
+    assert_eq!(command.state, LatestState::Unrecorded);
+    assert_eq!(command.outcome, Some(Outcome::Ok));
+    assert_eq!(command.audit_id, Some(42));
+    assert!(command.finished_at_ms.is_some());
+    let mode = slot(&view, "mode").unwrap();
+    assert_eq!(mode.id, "earlier");
+    assert_eq!(mode.state, LatestState::Unrecorded);
+    assert_eq!(mode.outcome, None);
+    assert_eq!(mode.reason, None);
+    assert_eq!(mode.finished_at_ms, None);
+    let json = serde_json::to_value(&view).unwrap();
+    assert_eq!(json["slots"][2]["latest"]["state"], "unrecorded");
+    assert_eq!(json["slots"][2]["latest"]["outcome"], Value::Null);
+}
+
+/// `blocked` is the write's own steps 2 and 5: the write with the same
+/// context is refused with the same code.
+async fn assert_blocked(fx: &Fixture, context: ViewContext<'_>, code: &str, phase: &str) {
+    let view = view_with(&context).await;
+    assert_eq!(view.blocked, Some(code));
+    assert_eq!(view.phase, phase);
+    let write = OperationWrite {
+        env: context.env,
+        auth: context.auth,
+        log: fx.log.clone(),
+        project: context.project,
+        hub: context.hub,
+    };
+    let result = operation_write(&write, &button("command", 0, json!(true))).await;
+    assert_eq!(result.reason.as_deref(), Some(code), "{result:?}");
+}
+
+#[tokio::test]
+async fn the_view_is_blocked_by_the_rules_of_the_write() {
+    let mut fx = Fixture::new().await;
+    fx.env.runtime.store(false, Ordering::SeqCst);
+    assert_blocked(&fx, fx.view_context(), reason::NOT_RUNTIME, "initializing").await;
+    fx.env.runtime.store(true, Ordering::SeqCst);
+    let mut context = fx.view_context();
+    context.auth = None;
+    assert_blocked(&fx, context, reason::AUTH_UNAVAILABLE, PHASE_UNKNOWN).await;
+    let mut context = fx.view_context();
+    context.project = None;
+    let view = view_with(&context).await;
+    assert_eq!(view.project_id, None);
+    assert!(view.slots.is_empty());
+    assert_blocked(&fx, context, reason::PROJECT_CHANGED, "initializing").await;
+    let mut context = fx.view_context();
+    context.hub.write = None;
+    assert_blocked(&fx, context, reason::NO_WRITE_KEY, "initializing").await;
+    fx.contract = false;
+    assert_blocked(
+        &fx,
+        fx.view_context(),
+        reason::HUB_UNSUPPORTED,
+        "initializing",
+    )
+    .await;
+    fx.contract = true;
+    // The record could not be opened: the slots are listed without rows.
+    let mut context = fx.view_context();
+    context.log = None;
+    let view = view_with(&context).await;
+    assert_eq!(view.blocked, Some(reason::RECORD_FAILED));
+    assert_eq!(view.slots.len(), 4);
+    assert!(view.slots.iter().all(|slot| slot.latest.is_none()));
+    // A transition stopped after its first step, then the operation phase.
+    assert!(fx
+        .auth
+        .transition_to_operational("admin", "wrong", "管理者", || true)
+        .await
+        .is_err());
+    assert_blocked(
+        &fx,
+        fx.view_context(),
+        reason::PHASE_UNAVAILABLE,
+        "transitioning",
+    )
+    .await;
+    fx.transition().await;
+    assert_blocked(
+        &fx,
+        fx.view_context(),
+        reason::NOT_AUTHORIZED,
+        "operational",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn the_view_refuses_an_unknown_or_malformed_equipment() {
+    let fx = Fixture::new().await;
+    let context = fx.view_context();
+    for (id, code) in [
+        ("nope".to_owned(), reason::UNKNOWN_EQUIPMENT),
+        (String::new(), reason::INVALID_REQUEST),
+        ("x".repeat(129), reason::INVALID_REQUEST),
+    ] {
+        let request = OperationViewRequest { equipment_id: id };
+        assert_eq!(operation_view(&context, &request).await, Err(code));
+    }
+    // Another pump of the type: the same slots, bound or not.
+    let request = OperationViewRequest {
+        equipment_id: super::tests::OTHER_PUMP.into(),
+    };
+    let other = operation_view(&context, &request).await.unwrap();
+    assert_eq!(other.slots.len(), 4);
+    let request: OperationViewRequest =
+        serde_json::from_value(json!({"equipmentId": PUMP})).unwrap();
+    assert_eq!(request.equipment_id, PUMP);
+    assert!(serde_json::from_value::<OperationViewRequest>(
+        json!({"equipmentId": PUMP, "projectId": "x"})
+    )
+    .is_err());
+}
