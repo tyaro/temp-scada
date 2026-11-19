@@ -20,9 +20,9 @@ uuid = { version = "1", features = ["v4", "v7"] }
 getrandom = "0.3"
 # Banto v7.2.0 (tag commit). The admin services own users / settings / audit;
 # the host only re-validates the desktop session and maps roles.
-banto-admin-services = { git = "https://github.com/tyaro/banto.git", rev = "54a577c26032d756816d03e1605f99b908c00e73" }
-banto-core = { git = "https://github.com/tyaro/banto.git", rev = "54a577c26032d756816d03e1605f99b908c00e73" }
-banto-storage = { git = "https://github.com/tyaro/banto.git", rev = "54a577c26032d756816d03e1605f99b908c00e73", features = ["sqlite"] }
+banto-admin-services = { git = "https://github.com/tyaro/banto.git", rev = "f20d380c02c87f974e119ad952886ed75f6a2147" }
+banto-core = { git = "https://github.com/tyaro/banto.git", rev = "f20d380c02c87f974e119ad952886ed75f6a2147" }
+banto-storage = { git = "https://github.com/tyaro/banto.git", rev = "f20d380c02c87f974e119ad952886ed75f6a2147", features = ["sqlite"] }
 tokio.workspace = true
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
 

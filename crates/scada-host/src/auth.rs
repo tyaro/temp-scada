@@ -607,11 +607,13 @@ impl HostAuth {
     }
 }
 
-/// Banto admin-template's SQLite migrations 0002-0012 without the demo
+/// Banto admin-template's SQLite migrations 0002-0013 without the demo
 /// `items` (0001, 0009, 0011) and attachments (0006), copied verbatim so their
 /// checksums match Banto's. 0010 adds the audit record-scope columns that
 /// `AuditLogService`'s `recordResource` / `recordId` filters read; 0012 adds
-/// the `users.version` column `UsersService` selects since Banto v7.4.0.
+/// the `users.version` column `UsersService` selects since Banto v7.4.0;
+/// 0013 adds the `user_permissions` table the user update reads since Banto
+/// v7.7.0 (SCADA registers no permission catalog yet).
 async fn migrate(db: &Db) -> Result<(), BantoError> {
     let pool = db
         .as_sqlite()

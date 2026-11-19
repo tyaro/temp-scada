@@ -157,8 +157,8 @@ dependencies = [
 
 [[package]]
 name = "banto-admin-services"
-version = "7.6.0"
-source = "git+https://github.com/tyaro/banto.git?rev=54a577c26032d756816d03e1605f99b908c00e73#54a577c26032d756816d03e1605f99b908c00e73"
+version = "7.7.0"
+source = "git+https://github.com/tyaro/banto.git?rev=f20d380c02c87f974e119ad952886ed75f6a2147#f20d380c02c87f974e119ad952886ed75f6a2147"
 dependencies = [
  "argon2",
  "banto-core",
@@ -173,8 +173,8 @@ dependencies = [
 
 [[package]]
 name = "banto-core"
-version = "7.6.0"
-source = "git+https://github.com/tyaro/banto.git?rev=54a577c26032d756816d03e1605f99b908c00e73#54a577c26032d756816d03e1605f99b908c00e73"
+version = "7.7.0"
+source = "git+https://github.com/tyaro/banto.git?rev=f20d380c02c87f974e119ad952886ed75f6a2147#f20d380c02c87f974e119ad952886ed75f6a2147"
 dependencies = [
  "chrono",
  "serde",
@@ -216,8 +216,8 @@ dependencies = [
 
 [[package]]
 name = "banto-storage"
-version = "7.6.0"
-source = "git+https://github.com/tyaro/banto.git?rev=54a577c26032d756816d03e1605f99b908c00e73#54a577c26032d756816d03e1605f99b908c00e73"
+version = "7.7.0"
+source = "git+https://github.com/tyaro/banto.git?rev=f20d380c02c87f974e119ad952886ed75f6a2147#f20d380c02c87f974e119ad952886ed75f6a2147"
 dependencies = [
  "banto-core",
  "serde_json",
@@ -903,7 +903,7 @@ dependencies = [
  "libc",
  "option-ext",
  "redox_users",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2421,7 +2421,7 @@ dependencies = [
  "png",
  "serde",
  "thiserror 2.0.21",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -3119,7 +3119,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3469,7 +3469,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -3947,7 +3947,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -5015,7 +5015,7 @@ dependencies = [
  "png",
  "serde",
  "thiserror 2.0.21",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -5449,7 +5449,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -5470,7 +5470,7 @@ dependencies = [
  "objc2-foundation",
  "objc2-quartz-core",
  "raw-window-handle",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
  "windows-version",
 ]
 
@@ -5840,7 +5840,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d6f32a0ff4a9f6f01231eb2059cc85479330739333e0e58cadf03b6af2cca10"
 dependencies = [
  "cfg-if",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
