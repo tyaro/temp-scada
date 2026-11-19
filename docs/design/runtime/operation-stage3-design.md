@@ -276,3 +276,11 @@ O2b-2 の分け方と O2b-2a で決めたこと（2026-11-19）: O2b-2a は host
 - 送信のタスクが異常終了したときは `uncertain`（理由 `interrupted`）とする。
 
 O2b-2b で決めたこと（2026-11-19）: command `operation_write` は Runtime の窓だけに許す（ACL の `runtime.json`、`require_runtime`）。Editor mode では要求を受け取る前に拒むので記録する要求が無く、`operations.db` は Runtime mode でだけ開く（host の `not_runtime` はこの command からは出ない）。記録を開けないときは 2〜5 を走らせずに `record_failed` を返す。購読の catalog の revision は、購読の最新の frame の値（`ReadHostFrame::catalog_revision`）を使う。購読が無いか catalog がまだ無ければ `catalog_pending`。
+
+O3 の分け方と O3a で決めたこと（2026-11-19）: O3a は Runtime の小窓が操作の行を出すための照会の command `operation_view`（Rust）、O3b は TS の純関数（Project からの操作の行、入力の表記と小数桁の規則を host と同じにする解釈、確認の小窓の内容、区分・理由の日本語の文言）、O3c は小窓の操作の行・確認の小窓・結果の表示、Editor の模擬の書込み、モックの IPC での e2e。O3a で決めたことは次のとおり。
+
+- 要求は `{ equipmentId }` だけ（1〜128 文字、ほかの欄は拒む）。Project は host の適用中のものを使い、webview からは受け取らない。答えは `projectId`・`projectDigest`（適用中の Project。無ければ null）、`blocked`、`phase`（記録に書くのと同じ語。認証を開けなければ `unknown`）、`slots`。
+- `slots` は機器種別の slot の順で、`write` を持つ slot だけ。各 slot の `latest` は最後の 1 件で、`state` は `finished`・`sending`・`unrecorded`。`outcome`・`reason`・`finishedAtMs`・`auditId` は確定した結果から取り、`sending` と、結果を持たない `unrecorded` では null。`value` は解決した値（記録の `value.value`）、`tag` は解決した外部名で、`operation_write` の答えと揃える。
+- `blocked` は、要求に依らない 2 と 5 の検査を書込みと同じ関数で記録せずに評価したもの（`not_runtime`・`auth_unavailable`・`phase_unavailable`・`not_authorized`・`project_changed`・`hub_unsupported`・`no_write_key`）と、送信中の `busy`。順は書込みと同じで、記録を開けない・読めないときは最初に `record_failed`（slot は並べ、`latest` は null）。製品では `hub_unsupported` になる。要求ごとの 1・3・4 の拒否は書込みのときに決まる。
+- 適用中の Project に無い機器は `unknown_equipment`、id の形が違えば `invalid_request` のエラーで、記録しない。適用中の Project が無ければ `blocked: "project_changed"` で `slots` は空。
+- 照会は遷移のロックも送信枠も取らない。

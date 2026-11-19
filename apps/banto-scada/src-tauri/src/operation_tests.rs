@@ -201,3 +201,107 @@ fn editor_mode_opens_no_record() {
         Err(json!("runtimeOnly"))
     );
 }
+
+/// The faceplate's operation rows (`operation_view`, O3a): the product build
+/// is blocked by the Hub contract, and a recorded refusal is the slot's last
+/// request.
+#[test]
+fn the_view_lists_the_write_slots_and_is_blocked_by_the_hub_contract() {
+    let dir = TempDir::new();
+    let mode = runtime_mode(&dir);
+    let request = startup(&mode);
+    let (_app, webview) = app(&dir, mode, "runtime");
+    let view_request = json!({"request": {"equipmentId": PUMP}});
+
+    let view = invoke(&webview, "operation_view", view_request.clone()).unwrap();
+    assert_eq!(view["projectId"], request["projectId"], "{view}");
+    assert_eq!(view["projectDigest"], request["projectDigest"]);
+    assert_eq!(view["blocked"], "hub_unsupported");
+    assert_eq!(view["phase"], "initializing");
+    assert_eq!(
+        view["slots"],
+        json!([{"slot": "command", "latest": null}]),
+        "{view}"
+    );
+
+    invoke(&webview, "operation_write", json!({"request": request})).unwrap();
+    let view = invoke(&webview, "operation_view", view_request).unwrap();
+    let latest = &view["slots"][0]["latest"];
+    assert_eq!(latest["state"], "finished", "{view}");
+    assert_eq!(latest["outcome"], "refused");
+    assert_eq!(latest["reason"], "catalog_unavailable");
+    assert_eq!(latest["tag"], COMMAND_TAG);
+    assert_eq!(latest["value"], json!(true));
+    assert_eq!(latest["auditId"], Value::Null);
+}
+
+/// The id is the only argument; an equipment the applied Project does not
+/// have is an error, not a record.
+#[test]
+fn the_view_of_an_unknown_equipment_is_an_error() {
+    let dir = TempDir::new();
+    let mode = runtime_mode(&dir);
+    startup(&mode);
+    let (_app, webview) = app(&dir, mode, "runtime");
+    assert_eq!(
+        invoke(
+            &webview,
+            "operation_view",
+            json!({"request": {"equipmentId": "nope"}})
+        ),
+        Err(json!("unknown_equipment"))
+    );
+    assert_eq!(
+        invoke(
+            &webview,
+            "operation_view",
+            json!({"request": {"equipmentId": ""}})
+        ),
+        Err(json!("invalid_request"))
+    );
+    assert!(invoke(
+        &webview,
+        "operation_view",
+        json!({"request": {"equipmentId": PUMP, "projectId": "p"}})
+    )
+    .is_err());
+}
+
+/// No applied Project: nothing to list, and a write would be
+/// `project_changed`. A record that is not open is `record_failed`.
+#[test]
+fn the_view_without_a_project_or_a_record_says_why() {
+    let dir = TempDir::new();
+    let mode = runtime_mode(&dir);
+    startup(&mode);
+    let AppMode::Runtime { project_path } = &mode else {
+        unreachable!()
+    };
+    std::fs::write(project_path, b"{not json").unwrap();
+    let (app, webview) = app(&dir, mode, "runtime");
+    let view_request = json!({"request": {"equipmentId": PUMP}});
+
+    let view = invoke(&webview, "operation_view", view_request.clone()).unwrap();
+    assert_eq!(view["blocked"], "project_changed", "{view}");
+    assert_eq!(view["projectId"], Value::Null);
+    assert_eq!(view["slots"], json!([]));
+
+    tauri::async_runtime::block_on(app.state::<OperationState>().close());
+    let view = invoke(&webview, "operation_view", view_request).unwrap();
+    assert_eq!(view["blocked"], "record_failed", "{view}");
+}
+
+/// Editor mode refuses the view by mode.
+#[test]
+fn editor_mode_refuses_the_view() {
+    let dir = TempDir::new();
+    let (_app, webview) = app(&dir, AppMode::Editor, "editor");
+    assert_eq!(
+        invoke(
+            &webview,
+            "operation_view",
+            json!({"request": {"equipmentId": PUMP}})
+        ),
+        Err(json!("runtimeOnly"))
+    );
+}

@@ -431,6 +431,7 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             hub_catalog,
             close::app_close_reply,
             operation::operation_write,
+            operation::operation_view,
             project::project_open,
             project::project_save,
             alarm::alarm_apply,
