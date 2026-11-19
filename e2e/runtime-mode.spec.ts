@@ -1072,7 +1072,7 @@ test.describe("the faceplate's operation rows (operation stage 3, O3c-1)", () =>
       "[data-operation-slot='running'] [data-operation-result]",
     );
     await expect(result).toContainText("書込みました");
-    await expect(result).toContainText("書いた値 運転（true）");
+    await expect(result).toContainText("要求値 運転（true）");
     const writes = await page.evaluate(
       () => (window as any).__runtimeHost.writes,
     );
@@ -1154,12 +1154,34 @@ test.describe("the faceplate's operation rows (operation stage 3, O3c-1)", () =>
     await rows.getByRole("button", { name: "運転", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "操作の確認" });
     await dialog.getByRole("button", { name: "実行" }).click();
-    const result = rows.locator(
-      "[data-operation-slot='running'] [data-operation-result]",
-    );
-    await expect(result).toContainText(
+    const slot = rows.locator("[data-operation-slot='running']");
+    const notice = slot.locator("[data-operation-notice]");
+    await expect(notice).toContainText(
       "結果不明。現在値と実行記録を確認してください",
     );
-    await expect(result).not.toContainText("受け付けませんでした");
+    await expect(notice).toContainText("要求値 運転（true）");
+    await expect(slot).not.toContainText("受け付けませんでした");
+    // Another operation's row arrives in the record: it is shown, and the
+    // notice of the lost answer stays (the two cannot be matched).
+    await page.evaluate(() => {
+      (window as any).__runtimeHost.latest = {
+        id: "another-operation",
+        state: "finished",
+        outcome: "refused",
+        reason: "busy",
+        requestedAtMs: Date.UTC(2026, 10, 19, 1, 2, 3),
+        finishedAtMs: Date.UTC(2026, 10, 19, 1, 2, 4),
+        tag: "Plant.Run",
+        value: false,
+        auditId: null,
+      };
+    });
+    await expect(slot.locator("[data-operation-result]")).toContainText(
+      "送っていません",
+      { timeout: 10_000 },
+    );
+    await expect(notice).toContainText(
+      "結果不明。現在値と実行記録を確認してください",
+    );
   });
 });

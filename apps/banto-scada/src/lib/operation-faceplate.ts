@@ -132,16 +132,12 @@ export function writeErrorText(error: unknown): string {
     : WRITE_UNKNOWN_TEXT;
 }
 
-/**
- * この小窓から送った書込みの答え、または応答が取れなかったこと。`before` は
- * 送る前に見ていた記録の最後の行の id（無ければ null）。
- */
+/** この小窓から送った書込みの答え、または応答が取れなかったこと。 */
 export type RowAnswer =
   | { kind: "result"; result: WriteResult; atMs: number }
   | {
       kind: "error";
       message: string;
-      before: string | null;
       /** 確認の小窓で書くとした値。 */
       value: boolean | number;
     };
@@ -153,14 +149,21 @@ export interface RowStatus {
   reason: string | null;
   atMs: number | null;
   /**
-   * 書こうとした値（解決した値）の文。§5: 結果は設備の状態ではないので、
-   * どの値についての結果かを購読値と並べて出す。分からなければ null。
+   * 要求した値（解決した値）の文。§5: 結果は設備の状態ではないので、
+   * どの値についての結果かを購読値と並べて出す。送った・成立したとは
+   * 限らない（拒否・結果不明でも出す）。分からなければ null。
    */
   value: string | null;
+  /**
+   * この小窓から送った書込みの応答が取れなかったことの注意と、その要求値。
+   * 自分の操作と記録の行を照合する手段が無いので、記録の最後の行（別の
+   * 操作のものかもしれない）とは分けて出し、行が変わっても消さない。
+   */
+  notice: { text: string; value: string | null } | null;
 }
 
-/** 書いた値の文。ボタンの値なら、確認の小窓と同じ「見出し（値）」。 */
-export function writtenValueText(
+/** 要求値の文。ボタンの値なら、確認の小窓と同じ「見出し（値）」。 */
+export function requestedValueText(
   value: unknown,
   row: Pick<OperationRow, "buttons"> | null,
 ): string | null {
@@ -184,7 +187,8 @@ function latestStatus(
     texts,
     reason: latest.reason ? reasonText(latest.reason) : null,
     atMs: latest.state === "sending" ? null : latest.finishedAtMs,
-    value: writtenValueText(latest.value, row),
+    value: requestedValueText(latest.value, row),
+    notice: null,
   };
 }
 
@@ -198,16 +202,17 @@ export function rowStatus(
   answer: RowAnswer | null,
   row: Pick<OperationRow, "buttons"> | null = null,
 ): RowStatus | null {
-  if (answer?.kind === "error")
-    // 送った後に新しい記録の行が読めたら、その行が結果を示す。
-    return latest && latest.id !== answer.before
-      ? latestStatus(latest, row)
-      : {
-          texts: [answer.message],
-          reason: null,
-          atMs: null,
-          value: writtenValueText(answer.value, row),
-        };
+  if (answer?.kind === "error") {
+    // 記録の最後の行は出すが、応答を失った注意はその行で消さない（その行が
+    // 自分の操作のものか、別の操作のものかを決められないため）。
+    const notice = {
+      text: answer.message,
+      value: requestedValueText(answer.value, row),
+    };
+    return latest
+      ? { ...latestStatus(latest, row), notice }
+      : { texts: [], reason: null, atMs: null, value: null, notice };
+  }
   if (
     answer &&
     (answer.result.unrecorded ||
@@ -221,7 +226,8 @@ export function rowStatus(
       ],
       reason: answer.result.reason ? reasonText(answer.result.reason) : null,
       atMs: answer.atMs,
-      value: writtenValueText(answer.result.value, row),
+      value: requestedValueText(answer.result.value, row),
+      notice: null,
     };
   return latest ? latestStatus(latest, row) : null;
 }

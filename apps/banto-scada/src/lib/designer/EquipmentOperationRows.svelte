@@ -155,7 +155,6 @@
     pending = null;
     sending = true;
     const slot = target.row.slotName;
-    const before = latestOf(slot)?.id ?? null;
     try {
       const result = await host.write(
         buildOperationRequest({
@@ -174,7 +173,6 @@
       answers[slot] = {
         kind: "error",
         message: writeErrorText(error),
-        before,
         value: target.expectedValue,
       };
     } finally {
@@ -250,10 +248,17 @@
           {#if inputErrors[row.slotName]}<p class="error" role="alert">
               {inputErrors[row.slotName]}
             </p>{/if}
-          {#if status}
+          {#if status?.notice}
+            <!-- 応答を失った操作の注意。記録の最後の行とは分け、その行が変わっても消さない。 -->
+            <p class="error" role="alert" data-operation-notice>
+              {status.notice.text}{#if status.notice.value !== null}
+                · 要求値 {status.notice.value}{/if}
+            </p>
+          {/if}
+          {#if status?.texts.length}
             <p class="result" data-operation-result>
               {status.texts.join(" · ")}{#if status.value !== null}
-                · 書いた値 {status.value}{/if}{#if status.atMs !== null}
+                · 要求値 {status.value}{/if}{#if status.atMs !== null}
                 · {operationTimeText(status.atMs)}{/if}{#if status.reason}
                 · {status.reason}{/if}
             </p>
