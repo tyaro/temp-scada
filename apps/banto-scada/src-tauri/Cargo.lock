@@ -288,8 +288,8 @@ dependencies = [
 
 [[package]]
 name = "banto-admin-services"
-version = "7.7.0"
-source = "git+https://github.com/tyaro/banto.git?rev=f20d380c02c87f974e119ad952886ed75f6a2147#f20d380c02c87f974e119ad952886ed75f6a2147"
+version = "7.9.0"
+source = "git+https://github.com/tyaro/banto.git?rev=c017882a654754dfed87bf558a319c96ba136716#c017882a654754dfed87bf558a319c96ba136716"
 dependencies = [
  "argon2",
  "banto-core",
@@ -304,8 +304,8 @@ dependencies = [
 
 [[package]]
 name = "banto-core"
-version = "7.7.0"
-source = "git+https://github.com/tyaro/banto.git?rev=f20d380c02c87f974e119ad952886ed75f6a2147#f20d380c02c87f974e119ad952886ed75f6a2147"
+version = "7.9.0"
+source = "git+https://github.com/tyaro/banto.git?rev=c017882a654754dfed87bf558a319c96ba136716#c017882a654754dfed87bf558a319c96ba136716"
 dependencies = [
  "chrono",
  "serde",
@@ -348,8 +348,8 @@ dependencies = [
 
 [[package]]
 name = "banto-storage"
-version = "7.7.0"
-source = "git+https://github.com/tyaro/banto.git?rev=f20d380c02c87f974e119ad952886ed75f6a2147#f20d380c02c87f974e119ad952886ed75f6a2147"
+version = "7.9.0"
+source = "git+https://github.com/tyaro/banto.git?rev=c017882a654754dfed87bf558a319c96ba136716#c017882a654754dfed87bf558a319c96ba136716"
 dependencies = [
  "banto-core",
  "serde_json",
