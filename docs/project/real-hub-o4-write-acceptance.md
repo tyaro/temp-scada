@@ -42,7 +42,7 @@
 
 §1の表の2件を、次のどちらかでHubへ登録し、有効・書込み可にする。
 
-- SCADAの「Hub登録用CSVを書き出す」（[設計](../design/equipment/equipment-register-design.md)の該当節）。`examples/real-hub-write.project.json`をEditorで開き、機器の表から書き出して、Hubの「タグのCSVインポート」で取り込む。addressは空欄で出るので、D4010・M1510を埋める。`writable`列は`write`を持つslotなので`true`で出る（取込み後にHubの画面で書込み可になっていることを確かめる）。
+- SCADAの「Hub登録用CSVを書き出す」（[設計](../design/equipment/equipment-register-design.md)の該当節）。`examples/real-hub-write.project.json`をEditorで開き、機器の表から書き出して、Hubの「タグのCSVインポート」で取り込む。addressは空欄で出るので、D4010・M1510を埋める。number の slot の`dataType`は空欄で出る（Hubは空の型を断る）ので、`SCADA_O4_D4010`の行の`dataType`を`i16`にする（`SCADA_O4_M1510`は`bit`で出る）。`writable`列は`write`を持つslotなので`true`で出る（取込み後にHubの画面で書込み可になっていることを確かめる）。
 - Hubの管理画面で直接追加する。
 
 登録後、catalog revisionを記録する。
