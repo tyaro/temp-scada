@@ -142,31 +142,95 @@ async fn reopening_finishes_rows_an_earlier_process_left_pending() {
 }
 
 #[tokio::test]
-async fn a_file_of_another_format_is_not_opened() {
-    let file = temp_file();
-    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
-    sqlx::query("PRAGMA user_version = 2")
-        .execute(&db.pool)
+async fn a_file_of_another_format_is_refused_without_changing_it() {
+    // A file of a later format, and a foreign SQLite file without our
+    // version, both in rollback-journal mode.
+    for setup in ["PRAGMA user_version = 2", "CREATE TABLE foreign_data (x)"] {
+        let file = temp_file();
+        let mut connection = <sqlx::sqlite::SqliteConnection as sqlx::Connection>::connect_with(
+            &SqliteConnectOptions::new()
+                .filename(&file)
+                .create_if_missing(true)
+                .journal_mode(sqlx::sqlite::SqliteJournalMode::Delete),
+        )
         .await
         .unwrap();
-    db.close().await;
-    assert!(matches!(
-        OperationDb::open(&file, 0).await,
-        Err(OperationDbError::UnsupportedFormat)
-    ));
+        sqlx::raw_sql(setup).execute(&mut connection).await.unwrap();
+        sqlx::Connection::close(connection).await.unwrap();
 
-    // A foreign SQLite file without our version is not taken over either.
-    let other = temp_file();
-    let (db, _) = OperationDb::open(&other, 0).await.unwrap();
-    sqlx::raw_sql("DROP TABLE operation; PRAGMA user_version = 0; CREATE TABLE foreign_data (x)")
-        .execute(&db.pool)
+        assert!(
+            matches!(
+                OperationDb::open(&file, 0).await,
+                Err(OperationDbError::UnsupportedFormat)
+            ),
+            "{setup}"
+        );
+        // The refused file keeps its journal mode (WAL would be persistent).
+        let mut connection = <sqlx::sqlite::SqliteConnection as sqlx::Connection>::connect_with(
+            &SqliteConnectOptions::new().filename(&file).read_only(true),
+        )
         .await
         .unwrap();
+        let mode: String = sqlx::query_scalar("PRAGMA journal_mode")
+            .fetch_one(&mut connection)
+            .await
+            .unwrap();
+        assert_eq!(mode, "delete", "{setup}");
+        sqlx::Connection::close(connection).await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn an_accepted_file_is_in_wal_mode() {
+    let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
+    let mode: String = sqlx::query_scalar("PRAGMA journal_mode")
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    assert_eq!(mode, "wal");
     db.close().await;
-    assert!(matches!(
-        OperationDb::open(&other, 0).await,
-        Err(OperationDbError::UnsupportedFormat)
-    ));
+}
+
+#[tokio::test]
+async fn a_row_finished_between_the_read_and_the_lock_reads_as_finished() {
+    let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let other = request("speedSp");
+    let request = request("command");
+
+    // `latest` reads the row while it is pending; `complete` then writes the
+    // outcome and frees the send slot before `latest` takes the lock.
+    let id = log.begin(&request).await.unwrap();
+    let stale = log
+        .db()
+        .latest(&request.project_id, "eq-1", "command")
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(stale.finish.is_none());
+    log.complete(&id, finish(Outcome::Ok, 1_300)).await.unwrap();
+    let (row, state) = log.resolve(stale).await.unwrap();
+    assert_eq!(state, RecordState::Finished(finish(Outcome::Ok, 1_300)));
+    assert_eq!(row.finish, Some(finish(Outcome::Ok, 1_300)));
+
+    // The same when a kept outcome is rewritten between the read and the lock.
+    let id = log.begin(&request).await.unwrap();
+    fail_updates(log.db(), true).await;
+    assert!(log
+        .complete(&id, finish(Outcome::Failed, 1_400))
+        .await
+        .is_err());
+    let stale = log
+        .db()
+        .latest(&request.project_id, "eq-1", "command")
+        .await
+        .unwrap()
+        .unwrap();
+    fail_updates(log.db(), false).await;
+    log.refuse(&other, "too_soon", 1_500).await.unwrap();
+    let (_, state) = log.resolve(stale).await.unwrap();
+    assert_eq!(state, RecordState::Finished(finish(Outcome::Failed, 1_400)));
+    log.close().await;
 }
 
 #[tokio::test]
@@ -356,5 +420,22 @@ async fn a_pending_row_of_an_earlier_process_reads_as_unrecorded_without_outcome
         .unwrap()
         .unwrap();
     assert_eq!(state, RecordState::Unrecorded { finish: None });
+    log.close().await;
+}
+
+#[tokio::test]
+async fn a_dropped_begin_frees_the_send_slot() {
+    let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let request = request("command");
+    {
+        let mut begin = Box::pin(log.begin(&request));
+        // The SQLite worker answers on another thread: the first poll waits.
+        let first = futures_util::poll!(begin.as_mut());
+        assert!(first.is_pending());
+        assert!(log.in_flight.lock().unwrap().sending.is_some());
+    }
+    assert!(log.in_flight.lock().unwrap().sending.is_none());
+    log.begin(&request).await.unwrap();
     log.close().await;
 }

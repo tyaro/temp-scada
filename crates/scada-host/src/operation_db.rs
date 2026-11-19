@@ -185,10 +185,11 @@ impl OperationDb {
         if let Some(parent) = file.parent() {
             durable::create_dir_durably(parent)?;
         }
+        // No journal mode yet: WAL is persistent in the file, so it is set
+        // only after the file is accepted, never on a foreign one we refuse.
         let options = SqliteConnectOptions::new()
             .filename(file)
-            .create_if_missing(true)
-            .journal_mode(sqlx::sqlite::SqliteJournalMode::Wal);
+            .create_if_missing(true);
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .connect_with(options)
@@ -242,6 +243,9 @@ impl OperationDb {
             .await?;
             tx.commit().await?;
         }
+        sqlx::query("PRAGMA journal_mode = WAL")
+            .execute(&pool)
+            .await?;
         let recovered = sqlx::query(
             "UPDATE operation SET outcome = 'uncertain', reason = ?, finished_at_ms = ? WHERE outcome = 'pending'",
         )
@@ -350,7 +354,6 @@ impl OperationDb {
         row.map(|row| stored_row(&row)).transpose()
     }
 
-    #[cfg(test)]
     async fn row(&self, id: &str) -> Result<Option<StoredRow>, OperationDbError> {
         let row = sqlx::query("SELECT * FROM operation WHERE id = ?")
             .bind(id)
@@ -430,6 +433,32 @@ struct InFlight {
     unrecorded: BTreeMap<String, Finish>,
 }
 
+/// The send slot `begin` took, freed on drop unless `keep` hands it to the
+/// caller (an error return or a dropped `begin` future).
+struct Reservation<'a> {
+    in_flight: &'a Mutex<InFlight>,
+    id: &'a str,
+    armed: bool,
+}
+
+impl Reservation<'_> {
+    fn keep(mut self) {
+        self.armed = false;
+    }
+}
+
+impl Drop for Reservation<'_> {
+    fn drop(&mut self) {
+        if !self.armed {
+            return;
+        }
+        let mut in_flight = self.in_flight.lock().unwrap_or_else(|e| e.into_inner());
+        if in_flight.sending.as_deref() == Some(self.id) {
+            in_flight.sending = None;
+        }
+    }
+}
+
 /// The record plus what only this process knows: the row it is sending (at
 /// most one per terminal, §4) and the outcomes it could not write (§9).
 pub struct OperationLog {
@@ -452,7 +481,9 @@ impl OperationLog {
     /// Reserve the terminal's single send slot and write the `pending` row
     /// (log-before-write). Returns the row id, which is also the Hub's
     /// `correlation_id` (UUID v7, 36 chars). On `Record` the slot is free
-    /// again and nothing may be sent.
+    /// again and nothing may be sent. When the future is dropped before it
+    /// returns, the slot is freed too (the caller never got the id, so it
+    /// cannot send); a row it already wrote reads as `unrecorded`.
     pub async fn begin(&self, request: &RequestRecord) -> Result<String, BeginError> {
         let id = uuid::Uuid::now_v7().to_string();
         {
@@ -462,11 +493,16 @@ impl OperationLog {
             }
             in_flight.sending = Some(id.clone());
         }
+        let reservation = Reservation {
+            in_flight: &self.in_flight,
+            id: &id,
+            armed: true,
+        };
         if let Err(error) = self.db.insert_pending(&id, request).await {
-            self.in_flight.lock().expect("operation log lock").sending = None;
             return Err(BeginError::Record(error));
         }
         self.retry_unrecorded().await;
+        reservation.keep();
         Ok(id)
     }
 
@@ -552,20 +588,38 @@ impl OperationLog {
         let Some(row) = self.db.latest(project_id, equipment_id, slot).await? else {
             return Ok(None);
         };
+        self.resolve(row).await.map(Some)
+    }
+
+    /// The state of a row read from the DB. A `pending` row that this
+    /// process neither sends nor holds an outcome for is read again: the
+    /// row's `complete` (or a rewrite) may have finished it between the read
+    /// and the lock. Both write the DB before they release the row in memory,
+    /// so the second read sees the outcome; a row still `pending` then is
+    /// one of an earlier process.
+    async fn resolve(&self, row: StoredRow) -> Result<(StoredRow, RecordState), OperationDbError> {
+        if let Some(finish) = &row.finish {
+            let state = RecordState::Finished(finish.clone());
+            return Ok((row, state));
+        }
+        {
+            let in_flight = self.in_flight.lock().expect("operation log lock");
+            if in_flight.sending.as_deref() == Some(row.id.as_str()) {
+                return Ok((row, RecordState::Sending));
+            }
+            if let Some(finish) = in_flight.unrecorded.get(&row.id) {
+                let state = RecordState::Unrecorded {
+                    finish: Some(finish.clone()),
+                };
+                return Ok((row, state));
+            }
+        }
+        let row = self.db.row(&row.id).await?.unwrap_or(row);
         let state = match &row.finish {
             Some(finish) => RecordState::Finished(finish.clone()),
-            None => {
-                let in_flight = self.in_flight.lock().expect("operation log lock");
-                if in_flight.sending.as_deref() == Some(row.id.as_str()) {
-                    RecordState::Sending
-                } else {
-                    RecordState::Unrecorded {
-                        finish: in_flight.unrecorded.get(&row.id).cloned(),
-                    }
-                }
-            }
+            None => RecordState::Unrecorded { finish: None },
         };
-        Ok(Some((row, state)))
+        Ok((row, state))
     }
 
     #[cfg(test)]
