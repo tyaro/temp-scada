@@ -40,6 +40,9 @@ pub trait WriteKeyStore: Send + Sync {
 #[derive(Clone)]
 pub struct WriteKey {
     pub endpoint: String,
+    /// The keyring entry id (`KeyRef::id`): the generation of the key, so
+    /// an outcome of a key registered again meanwhile is told apart (§7).
+    pub id: String,
     pub client: Arc<RestClient>,
 }
 
@@ -122,6 +125,7 @@ pub async fn register(
     }
     Ok(WriteKey {
         endpoint: key.endpoint,
+        id: key.id,
         client: Arc::new(client),
     })
 }
@@ -148,6 +152,7 @@ pub fn load(store: &dyn WriteKeyStore, log: &OperationLog) -> Result<Option<Writ
     let client = write_client(&key.endpoint, &secret)?;
     Ok(Some(WriteKey {
         endpoint: key.endpoint,
+        id: key.id,
         client: Arc::new(client),
     }))
 }

@@ -125,11 +125,11 @@ async fn a_keyring_that_refuses_leaves_no_key() {
 async fn a_registration_clears_a_stopped_or_invalid_terminal() {
     let store = MemoryStore::default();
     let (log, _) = log().await;
-    register(&store, &log, SECRET, Some(HUB), 1_000)
+    let key = register(&store, &log, SECRET, Some(HUB), 1_000)
         .await
         .unwrap();
     let id = log
-        .begin(&request(), std::time::Duration::ZERO)
+        .begin(&request(), std::time::Duration::ZERO, &key.id)
         .await
         .unwrap();
     log.complete(
