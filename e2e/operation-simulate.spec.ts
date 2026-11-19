@@ -109,3 +109,27 @@ test("the Editor's operator view writes simulated values with its note", async (
     rows.locator("[data-operation-slot='running'] .value"),
   ).toContainText("SIM · false");
 });
+
+test("reopening the same equipment from the list drops the placement and its operation", async ({
+  page,
+}) => {
+  await start(page);
+  await mainCanvas(page).locator(`g[data-object-id="${linkedId}"]`).click();
+  const rows = page.getByRole("region", { name: "機器の操作" });
+  const run = rows.getByRole("button", { name: "運転", exact: true });
+  await expect(run).toBeEnabled();
+  // The list brings the open faceplate to the front without a placement.
+  await page
+    .getByRole("button", { name: "機器の読取詳細", exact: true })
+    .click();
+  const picker = page.getByRole("dialog", {
+    name: "機器の読取詳細を開く",
+    exact: true,
+  });
+  await picker.locator(`input[value="${pump.id}"]`).check();
+  await picker.getByRole("button", { name: "小窓を表示", exact: true }).click();
+  await expect(rows.locator("[data-operation-disabled]")).toHaveText(
+    "配置から開いたときだけ操作できます",
+  );
+  await expect(run).toBeDisabled();
+});
