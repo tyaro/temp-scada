@@ -4,6 +4,7 @@
   import {
     canEditSettings,
     canManageUsers,
+    canSetupFirstAdmin,
     canTransition,
     type ActionResult,
     type AuthSession,
@@ -15,7 +16,8 @@
   // for a control placed at the right of a bar (Runtime's top bar).
   // `runtime` hides the Editor-only operations (Runtime mode design §5,
   // §10-2): the move to operation and the authentication settings, whose
-  // commands the Runtime capability rejects.
+  // commands the Runtime capability rejects. It offers `auth_setup` instead,
+  // when the auth is on and no administrator exists.
   let {
     session,
     align = "start",
@@ -53,6 +55,7 @@
       (ready?.phase.phase === "transitioning" ||
         (transitionOpen && canTransition(view))),
   );
+  const showSetup = $derived(runtime && canSetupFirstAdmin(view));
 
   const summary = $derived.by(() => {
     if (view.status === "loading") return "確認中";
@@ -106,6 +109,16 @@
         creatingAdmin ? displayName.trim() || name : "",
       ),
     );
+  }
+
+  function setupAdmin(event: SubmitEvent) {
+    event.preventDefault();
+    if (password !== passwordConfirm) {
+      result = { ok: false, message: "確認用のパスワードが一致しません。" };
+      return;
+    }
+    const name = username.trim();
+    void run(() => session.setup(name, password, displayName.trim() || name));
   }
 
   function changePassword(event: SubmitEvent) {
@@ -197,7 +210,8 @@
       {:else if view.phase.phase === "initializing" && view.phase.authDisabled}
         {#if runtime}
           <p class="note" data-auth-editor-only>
-            運用への移行は Editor で行ってください。
+            運用への移行は Editor
+            で行ってください。認証無効モードの間は、最初の管理者も移行のときに作成します。
           </p>
         {:else if canTransition(view)}
           {#if !transitionOpen}
@@ -227,50 +241,7 @@
               : "管理者の資格情報を確認し、認証無効モードをオフにします。"}
             移行後は認証無効モードへ戻せません。
           </p>
-          <label class="banto-field banto-field--stacked">
-            <span class="banto-field-label">管理者のユーザー名</span>
-            <input
-              class="banto-field-control"
-              autocomplete="username"
-              bind:value={username}
-              disabled={busy}
-              required
-            />
-          </label>
-          {#if creatingAdmin}
-            <label class="banto-field banto-field--stacked">
-              <span class="banto-field-label">表示名</span>
-              <input
-                class="banto-field-control"
-                bind:value={displayName}
-                disabled={busy}
-              />
-            </label>
-          {/if}
-          <label class="banto-field banto-field--stacked">
-            <span class="banto-field-label">パスワード</span>
-            <input
-              class="banto-field-control"
-              type="password"
-              autocomplete={creatingAdmin ? "new-password" : "current-password"}
-              bind:value={password}
-              disabled={busy}
-              required
-            />
-          </label>
-          {#if creatingAdmin}
-            <label class="banto-field banto-field--stacked">
-              <span class="banto-field-label">パスワード（確認）</span>
-              <input
-                class="banto-field-control"
-                type="password"
-                autocomplete="new-password"
-                bind:value={passwordConfirm}
-                disabled={busy}
-                required
-              />
-            </label>
-          {/if}
+          {@render adminFields(creatingAdmin)}
           <div class="auth-actions">
             <button type="submit" disabled={busy}
               >{view.phase.phase === "transitioning"
@@ -287,6 +258,22 @@
                 }}>取消</button
               >
             {/if}
+          </div>
+        </form>
+      {:else if showSetup}
+        <form
+          class="auth-form"
+          aria-label="最初の管理者を作成"
+          onsubmit={setupAdmin}
+          data-auth-setup
+        >
+          <p class="note">
+            この端末には管理者がいません。最初の管理者を作成してログインします。運用への移行は
+            Editor で行います。
+          </p>
+          {@render adminFields(true)}
+          <div class="auth-actions">
+            <button type="submit" disabled={busy}>最初の管理者を作成</button>
           </div>
         </form>
       {:else if view.phase.phase === "operational" && !view.session}
@@ -416,6 +403,55 @@
     onclose={() => (settingsOpen = false)}
   />
 {/if}
+
+<!-- The administrator's credentials of the move to operation and of the
+first-administrator setup; `creating` asks for a name and a confirmation. -->
+{#snippet adminFields(creating: boolean)}
+  <label class="banto-field banto-field--stacked">
+    <span class="banto-field-label">管理者のユーザー名</span>
+    <input
+      class="banto-field-control"
+      autocomplete="username"
+      bind:value={username}
+      disabled={busy}
+      required
+    />
+  </label>
+  {#if creating}
+    <label class="banto-field banto-field--stacked">
+      <span class="banto-field-label">表示名</span>
+      <input
+        class="banto-field-control"
+        bind:value={displayName}
+        disabled={busy}
+      />
+    </label>
+  {/if}
+  <label class="banto-field banto-field--stacked">
+    <span class="banto-field-label">パスワード</span>
+    <input
+      class="banto-field-control"
+      type="password"
+      autocomplete={creating ? "new-password" : "current-password"}
+      bind:value={password}
+      disabled={busy}
+      required
+    />
+  </label>
+  {#if creating}
+    <label class="banto-field banto-field--stacked">
+      <span class="banto-field-label">パスワード（確認）</span>
+      <input
+        class="banto-field-control"
+        type="password"
+        autocomplete="new-password"
+        bind:value={passwordConfirm}
+        disabled={busy}
+        required
+      />
+    </label>
+  {/if}
+{/snippet}
 
 <style>
   .auth-control {

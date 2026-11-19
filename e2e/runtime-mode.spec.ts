@@ -13,7 +13,10 @@ interface RuntimeHostOptions {
   alarm?: "notApplied" | "otherProject" | "differs" | "same";
   /** `failOnce`: the first `runtime_read_start` fails, later ones succeed. */
   readStart?: "ok" | "failOnce";
-  auth?: "operational" | "setup" | "transitioning";
+  /** `firstAdmin`: the auth is on, no account exists and no one is signed in. */
+  auth?: "operational" | "setup" | "transitioning" | "firstAdmin";
+  /** What `recording_status` answers: no applied plan, or recording. */
+  recording?: "unconfigured" | "running";
   /** `blocked`: listening to `alarm_changed` fails until the test sets `alarmListenBlocked = false`. */
   alarmListen?: "ok" | "blocked";
 }
@@ -26,6 +29,9 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
       let nextId = 0;
       const host = {
         calls: [] as string[],
+        setups: [] as Record<string, unknown>[],
+        account: null as null | { username: string; displayName: string },
+        seq: 1,
         starts: [] as Record<string, unknown>[],
         acks: [] as unknown[],
         alarmListenBlocked: options.alarmListen === "blocked",
@@ -223,7 +229,117 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
               }
               case "history_cancel":
                 return null;
+              case "runtime_recording_context":
+                return {
+                  version: 1,
+                  kind: "recordingManagementContext",
+                  contextId: "host:test",
+                  projectId: options.projectId,
+                  projectRevision: 1,
+                  deploymentId: "deployment:test",
+                  storeId: "store:test",
+                  historianNamespace: "historian:test",
+                };
+              case "recording_status": {
+                const running = options.recording === "running";
+                const plan = {
+                  version: 1,
+                  kind: "recordingPlan",
+                  planId: "plan-a",
+                  revision: 1,
+                  enabled: true,
+                  group: {
+                    groupId: "group",
+                    hubRef: "hub",
+                    periodMs: 1000,
+                    members: [
+                      {
+                        memberId: "member-0",
+                        externalName: "Plant.Number",
+                        valueType: "number",
+                      },
+                    ],
+                  },
+                };
+                return {
+                  version: 1,
+                  kind: "recordingInspectionResponse",
+                  request: args!.request,
+                  database: running
+                    ? {
+                        state: "available",
+                        snapshotCommit: 6,
+                        currentMappingRevision: 1,
+                        currentRetentionAppliedRevision: 1,
+                        applied: {
+                          appliedRevision: 1,
+                          commitVersion: 4,
+                          desired: plan,
+                          mappingRevision: 1,
+                          retentionAppliedRevision: 1,
+                        },
+                        latestActivation: {
+                          activationId: "activation:1",
+                          appliedRevision: 1,
+                          commitVersion: 5,
+                          sessionId: "session:1",
+                          state: "active",
+                          committedThrough: 0,
+                          endCommitVersion: null,
+                        },
+                        activeSessionId: "session:1",
+                        activeRetentionJobId: null,
+                        retentionFence: { cutoffMs: null, commitVersion: 0 },
+                      }
+                    : {
+                        state: "available",
+                        snapshotCommit: 0,
+                        currentMappingRevision: null,
+                        currentRetentionAppliedRevision: null,
+                        applied: null,
+                        latestActivation: null,
+                        activeSessionId: null,
+                        activeRetentionJobId: null,
+                        retentionFence: { cutoffMs: null, commitVersion: 0 },
+                      },
+                  host: running
+                    ? {
+                        state: "observed",
+                        observedAtMs: 1000,
+                        runRef: "run:1",
+                        sessionId: "session:1",
+                        phase: "running",
+                        stopRequested: false,
+                        issue: "none",
+                        cleanup: "unknown",
+                        sourceShutdown: "unknown",
+                        planRecoveryRequired: false,
+                        retentionRearmRequired: false,
+                        retentionJobPending: false,
+                      }
+                    : { state: "unknown" },
+                  sdk: { state: "unknown" },
+                };
+              }
+              case "auth_setup":
+                host.setups.push(args!);
+                host.account = {
+                  username: args!.username,
+                  displayName: args!.displayName,
+                };
+                return {
+                  success: true,
+                  error: null,
+                  superseded: false,
+                  seq: ++host.seq,
+                };
               case "auth_phase":
+                if (options.auth === "firstAdmin")
+                  return {
+                    phase: "operational",
+                    authDisabled: false,
+                    hasAdmin: host.account !== null,
+                  };
                 return options.auth === "setup"
                   ? {
                       phase: "initializing",
@@ -242,6 +358,18 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                         hasAdmin: true,
                       };
               case "auth_resolve":
+                if (options.auth === "firstAdmin")
+                  return {
+                    identity: host.account && {
+                      id: host.account.username,
+                      name: host.account.displayName,
+                      role: "admin",
+                    },
+                    kind: host.account ? "account" : null,
+                    checked: host.seq,
+                    current: host.seq,
+                    stale: false,
+                  };
                 return {
                   identity: {
                     id: "local",
@@ -614,6 +742,100 @@ test("the top bar opens the history trend window over runtime_history_context", 
   expect(used).toContain("runtime_history_context");
   expect(used).toContain("history_query");
   expect(used).not.toContain("history_context");
+});
+
+/** The recording commands only Editor may call (Runtime mode design §5, §10-3 案 A). */
+const recordingWrites = [
+  "recording_context",
+  "recording_initial_setup",
+  "recording_resume",
+  "recording_stop",
+  "recording_reconfigure",
+  "recording_owner_rebind",
+];
+
+test("the top bar shows the recording state read-only and leaves starting it to Editor", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page);
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  const status = page.locator("[data-runtime-recording]");
+  await expect(status).toContainText("記録未設定");
+  await expect(page.locator("[data-runtime-recording-note]")).toHaveText(
+    "Runtime の運転中は記録されません。記録は Editor で開始します",
+  );
+  await expect(
+    page.getByRole("button", { name: /記録を(再開|開始|停止)/ }),
+  ).toHaveCount(0);
+  // A click inspects again.
+  await status.click();
+  await expect
+    .poll(async () =>
+      (await calls(page)).filter((c) => c === "recording_status"),
+    )
+    .toHaveLength(2);
+  await expect(status).toContainText("記録未設定");
+  const used = await calls(page);
+  expect(used).toContain("runtime_recording_context");
+  for (const command of recordingWrites) expect(used).not.toContain(command);
+  expect(used.some((c) => c.startsWith("recording_workflow_"))).toBe(false);
+});
+
+test("the top bar shows a running recording without the Editor note", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { recording: "running" });
+  await page.goto("/runtime.html");
+  await expect(page.locator("[data-runtime-recording]")).toContainText(
+    "記録中",
+  );
+  await expect(page.locator("[data-runtime-recording-note]")).toHaveCount(0);
+  const used = await calls(page);
+  for (const command of recordingWrites) expect(used).not.toContain(command);
+});
+
+test("a Runtime with the auth on and no administrator creates the first one with auth_setup", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { auth: "firstAdmin" });
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  await expect(page.locator("[data-runtime-recording]")).toContainText(
+    "記録: ログインが必要",
+  );
+  expect(await calls(page)).not.toContain("runtime_recording_context");
+
+  await page.locator(".runtime-auth summary").click();
+  const popover = page.locator(".runtime-auth .auth-popover");
+  const form = popover.getByRole("form", { name: "最初の管理者を作成" });
+  await expect(form).toBeVisible();
+  await expect(popover.getByRole("form", { name: "ログイン" })).toHaveCount(0);
+  await form.getByLabel("管理者のユーザー名").fill("admin");
+  await form.getByLabel("表示名").fill("管理者");
+  await form.getByLabel("パスワード", { exact: true }).fill("secret-pass");
+  await form.getByLabel("パスワード（確認）").fill("other-pass");
+  await form.getByRole("button", { name: "最初の管理者を作成" }).click();
+  await expect(popover).toContainText("確認用のパスワードが一致しません。");
+  expect(await calls(page)).not.toContain("auth_setup");
+
+  await form.getByLabel("パスワード（確認）").fill("secret-pass");
+  await form.getByRole("button", { name: "最初の管理者を作成" }).click();
+  await expect(popover).toContainText(
+    "最初の管理者を作成し、ログインしました。",
+  );
+  await expect(page.locator(".runtime-auth summary")).toContainText("管理者");
+  await expect(form).toHaveCount(0);
+  expect(
+    await page.evaluate(() => (window as any).__runtimeHost.setups),
+  ).toEqual([
+    { username: "admin", password: "secret-pass", displayName: "管理者" },
+  ]);
+  expect(await calls(page)).not.toContain("auth_transition_to_operational");
+  // Signed in, the recording state is read.
+  await expect(page.locator("[data-runtime-recording]")).toContainText(
+    "記録未設定",
+  );
 });
 
 test("a failed alarm subscription keeps a warning until a refresh re-subscribes, then changes arrive", async ({

@@ -51,6 +51,22 @@ export function canEditSettings(view: AuthView): boolean {
   );
 }
 
+/**
+ * Whether `auth_setup` can create the first administrator: the auth is on
+ * (the host refuses setup in the auth-disabled mode, where the move to
+ * operation creates the first administrator), no administrator exists and
+ * no one is signed in. Not during an unfinished move to operation.
+ */
+export function canSetupFirstAdmin(view: AuthView): boolean {
+  return (
+    view.status === "ready" &&
+    view.phase.phase !== "transitioning" &&
+    !view.phase.authDisabled &&
+    !view.phase.hasAdmin &&
+    !view.session
+  );
+}
+
 /** Whether the move to operation can be started (design §6). */
 export function canTransition(view: AuthView): boolean {
   if (view.status !== "ready") return false;
@@ -140,6 +156,29 @@ export class AuthSession {
         message: result.superseded
           ? "別の操作でログイン状態が変わりました。状態を確認してください。"
           : (result.error ?? "ログインできませんでした。"),
+      };
+    });
+  }
+
+  /** `auth_setup`: the first administrator, signed in on success (Runtime
+   * mode design §10-2). */
+  setup(
+    username: string,
+    password: string,
+    displayName: string,
+  ): Promise<ActionResult> {
+    return this.#act(async () => {
+      const result = await this.#client.setup(username, password, displayName);
+      if (result.success)
+        return {
+          ok: true,
+          message: "最初の管理者を作成し、ログインしました。",
+        };
+      return {
+        ok: false,
+        message: result.superseded
+          ? "別の操作でログイン状態が変わりました。状態を確認してください。"
+          : (result.error ?? "最初の管理者を作成できませんでした。"),
       };
     });
   }
