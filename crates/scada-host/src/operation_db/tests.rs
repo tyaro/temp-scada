@@ -1231,3 +1231,106 @@ async fn a_format_5_file_gets_the_retention_and_keeps_its_interval() {
     assert_eq!(log.min_interval(), Duration::from_millis(2_500));
     log.close().await;
 }
+
+/// The operation history (§9 照会; O4b): the rows of one Project, newest
+/// first, narrowed by the period, the equipment and the stored outcome, and
+/// read on from a `seq` cursor.
+#[tokio::test]
+async fn history_lists_a_projects_rows_newest_first_by_its_conditions() {
+    let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
+    let project = request("command").project_id;
+    let at = |ms: i64, equipment: &str, slot: &str| {
+        let mut row = request(slot);
+        row.requested_at_ms = ms;
+        row.equipment_id = equipment.into();
+        row
+    };
+    db.insert_finished(
+        "a",
+        &at(1_000, "eq-1", "command"),
+        &finish(Outcome::Ok, 1_100),
+    )
+    .await
+    .unwrap();
+    db.insert_finished(
+        "b",
+        &at(2_000, "eq-2", "command"),
+        &finish(Outcome::Failed, 2_100),
+    )
+    .await
+    .unwrap();
+    db.insert_pending("c", &at(3_000, "eq-1", "speedSp"))
+        .await
+        .unwrap();
+    db.insert_finished(
+        "d",
+        &at(4_000, "eq-1", "command"),
+        &finish(Outcome::Refused, 4_000),
+    )
+    .await
+    .unwrap();
+    let mut other = at(5_000, "eq-1", "command");
+    other.project_id = "other".into();
+    db.insert_finished("e", &other, &finish(Outcome::Ok, 5_100))
+        .await
+        .unwrap();
+
+    let ids = |rows: Vec<StoredRow>| rows.into_iter().map(|row| row.id).collect::<Vec<_>>();
+    let all = HistoryFilter::default();
+    let rows = db.history(&project, &all, 10).await.unwrap();
+    assert!(rows.windows(2).all(|pair| pair[0].seq > pair[1].seq));
+    assert_eq!(ids(rows), ["d", "c", "b", "a"]);
+
+    let period = HistoryFilter {
+        from_ms: Some(2_000),
+        to_ms: Some(3_000),
+        ..HistoryFilter::default()
+    };
+    assert_eq!(
+        ids(db.history(&project, &period, 10).await.unwrap()),
+        ["c", "b"]
+    );
+    let from = HistoryFilter {
+        from_ms: Some(3_000),
+        ..HistoryFilter::default()
+    };
+    assert_eq!(
+        ids(db.history(&project, &from, 10).await.unwrap()),
+        ["d", "c"]
+    );
+    let equipment = HistoryFilter {
+        equipment_id: Some("eq-1".into()),
+        ..HistoryFilter::default()
+    };
+    assert_eq!(
+        ids(db.history(&project, &equipment, 10).await.unwrap()),
+        ["d", "c", "a"]
+    );
+    let outcomes = HistoryFilter {
+        outcomes: Some(vec!["ok", PENDING]),
+        ..HistoryFilter::default()
+    };
+    assert_eq!(
+        ids(db.history(&project, &outcomes, 10).await.unwrap()),
+        ["c", "a"]
+    );
+    let none = HistoryFilter {
+        outcomes: Some(Vec::new()),
+        ..HistoryFilter::default()
+    };
+    assert!(db.history(&project, &none, 10).await.unwrap().is_empty());
+
+    // A page of 2, then the rows older than its last `seq`.
+    let page = db.history(&project, &all, 2).await.unwrap();
+    let cursor = page.last().unwrap().seq;
+    assert_eq!(ids(page), ["d", "c"]);
+    let next = HistoryFilter {
+        before_seq: Some(cursor),
+        ..HistoryFilter::default()
+    };
+    assert_eq!(
+        ids(db.history(&project, &next, 2).await.unwrap()),
+        ["b", "a"]
+    );
+    db.close().await;
+}

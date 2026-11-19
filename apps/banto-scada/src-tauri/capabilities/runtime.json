@@ -15,6 +15,7 @@
     "allow-runtime-alarm-status",
     "allow-operation-write",
     "allow-operation-view",
+    "allow-operation-history",
     "allow-operation-key-status",
     "allow-operation-key-register",
     "allow-operation-key-delete",

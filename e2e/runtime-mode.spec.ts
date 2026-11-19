@@ -67,6 +67,8 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
         keySecrets: [] as string[],
         /** When set, the three key changes reject with this reason. */
         keyRefusal: null as null | string,
+        /** The requests `operation_history` received (O4b). */
+        histories: [] as Record<string, unknown>[],
         /** Milliseconds `operation_key_status` takes to answer. */
         keyStatusDelayMs: 0,
         seq: 1,
@@ -213,6 +215,56 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                     latest: slot === "running" ? host.latest : null,
                   })),
                 };
+              }
+              case "operation_history": {
+                // Two pages: the first says where the second starts.
+                const request = args!.request as Record<string, unknown>;
+                host.histories.push(request);
+                const row = (seq: number, patch: Record<string, unknown>) => ({
+                  seq,
+                  id: `row-${seq}`,
+                  state: "finished",
+                  outcome: "ok",
+                  reason: null,
+                  requestedAtMs: Date.UTC(2026, 10, 20, 0, 0, seq),
+                  finishedAtMs: Date.UTC(2026, 10, 20, 0, 0, seq) + 250,
+                  tag: "Line1.P101.Run",
+                  value: true,
+                  auditId: 900 + seq,
+                  user: "未ログイン",
+                  equipmentId: "0199f700-0000-7000-8000-000000000002",
+                  equipmentCode: "P-101",
+                  slot: "running",
+                  input: null,
+                  repeatCount: 1,
+                  ...patch,
+                });
+                return request.beforeSeq === undefined
+                  ? {
+                      projectId: options.projectId,
+                      rows: [
+                        row(12, {}),
+                        row(11, {
+                          outcome: "refused",
+                          reason: "phase_unavailable",
+                          auditId: null,
+                          repeatCount: 3,
+                        }),
+                      ],
+                      nextBeforeSeq: 11,
+                    }
+                  : {
+                      projectId: options.projectId,
+                      rows: [
+                        row(4, {
+                          state: "unrecorded",
+                          outcome: null,
+                          finishedAtMs: null,
+                          auditId: null,
+                        }),
+                      ],
+                      nextBeforeSeq: null,
+                    };
               }
               case "operation_key_status": {
                 // The answer is the state when asked, however late it arrives.
@@ -1249,6 +1301,76 @@ test.describe("the faceplate's operation rows (operation stage 3, O3c-1)", () =>
       "結果不明。現在値と実行記録を確認してください",
     );
   });
+});
+
+test("the top bar opens the operation history; its filters and さらに読む go to operation_history (O4b)", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { operation: "ready" });
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  const entry = page.locator("[data-runtime-operation-history-entry]");
+  await entry.click();
+  const dialog = page.getByRole("dialog", { name: "操作履歴" });
+  await expect(dialog).toBeVisible();
+  const histories = () =>
+    page.evaluate(() => (window as any).__runtimeHost.histories);
+  await expect.poll(histories).toEqual([{}]);
+
+  const newest = dialog.locator('[data-operation-history-row="12"]');
+  await expect(newest).toContainText("P-101 ");
+  await expect(newest).toContainText("運転指令");
+  await expect(newest).toContainText("運転（true）");
+  await expect(newest).toContainText("書込みました");
+  await expect(newest).toContainText("250 ms");
+  await expect(newest).toContainText("912");
+  const refused = dialog.locator('[data-operation-history-row="11"]');
+  await expect(refused).toContainText("送っていません");
+  await expect(refused).toContainText("運用の段階を確かめられません");
+  await expect(refused.locator("[data-operation-history-repeat]")).toHaveText(
+    "×3",
+  );
+  await expect(newest.locator("[data-operation-history-repeat]")).toHaveText(
+    "",
+  );
+
+  // The filters change the request; さらに読む reads on with the same ones.
+  await dialog
+    .locator("[data-operation-history-equipment]")
+    .selectOption("0199f700-0000-7000-8000-000000000002");
+  await dialog.locator('[data-operation-history-outcome="ok"]').uncheck();
+  await dialog
+    .locator("[data-operation-history-from]")
+    .fill("2026-11-20T08:00");
+  await dialog.getByRole("button", { name: "照会", exact: true }).click();
+  const fromMs = await page.evaluate(() =>
+    new Date("2026-11-20T08:00").getTime(),
+  );
+  const narrowed = {
+    fromMs,
+    equipmentId: "0199f700-0000-7000-8000-000000000002",
+    outcomes: [
+      "refused",
+      "not_sent",
+      "stopped",
+      "failed",
+      "uncertain",
+      "pending",
+    ],
+  };
+  await expect.poll(histories).toEqual([{}, narrowed]);
+  await dialog.locator("[data-operation-history-more]").click();
+  await expect
+    .poll(histories)
+    .toEqual([{}, narrowed, { ...narrowed, beforeSeq: 11 }]);
+  await expect(
+    dialog.locator('[data-operation-history-row="4"]'),
+  ).toContainText("結果を記録できませんでした");
+  await expect(dialog.locator("[data-operation-history-more]")).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(entry).toBeFocused();
 });
 
 test.describe("the write terminal settings (operation stage 3, O2c-4a)", () => {

@@ -32,6 +32,7 @@ use crate::operation_db::{
 use crate::operation_key::WriteKey;
 
 mod catalog;
+mod history;
 mod resolve;
 mod view;
 
@@ -41,6 +42,10 @@ mod flow_tests;
 mod tests;
 
 pub use catalog::{check_catalog, hub_value, MAX_SAFE_INTEGER};
+pub use history::{
+    operation_history, HistoryOutcome, HistoryRow, OperationHistory, OperationHistoryRequest,
+    HISTORY_PAGE,
+};
 pub use resolve::{
     check_shape, parse_input, resolve, slot_decimals, AppliedProject, Known, OperationWriteRequest,
     Resolved, SlotType, WriteValue, MAX_ID_CHARS, MAX_INPUT_CHARS,
