@@ -175,6 +175,7 @@
         kind: "error",
         message: writeErrorText(error),
         before,
+        value: target.expectedValue,
       };
     } finally {
       sending = false;
@@ -206,6 +207,7 @@
         {@const status = rowStatus(
           latestOf(row.slotName),
           answers[row.slotName] ?? null,
+          row,
         )}
         <li data-operation-slot={row.slotName}>
           <div class="head">
@@ -250,7 +252,8 @@
             </p>{/if}
           {#if status}
             <p class="result" data-operation-result>
-              {status.texts.join(" · ")}{#if status.atMs !== null}
+              {status.texts.join(" · ")}{#if status.value !== null}
+                · 書いた値 {status.value}{/if}{#if status.atMs !== null}
                 · {operationTimeText(status.atMs)}{/if}{#if status.reason}
                 · {status.reason}{/if}
             </p>

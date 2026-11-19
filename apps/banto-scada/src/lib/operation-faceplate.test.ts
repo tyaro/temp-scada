@@ -5,6 +5,7 @@ import {
   INITIALIZING_TEXT,
   ipcErrorText,
   writeErrorText,
+  writtenValueText,
   WRITE_UNKNOWN_TEXT,
   LOADING_TEXT,
   NO_PLACEMENT_TEXT,
@@ -118,6 +119,7 @@ describe("rowStatus", () => {
       texts: ["書込みました"],
       reason: null,
       atMs: 2,
+      value: "true",
     });
     expect(
       rowStatus(
@@ -128,13 +130,19 @@ describe("rowStatus", () => {
       texts: ["送っていません"],
       reason: "前の書込みから間がありません",
       atMs: 3,
+      value: "true",
     });
     expect(
       rowStatus(
         latest({ state: "sending", outcome: null, finishedAtMs: null }),
         null,
       ),
-    ).toEqual({ texts: [SENDING_TEXT], reason: null, atMs: null });
+    ).toEqual({
+      texts: [SENDING_TEXT],
+      reason: null,
+      atMs: null,
+      value: "true",
+    });
     expect(
       rowStatus(latest({ state: "unrecorded", outcome: null }), null)?.texts,
     ).toEqual([UNRECORDED_TEXT]);
@@ -167,6 +175,7 @@ describe("rowStatus", () => {
       texts: ["送っていません"],
       reason: "要求の形が正しくありません",
       atMs: 9,
+      value: "true",
     });
     expect(
       rowStatus(latest(), {
@@ -180,11 +189,13 @@ describe("rowStatus", () => {
       kind: "error" as const,
       message: WRITE_UNKNOWN_TEXT,
       before: latest().id,
+      value: 12.5,
     };
     expect(rowStatus(latest(), lost)).toEqual({
       texts: [WRITE_UNKNOWN_TEXT],
       reason: null,
       atMs: null,
+      value: "12.5",
     });
     expect(rowStatus({ ...latest(), id: "newer" }, lost)?.texts).toEqual([
       "書込みました",
@@ -192,6 +203,26 @@ describe("rowStatus", () => {
     expect(rowStatus(null, { ...lost, before: null })?.texts).toEqual([
       WRITE_UNKNOWN_TEXT,
     ]);
+  });
+});
+
+describe("writtenValueText", () => {
+  it("names the button of the value, else the value itself", () => {
+    const row = {
+      buttons: [
+        { index: 0, label: "運転", value: true },
+        { index: 1, label: "停止", value: false },
+      ],
+    };
+    expect(writtenValueText(false, row)).toBe("停止（false）");
+    expect(writtenValueText(12.5, row)).toBe("12.5");
+    expect(writtenValueText(true, null)).toBe("true");
+    expect(writtenValueText(null, row)).toBeNull();
+    expect(writtenValueText(undefined, row)).toBeNull();
+    // The record's last row shows its value with the button's label.
+    expect(rowStatus(latest({ value: false }), null, row)?.value).toBe(
+      "停止（false）",
+    );
   });
 });
 

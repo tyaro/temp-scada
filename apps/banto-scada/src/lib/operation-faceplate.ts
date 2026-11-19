@@ -10,6 +10,7 @@ import {
   SENDING_TEXT,
   UNRECORDED_TEXT,
   type OperationLatest,
+  type OperationRow,
   type OperationView,
   type OperationWriteRequest,
   type WriteResult,
@@ -137,7 +138,13 @@ export function writeErrorText(error: unknown): string {
  */
 export type RowAnswer =
   | { kind: "result"; result: WriteResult; atMs: number }
-  | { kind: "error"; message: string; before: string | null };
+  | {
+      kind: "error";
+      message: string;
+      before: string | null;
+      /** 確認の小窓で書くとした値。 */
+      value: boolean | number;
+    };
 
 /** 操作の行に出す結果（§8）。`atMs` は区分が確定した時刻。 */
 export interface RowStatus {
@@ -145,9 +152,27 @@ export interface RowStatus {
   texts: string[];
   reason: string | null;
   atMs: number | null;
+  /**
+   * 書こうとした値（解決した値）の文。§5: 結果は設備の状態ではないので、
+   * どの値についての結果かを購読値と並べて出す。分からなければ null。
+   */
+  value: string | null;
 }
 
-function latestStatus(latest: OperationLatest): RowStatus {
+/** 書いた値の文。ボタンの値なら、確認の小窓と同じ「見出し（値）」。 */
+export function writtenValueText(
+  value: unknown,
+  row: Pick<OperationRow, "buttons"> | null,
+): string | null {
+  if (typeof value !== "boolean" && typeof value !== "number") return null;
+  const button = row?.buttons.find((item) => item.value === value);
+  return button ? `${button.label}（${String(value)}）` : String(value);
+}
+
+function latestStatus(
+  latest: OperationLatest,
+  row: Pick<OperationRow, "buttons"> | null,
+): RowStatus {
   const outcome = latest.outcome ? outcomeText(latest.outcome) : null;
   const texts =
     latest.state === "sending"
@@ -159,6 +184,7 @@ function latestStatus(latest: OperationLatest): RowStatus {
     texts,
     reason: latest.reason ? reasonText(latest.reason) : null,
     atMs: latest.state === "sending" ? null : latest.finishedAtMs,
+    value: writtenValueText(latest.value, row),
   };
 }
 
@@ -170,12 +196,18 @@ function latestStatus(latest: OperationLatest): RowStatus {
 export function rowStatus(
   latest: OperationLatest | null,
   answer: RowAnswer | null,
+  row: Pick<OperationRow, "buttons"> | null = null,
 ): RowStatus | null {
   if (answer?.kind === "error")
     // 送った後に新しい記録の行が読めたら、その行が結果を示す。
     return latest && latest.id !== answer.before
-      ? latestStatus(latest)
-      : { texts: [answer.message], reason: null, atMs: null };
+      ? latestStatus(latest, row)
+      : {
+          texts: [answer.message],
+          reason: null,
+          atMs: null,
+          value: writtenValueText(answer.value, row),
+        };
   if (
     answer &&
     (answer.result.unrecorded ||
@@ -189,8 +221,9 @@ export function rowStatus(
       ],
       reason: answer.result.reason ? reasonText(answer.result.reason) : null,
       atMs: answer.atMs,
+      value: writtenValueText(answer.result.value, row),
     };
-  return latest ? latestStatus(latest) : null;
+  return latest ? latestStatus(latest, row) : null;
 }
 
 /** 結果の時刻（端末の時刻帯の 24 時間表記）。 */

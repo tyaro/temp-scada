@@ -1072,6 +1072,7 @@ test.describe("the faceplate's operation rows (operation stage 3, O3c-1)", () =>
       "[data-operation-slot='running'] [data-operation-result]",
     );
     await expect(result).toContainText("書込みました");
+    await expect(result).toContainText("書いた値 運転（true）");
     const writes = await page.evaluate(
       () => (window as any).__runtimeHost.writes,
     );
