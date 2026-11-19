@@ -8,9 +8,15 @@
 //!   any request is taken, so Editor mode has nothing to record.
 //! - The Hub's write contract (§11-8) is asked with the read key of the
 //!   Hub connection (`GET /api/v1/status`, upstream #1223) on every write
-//!   and view. The product still never sends: there is no write key (O2c),
-//!   so a request that passes up to §4-4 is `hub_unsupported` on a Hub
-//!   before #1201 and `no_write_key` on one with the contract.
+//!   and view. The write key (§7) is read from the record and the keyring
+//!   for every write and view (`operation_key::load`): none is
+//!   `no_write_key`, one registered for another endpoint than the read
+//!   connection's is `hub_mismatch`.
+//! - The write key is registered and deleted, and writes resumed, by the
+//!   Runtime window's terminal settings (O2c-3b-2): Admin only, login-free
+//!   for the local auth-disabled Admin, in the phases the alarm settings
+//!   allow. One key change at a time (`key_lock`). The secret is never
+//!   answered back.
 //! - A record that could not be opened answers `refused` / `record_failed`
 //!   with `unrecorded: true`: nothing can be recorded, so nothing is sent.
 //! - `operation_view` (O3a) reads the faceplate's operation rows of one
@@ -21,16 +27,18 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use scada_host::operation_db::{OperationDb, OperationLog, Outcome};
-use scada_host::operation_key::WriteKey;
+use scada_host::operation_db::{OperationDb, OperationLog, Outcome, WriteStatus};
+use scada_host::operation_key::{self, WriteKey, WriteKeyStore};
 use scada_host::operation_write::{
     self, check_shape, reason, HubAccess, OperationEnv, OperationView, OperationViewRequest,
     OperationWrite, OperationWriteRequest, ViewContext, WriteResult, MIN_WRITE_INTERVAL,
     WRITE_TIMEOUT,
 };
 use scada_host::recording_runtime::NO_DATA_DIR;
+use serde::Serialize;
 use tauri::State;
 
+use crate::alarm::{refusal, verify_alarm_phase};
 use crate::app_mode::AppMode;
 use crate::auth::AuthState;
 use crate::runtime::StartupProject;
@@ -40,12 +48,6 @@ use crate::NativeHost;
 /// that does not answer delays the faceplate's 2-second poll little.
 const VIEW_TIMEOUT: Duration = Duration::from_secs(3);
 
-/// The write key (O2c-3b registers it); none yet, so `no_write_key`
-/// behind the contract.
-fn write_key() -> Option<WriteKey> {
-    None
-}
-
 /// The record's file name in the terminal's data dir (§9).
 pub const OPERATIONS_DB: &str = "operations.db";
 
@@ -54,20 +56,38 @@ const EDITOR_MODE: &str = "editorMode";
 const DB_UNAVAILABLE: &str = "operationDbUnavailable";
 const CLOSED: &str = "closed";
 
-/// The operation record of this process, or why it is not open.
-pub struct OperationState(Mutex<Result<Arc<OperationLog>, &'static str>>);
+/// Why the keyring of the write key is not there (logged; the commands
+/// answer `key_store`).
+const NO_KEY_STORE: &str = "noKeyStore";
+
+/// The operation record of this process (or why it is not open) and the
+/// keyring of the write key.
+pub struct OperationState {
+    log: Mutex<Result<Arc<OperationLog>, &'static str>>,
+    keys: Result<Arc<dyn WriteKeyStore>, &'static str>,
+    /// Held by a registration and a deletion of the write key, so two never
+    /// interleave (the previous entry is read, then replaced).
+    key_lock: tokio::sync::Mutex<()>,
+}
 
 impl OperationState {
     /// Open `operations.db` under `dir` in Runtime mode. A failure does not
     /// stop the app; the command answers `record_failed`. Rows an earlier
     /// process left `pending` are finished as `uncertain` here (§9).
-    pub async fn open(mode: &AppMode, dir: Result<impl AsRef<Path>, impl std::fmt::Debug>) -> Self {
+    pub async fn open(
+        mode: &AppMode,
+        dir: Result<impl AsRef<Path>, impl std::fmt::Debug>,
+        keys: Result<Arc<dyn WriteKeyStore>, &'static str>,
+    ) -> Self {
         if !matches!(mode, AppMode::Runtime { .. }) {
             return Self::unavailable(EDITOR_MODE);
         }
         let Ok(dir) = dir else {
             return Self::unavailable(NO_DATA_DIR);
         };
+        if let Err(why) = &keys {
+            eprintln!("[banto-scada] the write key store is unavailable ({why})");
+        }
         let file = dir.as_ref().join(OPERATIONS_DB);
         match OperationDb::open(&file, now_ms()).await {
             Ok((db, recovered)) => {
@@ -76,7 +96,11 @@ impl OperationState {
                         "[banto-scada] operation record: {recovered} interrupted row(s) finished as uncertain"
                     );
                 }
-                Self(Mutex::new(Ok(Arc::new(OperationLog::new(db)))))
+                Self {
+                    log: Mutex::new(Ok(Arc::new(OperationLog::new(db)))),
+                    keys,
+                    key_lock: tokio::sync::Mutex::new(()),
+                }
             }
             Err(error) => {
                 eprintln!("[banto-scada] the operation record could not be opened: {error:?}");
@@ -86,11 +110,32 @@ impl OperationState {
     }
 
     pub fn unavailable(reason: &'static str) -> Self {
-        Self(Mutex::new(Err(reason)))
+        Self {
+            log: Mutex::new(Err(reason)),
+            keys: Err(NO_KEY_STORE),
+            key_lock: tokio::sync::Mutex::new(()),
+        }
     }
 
     pub(crate) fn log(&self) -> Result<Arc<OperationLog>, &'static str> {
-        self.0.lock().unwrap_or_else(|e| e.into_inner()).clone()
+        self.log.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+
+    /// The registered write key, read now from the record and the keyring.
+    /// A keyring that refuses (or a key that no longer makes a client) is
+    /// no key: `no_write_key`, never a write with a key not confirmed.
+    fn write_key(&self, log: &OperationLog) -> Option<WriteKey> {
+        let store = self.keys.as_ref().ok()?;
+        match operation_key::load(store.as_ref(), log) {
+            Ok(key) => key,
+            Err(error) => {
+                eprintln!(
+                    "[banto-scada] the write key could not be read ({})",
+                    error.as_str()
+                );
+                None
+            }
+        }
     }
 
     /// Release the SQLite handles at exit. Later commands answer
@@ -99,7 +144,7 @@ impl OperationState {
     /// start, §9).
     pub async fn close(&self) {
         let taken = std::mem::replace(
-            &mut *self.0.lock().unwrap_or_else(|e| e.into_inner()),
+            &mut *self.log.lock().unwrap_or_else(|e| e.into_inner()),
             Err(CLOSED),
         );
         if let Ok(log) = taken {
@@ -171,12 +216,8 @@ pub async fn operation_write(
         Ok(log) => log,
         Err(why) => return Ok(unrecordable(&request, why)),
     };
-    let endpoint = host
-        .bootstrap
-        .record()
-        .ok()
-        .flatten()
-        .map(|record| record.endpoint);
+    let endpoint = read_endpoint(&host);
+    let write = operations.write_key(&log);
     let read = host.bootstrap.rest_client().ok().flatten();
     let context = OperationWrite {
         env: Arc::new(HostEnv {
@@ -189,8 +230,7 @@ pub async fn operation_write(
             endpoint,
             read: read.as_ref(),
             subscribed_revision: host.read_revision.get(),
-            // Until the write key (O2c-3): never sent.
-            write: write_key(),
+            write,
             min_interval: MIN_WRITE_INTERVAL,
             timeout: WRITE_TIMEOUT,
         },
@@ -215,18 +255,20 @@ pub async fn operation_view(
 ) -> Result<OperationView, String> {
     mode.require_runtime()?;
     let read = host.bootstrap.rest_client().ok().flatten();
+    let log = operations.log().ok();
+    let write = log.as_deref().and_then(|log| operations.write_key(log));
     let context = ViewContext {
         env: Arc::new(HostEnv {
             runtime: matches!(*mode, AppMode::Runtime { .. }),
         }),
         auth: auth.auth_host(),
-        log: operations.log().ok(),
+        log,
         project: startup.applied(),
         hub: HubAccess {
-            endpoint: None,
+            endpoint: read_endpoint(&host),
             read: read.as_ref(),
             subscribed_revision: None,
-            write: write_key(),
+            write,
             min_interval: MIN_WRITE_INTERVAL,
             timeout: VIEW_TIMEOUT,
         },
@@ -234,4 +276,142 @@ pub async fn operation_view(
     operation_write::operation_view(&context, &request)
         .await
         .map_err(str::to_owned)
+}
+
+/// The write key and the write state for the terminal settings (§7): the
+/// endpoint the key was registered for (`null` when none), the saved read
+/// connection's endpoint (`null` when none; another one than the key's is
+/// `hub_mismatch`) and the write state. The secret is never answered.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OperationKeyStatus {
+    pub key_endpoint: Option<String>,
+    pub hub_endpoint: Option<String>,
+    pub write: WriteStatus,
+}
+
+fn key_status(log: &OperationLog, host: &NativeHost) -> OperationKeyStatus {
+    OperationKeyStatus {
+        key_endpoint: log.key_endpoint(),
+        hub_endpoint: read_endpoint(host),
+        write: log.write_status(),
+    }
+}
+
+/// The endpoint of the saved read connection: the Hub's identity in the
+/// record and the endpoint the write key is paired with (§7).
+fn read_endpoint(host: &NativeHost) -> Option<String> {
+    host.bootstrap
+        .record()
+        .ok()
+        .flatten()
+        .map(|record| record.endpoint)
+}
+
+/// Admin only (login-free for the local auth-disabled Admin), in the phases
+/// the alarm settings allow (§7).
+async fn authorize_settings(auth: &AuthState) -> Result<(), String> {
+    verify_alarm_phase(auth).await?;
+    auth.get()
+        .map_err(refusal)?
+        .authorize_operation_settings()
+        .await
+        .map_err(refusal)
+}
+
+fn open_log(operations: &OperationState) -> Result<Arc<OperationLog>, String> {
+    operations.log().map_err(|why| {
+        eprintln!("[banto-scada] operation settings: the record is unavailable ({why})");
+        reason::RECORD_FAILED.to_owned()
+    })
+}
+
+fn key_store(operations: &OperationState) -> Result<Arc<dyn WriteKeyStore>, String> {
+    operations
+        .keys
+        .clone()
+        .map_err(|_| operation_key::KeyError::KeyStore.as_str().to_owned())
+}
+
+/// `operation_key_status`: the write key and the write state (§7). Runtime
+/// only; no permission (nothing secret is answered). `record_failed` when
+/// the record is not open.
+#[tauri::command]
+pub async fn operation_key_status(
+    mode: State<'_, AppMode>,
+    operations: State<'_, OperationState>,
+    host: State<'_, NativeHost>,
+) -> Result<OperationKeyStatus, String> {
+    mode.require_runtime()?;
+    let log = open_log(&operations)?;
+    Ok(key_status(&log, &host))
+}
+
+/// `operation_key_register`: register `secret` as the write key for the
+/// saved read connection's endpoint (§7, `operation_key::register`); the
+/// write state becomes `ready`. Admin only. The errors are the auth
+/// refusals (`unauthorized`, `forbidden`, `auth_unavailable`,
+/// `auth_failed`, `auth_phase_unavailable`), `record_failed` and
+/// `KeyError::as_str` (`no_hub`, `invalid_secret`, `invalid_endpoint`,
+/// `key_store`).
+#[tauri::command]
+pub async fn operation_key_register(
+    mode: State<'_, AppMode>,
+    auth: State<'_, AuthState>,
+    operations: State<'_, OperationState>,
+    host: State<'_, NativeHost>,
+    secret: String,
+) -> Result<OperationKeyStatus, String> {
+    mode.require_runtime()?;
+    authorize_settings(&auth).await?;
+    let log = open_log(&operations)?;
+    let store = key_store(&operations)?;
+    let _keys = operations.key_lock.lock().await;
+    let endpoint = read_endpoint(&host);
+    operation_key::register(store.as_ref(), &log, &secret, endpoint.as_deref(), now_ms())
+        .await
+        .map_err(|error| error.as_str().to_owned())?;
+    Ok(key_status(&log, &host))
+}
+
+/// `operation_key_delete`: drop the write key from the record, then its
+/// keyring entry (§7). The write state is kept. Admin only; the errors are
+/// the auth refusals, `record_failed` and `key_store`.
+#[tauri::command]
+pub async fn operation_key_delete(
+    mode: State<'_, AppMode>,
+    auth: State<'_, AuthState>,
+    operations: State<'_, OperationState>,
+    host: State<'_, NativeHost>,
+) -> Result<OperationKeyStatus, String> {
+    mode.require_runtime()?;
+    authorize_settings(&auth).await?;
+    let log = open_log(&operations)?;
+    let store = key_store(&operations)?;
+    let _keys = operations.key_lock.lock().await;
+    operation_key::delete(store.as_ref(), &log)
+        .await
+        .map_err(|error| error.as_str().to_owned())?;
+    Ok(key_status(&log, &host))
+}
+
+/// `operation_write_resume`: 「書込みを再開」 (§7). A `stopped` terminal
+/// becomes `ready` once the record has it; any other state is answered as
+/// it is (`key_invalid` needs the key registered again). Admin only; the
+/// errors are the auth refusals and `record_failed`.
+#[tauri::command]
+pub async fn operation_write_resume(
+    mode: State<'_, AppMode>,
+    auth: State<'_, AuthState>,
+    operations: State<'_, OperationState>,
+    host: State<'_, NativeHost>,
+) -> Result<OperationKeyStatus, String> {
+    mode.require_runtime()?;
+    authorize_settings(&auth).await?;
+    let log = open_log(&operations)?;
+    log.resume(now_ms()).await.map_err(|error| {
+        eprintln!("[banto-scada] operation settings: the resume could not be saved: {error:?}");
+        reason::RECORD_FAILED.to_owned()
+    })?;
+    Ok(key_status(&log, &host))
 }

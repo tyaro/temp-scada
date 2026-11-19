@@ -90,7 +90,7 @@ fn apply_failure_reason(error: &AlarmServiceError) -> String {
     }
 }
 
-fn refusal(error: CommandError) -> String {
+pub(crate) fn refusal(error: CommandError) -> String {
     match error {
         CommandError::Banto(BantoError::Unauthorized) => "unauthorized",
         CommandError::Banto(BantoError::Forbidden) => "forbidden",
@@ -121,7 +121,7 @@ pub(crate) async fn applied_user(auth: &AuthState) -> Result<String, String> {
     })
 }
 
-async fn verify_alarm_phase(auth: &AuthState) -> Result<(), String> {
+pub(crate) async fn verify_alarm_phase(auth: &AuthState) -> Result<(), String> {
     let phase = auth
         .get()
         .map_err(refusal)?

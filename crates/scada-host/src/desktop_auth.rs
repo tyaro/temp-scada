@@ -324,6 +324,18 @@ impl DesktopAuth {
         Ok(())
     }
 
+    /// Registering or deleting the write key and resuming writes
+    /// (operation design §7) are terminal settings, not equipment
+    /// operations: Admin only, login-free for the local auth-disabled
+    /// Admin (development / initial setup).
+    pub async fn authorize_operation_settings(&self) -> Result<(), CommandError> {
+        self.auth()
+            .auth()
+            .require_role(Role::Admin, "operation")
+            .await?;
+        Ok(())
+    }
+
     /// `auth_login`. A refusal (wrong credentials, auth-disabled mode, a
     /// superseded install) is `Ok` with `success: false`, as in Banto.
     pub async fn login(&self, username: &str, password: &str) -> Result<LoginResult, CommandError> {

@@ -94,8 +94,9 @@ fn the_command_list_is_generate_handler_without_gaps_or_duplicates() {
     );
     assert_eq!(registered, unique);
     // 56 commands before the mode, `app_mode`, the 6 `runtime_*` and
-    // `operation_write` and `operation_view`.
-    assert_eq!(listed.len(), 65);
+    // `operation_write` and `operation_view`, and the 4 of the write key
+    // (`operation_key_*`, `operation_write_resume`).
+    assert_eq!(listed.len(), 69);
 }
 
 #[test]
@@ -187,6 +188,26 @@ fn fingerprint(dir: &Path) -> BTreeMap<PathBuf, (u64, std::time::SystemTime)> {
     files
 }
 
+/// The keyring of the write key, in memory (operation design §7).
+#[derive(Default)]
+pub(crate) struct MemoryWriteKeys(std::sync::Mutex<BTreeMap<String, String>>);
+
+impl scada_host::operation_key::WriteKeyStore for MemoryWriteKeys {
+    fn get(&self, id: &str) -> Result<Option<String>, scada_host::operation_key::KeyError> {
+        Ok(self.0.lock().unwrap().get(id).cloned())
+    }
+
+    fn set(&self, id: &str, secret: &str) -> Result<(), scada_host::operation_key::KeyError> {
+        self.0.lock().unwrap().insert(id.into(), secret.into());
+        Ok(())
+    }
+
+    fn delete(&self, id: &str) -> Result<(), scada_host::operation_key::KeyError> {
+        self.0.lock().unwrap().remove(id);
+        Ok(())
+    }
+}
+
 /// A first-start host with real auth, alarm and recording stores in `dir`.
 pub(crate) fn app(
     dir: &TempDir,
@@ -196,8 +217,11 @@ pub(crate) fn app(
     let (auth, recording) =
         tauri::async_runtime::block_on(AuthState::start(&dir.0, "no_recording_run"));
     let alarm = tauri::async_runtime::block_on(alarm::AlarmState::open(Ok::<_, ()>(&dir.0)));
-    let operations =
-        tauri::async_runtime::block_on(operation::OperationState::open(&mode, Ok::<_, ()>(&dir.0)));
+    let operations = tauri::async_runtime::block_on(operation::OperationState::open(
+        &mode,
+        Ok::<_, ()>(&dir.0),
+        Ok(Arc::new(MemoryWriteKeys::default())),
+    ));
     let app = commands(mock_builder())
         .manage(operations)
         .manage(StartupProject::load(&mode))
@@ -495,6 +519,10 @@ fn runtime_only_calls() -> Vec<(&'static str, Value)> {
                 "buttonIndex": 0, "expectedValue": true}}),
         ),
         ("operation_view", json!({"request": {"equipmentId": "e"}})),
+        ("operation_key_status", json!({})),
+        ("operation_key_register", json!({"secret": "s"})),
+        ("operation_key_delete", json!({})),
+        ("operation_write_resume", json!({})),
     ];
     let named: BTreeSet<&str> = calls.iter().map(|(name, _)| *name).collect();
     assert_eq!(named, RUNTIME_ONLY.iter().copied().collect());
