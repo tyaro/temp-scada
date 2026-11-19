@@ -102,6 +102,10 @@ pub struct Resolved {
     /// The slot's external name.
     pub tag: String,
     pub value: WriteValue,
+    /// Whether the value has a non-zero fraction as entered, before the
+    /// rounding to `f64` (an input like `1.00000000000000001` reads as 1.0):
+    /// an integer tag refuses it (§4.2 `type_mismatch`).
+    pub fractional: bool,
 }
 
 /// What resolution learned before it stopped, for the record of a refusal.
@@ -152,6 +156,7 @@ pub fn resolve(
         .get("write")
         .filter(|write| write.is_object())
         .ok_or(reason::NO_WRITE_DEF)?;
+    let mut fractional = false;
     let value = match (request.button_index, request.input.as_deref()) {
         (Some(index), _) => {
             let button = usize::try_from(index)
@@ -167,6 +172,7 @@ pub fn resolve(
                 .ok_or(reason::INVALID_VALUE)?;
             let decimals = slot_decimals(doc, placement, &request.slot_name);
             let value = parse_input(text, decimals)?;
+            fractional = has_fraction(text);
             let (Some(min), Some(max)) = (input["min"].as_f64(), input["max"].as_f64()) else {
                 return Err(reason::INVALID_VALUE);
             };
@@ -178,6 +184,9 @@ pub fn resolve(
         }
         (None, None) => return Err(reason::INVALID_REQUEST),
     };
+    if let WriteValue::Number(number) = value {
+        fractional |= number.fract() != 0.0;
+    }
     known.value = Some(value);
     let tag = items(&equipment["bindings"])
         .find(|binding| binding["slotName"] == request.slot_name.as_str())
@@ -192,6 +201,7 @@ pub fn resolve(
         slot_type,
         tag: tag.to_owned(),
         value,
+        fractional,
     })
 }
 
@@ -237,8 +247,10 @@ fn collect_decimals(value: &Value, slot_name: &str, decimals: &mut Option<u32>) 
             {
                 if let Some(found) = map
                     .get("format")
-                    .and_then(|format| format["decimals"].as_u64())
-                    .and_then(|d| u32::try_from(d).ok())
+                    .and_then(|format| format["decimals"].as_f64())
+                    // `2.0` is a valid integer in the schema too.
+                    .filter(|d| d.fract() == 0.0 && (0.0..=f64::from(u32::MAX)).contains(d))
+                    .map(|d| d as u32)
                 {
                     *decimals = Some(decimals.map_or(found, |d| d.max(found)));
                 }
@@ -280,6 +292,13 @@ pub fn parse_input(text: &str, decimals: Option<u32>) -> Result<f64, &'static st
         return Err(reason::OUT_OF_RANGE);
     }
     Ok(value)
+}
+
+/// Whether a typed input (already checked by [`parse_input`]) has a
+/// non-zero fraction digit.
+fn has_fraction(text: &str) -> bool {
+    text.split_once('.')
+        .is_some_and(|(_, fraction)| fraction.bytes().any(|b| b != b'0'))
 }
 
 /// Whether the resolved value is the one the confirmation showed.

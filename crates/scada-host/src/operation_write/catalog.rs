@@ -11,12 +11,16 @@ pub const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
 /// Check the tag in the catalog (§4.1, §4.2) and give the value to send.
 /// `subscribed_revision` is the catalog revision the terminal's subscription
 /// resolved against; another revision (or none) is `catalog_pending`.
+/// `fractional` is [`super::Resolved::fractional`]: a value with a fraction as
+/// entered is `type_mismatch` for an integer tag even when it rounds to a
+/// whole `f64`.
 pub fn check_catalog(
     catalog: &CatalogSnapshot,
     subscribed_revision: Option<u64>,
     tag: &str,
     slot_type: SlotType,
     value: WriteValue,
+    fractional: bool,
 ) -> Result<RequestedValue, &'static str> {
     if subscribed_revision != Some(catalog.revision) {
         return Err(reason::CATALOG_PENDING);
@@ -31,6 +35,9 @@ pub fn check_catalog(
     }
     if !row.writable {
         return Err(reason::NOT_WRITABLE);
+    }
+    if fractional && integer_range(&row.data_type).is_some() {
+        return Err(reason::TYPE_MISMATCH);
     }
     hub_value(&row.data_type, slot_type, value)
 }

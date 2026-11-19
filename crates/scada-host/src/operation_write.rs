@@ -23,7 +23,9 @@ use serde_json::{json, Value};
 
 use crate::auth::CurrentSession;
 use crate::auth_phase::{AuthHost, AuthPhase};
-use crate::operation_db::{BeginError, Finish, OperationLog, Outcome, RequestRecord, INTERRUPTED};
+use crate::operation_db::{
+    BeginError, Finish, OperationDbError, OperationLog, Outcome, RequestRecord, INTERRUPTED,
+};
 
 mod catalog;
 mod resolve;
@@ -236,19 +238,23 @@ pub async fn operation_write(
         auth: context.auth.clone(),
         log: context.log.clone(),
     };
-    let (finish, unrecorded) = match tokio::spawn(send.run()).await {
-        Ok(done) => done,
-        Err(_) => {
-            // The task panicked: whether it sent is unknown. Its row stays
-            // `pending` and reads as unrecorded until the next start.
-            let finish = Finish {
-                outcome: Outcome::Uncertain,
-                reason: Some(INTERRUPTED.into()),
-                audit_id: None,
-                finished_at_ms: context.env.now_ms(),
-            };
-            (finish, true)
+    // Supervised in a task of its own too, so a panic of the send task is
+    // finished (and the send slot freed) even when the caller stopped
+    // waiting.
+    let log = context.log.clone();
+    let env = context.env.clone();
+    let supervised_id = id.clone();
+    let supervised = tokio::spawn(async move {
+        match tokio::spawn(send.run()).await {
+            Ok(done) => done,
+            Err(_) => finish_interrupted(&log, &supervised_id, &*env).await,
         }
+    });
+    let (finish, unrecorded) = match supervised.await {
+        Ok(done) => done,
+        // Only when the runtime is shutting down: the row reads as
+        // unrecorded and the next start makes it `interrupted`.
+        Err(_) => (interrupted(&*context.env), true),
     };
     WriteResult {
         outcome: finish.outcome,
@@ -315,6 +321,7 @@ async fn fetch_and_check(
         &resolved.tag,
         resolved.slot_type,
         resolved.value,
+        resolved.fractional,
     )
 }
 
@@ -406,12 +413,7 @@ impl Sending {
             Ok(sending) => match sending.await {
                 Ok(result) => Finish::of_write(&result, self.env.now_ms()),
                 // The send task panicked: whether it reached the Hub is unknown.
-                Err(_) => Finish {
-                    outcome: Outcome::Uncertain,
-                    reason: Some(INTERRUPTED.into()),
-                    audit_id: None,
-                    finished_at_ms: self.env.now_ms(),
-                },
+                Err(_) => interrupted(&*self.env),
             },
         };
         self.finish(finish).await
@@ -424,6 +426,35 @@ impl Sending {
                 eprintln!("operation write: the outcome could not be written: {error:?}");
                 (finish, true)
             }
+        }
+    }
+}
+
+fn interrupted(env: &dyn OperationEnv) -> Finish {
+    Finish {
+        outcome: Outcome::Uncertain,
+        reason: Some(INTERRUPTED.into()),
+        audit_id: None,
+        finished_at_ms: env.now_ms(),
+    }
+}
+
+/// The send task panicked, before or after the send started: whether the
+/// write reached the Hub is unknown, so the row is finished `uncertain`
+/// (`interrupted`) and the send slot freed. Never re-sent. When the outcome
+/// cannot be written, the log keeps it as unrecorded (`complete`). A row the
+/// task had already finished (`InvalidRow`) keeps its recorded outcome.
+async fn finish_interrupted(
+    log: &OperationLog,
+    id: &str,
+    env: &dyn OperationEnv,
+) -> (Finish, bool) {
+    let finish = interrupted(env);
+    match log.complete(id, finish.clone()).await {
+        Ok(()) | Err(OperationDbError::InvalidRow) => (finish, false),
+        Err(error) => {
+            eprintln!("operation write: the outcome could not be written: {error:?}");
+            (finish, true)
         }
     }
 }

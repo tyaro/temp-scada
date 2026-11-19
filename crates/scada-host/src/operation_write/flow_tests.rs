@@ -227,10 +227,17 @@ async fn serve(mut stream: TcpStream, state: Arc<HubState>) {
 
 struct TestEnv {
     runtime: AtomicBool,
+    /// Calls of `now_ms` so far, and the call (1-based) that panics; 0 never.
+    clock_calls: AtomicU64,
+    panic_at_call: AtomicU64,
 }
 
 impl OperationEnv for TestEnv {
     fn now_ms(&self) -> i64 {
+        let call = self.clock_calls.fetch_add(1, Ordering::SeqCst) + 1;
+        if call == self.panic_at_call.load(Ordering::SeqCst) {
+            panic!("test: the clock panics at call {call}");
+        }
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -274,6 +281,8 @@ impl Fixture {
             log: Arc::new(OperationLog::new(db)),
             env: Arc::new(TestEnv {
                 runtime: AtomicBool::new(true),
+                clock_calls: AtomicU64::new(0),
+                panic_at_call: AtomicU64::new(0),
             }),
             project: project(),
             read,
@@ -844,4 +853,90 @@ async fn an_outcome_that_cannot_be_written_is_returned_and_shown_as_unrecorded()
     };
     assert_eq!(finish.outcome, Outcome::Ok);
     assert_eq!(fx.hub.writes().len(), 2);
+}
+
+impl Fixture {
+    /// Make the send task panic once the write has returned: in a sent
+    /// write, `now_ms` is called for the request (1), then for the outcome in
+    /// the send task (2).
+    fn panic_after_the_send(&self) {
+        self.env.clock_calls.store(0, Ordering::SeqCst);
+        self.env.panic_at_call.store(2, Ordering::SeqCst);
+    }
+}
+
+#[tokio::test]
+async fn a_send_task_that_panics_is_finished_uncertain_and_frees_the_slot() {
+    let fx = Fixture::new().await;
+    fx.panic_after_the_send();
+    let result = fx.run(&button("command", 0, json!(true))).await;
+    assert_eq!(result.outcome, Outcome::Uncertain, "{result:?}");
+    assert_eq!(result.reason.as_deref(), Some(INTERRUPTED));
+    assert!(!result.unrecorded);
+    // Recorded, not left `Sending`.
+    let finish = fx.finished("command").await;
+    assert_eq!(finish.outcome, Outcome::Uncertain);
+    assert_eq!(finish.reason.as_deref(), Some(INTERRUPTED));
+    assert_eq!(fx.hub.writes().len(), 1);
+    // The send slot is free: the next write is sent, the first is not re-sent.
+    assert_eq!(
+        fx.run(&button("mode", 0, json!(1))).await.outcome,
+        Outcome::Ok
+    );
+    assert_eq!(fx.hub.writes().len(), 2);
+}
+
+#[tokio::test]
+async fn a_send_task_that_panics_is_finished_even_when_the_caller_stops_waiting() {
+    let fx = Fixture::new().await;
+    let hold = &fx.hub.state.write_hold;
+    hold.on.store(true, Ordering::SeqCst);
+    fx.panic_after_the_send();
+    let request = button("command", 0, json!(true));
+    // The caller goes away while the Hub holds the write.
+    tokio::select! {
+        _ = fx.run(&request) => panic!("the write returned while the Hub held it"),
+        () = hold.arrived.notified() => {}
+    }
+    hold.on.store(false, Ordering::SeqCst);
+    hold.release.notify_one();
+    let mut finish = None;
+    for _ in 0..200 {
+        if let Some((_, RecordState::Finished(done))) = fx.latest("command").await {
+            finish = Some(done);
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    }
+    let finish = finish.expect("the row was finished");
+    assert_eq!(finish.outcome, Outcome::Uncertain);
+    assert_eq!(finish.reason.as_deref(), Some(INTERRUPTED));
+    assert_eq!(
+        fx.run(&button("mode", 0, json!(1))).await.outcome,
+        Outcome::Ok
+    );
+    assert_eq!(fx.hub.writes().len(), 2);
+}
+
+#[tokio::test]
+async fn a_panicked_send_whose_outcome_cannot_be_written_reads_as_unrecorded() {
+    let fx = Fixture::new().await;
+    fx.log
+        .db()
+        .execute_for_test("CREATE TRIGGER fail_update BEFORE UPDATE ON operation BEGIN SELECT RAISE(ABORT, 'disk full'); END")
+        .await;
+    fx.panic_after_the_send();
+    let result = fx.run(&button("command", 0, json!(true))).await;
+    assert_eq!(result.outcome, Outcome::Uncertain);
+    assert!(result.unrecorded);
+    let RecordState::Unrecorded {
+        finish: Some(finish),
+    } = fx.latest("command").await.unwrap().1
+    else {
+        panic!("not unrecorded");
+    };
+    assert_eq!(finish.reason.as_deref(), Some(INTERRUPTED));
+    // The slot is free; the next write is refused by the record, not `busy`.
+    let next = fx.run(&button("mode", 0, json!(1))).await;
+    assert_ne!(next.reason.as_deref(), Some(reason::BUSY), "{next:?}");
 }

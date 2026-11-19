@@ -192,6 +192,23 @@ fn inputs_resolve_within_the_range() {
 }
 
 #[test]
+fn an_input_keeps_its_fraction_from_before_the_rounding() {
+    let project = project();
+    let fractional = |text: &str, expected: Value| {
+        resolve_with(&project, &input(text, expected))
+            .0
+            .unwrap()
+            .fractional
+    };
+    // Rounds to 1.0 as an f64, but is not an integer as entered.
+    assert!(fractional("1.00000000000000001", json!(1.0)));
+    assert!(fractional("12.5", json!(12.5)));
+    assert!(!fractional("12", json!(12)));
+    assert!(!fractional("12.000", json!(12)));
+    assert!(!fractional("-0.0", json!(0)));
+}
+
+#[test]
 fn each_resolution_check_has_its_reason() {
     let project = project();
     let cases: Vec<(OperationWriteRequest, &str)> = vec![
@@ -331,13 +348,16 @@ fn the_decimals_are_the_largest_format_of_the_symbol_texts_showing_the_slot() {
             "format": {"decimals": 1}}},
         {"id": "b", "shape": {"type": "table", "cells": [[
             {"slotBinding": {"slotName": "speedSp"}, "format": {"decimals": 2, "unit": "Hz"}},
-            {"slotBinding": {"slotName": "other"}, "format": {"decimals": 5}}]]}},
+            {"slotBinding": {"slotName": "other"}, "format": {"decimals": 5}},
+            {"slotBinding": {"slotName": "float"}, "format": {"decimals": 2.0}}]]}},
         {"id": "c", "shape": {"type": "text", "slotBinding": {"slotName": "speedSp"},
             "format": {"unit": "Hz"}}}
     ]}, {"id": "plain", "objects": []}]});
     let placement = |symbol: &str| json!({"shape": {"type": "symbol", "symbolId": symbol}});
     assert_eq!(slot_decimals(&doc, &placement("sym"), "speedSp"), Some(2));
     assert_eq!(slot_decimals(&doc, &placement("sym"), "other"), Some(5));
+    // The schema takes an integral JSON float as an integer.
+    assert_eq!(slot_decimals(&doc, &placement("sym"), "float"), Some(2));
     assert_eq!(slot_decimals(&doc, &placement("sym"), "none"), None);
     assert_eq!(slot_decimals(&doc, &placement("plain"), "speedSp"), None);
     assert_eq!(slot_decimals(&doc, &placement("missing"), "speedSp"), None);
@@ -385,6 +405,7 @@ fn the_catalog_row_must_be_current_enabled_and_writable() {
             tag,
             SlotType::Bool,
             WriteValue::Bool(true),
+            false,
         )
     };
     assert_eq!(check(Some(5), "A"), Ok(RequestedValue::Bool(true)));
@@ -393,6 +414,29 @@ fn the_catalog_row_must_be_current_enabled_and_writable() {
     assert_eq!(check(Some(5), "Missing"), Err(reason::UNRESOLVED));
     assert_eq!(check(Some(5), "Off"), Err(reason::TAG_DISABLED));
     assert_eq!(check(Some(5), "Ro"), Err(reason::NOT_WRITABLE));
+}
+
+#[test]
+fn an_integer_tag_refuses_a_fraction_as_entered() {
+    let snapshot = catalog(json!([
+        {"name": "I", "type": "i16"},
+        {"name": "U", "type": "u64"},
+        {"name": "F", "type": "f64"},
+    ]));
+    let check = |tag, fractional| {
+        check_catalog(
+            &snapshot,
+            Some(5),
+            tag,
+            SlotType::Number,
+            WriteValue::Number(1.0),
+            fractional,
+        )
+    };
+    assert_eq!(check("I", true), Err(reason::TYPE_MISMATCH));
+    assert_eq!(check("U", true), Err(reason::TYPE_MISMATCH));
+    assert_eq!(check("I", false), Ok(RequestedValue::Num(1.0)));
+    assert_eq!(check("F", true), Ok(RequestedValue::Num(1.0)));
 }
 
 #[test]
