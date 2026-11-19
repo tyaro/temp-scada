@@ -26,6 +26,11 @@ const WRITE_KEY: &str = "operation-write-test-only-key";
 const REVISION: u64 = 5;
 /// Bounds far beyond any loopback answer, so no case depends on timing.
 const LONG: Duration = Duration::from_secs(20);
+/// `GET /api/v1/status` of a Hub with the #1201 write contract (#1223) and
+/// of one before it, which omits `capabilities` (§11-8).
+const WITH_CONTRACT: &str =
+    r#"{"version": "0.3.0-alpha.3", "capabilities": ["write_contract_v1"]}"#;
+const BEFORE_CONTRACT: &str = r#"{"version": "0.3.0-alpha.2"}"#;
 
 struct TempDir(PathBuf);
 
@@ -74,6 +79,8 @@ impl Hold {
 struct HubState {
     revision: AtomicU64,
     catalog_status: AtomicU16,
+    /// The answer to `GET /api/v1/status` (§11-8).
+    status: Mutex<(u16, &'static str)>,
     /// `(external name, data type, enabled, writable)`.
     rows: Mutex<Vec<(&'static str, &'static str, bool, bool)>>,
     reply: Mutex<Reply>,
@@ -102,6 +109,7 @@ impl Hub {
         let state = Arc::new(HubState {
             revision: AtomicU64::new(REVISION),
             catalog_status: AtomicU16::new(200),
+            status: Mutex::new((200, WITH_CONTRACT)),
             rows: Mutex::new(vec![
                 (COMMAND_TAG, "bit", true, true),
                 (SPEED_TAG, "f32", true, true),
@@ -209,6 +217,9 @@ async fn serve(mut stream: TcpStream, state: Arc<HubState>) {
             "collection_mode": "configured", "tags": rows});
         let status = state.catalog_status.load(Ordering::SeqCst);
         respond(&mut stream, status, &catalog.to_string()).await;
+    } else if head.starts_with("GET /api/v1/status ") {
+        let (status, body) = *state.status.lock().unwrap();
+        respond(&mut stream, status, body).await;
     } else if head.starts_with("POST /api/v1/values/") {
         let path = head.split(' ').nth(1).unwrap_or_default().to_owned();
         let body: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
@@ -257,7 +268,6 @@ struct Fixture {
     project: scada_model::Project,
     read: RestClient,
     write: Arc<RestClient>,
-    contract: bool,
     _dir: TempDir,
 }
 
@@ -287,7 +297,6 @@ impl Fixture {
             project: project(),
             read,
             write,
-            contract: true,
             _dir: dir,
         }
     }
@@ -304,13 +313,17 @@ impl Fixture {
             }),
             hub: HubAccess {
                 endpoint: Some(self.hub.url.clone()),
-                catalog: Some(&self.read),
+                read: Some(&self.read),
                 subscribed_revision: Some(REVISION),
-                write_contract_confirmed: self.contract,
                 write: Some(self.write.clone()),
                 timeout: LONG,
             },
         }
+    }
+
+    /// Set the Hub's answer to `GET /api/v1/status`.
+    fn hub_status(&self, status: u16, body: &'static str) {
+        *self.hub.state.status.lock().unwrap() = (status, body);
     }
 
     async fn run(&self, request: &OperationWriteRequest) -> WriteResult {
@@ -621,16 +634,29 @@ async fn refusals_before_sending_are_recorded_and_never_sent() {
 
 #[tokio::test]
 async fn the_hub_contract_and_the_write_key_are_required() {
-    let mut fx = Fixture::new().await;
+    let fx = Fixture::new().await;
     let command = button("command", 0, json!(true));
-    fx.contract = false;
-    assert_refused(&fx, &command, reason::HUB_UNSUPPORTED).await;
-    fx.contract = true;
+    // §11-8: a Hub before #1223 omits `capabilities`; one that lists
+    // others, fails or answers garbage is not confirmed either.
+    for (status, body) in [
+        (200, BEFORE_CONTRACT),
+        (
+            200,
+            r#"{"version": "9.0.0", "capabilities": ["write_contract_v2"]}"#,
+        ),
+        (500, WITH_CONTRACT),
+        (401, WITH_CONTRACT),
+        (200, "not json"),
+    ] {
+        fx.hub_status(status, body);
+        assert_refused(&fx, &command, reason::HUB_UNSUPPORTED).await;
+    }
+    fx.hub_status(200, WITH_CONTRACT);
     let mut context = fx.context();
     context.hub.write = None;
     let result = operation_write(&context, &command).await;
     assert_eq!(result.reason.as_deref(), Some(reason::NO_WRITE_KEY));
-    context.hub.catalog = None;
+    context.hub.read = None;
     let result = operation_write(&context, &command).await;
     assert_eq!(result.reason.as_deref(), Some(reason::CATALOG_UNAVAILABLE));
     assert!(fx.hub.writes().is_empty());
@@ -1114,7 +1140,7 @@ async fn assert_blocked(fx: &Fixture, context: ViewContext<'_>, code: &str, phas
 
 #[tokio::test]
 async fn the_view_is_blocked_by_the_rules_of_the_write() {
-    let mut fx = Fixture::new().await;
+    let fx = Fixture::new().await;
     fx.env.runtime.store(false, Ordering::SeqCst);
     assert_blocked(&fx, fx.view_context(), reason::NOT_RUNTIME, "initializing").await;
     fx.env.runtime.store(true, Ordering::SeqCst);
@@ -1130,7 +1156,7 @@ async fn the_view_is_blocked_by_the_rules_of_the_write() {
     let mut context = fx.view_context();
     context.hub.write = None;
     assert_blocked(&fx, context, reason::NO_WRITE_KEY, "initializing").await;
-    fx.contract = false;
+    fx.hub_status(200, BEFORE_CONTRACT);
     assert_blocked(
         &fx,
         fx.view_context(),
@@ -1138,7 +1164,13 @@ async fn the_view_is_blocked_by_the_rules_of_the_write() {
         "initializing",
     )
     .await;
-    fx.contract = true;
+    fx.hub_status(200, WITH_CONTRACT);
+    // No read client: the contract cannot be asked. (The write stops at
+    // step 4's `catalog_unavailable` before it asks.)
+    let mut context = fx.view_context();
+    context.hub.read = None;
+    let view = view_with(&context).await;
+    assert_eq!(view.blocked, Some(reason::HUB_UNSUPPORTED));
     // The record could not be opened: the slots are listed without rows.
     let mut context = fx.view_context();
     context.log = None;

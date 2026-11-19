@@ -299,3 +299,10 @@ O3c-2 で決めたこと（2026-11-19）: 設計に書いていなかった所�
 - 「実 Hub の購読中」は Editor に `readSource` があることで判断する。そのときの照会は TS だけの理由のコード `simulated_on_hub`（「実Hubの購読中は模擬の書込みはできません」）を返し、host は返さない。デモの模擬値の読取も `readSource` なので同じく押せない（デモの Project に `write` は無い）。
 - 模擬の書込みは host の `resolve` と同じ順で検査する（Project・機器・押した配置・slot・`write`・ボタンか入力の値・割付け・`expectedValue`）。Hub のカタログが無いので、タグの有無・書込みの可否・整数の型（`type_mismatch`）は確かめない。拒否は記録に残さず、通ったものだけを機器・slot の最後の 1 件として残す（`recordId` は `simulated-<連番>`）。
 - 模擬の host の `projectDigest` は固定の `editor-simulation`、`phase` は `simulation`（初期設定中の文を出さない）。小窓の「操作」の見出しと確認の小窓に「模擬」と出し、Editor の運転表示のバーは「表示確認（模擬の書込み）」と出す。
+
+§11-8 の確認（2026-11-20）: 上流 banto-industrial #1223 は #1224 で閉じ、Hub の `GET /api/v1/status` が `capabilities`（`write_contract_v1`）を返し、tagclient に `fetch_status`・`HubStatus::supports_write_contract` が入った（タグ `v0.3.0-alpha.3`）。依存をこの版へ上げ、4-5 の `hub_unsupported` を次のとおり判定する。
+
+- 書込みと照会のたびに、読み用キーの `RestClient` で状態を取り直す（§4.1 の catalog と同じ。Hub が古い版へ戻されても前の答えを使わない）。
+- `write_contract_v1` が並んでいるときだけ契約ありとする。欄が無い（#1223 より前の Hub）、別の名前だけ、HTTP の誤り、本文が読めない、上限の時間内に返らない、読み用キーが無いときは、確かめられないので `hub_unsupported`。
+- 書込みは 4 の catalog の取得が通った後に聞く（Hub に届かないときは 4 の `catalog_unavailable` が先に出る）。上限は書込みと同じ。照会は 2・3 で止まらないときだけ聞き、小窓の 2 秒おきの照会を長く止めないよう上限を 3 秒にする。
+- 製品には書き用キーがまだ無い（O2c）ので、契約のある Hub では `no_write_key`、無い Hub では `hub_unsupported` で拒み、Hub へは送らない。

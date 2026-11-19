@@ -131,14 +131,20 @@ pub async fn operation_view(
         .to_owned();
     // The order of the write: the record (checked by the caller before
     // step 2), step 2, step 3's applied Project, step 5, step 6's slot.
+    // The Hub is asked only when nothing before step 5 refuses.
     let mut blocked = match &context.log {
         None => Some(reason::RECORD_FAILED),
-        Some(log) => admission
+        Some(log) => match admission
             .result
             .err()
             .or(context.project.is_none().then_some(reason::PROJECT_CHANGED))
-            .or_else(|| write_client(&context.hub).err())
-            .or(log.is_sending().then_some(reason::BUSY)),
+        {
+            Some(code) => Some(code),
+            None => write_client(&context.hub)
+                .await
+                .err()
+                .or(log.is_sending().then_some(reason::BUSY)),
+        },
     };
     let mut views = Vec::with_capacity(slots.len());
     let mut unreadable = false;
