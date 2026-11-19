@@ -118,6 +118,8 @@ interface Use {
   name: string;
   slotName: string;
   type: SlotType;
+  /** The slot has an operation (`write`), so the Hub tag must be writable. */
+  write: boolean;
 }
 
 /**
@@ -161,6 +163,7 @@ export function hubTagCsv(
         name: item.name,
         slotName: slot.name,
         type: slot.type,
+        write: slot.write !== undefined,
       };
       const list = uses.get(name);
       if (list) list.push(use);
@@ -196,7 +199,8 @@ export function hubTagCsv(
       engLo: "",
       engHi: "",
       enabled: "true",
-      writable: "false",
+      // Writable when any slot sharing the name is operated (O1b).
+      writable: String(list.some((use) => use.write)),
       tagKind: "plc",
       expression: "",
       retain: "false",
