@@ -189,6 +189,29 @@ pub struct OperationDb {
     write_status: WriteStatus,
 }
 
+/// Finish a `pending` row; `InvalidRow` when it is not `pending`.
+async fn finish_row<'e, E>(executor: E, id: &str, finish: &Finish) -> Result<(), OperationDbError>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+{
+    let updated = sqlx::query(
+        "UPDATE operation SET outcome = ?, reason = ?, audit_id = ?, finished_at_ms = ? WHERE id = ? AND outcome = 'pending'",
+    )
+    .bind(finish.outcome.as_str())
+    .bind(finish.reason.as_deref())
+    .bind(finish.audit_id)
+    .bind(finish.finished_at_ms)
+    .bind(id)
+    .execute(executor)
+    .await?
+    .rows_affected();
+    if updated == 1 {
+        Ok(())
+    } else {
+        Err(OperationDbError::InvalidRow)
+    }
+}
+
 /// Format 1 to 2: the write state's table (§7, O2c-2).
 async fn add_write_state(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
@@ -404,22 +427,29 @@ impl OperationDb {
     /// Finish a `pending` row. Fails with `InvalidRow` when the row is not
     /// `pending`: an outcome is written once.
     pub async fn finish(&self, id: &str, finish: &Finish) -> Result<(), OperationDbError> {
-        let updated = sqlx::query(
-            "UPDATE operation SET outcome = ?, reason = ?, audit_id = ?, finished_at_ms = ? WHERE id = ? AND outcome = 'pending'",
+        finish_row(&self.pool, id, finish).await
+    }
+
+    /// Finish a `pending` row and save the write state its outcome moved the
+    /// terminal to, in one transaction (§7): a process that ends between
+    /// them never leaves a tripped key in the record with `ready` in the
+    /// file. Neither is written when either fails.
+    pub async fn finish_with_state(
+        &self,
+        id: &str,
+        finish: &Finish,
+        status: WriteStatus,
+    ) -> Result<(), OperationDbError> {
+        let mut tx = self.pool.begin_with("BEGIN IMMEDIATE").await?;
+        finish_row(&mut *tx, id, finish).await?;
+        write_state::save(
+            &mut *tx,
+            status.state,
+            status.changed_at_ms.unwrap_or_default(),
         )
-        .bind(finish.outcome.as_str())
-        .bind(finish.reason.as_deref())
-        .bind(finish.audit_id)
-        .bind(finish.finished_at_ms)
-        .bind(id)
-        .execute(&self.pool)
-        .await?
-        .rows_affected();
-        if updated == 1 {
-            Ok(())
-        } else {
-            Err(OperationDbError::InvalidRow)
-        }
+        .await?;
+        tx.commit().await?;
+        Ok(())
     }
 
     /// The newest row of one slot of one equipment of a Project (§8: the
@@ -587,6 +617,11 @@ impl Drop for Reservation<'_> {
 pub struct OperationLog {
     db: OperationDb,
     in_flight: Mutex<InFlight>,
+    /// Held across every save of the write state and the change of the
+    /// in-memory copy that goes with it (a trip, a retried save, a resume,
+    /// a registration), so an older snapshot is never saved over a newer
+    /// state.
+    state_lock: tokio::sync::Mutex<()>,
 }
 
 impl OperationLog {
@@ -598,6 +633,7 @@ impl OperationLog {
                 write,
                 ..InFlight::default()
             }),
+            state_lock: tokio::sync::Mutex::new(()),
         }
     }
 
@@ -619,6 +655,7 @@ impl OperationLog {
     /// A write key was registered again (§7): any state becomes `ready`
     /// once the file has it. Called by the key's registration (O2c-3).
     pub async fn key_registered(&self, now_ms: i64) -> Result<(), OperationDbError> {
+        let _state = self.state_lock.lock().await;
         write_state::save(&self.db.pool, WriteState::Ready, now_ms).await?;
         let mut in_flight = self.in_flight.lock().expect("operation log lock");
         in_flight.write = WriteStatus {
@@ -634,6 +671,7 @@ impl OperationLog {
     /// Returns whether it changed; a `key_invalid` terminal is not resumed
     /// (only registering the key again clears it).
     pub async fn resume(&self, now_ms: i64) -> Result<bool, OperationDbError> {
+        let _state = self.state_lock.lock().await;
         if self.write_status().state != WriteState::Stopped {
             return Ok(false);
         }
@@ -644,6 +682,7 @@ impl OperationLog {
             state: WriteState::Ready,
             changed_at_ms: Some(now_ms),
         };
+        in_flight.write_unsaved = false;
         Ok(true)
     }
 
@@ -719,19 +758,28 @@ impl OperationLog {
     /// 「記録に失敗」 to the actual outcome.
     ///
     /// A tripped or refused key moves the write state (§7) before the slot
-    /// is freed, so the next write already sees it; the file follows (a
-    /// failed save is logged and the state still holds in this process).
+    /// is freed, so the next write already sees it. The row and the state
+    /// are one transaction; when it fails, the state still holds in this
+    /// process and is saved on its own again, now and after the next write
+    /// the DB takes.
     pub async fn complete(&self, id: &str, finish: Finish) -> Result<(), OperationDbError> {
-        let result = self.db.finish(id, &finish).await;
-        let moved = WriteState::after(&finish);
+        let moved = WriteState::after(&finish).map(|state| WriteStatus {
+            state,
+            changed_at_ms: Some(finish.finished_at_ms),
+        });
+        let state_guard = match moved {
+            Some(_) => Some(self.state_lock.lock().await),
+            None => None,
+        };
+        let result = match moved {
+            Some(status) => self.db.finish_with_state(id, &finish, status).await,
+            None => self.db.finish(id, &finish).await,
+        };
         let result = {
             let mut in_flight = self.in_flight.lock().expect("operation log lock");
-            if let Some(state) = moved {
-                in_flight.write = WriteStatus {
-                    state,
-                    changed_at_ms: Some(finish.finished_at_ms),
-                };
-                in_flight.write_unsaved = true;
+            if let Some(status) = moved {
+                in_flight.write = status;
+                in_flight.write_unsaved = result.is_err();
             }
             if in_flight.sending.as_deref() == Some(id) {
                 in_flight.sending = None;
@@ -745,7 +793,10 @@ impl OperationLog {
                 other => other,
             }
         };
-        if moved.is_some() {
+        drop(state_guard);
+        if moved.is_some() && result.is_err() {
+            // The row could not be finished (or was finished already): the
+            // state alone.
             self.save_write_state().await;
         }
         result?;
@@ -760,6 +811,7 @@ impl OperationLog {
     /// is logged and kept for the next try; the state holds in this
     /// process either way.
     async fn save_write_state(&self) {
+        let _state = self.state_lock.lock().await;
         let status = {
             let in_flight = self.in_flight.lock().expect("operation log lock");
             if !in_flight.write_unsaved {

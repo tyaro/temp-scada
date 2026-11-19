@@ -693,23 +693,59 @@ async fn a_state_that_could_not_be_saved_holds_and_is_saved_later() {
             "CREATE TRIGGER fail_state BEFORE INSERT ON terminal_write BEGIN SELECT RAISE(ABORT, 'disk full'); END",
         )
         .await;
-    // The row is written; only the state's save fails.
-    log.complete(
-        &id,
-        hub_error(Outcome::Stopped, ErrorKind::KeyTripped, 2_000),
-    )
-    .await
-    .unwrap();
+    // The row and the state are one transaction: neither is written.
+    let tripped = hub_error(Outcome::Stopped, ErrorKind::KeyTripped, 2_000);
+    assert!(log.complete(&id, tripped.clone()).await.is_err());
+    assert!(log.db().row(&id).await.unwrap().unwrap().finish.is_none());
+    // The state holds in this process; the slot is free.
     assert_eq!(log.gate(Duration::ZERO), Err(Gate::Stopped));
+    assert!(!log.is_sending());
     log.db().execute_for_test("DROP TRIGGER fail_state").await;
-    // The next write the DB takes saves it too.
+    // The next write the DB takes saves both.
     log.refuse(&request, "write_stopped", 2_100).await.unwrap();
+    assert_eq!(
+        log.db().row(&id).await.unwrap().unwrap().finish,
+        Some(tripped)
+    );
     log.close().await;
     let (db, _) = OperationDb::open(&file, 0).await.unwrap();
     assert_eq!(
         OperationLog::new(db).write_status().state,
         WriteState::Stopped
     );
+}
+
+#[tokio::test]
+async fn a_process_that_ends_after_a_trip_restarts_stopped() {
+    // The outcome and the state commit together: a process killed right
+    // after `complete` (no close) never restarts `ready` with the trip in
+    // the record. Both moving outcomes.
+    for (outcome, kind, state) in [
+        (Outcome::Stopped, ErrorKind::KeyTripped, WriteState::Stopped),
+        (
+            Outcome::NotSent,
+            ErrorKind::Unauthorized,
+            WriteState::KeyInvalid,
+        ),
+    ] {
+        let file = temp_file();
+        let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+        let log = OperationLog::new(db);
+        let request = request("command");
+        let id = log.begin(&request, Duration::ZERO).await.unwrap();
+        log.complete(&id, hub_error(outcome, kind, 2_000))
+            .await
+            .unwrap();
+        drop(log);
+
+        let (db, recovered) = OperationDb::open(&file, 0).await.unwrap();
+        assert_eq!(recovered, 0, "{state:?}");
+        let log = OperationLog::new(db);
+        assert_eq!(log.write_status().state, state);
+        let finish = log.db().row(&id).await.unwrap().unwrap().finish.unwrap();
+        assert_eq!(finish.outcome, outcome);
+        log.close().await;
+    }
 }
 
 #[tokio::test]

@@ -5,7 +5,7 @@
 //! resume writes; the in-memory copy lives in `OperationLog`.
 use banto_tagclient::ErrorKind;
 use serde::Serialize;
-use sqlx::{Row, SqlitePool};
+use sqlx::{Row, Sqlite, SqlitePool};
 
 use super::{Finish, OperationDbError, Outcome};
 
@@ -86,18 +86,23 @@ pub(super) async fn load(pool: &SqlitePool) -> Result<WriteStatus, OperationDbEr
     })
 }
 
-pub(super) async fn save(
-    pool: &SqlitePool,
+/// Save the state with `executor`: the pool, or the transaction that also
+/// finishes the row whose outcome moved it.
+pub(super) async fn save<'e, E>(
+    executor: E,
     state: WriteState,
     changed_at_ms: i64,
-) -> Result<(), OperationDbError> {
+) -> Result<(), OperationDbError>
+where
+    E: sqlx::Executor<'e, Database = Sqlite>,
+{
     sqlx::query(
         "INSERT INTO terminal_write (id, state, changed_at_ms) VALUES (1, ?, ?)
          ON CONFLICT (id) DO UPDATE SET state = excluded.state, changed_at_ms = excluded.changed_at_ms",
     )
     .bind(state.as_str())
     .bind(changed_at_ms)
-    .execute(pool)
+    .execute(executor)
     .await?;
     Ok(())
 }
