@@ -11,6 +11,7 @@
 import {
   createTauriAuthProvider,
   isProviderError,
+  type AuthOperationResult,
   type AuthProvider,
   type ErrorBody,
 } from "@banto/admin-core";
@@ -216,6 +217,14 @@ function parseSettings(value: unknown): AuthSettings {
 export interface NativeAuthClient {
   readonly provider: AuthProvider;
   phase(): Promise<AuthPhase>;
+  /** `auth_setup` through the provider: creates the very first account and
+   * signs in as it. The host refuses it while the auth-disabled mode is on
+   * (the first administrator is then made by the move to operation). */
+  setup(
+    username: string,
+    password: string,
+    displayName: string,
+  ): Promise<AuthOperationResult>;
   transitionToOperational(
     username: string,
     password: string,
@@ -243,10 +252,16 @@ export function createNativeAuthClient(invoke: Invoke): NativeAuthClient {
       throw describeError(raw);
     }
   }
+  const provider = createTauriAuthProvider({ invoke: providerInvoke(invoke) });
   return {
-    provider: createTauriAuthProvider({ invoke: providerInvoke(invoke) }),
+    provider,
     async phase() {
       return parsePhase(await call("auth_phase"));
+    },
+    async setup(username, password, displayName) {
+      if (!provider.setup)
+        throw new AuthCommandError(undefined, "最初の管理者を作成できません。");
+      return provider.setup({ username, password, displayName });
     },
     async transitionToOperational(username, password, displayName) {
       const result = await call("auth_transition_to_operational", {

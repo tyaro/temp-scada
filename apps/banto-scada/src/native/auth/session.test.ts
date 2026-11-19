@@ -9,6 +9,7 @@ import {
   AuthSession,
   canEditSettings,
   canManageUsers,
+  canSetupFirstAdmin,
   canTransition,
 } from "./session.svelte";
 
@@ -118,6 +119,34 @@ function fakeHost() {
           };
         host.signedIn!.password = a.newPassword as string;
         return { seq: ++host.seq };
+      case "auth_setup": {
+        // `scada_host::desktop_auth::setup`: refused in the auth-disabled
+        // mode, and only while there is no account.
+        if (host.disabled || host.accounts.length)
+          return {
+            success: false,
+            error: host.disabled
+              ? "認証無効モードではログインできません"
+              : "既に初期化されています",
+            superseded: false,
+            seq: host.seq,
+          };
+        const account: Account = {
+          id: 1,
+          username: a.username as string,
+          password: a.password as string,
+          displayName: a.displayName as string,
+          role: "admin",
+        };
+        host.accounts.push(account);
+        host.signedIn = account;
+        return {
+          success: true,
+          error: null,
+          superseded: false,
+          seq: ++host.seq,
+        };
+      }
       case "auth_transition_to_operational": {
         if (host.refuseTransition) throw host.refuseTransition;
         let admin = host.accounts.find((x) => x.role === "admin");
@@ -272,6 +301,37 @@ describe("AuthSession", () => {
       },
     });
     expect(canTransition(session.view)).toBe(false);
+  });
+
+  it("creates the first administrator with auth_setup only while the auth is on and no admin exists", async () => {
+    const { host, session } = fakeHost();
+    await session.refresh();
+    // The auth-disabled mode: the move to operation creates the first admin.
+    expect(canSetupFirstAdmin(session.view)).toBe(false);
+    host.phase = "operational";
+    host.disabled = false;
+    await session.refresh();
+    expect(canSetupFirstAdmin(session.view)).toBe(true);
+    const result = await session.setup("admin", "secret-pass", "管理者");
+    expect(result.ok).toBe(true);
+    expect(host.calls.find((c) => c.cmd === "auth_setup")?.args).toEqual({
+      username: "admin",
+      password: "secret-pass",
+      displayName: "管理者",
+    });
+    expect(
+      host.calls.some((c) => c.cmd === "auth_transition_to_operational"),
+    ).toBe(false);
+    expect(session.view).toMatchObject({
+      status: "ready",
+      phase: { hasAdmin: true },
+      session: { kind: "account", role: "admin" },
+    });
+    expect(canSetupFirstAdmin(session.view)).toBe(false);
+    // A second setup is refused by the host and shown.
+    await session.logout();
+    const again = await session.setup("other", "pw", "");
+    expect(again).toEqual({ ok: false, message: "既に初期化されています" });
   });
 
   it("keeps the phase and shows why when the move is refused", async () => {

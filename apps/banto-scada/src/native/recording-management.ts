@@ -168,27 +168,53 @@ export interface ManagementAccess {
   readonly sessionKey: string;
 }
 
+/** How the management context is asked for: the command and its arguments.
+ * Editor sends the Project it shows (`recording_context`); Runtime sends none
+ * and the host uses its startup Project (`runtime_recording_context`, Runtime
+ * mode design §5). */
+export type RecordingContextRequest = (
+  project: Project,
+) => [command: string, args: Record<string, unknown>];
+
+export const editorRecordingContext: RecordingContextRequest = (project) => [
+  "recording_context",
+  { projectJson: JSON.stringify(project) },
+];
+
+export const runtimeRecordingContext: RecordingContextRequest = () => [
+  "runtime_recording_context",
+  {},
+];
+
 /**
  * Keeps the recording management service of the current Project and
  * session: on each change of the Project's ID or revision, or of the
- * session, it asks the host for the management context (`recording_context`,
- * Viewer or above) and publishes a new service, or none while the reply is
- * pending, while no one is signed in, or when the host cannot answer.
- * Replies to an earlier Project or session are dropped. `setupDone` runs
- * after a successful first setup, resume or reconfiguration (the History
- * context changes with them).
+ * session, it asks the host for the management context (`request`,
+ * `recording_context` by default, Viewer or above) and publishes a new
+ * service, or none while the reply is pending, while no one is signed in, or
+ * when the host cannot answer (`failed` is told then). Replies to an earlier
+ * Project or session are dropped. `setupDone` runs after a successful first
+ * setup, resume or reconfiguration (the History context changes with them).
+ * The administrator's operations are offered only when `access.admin`.
  */
 export function createNativeRecordingManagement(
   invoke: NativeInvoke,
   publish: (service: RecordingManagementService | undefined) => void,
   setupDone: (project: Project) => void,
   ownerChanged?: () => void,
+  options: {
+    request?: RecordingContextRequest;
+    failed?: (error: unknown) => void;
+  } = {},
 ) {
+  const request = options.request ?? editorRecordingContext;
   let key: string | undefined;
+  let last: [Project, ManagementAccess] | undefined;
   let generation = 0;
   let disposed = false;
   return {
     update(project: Project, access: ManagementAccess) {
+      last = [project, access];
       const next = JSON.stringify([
         project.manifest.projectId,
         project.manifest.projectRevision,
@@ -203,9 +229,7 @@ export function createNativeRecordingManagement(
       publish(undefined);
       if (!access.signedIn) return;
       const current = () => !disposed && issued === generation;
-      invoke<unknown>("recording_context", {
-        projectJson: JSON.stringify(project),
-      }).then(
+      invoke<unknown>(...request(project)).then(
         (context) => {
           if (!current()) return;
           publish(
@@ -222,10 +246,17 @@ export function createNativeRecordingManagement(
             ),
           );
         },
-        () => {
-          /* the management workspace shows the service as offline */
+        (error) => {
+          // The management workspace shows the service as offline.
+          if (current()) options.failed?.(error);
         },
       );
+    },
+    /** Asks for the context again for the last Project and session. */
+    refresh() {
+      if (!last) return;
+      key = undefined;
+      this.update(...last);
     },
     dispose() {
       disposed = true;

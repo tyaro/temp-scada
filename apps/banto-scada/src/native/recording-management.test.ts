@@ -6,6 +6,7 @@ import type { NativeInvoke } from "./history";
 import {
   createNativeRecordingManagement,
   nativeRecordingManagementService,
+  runtimeRecordingContext,
   type ManagementAccess,
 } from "./recording-management";
 
@@ -310,4 +311,30 @@ it("reads the slot and rebinds the owner only for an administrator", async () =>
   ).resolves.toEqual({ ok: false, error: "busy" });
   // The rebind does not change History's series.
   expect(done).not.toHaveBeenCalled();
+});
+
+it("asks Runtime's context without a Project, tells a failure and asks again on refresh", async () => {
+  const published: (RecordingManagementService | undefined)[] = [];
+  const failed = vi.fn();
+  const management = createNativeRecordingManagement(
+    invoke,
+    (s) => published.push(s),
+    () => {},
+    undefined,
+    { request: runtimeRecordingContext, failed },
+  );
+  invoke.mockRejectedValueOnce({ kind: "unauthorized" });
+  management.update(project(1), viewer);
+  await vi.waitFor(() => expect(failed).toHaveBeenCalledOnce());
+  expect(failed).toHaveBeenCalledWith({ kind: "unauthorized" });
+  expect(invoke).toHaveBeenLastCalledWith("runtime_recording_context", {});
+
+  invoke.mockResolvedValue({ kind: "recordingManagementContext" });
+  management.refresh();
+  await vi.waitFor(() => expect(published.at(-1)).toBeDefined());
+  expect(invoke).toHaveBeenCalledTimes(2);
+  expect(invoke).not.toHaveBeenCalledWith(
+    "recording_context",
+    expect.anything(),
+  );
 });

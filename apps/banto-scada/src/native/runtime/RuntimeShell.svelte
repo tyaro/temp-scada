@@ -27,6 +27,17 @@
   } from "../../lib/history/workspace-model";
   import RuntimeOperator from "./RuntimeOperator.svelte";
   import {
+    createNativeRecordingManagement,
+    runtimeRecordingContext,
+  } from "../recording-management";
+  import type { RecordingManagementService } from "../../lib/recording-management/service";
+  import {
+    inspectRuntimeRecording,
+    recordingFailureView,
+    runtimeRecordingBadge,
+    type RuntimeRecordingView,
+  } from "./recording-status";
+  import {
     alarmDefinitionNotice,
     loadRuntimeProject,
     projectFailureText,
@@ -155,6 +166,66 @@
     }
   }
 
+  // Recording (Runtime mode design §6-4, §8, §10-3 案 A): only its state, from
+  // `recording_status` over the startup Project's context
+  // (`runtime_recording_context`, Viewer or above). Starting, resuming and
+  // stopping are Editor's; the service here never carries those operations.
+  let recording = $state.raw<RuntimeRecordingView>({ state: "signedOut" });
+  let recordingService: RecordingManagementService | undefined;
+  let recordingInspection = 0;
+  const nativeRecording = createNativeRecordingManagement(
+    invoke,
+    (service) => {
+      recordingService = service;
+      if (service) void inspectRecording();
+    },
+    () => {},
+    undefined,
+    {
+      request: runtimeRecordingContext,
+      failed: (error) => (recording = recordingFailureView(error)),
+    },
+  );
+  const recordingBadge = $derived(runtimeRecordingBadge(recording));
+  let recordingSessionKey: string | undefined;
+  $effect(() => {
+    if (!project) return;
+    const view = authSession.view;
+    const session = view.status === "ready" ? view.session : null;
+    const sessionKey = JSON.stringify(
+      session ? [session.identity.id, session.role, session.kind] : null,
+    );
+    if (sessionKey !== recordingSessionKey) {
+      recordingSessionKey = sessionKey;
+      recording = session ? { state: "loading" } : { state: "signedOut" };
+    }
+    nativeRecording.update(project, {
+      signedIn: !!session,
+      admin: false,
+      sessionKey,
+    });
+  });
+  async function inspectRecording() {
+    const service = recordingService;
+    if (!service) return;
+    const issued = ++recordingInspection;
+    recording = { state: "loading" };
+    const next = await inspectRuntimeRecording(
+      service,
+      `runtime-inspection:${issued}`,
+    );
+    if (issued === recordingInspection && service === recordingService)
+      recording = next;
+  }
+  /** A click inspects again, or asks for the context again after a failure. */
+  function refreshRecording() {
+    if (recordingService) void inspectRecording();
+    else if (recording.state === "unavailable") {
+      recording = { state: "loading" };
+      nativeRecording.refresh();
+    }
+  }
+
   async function connect() {
     if (hubBusy) return;
     hubBusy = true;
@@ -242,6 +313,7 @@
   });
   onDestroy(() => {
     disposed = true;
+    nativeRecording.dispose();
     unlisten?.();
     nativeHistory.dispose();
     historyController.dispose();
@@ -335,6 +407,24 @@
       {#if alarms.soundNotice}<span data-alarm-sound-fallback
           ><StatusBadge variant="warning" label={alarms.soundNotice} /></span
         >{/if}
+      <button
+        type="button"
+        class="runtime-entry"
+        onclick={refreshRecording}
+        disabled={recording.state === "signedOut" ||
+          recording.state === "loading"}
+        title={recordingBadge.title}
+        data-runtime-recording
+        ><StatusBadge
+          variant={recordingBadge.variant}
+          label={recordingBadge.label}
+        /></button
+      >
+      {#if recordingBadge.note}
+        <span class="runtime-stream" data-runtime-recording-note
+          >{recordingBadge.note}</span
+        >
+      {/if}
       <button
         type="button"
         bind:this={historyEntry}
