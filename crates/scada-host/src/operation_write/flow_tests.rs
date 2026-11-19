@@ -270,6 +270,8 @@ struct Fixture {
     project: scada_model::Project,
     read: RestClient,
     write: Arc<RestClient>,
+    /// `Duration::ZERO` unless a test checks the interval.
+    min_interval: Duration,
     _dir: TempDir,
 }
 
@@ -299,6 +301,7 @@ impl Fixture {
             project: project(),
             read,
             write,
+            min_interval: Duration::ZERO,
             _dir: dir,
         }
     }
@@ -319,6 +322,7 @@ impl Fixture {
                 subscribed_revision: Some(REVISION),
                 write: Some(self.write.clone()),
                 timeout: LONG,
+                min_interval: self.min_interval,
             },
         }
     }
@@ -509,6 +513,9 @@ async fn each_hub_answer_finishes_with_the_outcome_of_section_5() {
         assert_eq!(finish.outcome, *outcome, "{case}");
         assert_eq!(finish.reason, kind(*error), "{case}");
         assert_eq!(fx.hub.writes().len(), count + 1, "{case}");
+        // A tripped or refused key stops the terminal (§7); the next case
+        // starts from a registered key.
+        fx.log.key_registered(0).await.unwrap();
     }
 }
 
@@ -1228,4 +1235,63 @@ async fn the_view_refuses_an_unknown_or_malformed_equipment() {
         json!({"equipmentId": PUMP, "projectId": "x"})
     )
     .is_err());
+}
+
+#[tokio::test]
+async fn a_tripped_key_stops_later_writes_without_sending() {
+    let fx = Fixture::new().await;
+    fx.hub
+        .reply(Reply::Status(403, r#"{"error":"key_tripped"}"#));
+    let command = button("command", 0, json!(true));
+    let result = fx.run(&command).await;
+    assert_eq!(result.outcome, Outcome::Stopped);
+    assert_eq!(fx.hub.writes().len(), 1);
+    fx.hub.reply(Reply::Status(200, r#"{"audit_id": 43}"#));
+    assert_refused_after_send(&fx, &command, reason::WRITE_STOPPED).await;
+    let view = fx.view().await;
+    assert_eq!(view.blocked, Some(reason::WRITE_STOPPED));
+    // Resumed on the screen: the next write is sent and the Hub checks it.
+    assert!(fx.log.resume(0).await.unwrap());
+    assert_eq!(fx.run(&command).await.outcome, Outcome::Ok);
+    assert_eq!(fx.hub.writes().len(), 2);
+}
+
+#[tokio::test]
+async fn a_refused_key_makes_later_writes_key_invalid() {
+    let fx = Fixture::new().await;
+    fx.hub
+        .reply(Reply::Status(401, r#"{"error":"unauthorized"}"#));
+    let command = button("command", 0, json!(true));
+    assert_eq!(fx.run(&command).await.outcome, Outcome::NotSent);
+    assert_refused_after_send(&fx, &command, reason::KEY_INVALID).await;
+    assert_eq!(fx.view().await.blocked, Some(reason::KEY_INVALID));
+    // The contract and the key come first (§4-5).
+    fx.hub_status(200, BEFORE_CONTRACT);
+    assert_refused_after_send(&fx, &command, reason::HUB_UNSUPPORTED).await;
+}
+
+#[tokio::test]
+async fn a_write_inside_the_minimum_interval_is_too_soon() {
+    let mut fx = Fixture::new().await;
+    fx.min_interval = Duration::from_secs(60);
+    let command = button("command", 0, json!(true));
+    assert_eq!(fx.run(&command).await.outcome, Outcome::Ok);
+    assert_refused_after_send(&fx, &command, reason::TOO_SOON).await;
+    // The view does not show `too_soon`: it depends on when the next
+    // request comes.
+    assert_eq!(fx.view().await.blocked, None);
+    // With no interval the next write goes.
+    fx.min_interval = Duration::ZERO;
+    assert_eq!(fx.run(&command).await.outcome, Outcome::Ok);
+}
+
+/// A refusal after earlier sends: recorded, nothing more sent.
+async fn assert_refused_after_send(fx: &Fixture, request: &OperationWriteRequest, code: &str) {
+    let sent = fx.hub.writes().len();
+    let result = fx.run(request).await;
+    assert_eq!(result.outcome, Outcome::Refused, "{code}: {result:?}");
+    assert_eq!(result.reason.as_deref(), Some(code));
+    let (row, _) = fx.latest(&request.slot_name).await.unwrap();
+    assert_eq!(Some(row.id), result.record_id, "{code}");
+    assert_eq!(fx.hub.writes().len(), sent, "{code}: sent");
 }

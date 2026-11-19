@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use banto_tagclient::ErrorKind;
 use serde_json::json;
 
@@ -145,7 +147,7 @@ async fn reopening_finishes_rows_an_earlier_process_left_pending() {
 async fn a_file_of_another_format_is_refused_without_changing_it() {
     // A file of a later format, and a foreign SQLite file without our
     // version, both in rollback-journal mode.
-    for setup in ["PRAGMA user_version = 2", "CREATE TABLE foreign_data (x)"] {
+    for setup in ["PRAGMA user_version = 3", "CREATE TABLE foreign_data (x)"] {
         let file = temp_file();
         let mut connection = <sqlx::sqlite::SqliteConnection as sqlx::Connection>::connect_with(
             &SqliteConnectOptions::new()
@@ -200,7 +202,7 @@ async fn a_row_finished_between_the_read_and_the_lock_reads_as_finished() {
 
     // `latest` reads the row while it is pending; `complete` then writes the
     // outcome and frees the send slot before `latest` takes the lock.
-    let id = log.begin(&request).await.unwrap();
+    let id = log.begin(&request, Duration::ZERO).await.unwrap();
     let stale = log
         .db()
         .latest(&request.project_id, "eq-1", "command")
@@ -214,7 +216,7 @@ async fn a_row_finished_between_the_read_and_the_lock_reads_as_finished() {
     assert_eq!(row.finish, Some(finish(Outcome::Ok, 1_300)));
 
     // The same when a kept outcome is rewritten between the read and the lock.
-    let id = log.begin(&request).await.unwrap();
+    let id = log.begin(&request, Duration::ZERO).await.unwrap();
     fail_updates(log.db(), true).await;
     assert!(log
         .complete(&id, finish(Outcome::Failed, 1_400))
@@ -283,7 +285,7 @@ async fn one_write_is_in_flight_per_terminal() {
     let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
     let log = OperationLog::new(db);
     let request = request("command");
-    let id = log.begin(&request).await.unwrap();
+    let id = log.begin(&request, Duration::ZERO).await.unwrap();
     assert_eq!(id.len(), 36);
     let (_, state) = log
         .latest(&request.project_id, "eq-1", "command")
@@ -291,7 +293,10 @@ async fn one_write_is_in_flight_per_terminal() {
         .unwrap()
         .unwrap();
     assert_eq!(state, RecordState::Sending);
-    assert!(matches!(log.begin(&request).await, Err(BeginError::Busy)));
+    assert!(matches!(
+        log.begin(&request, Duration::ZERO).await,
+        Err(BeginError::Busy)
+    ));
 
     log.complete(&id, finish(Outcome::Uncertain, 1_500))
         .await
@@ -306,7 +311,7 @@ async fn one_write_is_in_flight_per_terminal() {
         RecordState::Finished(finish(Outcome::Uncertain, 1_500))
     );
     // The slot is free again.
-    let next = log.begin(&request).await.unwrap();
+    let next = log.begin(&request, Duration::ZERO).await.unwrap();
     assert_ne!(next, id);
     log.close().await;
 }
@@ -318,12 +323,12 @@ async fn nothing_is_sent_when_the_pending_row_cannot_be_written() {
     let log = OperationLog::new(db);
     let request = request("command");
     assert!(matches!(
-        log.begin(&request).await,
+        log.begin(&request, Duration::ZERO).await,
         Err(BeginError::Record(_))
     ));
     // The send slot was released.
     fail_inserts(log.db(), false).await;
-    log.begin(&request).await.unwrap();
+    log.begin(&request, Duration::ZERO).await.unwrap();
     log.close().await;
 }
 
@@ -333,7 +338,7 @@ async fn an_outcome_that_could_not_be_written_is_shown_and_rewritten_later() {
     let (db, _) = OperationDb::open(&file, 0).await.unwrap();
     let log = OperationLog::new(db);
     let request = request("command");
-    let id = log.begin(&request).await.unwrap();
+    let id = log.begin(&request, Duration::ZERO).await.unwrap();
 
     fail_updates(log.db(), true).await;
     let sent = Finish {
@@ -373,7 +378,7 @@ async fn a_completion_that_is_written_also_rewrites_an_earlier_unrecorded_outcom
     let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
     let log = OperationLog::new(db);
     let request = request("command");
-    let first = log.begin(&request).await.unwrap();
+    let first = log.begin(&request, Duration::ZERO).await.unwrap();
     fail_updates(log.db(), true).await;
     let kept = Finish {
         outcome: Outcome::Ok,
@@ -383,7 +388,7 @@ async fn a_completion_that_is_written_also_rewrites_an_earlier_unrecorded_outcom
     };
     assert!(log.complete(&first, kept.clone()).await.is_err());
     // The next request starts while updates still fail (its INSERT works).
-    let second = log.begin(&request).await.unwrap();
+    let second = log.begin(&request, Duration::ZERO).await.unwrap();
     assert!(log
         .db()
         .row(&first)
@@ -429,7 +434,7 @@ async fn a_dropped_begin_frees_the_send_slot() {
     let log = OperationLog::new(db);
     let request = request("command");
     {
-        let mut begin = Box::pin(log.begin(&request));
+        let mut begin = Box::pin(log.begin(&request, Duration::ZERO));
         // Hold the pool's only connection, so the INSERT surely waits.
         let held = log.db().pool.acquire().await.unwrap();
         let first = futures_util::poll!(begin.as_mut());
@@ -439,7 +444,7 @@ async fn a_dropped_begin_frees_the_send_slot() {
         drop(held);
     }
     assert!(log.in_flight.lock().unwrap().sending.is_none());
-    log.begin(&request).await.unwrap();
+    log.begin(&request, Duration::ZERO).await.unwrap();
     log.close().await;
 }
 
@@ -564,7 +569,7 @@ async fn only_the_newest_row_of_the_slot_is_folded_into() {
     let last = log.refuse(&run, "write_stopped", 1_050).await.unwrap();
     assert_ne!(last, id);
     // A sent request is never folded into.
-    let sent = log.begin(&run).await.unwrap();
+    let sent = log.begin(&run, Duration::ZERO).await.unwrap();
     log.complete(&sent, finish(Outcome::Ok, 1_060))
         .await
         .unwrap();
@@ -586,5 +591,172 @@ async fn a_fold_that_cannot_be_written_is_an_error() {
     assert!(log.refuse(&run, "too_soon", 1_020).await.is_err());
     fail_updates(log.db(), false).await;
     assert_eq!(log.db().row(&id).await.unwrap().unwrap().repeat_count, 1);
+    log.close().await;
+}
+
+fn hub_error(outcome: Outcome, kind: ErrorKind, at: i64) -> Finish {
+    Finish {
+        outcome,
+        reason: Some(kind.as_str().into()),
+        audit_id: None,
+        finished_at_ms: at,
+    }
+}
+
+#[tokio::test]
+async fn a_tripped_key_stops_the_terminal_across_restarts_until_resumed() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    assert_eq!(log.write_status(), WriteStatus::default());
+    let request = request("command");
+    let id = log.begin(&request, Duration::ZERO).await.unwrap();
+    log.complete(
+        &id,
+        hub_error(Outcome::Stopped, ErrorKind::KeyTripped, 2_000),
+    )
+    .await
+    .unwrap();
+    let stopped = WriteStatus {
+        state: WriteState::Stopped,
+        changed_at_ms: Some(2_000),
+    };
+    assert_eq!(log.write_status(), stopped);
+    assert_eq!(log.gate(Duration::ZERO), Err(Gate::Stopped));
+    assert!(matches!(
+        log.begin(&request, Duration::ZERO).await,
+        Err(BeginError::Gate(Gate::Stopped))
+    ));
+    log.close().await;
+
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    assert_eq!(log.write_status(), stopped);
+    assert!(log.resume(3_000).await.unwrap());
+    assert_eq!(log.gate(Duration::ZERO), Ok(()));
+    // Resuming a ready terminal changes nothing.
+    assert!(!log.resume(3_100).await.unwrap());
+    log.close().await;
+
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    assert_eq!(
+        log.write_status(),
+        WriteStatus {
+            state: WriteState::Ready,
+            changed_at_ms: Some(3_000),
+        }
+    );
+    log.close().await;
+}
+
+#[tokio::test]
+async fn a_refused_key_is_cleared_only_by_registering_it_again() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let request = request("command");
+    let id = log.begin(&request, Duration::ZERO).await.unwrap();
+    log.complete(
+        &id,
+        hub_error(Outcome::NotSent, ErrorKind::Unauthorized, 2_000),
+    )
+    .await
+    .unwrap();
+    assert_eq!(log.gate(Duration::ZERO), Err(Gate::KeyInvalid));
+    assert!(!log.resume(2_100).await.unwrap());
+    assert_eq!(log.write_status().state, WriteState::KeyInvalid);
+    log.key_registered(2_200).await.unwrap();
+    assert_eq!(log.gate(Duration::ZERO), Ok(()));
+    // Other outcomes leave the state alone.
+    for finish in [
+        finish(Outcome::Ok, 2_300),
+        hub_error(Outcome::NotSent, ErrorKind::WriteForbidden, 2_400),
+        hub_error(Outcome::Uncertain, ErrorKind::WriteUncertain, 2_500),
+    ] {
+        let id = log.begin(&request, Duration::ZERO).await.unwrap();
+        log.complete(&id, finish).await.unwrap();
+        assert_eq!(log.write_status().state, WriteState::Ready);
+    }
+    log.close().await;
+}
+
+#[tokio::test]
+async fn a_state_that_could_not_be_saved_holds_and_is_saved_later() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let request = request("command");
+    let id = log.begin(&request, Duration::ZERO).await.unwrap();
+    log.db()
+        .execute_for_test(
+            "CREATE TRIGGER fail_state BEFORE INSERT ON terminal_write BEGIN SELECT RAISE(ABORT, 'disk full'); END",
+        )
+        .await;
+    // The row is written; only the state's save fails.
+    log.complete(
+        &id,
+        hub_error(Outcome::Stopped, ErrorKind::KeyTripped, 2_000),
+    )
+    .await
+    .unwrap();
+    assert_eq!(log.gate(Duration::ZERO), Err(Gate::Stopped));
+    log.db().execute_for_test("DROP TRIGGER fail_state").await;
+    // The next write the DB takes saves it too.
+    log.refuse(&request, "write_stopped", 2_100).await.unwrap();
+    log.close().await;
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    assert_eq!(
+        OperationLog::new(db).write_status().state,
+        WriteState::Stopped
+    );
+}
+
+#[tokio::test]
+async fn sends_keep_the_minimum_interval() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let request = request("command");
+    let interval = Duration::from_millis(300);
+    let id = log.begin(&request, interval).await.unwrap();
+    log.complete(&id, finish(Outcome::Ok, 2_000)).await.unwrap();
+    assert_eq!(log.gate(interval), Err(Gate::TooSoon));
+    assert!(matches!(
+        log.begin(&request, interval).await,
+        Err(BeginError::Gate(Gate::TooSoon))
+    ));
+    // The refused begin took no slot and did not move the interval.
+    assert!(!log.is_sending());
+    assert_eq!(log.gate(Duration::ZERO), Ok(()));
+    tokio::time::sleep(interval + Duration::from_millis(100)).await;
+    assert_eq!(log.gate(interval), Ok(()));
+    log.begin(&request, interval).await.unwrap();
+    log.close().await;
+}
+
+#[tokio::test]
+async fn a_format_1_file_gets_the_write_state_and_keeps_its_rows() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let id = log
+        .refuse(&request("command"), "too_soon", 1_010)
+        .await
+        .unwrap();
+    log.db()
+        .execute_for_test("DROP TABLE terminal_write; PRAGMA user_version = 1;")
+        .await;
+    log.close().await;
+
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let version: i64 = sqlx::query_scalar("PRAGMA user_version")
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    assert_eq!(version, 2);
+    let log = OperationLog::new(db);
+    assert_eq!(log.write_status(), WriteStatus::default());
+    assert!(log.db().row(&id).await.unwrap().is_some());
     log.close().await;
 }

@@ -6,6 +6,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use banto_tagclient::ErrorKind;
 use serde::Serialize;
@@ -17,8 +18,13 @@ use crate::durable;
 
 #[cfg(test)]
 mod tests;
+mod write_state;
 
-const FORMAT: i64 = 1;
+pub use write_state::{WriteState, WriteStatus};
+
+/// Format 2 added `terminal_write` (O2c-2); a format-1 file gets the table
+/// when opened.
+const FORMAT: i64 = 2;
 const PENDING: &str = "pending";
 
 /// Identical refusals of a slot are one row for this long after the row's
@@ -179,6 +185,21 @@ pub struct StoredRow {
 
 pub struct OperationDb {
     pool: SqlitePool,
+    /// The write state as the file had it when opened (§7).
+    write_status: WriteStatus,
+}
+
+/// Format 1 to 2: the write state's table (§7, O2c-2).
+async fn add_write_state(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+) -> Result<(), OperationDbError> {
+    sqlx::raw_sql(write_state::CREATE_TABLE)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::raw_sql("PRAGMA user_version = 2;")
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
 }
 
 impl OperationDb {
@@ -202,7 +223,7 @@ impl OperationDb {
         let version: i64 = sqlx::query_scalar("PRAGMA user_version")
             .fetch_one(&pool)
             .await?;
-        if version != 0 && version != FORMAT {
+        if version != 0 && version != 1 && version != FORMAT {
             pool.close().await;
             return Err(OperationDbError::UnsupportedFormat);
         }
@@ -241,11 +262,15 @@ impl OperationDb {
                    audit_id INTEGER,
                    CHECK ((outcome = 'pending') = (finished_at_ms IS NULL))
                  );
-                 CREATE INDEX operation_slot_seq ON operation(project_id, equipment_id, slot, seq DESC);
-                 PRAGMA user_version = 1;",
+                 CREATE INDEX operation_slot_seq ON operation(project_id, equipment_id, slot, seq DESC);",
             )
             .execute(&mut *tx)
             .await?;
+            add_write_state(&mut tx).await?;
+            tx.commit().await?;
+        } else if version == 1 {
+            let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+            add_write_state(&mut tx).await?;
             tx.commit().await?;
         }
         sqlx::query("PRAGMA journal_mode = WAL")
@@ -259,7 +284,8 @@ impl OperationDb {
         .execute(&pool)
         .await?
         .rows_affected();
-        Ok((Self { pool }, recovered))
+        let write_status = write_state::load(&pool).await?;
+        Ok((Self { pool, write_status }, recovered))
     }
 
     /// Run raw SQL against the record (tests make writes fail with it).
@@ -477,11 +503,25 @@ pub enum RecordState {
     },
 }
 
+/// Why the terminal may not send now (§7), before the send slot.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Gate {
+    /// `write_stopped`: the Hub tripped the write key.
+    Stopped,
+    /// `key_invalid`: the Hub refused the write key.
+    KeyInvalid,
+    /// `too_soon`: within the minimum interval after the last send slot.
+    TooSoon,
+}
+
 /// A request could not start.
 #[derive(Debug)]
 pub enum BeginError {
     /// Another write of this terminal is in flight (`busy`, §4).
     Busy,
+    /// The write state or the minimum interval refused it (§7), checked
+    /// again with the send slot taken.
+    Gate(Gate),
     /// The `pending` row could not be written: nothing may be sent
     /// (`record_failed`, §4-6).
     Record(OperationDbError),
@@ -492,6 +532,28 @@ struct InFlight {
     sending: Option<String>,
     /// Rows whose outcome this process knows but could not write.
     unrecorded: BTreeMap<String, Finish>,
+    /// The terminal's write state (§7); the file follows it.
+    write: WriteStatus,
+    /// The write state moved but the file does not have it yet; saved
+    /// again after the next write the DB takes.
+    write_unsaved: bool,
+    /// When the last send slot was taken, on the monotonic clock (a wall
+    /// clock that goes back must not hold writes back).
+    last_begin: Option<Instant>,
+}
+
+impl InFlight {
+    fn gate(&self, min_interval: Duration) -> Result<(), Gate> {
+        match self.write.state {
+            WriteState::Stopped => return Err(Gate::Stopped),
+            WriteState::KeyInvalid => return Err(Gate::KeyInvalid),
+            WriteState::Ready => {}
+        }
+        match self.last_begin {
+            Some(last) if last.elapsed() < min_interval => Err(Gate::TooSoon),
+            _ => Ok(()),
+        }
+    }
 }
 
 /// The send slot `begin` took, freed on drop unless `keep` hands it to the
@@ -529,10 +591,60 @@ pub struct OperationLog {
 
 impl OperationLog {
     pub fn new(db: OperationDb) -> Self {
+        let write = db.write_status;
         Self {
             db,
-            in_flight: Mutex::new(InFlight::default()),
+            in_flight: Mutex::new(InFlight {
+                write,
+                ..InFlight::default()
+            }),
         }
+    }
+
+    /// The terminal's write state (§7).
+    pub fn write_status(&self) -> WriteStatus {
+        self.in_flight.lock().expect("operation log lock").write
+    }
+
+    /// Whether a write may start now as far as the write state and the
+    /// minimum interval since the last send slot go (§7). `begin` checks
+    /// again with the slot taken.
+    pub fn gate(&self, min_interval: Duration) -> Result<(), Gate> {
+        self.in_flight
+            .lock()
+            .expect("operation log lock")
+            .gate(min_interval)
+    }
+
+    /// A write key was registered again (§7): any state becomes `ready`
+    /// once the file has it. Called by the key's registration (O2c-3).
+    pub async fn key_registered(&self, now_ms: i64) -> Result<(), OperationDbError> {
+        write_state::save(&self.db.pool, WriteState::Ready, now_ms).await?;
+        let mut in_flight = self.in_flight.lock().expect("operation log lock");
+        in_flight.write = WriteStatus {
+            state: WriteState::Ready,
+            changed_at_ms: Some(now_ms),
+        };
+        in_flight.write_unsaved = false;
+        Ok(())
+    }
+
+    /// Resume a stopped terminal (§7 「書込みを再開」): `stopped` becomes
+    /// `ready` once the file has it, so a failed save leaves it stopped.
+    /// Returns whether it changed; a `key_invalid` terminal is not resumed
+    /// (only registering the key again clears it).
+    pub async fn resume(&self, now_ms: i64) -> Result<bool, OperationDbError> {
+        if self.write_status().state != WriteState::Stopped {
+            return Ok(false);
+        }
+        write_state::save(&self.db.pool, WriteState::Ready, now_ms).await?;
+        let mut in_flight = self.in_flight.lock().expect("operation log lock");
+        // Nothing can be sent while stopped, so nothing moved it meanwhile.
+        in_flight.write = WriteStatus {
+            state: WriteState::Ready,
+            changed_at_ms: Some(now_ms),
+        };
+        Ok(true)
     }
 
     pub async fn close(self) {
@@ -545,14 +657,20 @@ impl OperationLog {
     /// again and nothing may be sent. When the future is dropped before it
     /// returns, the slot is freed too (the caller never got the id, so it
     /// cannot send); a row it already wrote reads as `unrecorded`.
-    pub async fn begin(&self, request: &RequestRecord) -> Result<String, BeginError> {
+    pub async fn begin(
+        &self,
+        request: &RequestRecord,
+        min_interval: Duration,
+    ) -> Result<String, BeginError> {
         let id = uuid::Uuid::now_v7().to_string();
         {
             let mut in_flight = self.in_flight.lock().expect("operation log lock");
             if in_flight.sending.is_some() {
                 return Err(BeginError::Busy);
             }
+            in_flight.gate(min_interval).map_err(BeginError::Gate)?;
             in_flight.sending = Some(id.clone());
+            in_flight.last_begin = Some(Instant::now());
         }
         let reservation = Reservation {
             in_flight: &self.in_flight,
@@ -599,21 +717,38 @@ impl OperationLog {
     /// the outcome (shown as `unrecorded`, rewritten on the next successful
     /// write — never re-sent) and the error is returned so the screen adds
     /// 「記録に失敗」 to the actual outcome.
+    ///
+    /// A tripped or refused key moves the write state (§7) before the slot
+    /// is freed, so the next write already sees it; the file follows (a
+    /// failed save is logged and the state still holds in this process).
     pub async fn complete(&self, id: &str, finish: Finish) -> Result<(), OperationDbError> {
         let result = self.db.finish(id, &finish).await;
-        {
+        let moved = WriteState::after(&finish);
+        let result = {
             let mut in_flight = self.in_flight.lock().expect("operation log lock");
+            if let Some(state) = moved {
+                in_flight.write = WriteStatus {
+                    state,
+                    changed_at_ms: Some(finish.finished_at_ms),
+                };
+                in_flight.write_unsaved = true;
+            }
             if in_flight.sending.as_deref() == Some(id) {
                 in_flight.sending = None;
             }
-            if let Err(error) = result {
+            match result {
                 // `InvalidRow` means the row is no longer pending: nothing to keep.
-                if !matches!(error, OperationDbError::InvalidRow) {
+                Err(error) if !matches!(error, OperationDbError::InvalidRow) => {
                     in_flight.unrecorded.insert(id.into(), finish);
+                    Err(error)
                 }
-                return Err(error);
+                other => other,
             }
+        };
+        if moved.is_some() {
+            self.save_write_state().await;
         }
+        result?;
         // The DB took a write again: rewrite the outcomes kept earlier, so
         // they are not lost to `interrupted` if the process ends before the
         // next request.
@@ -621,10 +756,36 @@ impl OperationLog {
         Ok(())
     }
 
+    /// Save the write state when the file does not have it yet. A failure
+    /// is logged and kept for the next try; the state holds in this
+    /// process either way.
+    async fn save_write_state(&self) {
+        let status = {
+            let in_flight = self.in_flight.lock().expect("operation log lock");
+            if !in_flight.write_unsaved {
+                return;
+            }
+            in_flight.write
+        };
+        let at = status.changed_at_ms.unwrap_or_default();
+        match write_state::save(&self.db.pool, status.state, at).await {
+            Ok(()) => {
+                let mut in_flight = self.in_flight.lock().expect("operation log lock");
+                if in_flight.write == status {
+                    in_flight.write_unsaved = false;
+                }
+            }
+            Err(error) => {
+                eprintln!("operation log: the write state could not be saved: {error:?}");
+            }
+        }
+    }
+
     /// Rewrite outcomes this process could not write. Kept for a later try
     /// when the DB is still failing; dropped once the row is no longer
     /// `pending`.
     async fn retry_unrecorded(&self) {
+        self.save_write_state().await;
         let pending: Vec<(String, Finish)> = {
             let in_flight = self.in_flight.lock().expect("operation log lock");
             in_flight

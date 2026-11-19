@@ -24,6 +24,8 @@ Hub の書込み契約の確認（2026-11-20、[設計](../design/runtime/operat
 
 O2c-1（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) §7）: 同じ中身の拒否を、その slot の最新の行へ 60 秒の内はまとめ、`repeat_count` で数えるようにした（`OperationLog::refuse`）。小窓の照会はまだ件数を出さない。書込み状態・最小間隔・書き用キー（O2c-2〜4）は未実装。
 
+O2c-2（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) §7）: 端末の書込み状態（`ready`・`stopped`・`key_invalid`）を `operations.db`（形式 2）に保ち、Hub の 403 `key_tripped` で停止、401 でキー無効にする。再開（`stopped` だけ）とキー再登録の口を host に足した。書込みの最小間隔（既定 1 秒、`too_soon`）を足した。画面の再開ボタン・間隔の端末設定・書き用キー（O2c-3・4）は未実装で、製品は書き用キーなしで送らない。
+
 ## 実Hub・S7接続の着手方針（2026-11-05）
 
 サイドチャットの[実Hub・S7接続計画](real-hub-connection-plan.md)を採用し、ユーザー申告によりSOAK終了待ちを外した。C0の上流契約・対象環境・接続条件確認とC1の通常App読取接続を実施した。ローカル編集はオフラインのまま、デスクトップだけがread専用の製品host・IPCを使う。運用時の認証・管理操作は後続で確定する。

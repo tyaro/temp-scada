@@ -313,3 +313,12 @@ O2c の分け方と O2c-1 で決めたこと（2026-11-20）: O2c は 4 つに�
 - まとめた行の `requested_at_ms` は最初の要求のまま、`finished_at_ms` は最後の拒否の時刻にする。要求の時刻が行の最初の要求より前か、拒否の時刻が行の `finished_at_ms` より前（時計の巻き戻り）ならまとめず、新しい行にする（行の終わりの時刻を戻さない）。
 - まとめは 1 つの SQL 文（`UPDATE … RETURNING`）で行う。まとめられなかったときだけ新しい行を書くので、同時の拒否が 2 行になることはあっても、変わった行へまとめることは無い。まとめを書けなければ記録の失敗（`unrecorded`）とする。
 - 小窓の照会（§8）は `repeat_count` をまだ出さない（操作履歴の窓、O4 で出す）。
+
+O2c-2 で決めたこと（2026-11-20）: 設計に書いていなかった所は次のとおりにした。
+
+- 書込み状態は `operations.db` の表 `terminal_write`（1 行。`state`・`changed_at_ms`）に残す。§7 の「端末設定の DB」は、端末のデータフォルダーにある実行記録の DB とした（記録と同じ host の 1 か所で持ち、別の DB を足さない）。形式を 2 に上げ、形式 1 の file は開くときに表を足す（行は残す）。表に行が無ければ `ready`。
+- 遷移は送った書込みの結果で決める。tagclient の `KeyTripped`（403 `key_tripped`、区分 `stopped`）で `stopped`、`Unauthorized`（401）で `key_invalid`。結果を書いて送信枠を返す前に状態を変えるので、次の書込みは必ず新しい状態を見る。状態を file に書けなかったときも process の中では止めたままにし、次に DB が書込みを受けたときに書き直す。
+- 「書込みを再開」（`OperationLog::resume`）は `stopped` だけを `ready` に戻し、file に書けたときだけ変える（書けなければ止めたまま）。`key_invalid` は戻さず、キーの再登録（`key_registered`、O2c-3 から呼ぶ）だけが戻す。再登録はどの状態からも `ready` にする。
+- 最小間隔は、送信枠を取った時刻（4-6）からの経過で測る。壁時計の巻き戻りで書込みが止まらないよう、process の単調時計を使う。8 の照合で止めた要求も枠を取っていれば数える。再起動すると数え直す。間隔は host の `HubAccess::min_interval`（製品は `MIN_WRITE_INTERVAL`＝1 秒）。端末設定で変えるのは O2c-4。
+- 5 の順は `hub_unsupported`・`no_write_key`・（O2c-3 の `hub_mismatch`）・`write_stopped`・`key_invalid`・`too_soon`・`busy`。6 で送信枠を取ったときにも書込み状態と間隔をもう一度確かめる（5 と 6 の間に前の書込みが終わって止まった場合）。その場合は `busy` が先に出る。
+- 小窓の照会の `blocked` は `write_stopped`・`key_invalid` を出し、`too_soon` は出さない（次の要求がいつ来るかで決まるため）。
