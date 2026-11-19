@@ -5,7 +5,7 @@ import {
   INITIALIZING_TEXT,
   ipcErrorText,
   writeErrorText,
-  writtenValueText,
+  requestedValueText,
   WRITE_UNKNOWN_TEXT,
   LOADING_TEXT,
   NO_PLACEMENT_TEXT,
@@ -120,6 +120,7 @@ describe("rowStatus", () => {
       reason: null,
       atMs: 2,
       value: "true",
+      notice: null,
     });
     expect(
       rowStatus(
@@ -131,6 +132,7 @@ describe("rowStatus", () => {
       reason: "前の書込みから間がありません",
       atMs: 3,
       value: "true",
+      notice: null,
     });
     expect(
       rowStatus(
@@ -142,6 +144,7 @@ describe("rowStatus", () => {
       reason: null,
       atMs: null,
       value: "true",
+      notice: null,
     });
     expect(
       rowStatus(latest({ state: "unrecorded", outcome: null }), null)?.texts,
@@ -176,6 +179,7 @@ describe("rowStatus", () => {
       reason: "要求の形が正しくありません",
       atMs: 9,
       value: "true",
+      notice: null,
     });
     expect(
       rowStatus(latest(), {
@@ -184,29 +188,31 @@ describe("rowStatus", () => {
         atMs: 9,
       })?.texts,
     ).toEqual(["書けたか分かりません。現在値を確かめてください", "記録に失敗"]);
-    // The write's answer was lost: unknown until a new record row is read.
+    // The write's answer was lost: a notice kept apart from the record's
+    // last row, which may be another operation's, and never cleared by it.
     const lost = {
       kind: "error" as const,
       message: WRITE_UNKNOWN_TEXT,
-      before: latest().id,
       value: 12.5,
     };
-    expect(rowStatus(latest(), lost)).toEqual({
-      texts: [WRITE_UNKNOWN_TEXT],
+    expect(rowStatus(null, lost)).toEqual({
+      texts: [],
       reason: null,
       atMs: null,
-      value: "12.5",
+      value: null,
+      notice: { text: WRITE_UNKNOWN_TEXT, value: "12.5" },
     });
-    expect(rowStatus({ ...latest(), id: "newer" }, lost)?.texts).toEqual([
-      "書込みました",
-    ]);
-    expect(rowStatus(null, { ...lost, before: null })?.texts).toEqual([
+    const other = rowStatus(latest(), lost);
+    expect(other?.texts).toEqual(["書込みました"]);
+    expect(other?.notice).toEqual({ text: WRITE_UNKNOWN_TEXT, value: "12.5" });
+    // A newer row with another id does not clear the notice either.
+    expect(rowStatus(latest({ id: "newer" }), lost)?.notice?.text).toBe(
       WRITE_UNKNOWN_TEXT,
-    ]);
+    );
   });
 });
 
-describe("writtenValueText", () => {
+describe("requestedValueText", () => {
   it("names the button of the value, else the value itself", () => {
     const row = {
       buttons: [
@@ -214,11 +220,11 @@ describe("writtenValueText", () => {
         { index: 1, label: "停止", value: false },
       ],
     };
-    expect(writtenValueText(false, row)).toBe("停止（false）");
-    expect(writtenValueText(12.5, row)).toBe("12.5");
-    expect(writtenValueText(true, null)).toBe("true");
-    expect(writtenValueText(null, row)).toBeNull();
-    expect(writtenValueText(undefined, row)).toBeNull();
+    expect(requestedValueText(false, row)).toBe("停止（false）");
+    expect(requestedValueText(12.5, row)).toBe("12.5");
+    expect(requestedValueText(true, null)).toBe("true");
+    expect(requestedValueText(null, row)).toBeNull();
+    expect(requestedValueText(undefined, row)).toBeNull();
     // The record's last row shows its value with the button's label.
     expect(rowStatus(latest({ value: false }), null, row)?.value).toBe(
       "停止（false）",
