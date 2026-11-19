@@ -121,6 +121,15 @@ S0／S1のDesign Domain・正式Project layout・型／参照整合性・revisio
 
 上流との差分（2026-11-12、A7）: スナップショットの[Hub運用ガイド](../upstream/industrial/banto-hub-operations.md) §17 のタグ CSV の列表は `stringEncoding`・`comment` が無く古い。上流 `origin/HEAD`（`de80f76c`）の `apps/banto-hub/src/lib/banto/tagCsv.ts` の `TAG_CSV_COLUMNS` は 19 列（`connection,group,name,address,dataType,stringLength,stringEncoding,unit,decimals,rawLo,rawHi,engLo,engHi,enabled,writable,tagKind,expression,retain,comment`）で、取込みはヘッダの厳密一致（`comment` の無い 18 列も受理）。SCADA の Hub 登録用 CSV（`hub-tag-csv.ts`）は 19 列に合わせた。上流の列が変わったら同モジュールと試験を更新する。
 
+上流との差分（2026-11-20、#284）: スナップショットは運転操作の書込み契約（banto-industrial #1177・#1201・#1202、2026-11-18〜19）より前の版で、書込みの記述が古い。現在の依存の rev `6a08efbb` の上流の文書と比べた差分は次のとおり。写しは取り直さず、ここに記録する。
+
+- [Hub SDK](../upstream/industrial/banto-tagclient-design.md) §4: 写しの `write_tag(external_name, value) -> Result<()>` は古い。上流は `write_tag(external_name, value: RequestedValue, options: WriteOptions) -> Result<WriteReceipt>`（§4.4）。`RequestedValue::Text(String)` が増えて `Copy` が外れた。`WriteOptions` は `correlation_id`（1〜64文字の `[A-Za-z0-9._:-]`）と `on_behalf_of`（1〜128文字、制御文字不可）を送信前に検証し、合わなければ `InvalidWriteOptions` で何も送らない。`WriteReceipt` は `audit_id()` と `correlation_id()` を持つ。
+- 同 §4.4 のエラーの分類: 403 `key_tripped` は `KeyTripped`（ほかの 403 は `WriteForbidden`）、502 `write_failed` は `WriteRejected`、502 `write_uncertain`・知らない 502、500 `internal`・知らない 500、コードの無い 503、504 ほかの 5xx、送信後のタイムアウト・応答の途中の切断は `WriteUncertain`。自動の再試行はしない。
+- [Hub 設計](../upstream/industrial/tag-server-design.md): 写しに §6.6「SCADA の運転操作の書込み契約」（2026-11-18 オーナー決定）が無い。監査は log-before-write で、監査が `uncertain` の書込みは 502 `write_uncertain` で返す。
+- [Hub運用ガイド](../upstream/industrial/banto-hub-operations.md): 写しに「SCADA の端末に読み用と書き用の 2 本のキーを発行する」の節と、`/api/v1/status` の `capabilities` の `write_contract_v1` による書込み契約の判定の記述が無い。
+
+SCADA 側の追従は済んでいる（段階3の操作 O2b・O2c と #316。書込みは `operation_write.rs` が `WriteOptions` に実行記録の id と操作者を渡し `audit_id` を記録に残す、`WriteUncertain` は「結果不明」で再送しない、`KeyTripped` は端末の書込みを `stopped` にして購読は続ける、書き用キーは keyring の別項目、`write_contract_v1` が無ければ `hub_unsupported`）。上流の書込みの記述を引くときは写しでなく上の rev の上流を読む。
+
 `docs/upstream/industrial`は出典付きの参照スナップショットであり編集しない。上流の「実装済み」はIndustrial側の状態。monorepoへ戻す配置方針を維持し、独立開発を一時的な例外とする。
 
 ## 外部の参考実装の取り扱い
