@@ -1019,6 +1019,23 @@ async fn the_view_lists_the_write_slots_with_their_last_requests() {
 }
 
 #[tokio::test]
+async fn the_view_hides_every_row_when_one_cannot_be_read() {
+    let fx = Fixture::new().await;
+    fx.run(&button("command", 0, json!(true))).await;
+    fx.run(&button("spare", 0, json!(true))).await;
+    // `spare` (the last slot) holds a user that is not text: unreadable.
+    fx.log
+        .db()
+        .execute_for_test("UPDATE operation SET user = X'FF' WHERE slot = 'spare'")
+        .await;
+    let view = fx.view().await;
+    assert_eq!(view.blocked, Some(reason::RECORD_FAILED));
+    assert_eq!(view.slots.len(), 4);
+    // `command` was read before `spare` failed, and is not shown either.
+    assert!(view.slots.iter().all(|slot| slot.latest.is_none()));
+}
+
+#[tokio::test]
 async fn the_view_shows_the_row_being_sent_and_busy() {
     let fx = Fixture::new().await;
     let hold = &fx.hub.state.write_hold;
