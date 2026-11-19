@@ -132,11 +132,11 @@ O0 で記録の開始（`recording_initial_setup`）を Editor 専用にし、Ed
 
 - **O0a（host）**: `AppMode` と引数の解釈、窓を `setup` で作る、2 つの capability と `default.json` の削除、`AppManifest::commands` の宣言、Editor 専用・Runtime 専用の検査、`runtime_*` の入口、`app_mode`、単一起動、label の変更に伴う既存の経路の修正。
   - mode の試験（`mock_context` の IPC 試験。capability は効かないので Rust の検査を見る）: Runtime の mode で Editor 専用の command を表のとおりに直接呼ぶと `editorOnly` で、認証 DB・Project のファイル・警報 DB・記録 DB・Hub の接続の記録を変えないこと。Editor の mode で `runtime_*` が `runtimeOnly`。§5 の「両方」が Runtime の mode で通ること。
-  - ACL の試験: `tauri::test::mock_builder().build(tauri::generate_context!())` で実際の capability を埋め込み、`runtime` の label の窓から Editor 専用の command が ACL で断られ、`editor` の窓からは通ることを確かめる。組めないときは、生成された capability と §5 の表の照合で代え、その旨を PR に書く。
+  - ACL の試験: `tauri::test::mock_builder().build(tauri::generate_context!())` で実際の capability を埋め込み、`runtime` の label の窓から Editor 専用の command が ACL で断られ、`editor` の窓からは通ることを確かめる。組めないときは PR にその旨を書く。生成された capability と §5 の表の照合（下の一覧の試験）は宣言漏れ・書き間違いを拾うが、実際の窓の label に意図した ACL が効くことの確認ではないので、ACL の試験の代わりにしない。
   - 一覧の試験: 一覧・`generate_handler!`・2 つの capability が §5 と一致し、`runtime.json` が §4 の不変条件 1〜3 を満たす。
   - 引数の試験: 正常・パス無し・知らない引数・相対パス。
   - Project の試験: `runtime_project` が起動時の内容と digest を返し、ファイルを差し替えても変わらない。`runtime_read_start` などが webview の Project を受けない（引数が無い）。
-  - 実機の手順（smoke）: release ビルドを `--runtime` で起動し、引数の誤りで窓が出ないこと、2 つ目の起動が 1 つ目を前に出すこと、devtools が開かないこと。
+  - 実機の受入（ネイティブ。ACL の試験が組めたときも残す）: release ビルドを `--runtime` で起動し、Runtime の窓から Editor 専用の command が ACL で断られること（devtools の無い release では、Runtime の画面に一時的な確認の口を置かず、Editor の画面の入口を Runtime の窓で開いた状態を作れないので、debug ビルドの devtools から `invoke` して確かめる）、Editor で起動した窓では同じ command が通ること、引数の誤りで窓が出ないこと、2 つ目の起動が 1 つ目を前に出すこと、release で devtools が開かないこと。Rust の mode の拒否の試験は、これとは別に保つ。
 - **O0b（webview）**: `runtime.html`・`runtime.ts`・`RuntimeShell`、起動時の Project の読込と失敗の画面、`runtime_hub_connect`、上端の入口と §6 の 3 の表示。
   - e2e（`mockNativeHost` の形で `app_mode` を Runtime にする）: 運転表示だけが出てメニューバー・作業タブ・ファイル操作が無いこと、キー操作で Editor へ移れないこと、Project が読めないときの画面、保存済みの接続先が無いときの表示、警報の定義の 3 つの場合分けの表示。Editor の既存 e2e が変わらず通ること。
 - 文書: code-map（mode の境界・一覧のファイル）、implementation-status、README の起動方法（`--runtime`）、development-plan（上流 §18 と ACL の差）、親設計の §4 の 8・§10・§11-9 の文言。
