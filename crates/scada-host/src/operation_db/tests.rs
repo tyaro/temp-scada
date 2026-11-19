@@ -1025,3 +1025,24 @@ async fn a_key_changed_before_the_send_slot_is_not_sent() {
     assert!(!log.is_sending());
     log.close().await;
 }
+
+#[tokio::test]
+async fn the_send_starts_only_with_the_key_it_was_checked_with() {
+    let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
+    let log = OperationLog::new(db);
+    log.key_registered(1_000, &key_ref("k1")).await.unwrap();
+    let request = request("command");
+    let id = log.begin(&request, Duration::ZERO, "k1").await.unwrap();
+    assert_eq!(log.start_send(&id, || 7).await.unwrap(), 7);
+    // Registered again after the slot: the send does not start.
+    log.key_registered(2_000, &key_ref("k2")).await.unwrap();
+    let mut started = false;
+    assert!(matches!(
+        log.start_send(&id, || started = true).await,
+        Err(BeginError::KeyChanged)
+    ));
+    assert!(!started);
+    // Another row than the one holding the slot never starts either.
+    assert!(log.start_send("other", || ()).await.is_err());
+    log.close().await;
+}

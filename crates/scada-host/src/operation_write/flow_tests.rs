@@ -1371,3 +1371,47 @@ async fn a_key_registered_again_after_the_check_is_not_sent() {
     assert!(fx.hub.writes().is_empty());
     assert_eq!(fx.log.write_status().state, WriteState::Ready);
 }
+
+#[tokio::test]
+async fn a_key_changed_between_the_send_slot_and_the_send_is_not_sent() {
+    // #321 review: the key is registered again (or deleted) after step 6
+    // took the slot but before step 8 starts the send. The record's only
+    // connection stops the write at its `pending` row (the slot taken);
+    // the transition lock, taken then, keeps it before step 8 while the
+    // key changes.
+    for delete in [false, true] {
+        let fx = Fixture::new().await;
+        let command = button("command", 0, json!(true));
+        let held = fx.log.db().hold_for_test().await;
+        let change = async {
+            while !fx.log.is_sending() {
+                tokio::time::sleep(Duration::from_millis(5)).await;
+            }
+            let gate = fx.auth.gate().await;
+            drop(held);
+            if delete {
+                fx.log.key_deleted().await.unwrap();
+            } else {
+                fx.log
+                    .key_registered(
+                        0,
+                        &crate::operation_db::KeyRef {
+                            endpoint: fx.hub.url.clone(),
+                            id: "newer".into(),
+                        },
+                    )
+                    .await
+                    .unwrap();
+            }
+            drop(gate);
+        };
+        let (result, ()) = tokio::join!(fx.run(&command), change);
+        assert_eq!(result.outcome, Outcome::Refused, "delete: {delete}");
+        assert_eq!(result.reason.as_deref(), Some(reason::KEY_CHANGED));
+        assert!(fx.hub.writes().is_empty(), "delete: {delete}");
+        let finish = fx.finished("command").await;
+        assert_eq!(finish.reason.as_deref(), Some(reason::KEY_CHANGED));
+        assert!(!fx.log.is_sending());
+        assert_eq!(fx.log.write_status().state, WriteState::Ready);
+    }
+}

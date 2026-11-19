@@ -336,6 +336,13 @@ impl OperationDb {
         sqlx::query(sql).execute(&self.pool).await.unwrap();
     }
 
+    /// Hold the pool's only connection (tests stop a write at its next
+    /// statement with it).
+    #[cfg(test)]
+    pub(crate) async fn hold_for_test(&self) -> sqlx::pool::PoolConnection<sqlx::Sqlite> {
+        self.pool.acquire().await.unwrap()
+    }
+
     /// Release the SQLite handles (shutdown, or a test removing its dir).
     pub async fn close(self) {
         self.pool.close().await;
@@ -807,6 +814,31 @@ impl OperationLog {
         self.retry_unrecorded().await;
         reservation.keep();
         Ok(id)
+    }
+
+    /// Start the send of the row `begin` returned (§4-8): `start` runs (and
+    /// spawns the send task) only while the key the row was checked with is
+    /// still the registered one, under the same lock a registration and a
+    /// deletion take. So a key registered again or deleted after `begin`
+    /// never sends, and one changed after the start is ordered after it (the
+    /// send is not taken back). Never waits for the Hub: `start` only
+    /// spawns. `KeyChanged` when the key changed; the caller finishes the
+    /// row `refused` (`key_changed`).
+    pub async fn start_send<T>(
+        &self,
+        id: &str,
+        start: impl FnOnce() -> T,
+    ) -> Result<T, BeginError> {
+        let _state = self.state_lock.lock().await;
+        if !self
+            .in_flight
+            .lock()
+            .expect("operation log lock")
+            .sent_with_current_key(id)
+        {
+            return Err(BeginError::KeyChanged);
+        }
+        Ok(start())
     }
 
     /// Write a refusal that never reserved the send slot (§4 2–5). A

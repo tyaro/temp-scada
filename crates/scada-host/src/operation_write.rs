@@ -513,16 +513,26 @@ impl Sending {
             None => Err(reason::AUTH_CHANGED),
             Some(auth) => {
                 let gate = auth.gate().await;
-                let checked = recheck(gate.phase(), auth, &*self.env, &self.admitted).await;
-                let started = checked.map(|()| {
-                    let client = self.client.clone();
-                    let tag = self.tag.clone();
-                    let value = self.value.clone();
-                    let options = WriteOptions::default()
-                        .with_correlation_id(self.id.clone())
-                        .with_on_behalf_of(self.user.clone());
-                    tokio::spawn(async move { client.write_tag(&tag, value, options).await })
-                });
+                let started = match recheck(gate.phase(), auth, &*self.env, &self.admitted).await {
+                    Err(code) => Err(code),
+                    // The last check of the key's generation and the spawn
+                    // are one step against a registration or a deletion.
+                    Ok(()) => self
+                        .log
+                        .start_send(&self.id, || {
+                            let client = self.client.clone();
+                            let tag = self.tag.clone();
+                            let value = self.value.clone();
+                            let options = WriteOptions::default()
+                                .with_correlation_id(self.id.clone())
+                                .with_on_behalf_of(self.user.clone());
+                            tokio::spawn(
+                                async move { client.write_tag(&tag, value, options).await },
+                            )
+                        })
+                        .await
+                        .map_err(|_| reason::KEY_CHANGED),
+                };
                 drop(gate);
                 started
             }
