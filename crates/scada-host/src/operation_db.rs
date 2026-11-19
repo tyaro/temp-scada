@@ -496,17 +496,23 @@ impl OperationLog {
     /// 「記録に失敗」 to the actual outcome.
     pub async fn complete(&self, id: &str, finish: Finish) -> Result<(), OperationDbError> {
         let result = self.db.finish(id, &finish).await;
-        let mut in_flight = self.in_flight.lock().expect("operation log lock");
-        if in_flight.sending.as_deref() == Some(id) {
-            in_flight.sending = None;
-        }
-        if let Err(error) = result {
-            // `InvalidRow` means the row is no longer pending: nothing to keep.
-            if !matches!(error, OperationDbError::InvalidRow) {
-                in_flight.unrecorded.insert(id.into(), finish);
+        {
+            let mut in_flight = self.in_flight.lock().expect("operation log lock");
+            if in_flight.sending.as_deref() == Some(id) {
+                in_flight.sending = None;
             }
-            return Err(error);
+            if let Err(error) = result {
+                // `InvalidRow` means the row is no longer pending: nothing to keep.
+                if !matches!(error, OperationDbError::InvalidRow) {
+                    in_flight.unrecorded.insert(id.into(), finish);
+                }
+                return Err(error);
+            }
         }
+        // The DB took a write again: rewrite the outcomes kept earlier, so
+        // they are not lost to `interrupted` if the process ends before the
+        // next request.
+        self.retry_unrecorded().await;
         Ok(())
     }
 

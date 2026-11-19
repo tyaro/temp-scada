@@ -305,6 +305,44 @@ async fn an_outcome_that_could_not_be_written_is_shown_and_rewritten_later() {
 }
 
 #[tokio::test]
+async fn a_completion_that_is_written_also_rewrites_an_earlier_unrecorded_outcome() {
+    let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
+    let log = OperationLog::new(db);
+    let request = request("command");
+    let first = log.begin(&request).await.unwrap();
+    fail_updates(log.db(), true).await;
+    let kept = Finish {
+        outcome: Outcome::Ok,
+        reason: None,
+        audit_id: Some(9),
+        finished_at_ms: 1_400,
+    };
+    assert!(log.complete(&first, kept.clone()).await.is_err());
+    // The next request starts while updates still fail (its INSERT works).
+    let second = log.begin(&request).await.unwrap();
+    assert!(log
+        .db()
+        .row(&first)
+        .await
+        .unwrap()
+        .unwrap()
+        .finish
+        .is_none());
+
+    // The DB recovers before the second completes: its write rewrites the
+    // first too, so ending the process now would not lose it.
+    fail_updates(log.db(), false).await;
+    log.complete(&second, finish(Outcome::Failed, 1_600))
+        .await
+        .unwrap();
+    assert_eq!(
+        log.db().row(&first).await.unwrap().unwrap().finish,
+        Some(kept)
+    );
+    log.close().await;
+}
+
+#[tokio::test]
 async fn a_pending_row_of_an_earlier_process_reads_as_unrecorded_without_outcome() {
     let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
     // A row no in-process state knows of (left by a process whose recovery
