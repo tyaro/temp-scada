@@ -58,17 +58,36 @@ function contextKey(project: Project): string {
   ]);
 }
 
+/** How the History context is asked for: the command and its arguments.
+ * Editor sends the Project it shows (`history_context`); Runtime sends none
+ * and the host uses its startup Project (`runtime_history_context`, Runtime
+ * mode design §5). */
+export type HistoryContextRequest = (
+  project: Project,
+) => [command: string, args: Record<string, unknown>];
+
+export const editorHistoryContext: HistoryContextRequest = (project) => [
+  "history_context",
+  { projectJson: JSON.stringify(project) },
+];
+
+export const runtimeHistoryContext: HistoryContextRequest = () => [
+  "runtime_history_context",
+  {},
+];
+
 /**
  * Keeps the History service of the current Project: on each change of the
  * Project's ID, revision or recording plan, it asks the host for the
- * HistoryContext v2 (`history_context`) and publishes a new service, or none
- * while the reply is pending, when the recording DB has no applied plan for
- * this Project, or when the host cannot answer. Replies to an earlier Project
- * are dropped.
+ * HistoryContext v2 (`request`, `history_context` by default) and publishes a
+ * new service, or none while the reply is pending, when the recording DB has
+ * no applied plan for this Project, or when the host cannot answer. Replies to
+ * an earlier Project are dropped.
  */
 export function createNativeHistory(
   invoke: NativeInvoke,
   publish: (service: HistoryService | undefined) => void,
+  request: HistoryContextRequest = editorHistoryContext,
 ) {
   const source = nativeHistorySource(invoke);
   let key: string | undefined;
@@ -82,9 +101,7 @@ export function createNativeHistory(
       const issued = ++generation;
       publish(undefined);
       const current = () => !disposed && issued === generation;
-      invoke<unknown>("history_context", {
-        projectJson: JSON.stringify(project),
-      }).then(
+      invoke<unknown>(...request(project)).then(
         (context) => {
           if (current() && context != null) publish({ source, context });
         },

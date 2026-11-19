@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from "svelte";
   import OperatorView from "../../lib/operator/OperatorView.svelte";
   import { operatorStartScreen } from "../../lib/operator/operator-layout";
   import {
@@ -18,11 +19,22 @@
     store,
     readSource,
     onmessage,
+    onopentrend,
+    onretiretrend,
+    onopenalarms,
+    onsilencebuzzer,
+    overlays,
   }: {
     project: Project;
     store: AssetStore;
     readSource?: ReadSource;
     onmessage: (message: string) => void;
+    onopentrend?: (screenId: string, objectId: string, token?: object) => void;
+    onretiretrend?: (token: object) => void;
+    onopenalarms?: () => void;
+    onsilencebuzzer?: () => void;
+    /** The alarm list, alarm settings and history windows (top bar's entries). */
+    overlays?: Snippet;
   } = $props();
 
   const readPresentation = createReadPresentationController(
@@ -56,11 +68,17 @@
     readings={readContext.readings}
     equipmentContext={readContext.equipmentContext}
     {onmessage}
+    {onopentrend}
+    {onretiretrend}
+    {onopenalarms}
+    {onsilencebuzzer}
+    overlay={overlays}
   />
 {:else}
   <p class="runtime-empty" role="status">
     運転表示に出せる画面がありません（ヘッダー・フッター以外の画面が要ります）。
   </p>
+  {@render overlays?.()}
 {/if}
 
 <style>

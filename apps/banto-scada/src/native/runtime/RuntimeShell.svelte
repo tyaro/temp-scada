@@ -10,6 +10,21 @@
   import { nativeReadSource, runtimeReadStart } from "../sources";
   import type { ReadSource } from "../../lib/designer/controllers/read-presentation.svelte";
   import { applyWindowTitle } from "../../lib/window-title";
+  import { runtimeAlarmFeed } from "../project-file";
+  import { createNativeHistory, runtimeHistoryContext } from "../history";
+  import { createAlarmFeedController } from "../../lib/alarm-list/alarm-feed-controller.svelte";
+  import AlarmListWindow from "../../lib/alarm-list/AlarmListWindow.svelte";
+  import AlarmSettingsWindow from "../../lib/alarm-list/AlarmSettingsWindow.svelte";
+  import { alarmSettingsEntryReason } from "../../lib/alarm-settings";
+  import { setAlarmViewProject } from "../../lib/alarm-view-state.svelte";
+  import type { AlarmFeed } from "../../lib/project-file-service";
+  import HistoryWorkspace from "../../lib/history/HistoryWorkspace.svelte";
+  import { createHistoryController } from "../../lib/history/presentation";
+  import {
+    trendObjectDefinitionId,
+    type HistoryPreset,
+    type HistoryService,
+  } from "../../lib/history/workspace-model";
   import RuntimeOperator from "./RuntimeOperator.svelte";
   import {
     alarmDefinitionNotice,
@@ -51,6 +66,94 @@
   // subscription start leaves the Hub connected but values stopped, so it
   // gets its own state and a retry that only re-creates the subscription.
   let readFailed = $state(false);
+
+  const project = $derived(
+    loaded?.status === "opened" ? loaded.project : undefined,
+  );
+
+  // Alarms (Runtime mode design §5, §6-4): the same feed controller as the
+  // Editor, over the Runtime's commands (no `alarm_apply` / sound import).
+  let alarmFeed = $state.raw<AlarmFeed>();
+  const alarms = createAlarmFeedController({
+    feed: () => alarmFeed,
+    projectId: () => project?.manifest.projectId ?? "",
+    onerror: (text) => (message = text),
+  });
+  $effect(() => {
+    if (project) setAlarmViewProject(project);
+  });
+  let alarmListOpen = $state(false);
+  let alarmSettingsOpen = $state(false);
+  let alarmListOpener: Element | null = null;
+  let alarmSettingsOpener: Element | null = null;
+  let alarmEntry = $state<HTMLButtonElement>();
+  const alarmSettingsReason = $derived(alarmSettingsEntryReason(alarmFeed));
+  function openAlarmList() {
+    if (alarmListOpen) return;
+    alarmListOpener = document.activeElement;
+    alarmListOpen = true;
+  }
+  function openAlarmSettings() {
+    if (alarmSettingsOpen || alarmSettingsReason) return;
+    alarmSettingsOpener = document.activeElement;
+    alarmSettingsOpen = true;
+  }
+  /** Focus back to the opener while it is still shown, else the top bar entry. */
+  function restoreFocus(opener: Element | null, entry?: HTMLElement) {
+    if (
+      (opener instanceof HTMLElement || opener instanceof SVGElement) &&
+      opener.isConnected &&
+      !opener.closest("[inert]") &&
+      opener.getClientRects().length
+    ) {
+      opener.focus();
+      return undefined;
+    }
+    return entry;
+  }
+
+  // History (Runtime mode design §5): the context of the startup Project comes
+  // from `runtime_history_context`; the Project never changes in this window.
+  let historyService = $state.raw<HistoryService>();
+  const nativeHistory = createNativeHistory(
+    invoke,
+    (service) => (historyService = service),
+    runtimeHistoryContext,
+  );
+  const historyController = createHistoryController();
+  let historyOpen = $state(false);
+  let historyPreset = $state.raw<
+    (HistoryPreset & { popupToken?: object }) | undefined
+  >();
+  let historyOpener: Element | null = null;
+  let historyEntry = $state<HTMLButtonElement>();
+  /** A plan applied after startup gives a context only when asked again. */
+  function askContextAgain() {
+    if (project && !historyService) nativeHistory.refresh(project);
+  }
+  function openHistory() {
+    if (!project) return;
+    askContextAgain();
+    historyOpener = document.activeElement;
+    historyPreset = undefined;
+    historyOpen = true;
+  }
+  /** A trend object of the operator view opens its saved definition. */
+  function openTrend(screenId: string, objectId: string, popupToken?: object) {
+    if (!project) return;
+    const definitionId = trendObjectDefinitionId(project, screenId, objectId);
+    if (!definitionId) return;
+    askContextAgain();
+    historyOpener = document.activeElement;
+    historyPreset = { definitionId, token: {}, popupToken };
+    historyOpen = true;
+  }
+  function retireTrend(token: object) {
+    if (historyPreset?.popupToken === token) {
+      historyOpen = false;
+      historyPreset = undefined;
+    }
+  }
 
   async function connect() {
     if (hubBusy) return;
@@ -132,12 +235,16 @@
         `${result.project.manifest.name.trim() || result.fileName} - Banto SCADA Runtime`,
       ).catch(() => {});
       void checkAlarms();
+      alarmFeed = runtimeAlarmFeed((command, args) => invoke(command, args));
+      nativeHistory.update(result.project);
       await connect();
     })();
   });
   onDestroy(() => {
     disposed = true;
     unlisten?.();
+    nativeHistory.dispose();
+    historyController.dispose();
     if (loaded?.status === "opened") loaded.store.dispose();
   });
 </script>
@@ -213,6 +320,27 @@
           >{alarmNotice}</span
         >
       {/if}
+      <button
+        type="button"
+        class="runtime-entry"
+        bind:this={alarmEntry}
+        onclick={openAlarmList}
+        title="アラーム一覧を開く"
+        data-runtime-alarm-entry
+        ><StatusBadge
+          variant={alarms.healthy ? "neutral" : "warning"}
+          label={alarms.label}
+        /></button
+      >
+      {#if alarms.soundNotice}<span data-alarm-sound-fallback
+          ><StatusBadge variant="warning" label={alarms.soundNotice} /></span
+        >{/if}
+      <button
+        type="button"
+        bind:this={historyEntry}
+        onclick={openHistory}
+        data-runtime-history-entry>履歴トレンド</button
+      >
       {#if message}
         <span class="runtime-message" role="alert">{message}</span>
       {/if}
@@ -226,11 +354,66 @@
         store={loaded.store}
         {readSource}
         onmessage={(text) => (message = text)}
+        onopentrend={openTrend}
+        onretiretrend={retireTrend}
+        onopenalarms={openAlarmList}
+        onsilencebuzzer={alarms.canSilence ? alarms.silenceBuzzer : undefined}
+        {overlays}
       />
     </div>
   {/if}
 </div>
 <CloseConfirm />
+
+<!-- The windows open over the operator view, as in the Editor's operator view. -->
+{#snippet overlays()}
+  {#if project}
+    <HistoryWorkspace
+      open={historyOpen}
+      preset={historyPreset}
+      onrelease={() => (historyPreset = undefined)}
+      {project}
+      generation={0}
+      service={historyService}
+      controller={historyController}
+      onclose={() => (historyOpen = false)}
+      focusFallback={() => {
+        const opener = historyOpener;
+        historyOpener = null;
+        return restoreFocus(opener, historyEntry);
+      }}
+    />
+    <AlarmListWindow
+      open={alarmListOpen}
+      snapshot={alarms.snapshot}
+      feed={alarmFeed}
+      readError={alarms.readError}
+      projectId={project.manifest.projectId}
+      projectRevision={project.manifest.projectRevision}
+      onclose={() => (alarmListOpen = false)}
+      onrefresh={alarms.refresh}
+      onopensettings={openAlarmSettings}
+      focusFallback={() => {
+        const opener = alarmListOpener;
+        alarmListOpener = null;
+        return restoreFocus(opener, alarmEntry);
+      }}
+    />
+    <AlarmSettingsWindow
+      open={alarmSettingsOpen}
+      feed={alarmFeed}
+      snapshot={alarms.snapshot}
+      soundImport={false}
+      onclose={() => (alarmSettingsOpen = false)}
+      onrefresh={alarms.refresh}
+      focusFallback={() => {
+        const opener = alarmSettingsOpener;
+        alarmSettingsOpener = null;
+        return restoreFocus(opener, alarmEntry);
+      }}
+    />
+  {/if}
+{/snippet}
 
 <style>
   .runtime-shell {
@@ -263,6 +446,11 @@
   .runtime-hub-text,
   .runtime-stream {
     color: var(--banto-text-muted);
+  }
+  .runtime-entry {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
   }
   .runtime-auth {
     margin-left: auto;

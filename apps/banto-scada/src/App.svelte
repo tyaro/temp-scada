@@ -65,13 +65,8 @@
     AlarmFeed,
     ProjectFileService,
   } from "./lib/project-file-service";
-  import {
-    setAlarmViewProject,
-    setAlarmViewSnapshot,
-  } from "./lib/alarm-view-state.svelte";
-  import { AlarmMirror, type AlarmSnapshot } from "./lib/alarm-mirror";
-  import { ALARM_STATUS_LABELS, labelOf } from "./lib/alarm-banner";
-  import { AlarmRefreshQueue } from "./lib/alarm-refresh-queue";
+  import { setAlarmViewProject } from "./lib/alarm-view-state.svelte";
+  import { createAlarmFeedController } from "./lib/alarm-list/alarm-feed-controller.svelte";
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
     selectionPaintAlphaCommand,
@@ -265,6 +260,7 @@
   }
   import { untrack, tick, flushSync, onDestroy, onMount } from "svelte";
   import { createHistoryController } from "./lib/history/presentation";
+  import { trendObjectDefinitionId } from "./lib/history/workspace-model";
   import { selectionNudge } from "./lib/keyboard-move";
   import { normalizeRotation } from "./lib/rotation";
   import { parseNumericProperty } from "./lib/designer/numeric-properties";
@@ -454,10 +450,7 @@
   import OperatorView from "./lib/operator/OperatorView.svelte";
   import AlarmListWindow from "./lib/alarm-list/AlarmListWindow.svelte";
   import AlarmSettingsWindow from "./lib/alarm-list/AlarmSettingsWindow.svelte";
-  import {
-    alarmSettingsEntryReason,
-    alarmSoundFallbackNotice,
-  } from "./lib/alarm-settings";
+  import { alarmSettingsEntryReason } from "./lib/alarm-settings";
   import { operatorStartScreen } from "./lib/operator/operator-layout";
   import ArrayCopyDialog from "./lib/designer/ArrayCopyDialog.svelte";
   import { createArrayCopyController } from "./lib/designer/controllers/array-copy.svelte";
@@ -2033,7 +2026,7 @@
       return projectFileService;
     },
     alarmRefresh: () => void refreshAlarm(),
-    alarmUnavailable: (reason) => (alarmUnavailableReason = reason),
+    alarmUnavailable: (reason) => (alarms.unavailableReason = reason),
     chooseFile: () => projectFileInput?.click(),
     allow: (run) => drafts.allow(run),
     adopt,
@@ -2044,120 +2037,26 @@
   const replacement = $derived(projectFiles.replacement);
   const saveLabel = $derived(projectFiles.saveLabel);
   const lastExport = $derived(projectFiles.lastExport);
-  const alarmMirror = new AlarmMirror();
-  let alarmRefreshQueue: AlarmRefreshQueue<AlarmSnapshot> | null = null;
-  let alarmSnapshot = $state<AlarmSnapshot | null>(null);
-  let alarmReadError = $state<string | null>(null);
-  let alarmUnavailableReason = $state<string | null>(null);
-  const alarmLabel = $derived.by(() => {
-    const unavailable = alarmUnavailableReason ?? alarmReadError;
-    if (unavailable && alarmSnapshot?.status !== "running") {
-      if (unavailable === "terminalUnavailable")
-        return "警報: この端末ではEngineを利用できません";
-      if (unavailable === "noDataDir")
-        return "警報: 保存先がなく監視できません";
-      if (unavailable === "auth_phase_unavailable")
-        return "警報: 認証切替中で適用できません";
-    }
-    if (alarmReadError) return "警報: 状態を取得できません";
-    if (!alarmSnapshot) return "警報: 確認中";
-    if (alarmSnapshot.status !== "running")
-      return `警報: ${labelOf(ALARM_STATUS_LABELS, alarmSnapshot.status)}`;
-    // Not monitoring outranks the history outage; both are shown together.
-    const history = alarmSnapshot.historyWriteFailure
-      ? `履歴に書けません（未記録 ${alarmSnapshot.historyWriteFailure.unrecordedEvents} 件）`
-      : null;
-    if (alarmSnapshot.engine?.unavailable)
-      return history
-        ? `警報: 監視できていません・${history}`
-        : "警報: 監視できていません";
-    // Evaluation continues while rereads fail, until the streak's limit.
-    const reread = alarmSnapshot.rereadFailure
-      ? `値の読み直しに失敗（${alarmSnapshot.rereadFailure.failures} 回）`
-      : null;
-    const warnings = [history, reread].filter(Boolean).join("・");
-    if (warnings) return `警報: ${warnings}`;
-    if (alarmSnapshot.monitored?.projectId !== project.manifest.projectId)
-      return "警報: 別のProjectを監視中";
-    if (alarmSnapshot.pendingUnknown)
-      return "警報: 保存済みファイルを確認できません";
-    if (alarmSnapshot.pendingConditionChanges)
-      return "警報: 保存済み定義に未適用の変更あり";
-    if (alarmSnapshot.pendingDisplayChanges)
-      return "警報: 表示情報に未適用の変更あり";
-    return "警報: 監視中";
+  // 警報の host の購読・snapshot・状態の文（Runtime の窓と共通）。
+  const alarms = createAlarmFeedController({
+    feed: () => alarmFeed,
+    projectId: () => project.manifest.projectId,
+    onerror: (message) => report("error", message),
   });
-  function refreshAlarm() {
-    alarmRefreshQueue?.refresh();
-  }
-  /** ブザー停止（設計§6）。ACK ではなく、ログインも要らない。状態は host から取り直す。 */
-  function silenceBuzzer() {
-    const feed = alarmFeed;
-    if (!feed?.silenceBuzzer) return;
-    feed
-      .silenceBuzzer()
-      .then(refreshAlarm, (error) =>
-        report("error", `ブザーを止められませんでした: ${String(error)}`),
-      );
-  }
+  const alarmSnapshot = $derived(alarms.snapshot);
+  const refreshAlarm = alarms.refresh;
+  const silenceBuzzer = alarms.silenceBuzzer;
   const alarmFeed = $derived(alarmFeedProp ?? projectFileService?.alarmFeed);
   // Terminal settings (terminal settings design §7): the File menu and the
   // alarm list window. Not a Project setting; the browser has no host.
   let alarmSettingsOpener: Element | null = null;
   const alarmSettingsReason = $derived(alarmSettingsEntryReason(alarmFeed));
-  const alarmSoundNotice = $derived(
-    alarmSoundFallbackNotice(alarmSnapshot?.buzzerSound),
-  );
   function openAlarmSettings() {
     if (alarmSettingsOpen || alarmSettingsReason) return;
     alarmSettingsOpener = document.activeElement;
     alarmSettingsOpen = true;
   }
-  // 小札などの画面側の表示へ配る（編集・プレビュー・運転表示で同じ状態）。
-  $effect(() => setAlarmViewSnapshot(alarmSnapshot));
   $effect(() => setAlarmViewProject(project));
-  $effect(() => {
-    const feed = alarmFeed;
-    if (!feed) return;
-    const queue = new AlarmRefreshQueue(
-      () => feed.snapshot(),
-      (next) => {
-        alarmReadError = null;
-        if (alarmMirror.acceptSnapshot(next))
-          alarmSnapshot = alarmMirror.current;
-      },
-      (error) => (alarmReadError = String(error)),
-    );
-    alarmRefreshQueue = queue;
-    let disposed = false;
-    let unsubscribe: (() => void) | undefined;
-    void feed
-      .subscribe(
-        (change) => {
-          if (disposed) return;
-          const decision = alarmMirror.acceptChange(change);
-          if (decision === "refresh") void refreshAlarm();
-          else if (decision === "applied") alarmSnapshot = alarmMirror.current;
-        },
-        () => void refreshAlarm(),
-      )
-      .then((off) => {
-        if (disposed) off();
-        else {
-          unsubscribe = off;
-          void refreshAlarm();
-        }
-      })
-      .catch((error) => {
-        if (!disposed) alarmReadError = String(error);
-      });
-    return () => {
-      disposed = true;
-      queue.dispose();
-      if (alarmRefreshQueue === queue) alarmRefreshQueue = null;
-      unsubscribe?.();
-    };
-  });
   function adopt(
     next: Project,
     source: "sample" | "file" | "new",
@@ -2783,18 +2682,12 @@
       )
         return;
       // Resolve against the current Project after any pending form was applied.
-      const object = project.screens
-        .find((row) => row.id === sourceScreenId)
-        ?.objects.find((row) => row.id === objectId);
-      if (
-        !object ||
-        object.shape.type !== "trend" ||
-        !project.trends?.some(
-          (row) =>
-            object.shape.type === "trend" && row.id === object.shape.trendId,
-        )
-      )
-        return;
+      const definitionId = trendObjectDefinitionId(
+        project,
+        sourceScreenId,
+        objectId,
+      );
+      if (!definitionId) return;
       stopPlacement();
       historySvgOpener =
         document.activeElement instanceof SVGElement
@@ -2803,7 +2696,7 @@
       historyPreset = {
         project,
         generation,
-        definitionId: object.shape.trendId,
+        definitionId,
         token: {},
         screenId: originId,
         sourceScreenId,
@@ -4298,20 +4191,11 @@
     {#if recordingIndicator}{@render recordingStatus()}{/if}
     {#if alarmFeed}
       <StatusBadge
-        variant={alarmSnapshot?.status === "running" &&
-        alarmSnapshot.monitored?.projectId === project.manifest.projectId &&
-        !alarmSnapshot.engine?.unavailable &&
-        !alarmSnapshot.historyWriteFailure &&
-        !alarmSnapshot.rereadFailure &&
-        !alarmSnapshot.pendingConditionChanges &&
-        !alarmSnapshot.pendingDisplayChanges &&
-        !alarmSnapshot.pendingUnknown
-          ? "neutral"
-          : "warning"}
-        label={alarmLabel}
+        variant={alarms.healthy ? "neutral" : "warning"}
+        label={alarms.label}
       />
-      {#if alarmSoundNotice}<span data-alarm-sound-fallback
-          ><StatusBadge variant="warning" label={alarmSoundNotice} /></span
+      {#if alarms.soundNotice}<span data-alarm-sound-fallback
+          ><StatusBadge variant="warning" label={alarms.soundNotice} /></span
         >{/if}
     {/if}
     {#if !headerExtension}{@render browserHubStatus()}{/if}
@@ -5306,7 +5190,7 @@
     open={alarmListOpen}
     snapshot={alarmSnapshot}
     feed={alarmFeed}
-    readError={alarmReadError}
+    readError={alarms.readError}
     projectId={project.manifest.projectId}
     projectRevision={project.manifest.projectRevision}
     onclose={() => (alarmListOpen = false)}

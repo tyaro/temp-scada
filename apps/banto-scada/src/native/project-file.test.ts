@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   frame,
   nativeProjectFiles,
+  runtimeAlarmFeed,
   unframe,
   type RawInvoke,
 } from "./project-file";
@@ -23,6 +24,19 @@ describe("nativeProjectFiles", () => {
         args: { fileId: 4, confirmed: [], confirmedSwitchFrom: "project-a" },
       },
     ]);
+  });
+
+  it("gives Runtime the alarm feed without the Editor-only sound import", async () => {
+    const commands: string[] = [];
+    const invoke: RawInvoke = async (command) => {
+      commands.push(command);
+      return [];
+    };
+    const feed = runtimeAlarmFeed(invoke);
+    expect(feed.importAlarmSound).toBeUndefined();
+    expect(feed.resetAlarmSound).toBeDefined();
+    await feed.ack!([]);
+    expect(commands).toEqual(["alarm_ack"]);
   });
 
   it("names alarm_ack and alarm_history's arguments as the host reads them", async () => {

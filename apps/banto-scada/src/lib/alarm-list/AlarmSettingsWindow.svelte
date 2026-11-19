@@ -31,6 +31,7 @@
     onclose,
     onrefresh,
     focusFallback,
+    soundImport = true,
   }: {
     open: boolean;
     feed?: AlarmFeed;
@@ -39,6 +40,11 @@
     /** 変更の後に snapshot を取り直させる（`buzzerSound` を最新にする）。 */
     onrefresh: () => void;
     focusFallback?: () => HTMLElement | null | undefined;
+    /**
+     * 音のファイルを取り込む入口を出すか。Runtime の窓では出さない
+     * （`alarm_sound_import` は Editor 専用。Runtime モード設計 §10-4）。
+     */
+    soundImport?: boolean;
   } = $props();
 
   let view = $state.raw<AlarmSettingsView | null>(null);
@@ -125,7 +131,9 @@
       loadIssue = null;
       saveIssue = saveDone = soundIssue = soundDone = null;
       lockedReason =
-        feed?.setAlarmSettings && feed.importAlarmSound && feed.resetAlarmSound
+        feed?.setAlarmSettings &&
+        (!soundImport || feed.importAlarmSound) &&
+        feed.resetAlarmSound
           ? null
           : "この版では端末設定を変更できません。";
       void load();
@@ -312,15 +320,17 @@
         </p>
       {/if}
       <p class="hint">
-        WAV（リニア PCM・8 / 16 ビット・モノラルかステレオ・1 MB と 5
-        秒まで）を取り込めます。 音の操作は「保存」を待たずにすぐ反映します。
+        {#if soundImport}WAV（リニア PCM・8 / 16 ビット・モノラルかステレオ・1
+          MB と 5 秒まで）を取り込めます。{/if} 音の操作は「保存」を待たずにすぐ反映します。
       </p>
       <div class="actions sound">
-        <button
-          type="button"
-          disabled={!canChange}
-          onclick={() => soundAction("import")}>ファイルを選ぶ</button
-        >
+        {#if soundImport}
+          <button
+            type="button"
+            disabled={!canChange}
+            onclick={() => soundAction("import")}>ファイルを選ぶ</button
+          >
+        {/if}
         <button
           type="button"
           disabled={!canChange || view?.sound.kind !== "custom"}

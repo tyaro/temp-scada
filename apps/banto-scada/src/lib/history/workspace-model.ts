@@ -173,6 +173,24 @@ export function historyFormQuery(
   }
 }
 
+/**
+ * The saved trend definition a trend object on a screen opens (operator view
+ * and preview): undefined when the object is gone, is not a trend, or its
+ * definition is missing. Editor and Runtime open the history window with it.
+ */
+export function trendObjectDefinitionId(
+  project: Pick<Project, "screens" | "trends">,
+  screenId: string,
+  objectId: string,
+): string | undefined {
+  const shape = project.screens
+    .find((row) => row.id === screenId)
+    ?.objects.find((row) => row.id === objectId)?.shape;
+  if (shape?.type !== "trend") return undefined;
+  return project.trends?.some((row) => row.id === shape.trendId)
+    ? shape.trendId
+    : undefined;
+}
 /** Resolve a fresh, owned definition; a listing is not proof of retained data. */
 export function historyPresetDefinition(
   project: Pick<Project, "trends">,
