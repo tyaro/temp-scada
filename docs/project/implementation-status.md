@@ -18,6 +18,8 @@ Runtime mode（2026-11-19、[設計](../design/runtime/runtime-mode-design.md) �
 
 O2a（2026-11-19）: banto-industrial を `v0.3.0-alpha.2`（`c0ac5206`。#1201・#1202 の書込み契約を含む）へ上げた（lock は banto-industrial の 2 件だけ）。書込みの API はまだ使わない。catalog の表示の行（`CatalogRow`・`catalog-view.schema.json`）に `writable` を足した。上流の確認で、`data_type` の語彙は 10 語（真偽値は `bit`）、Hub の版の文字列では #1201 の有無を確かめられないと分かった（[設計](../design/runtime/operation-stage3-design.md) §4.2・§11-8）。
 
+O2b-1（2026-11-19）: host に実行記録 `operations.db`（端末のデータフォルダーの直下、要求 1 件を 1 行）を足した。行は送る前に `pending` で書き、§5 の区分（`ok`・`refused`・`not_sent`・`stopped`・`failed`・`uncertain`）で 1 回だけ確定する。tagclient の誤りの種別から区分への対応表、起動時に前のプロセスの `pending` を `uncertain`（`interrupted`）に直すこと、端末で送信中を 1 つにする予約（`busy`）、結果を記録できなかった行を `unrecorded` として出し次に書けたときに書き直すこと（再送はしない）を持つ。まだ `operation_write` も Tauri の command も無く、Hub へは書かない。
+
 ## 実Hub・S7接続の着手方針（2026-11-05）
 
 サイドチャットの[実Hub・S7接続計画](real-hub-connection-plan.md)を採用し、ユーザー申告によりSOAK終了待ちを外した。C0の上流契約・対象環境・接続条件確認とC1の通常App読取接続を実施した。ローカル編集はオフラインのまま、デスクトップだけがread専用の製品host・IPCを使う。運用時の認証・管理操作は後続で確定する。

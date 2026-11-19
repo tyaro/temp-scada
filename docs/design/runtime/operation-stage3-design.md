@@ -195,7 +195,7 @@ O2a の確認（2026-11-19、banto-industrial `v0.3.0-alpha.2` = `c0ac5206`）: 
 
 ## 9. 実行記録
 
-host の SQLite（端末に 1 つのファイル `operations.db`。警報 DB と同じフォルダー、同じ開き方の規則。Project をまたいで残し、行に Project を持つ）に、要求 1 件を 1 行で残す。
+host の SQLite（端末に 1 つのファイル `operations.db`。警報 DB と同じ開き方の規則。Project をまたいで残し、行に Project を持つ）に、要求 1 件を 1 行で残す。置き場は端末のデータフォルダーの直下（`alarm-terminal.json` の隣）とする。警報 DB の `alarms` フォルダーは、端末が中の `.db` をすべて警報 DB として世代番号を読むので、そこには置かない（O2b-1 で確定）。
 
 | 列                                       | 中身                                                    |
 | ---------------------------------------- | ------------------------------------------------------- |
@@ -263,3 +263,5 @@ host の SQLite（端末に 1 つのファイル `operations.db`。警報 DB と
 | O5     | banto#697 が入ったら `equipment.operate`・`alarm.ack` へ権限を移す                                                                                                                                                                                                                                                                                |
 
 O2a からは Tauri 実機と実 Hub の確認が要り、ブラウザの e2e では host を通らない。書込みの区分の正しさは O2b の host の試験で確かめる。各区切りの検証は[差分文書§5.5](../editor/flow-diagram-gap-2026-11-12.md#55-各-pr-の検証)に従う。
+
+O2b の分け方（2026-11-19）: O2b-1 は実行記録（`operations.db` の行、§5 の区分の対応表、起動時の `pending` の直し、送信中・記録できなかった行の区別、端末で送信中を 1 つにする予約）だけで、Hub へは送らない。O2b-2 は `operation_write` の検査の順（§4）とモック Hub の各応答の試験、Tauri の command。書き用キー（O2c）と書込み契約の確認（§11-8）が無い間、O2b-2 の command は `no_write_key`／`hub_unsupported` で拒み、実 Hub へは送らない。
