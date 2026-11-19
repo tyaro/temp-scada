@@ -27,6 +27,13 @@
   } from "../../lib/history/workspace-model";
   import RuntimeOperator from "./RuntimeOperator.svelte";
   import { createOperationHost } from "../../lib/operation-faceplate";
+  import OperationSettingsWindow from "./OperationSettingsWindow.svelte";
+  import {
+    createOperationSettingsHost,
+    settingsErrorCode,
+    writeBadge,
+    type OperationKeyStatus,
+  } from "./operation-settings";
   import {
     createNativeRecordingManagement,
     runtimeRecordingContext,
@@ -55,6 +62,8 @@
    * operations or preview switch, and no route to the Editor screen.
    */
   let { authClient }: { authClient: NativeAuthClient } = $props();
+  /** How often the top bar reads the write state again. */
+  const WRITE_STATUS_POLL_MS = 5000;
   // The client is fixed for the life of the window.
   // svelte-ignore state_referenced_locally
   const authSession = new AuthSession(authClient);
@@ -133,6 +142,57 @@
     }
     return entry;
   }
+
+  // The write key and the write state (operation stage 3 §7, §8, O2c-4a): a
+  // top bar badge read every few seconds (a write may trip the key), and the
+  // terminal settings window for the key and 「書込みを再開」.
+  const operationSettings = createOperationSettingsHost((command, args) =>
+    invoke(command, args),
+  );
+  let writeView = $state.raw<
+    { status: OperationKeyStatus } | { error: string } | undefined
+  >();
+  const writeEntryBadge = $derived(writeBadge(writeView));
+  let writeSettingsOpen = $state(false);
+  let writeSettingsOpener: Element | null = null;
+  let writeEntry = $state<HTMLButtonElement>();
+  let writeReading = false;
+  /** Bumped by the window's answers, so an older poll never overwrites them. */
+  let writeGeneration = 0;
+  async function readWriteStatus() {
+    if (writeReading) return;
+    writeReading = true;
+    const generation = writeGeneration;
+    let next: { status: OperationKeyStatus } | { error: string };
+    try {
+      next = { status: await operationSettings.status() };
+    } catch (error) {
+      next = { error: settingsErrorCode(error) };
+    } finally {
+      writeReading = false;
+    }
+    if (generation === writeGeneration) writeView = next;
+  }
+  function writeChanged(
+    view: { status: OperationKeyStatus } | { error: string },
+  ) {
+    writeGeneration++;
+    writeView = view;
+  }
+  function openWriteSettings() {
+    if (writeSettingsOpen) return;
+    writeSettingsOpener = document.activeElement;
+    writeSettingsOpen = true;
+  }
+  $effect(() => {
+    if (!project) return;
+    void readWriteStatus();
+    const timer = setInterval(
+      () => void readWriteStatus(),
+      WRITE_STATUS_POLL_MS,
+    );
+    return () => clearInterval(timer);
+  });
 
   // History (Runtime mode design §5): the context of the startup Project comes
   // from `runtime_history_context`; the Project never changes in this window.
@@ -438,6 +498,18 @@
       {/if}
       <button
         type="button"
+        class="runtime-entry"
+        bind:this={writeEntry}
+        onclick={openWriteSettings}
+        title={writeEntryBadge.title || "書込みの端末設定を開く"}
+        data-runtime-write-entry
+        ><StatusBadge
+          variant={writeEntryBadge.variant}
+          label={writeEntryBadge.label}
+        /></button
+      >
+      <button
+        type="button"
         bind:this={historyEntry}
         onclick={openHistory}
         data-runtime-history-entry>履歴トレンド</button
@@ -499,6 +571,17 @@
         const opener = alarmListOpener;
         alarmListOpener = null;
         return restoreFocus(opener, alarmEntry);
+      }}
+    />
+    <OperationSettingsWindow
+      open={writeSettingsOpen}
+      host={operationSettings}
+      onclose={() => (writeSettingsOpen = false)}
+      onchanged={writeChanged}
+      focusFallback={() => {
+        const opener = writeSettingsOpener;
+        writeSettingsOpener = null;
+        return restoreFocus(opener, writeEntry);
       }}
     />
     <AlarmSettingsWindow
