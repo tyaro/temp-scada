@@ -415,7 +415,7 @@ Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを�
 
 ## Host catalogとタグ選択（P4）
 
-`crates/scada-runtime/src/catalog.rs`の`CatalogHost`がSDK REST clientとProject／要求tokenを所有する。`request().fetch()`は一度だけ取得し、`accept`が最新要求と一致した結果だけを公開する。`catalog_view`はSDKの重複名検査を再利用して表示metadataへ投影する。`schema/catalog-view.schema.json`と`examples/catalog-view.json`をRust／TSで共有する。値購読・再接続・自動pollを所有しない。
+`crates/scada-runtime/src/catalog.rs`の`CatalogHost`がSDK REST clientとProject／要求tokenを所有する。`request().fetch()`は一度だけ取得し、`accept`が最新要求と一致した結果だけを公開する。`catalog_view`はSDKの重複名検査を再利用して表示metadataへ投影する（段階3の操作O2aから、Hubが書込みを受けるかの`writable`も出す。アドレス・式・現在値は出さない）。`schema/catalog-view.schema.json`と`examples/catalog-view.json`をRust／TSで共有する。値購読・再接続・自動pollを所有しない。
 
 `lib/catalog-session.ts`はProject所有者・payload検証・immutableな候補・旧delivery拒否を担当し、`designer/controllers/catalog.svelte.ts`は任意CatalogSourceの購読寿命と要求の失効（`@banto/admin-core`の`createRequestOwner`、key `"scope"`と`"delivery"`）を担当する。`tag-catalog.ts`はmetadata階層と型互換、`TagPicker.svelte`は検索・確認・明示選択、InspectorPanelとEquipmentLibraryは現在の配置／機器／slotと入力要素の再確認を所有する。適用・保存・履歴は既存フォームに残す。
 

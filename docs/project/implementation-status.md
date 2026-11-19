@@ -16,6 +16,8 @@ Runtime mode（2026-11-19、[設計](../design/runtime/runtime-mode-design.md) �
 
 段階3の操作 O1a（2026-11-19、[設計](../design/runtime/operation-stage3-design.md) §3）: 機器種別の slot に任意の `write`（見出し、1〜4 個のボタン、number slot だけの数値の入力の範囲）を足した。値の型は slot の型で決まり（bool は真偽値、number は数、state は 0〜2147483647 の整数）、上下限の順とボタンの値の重複は Rust・TS の意味検証で断る（共通ケース `examples/operation-cases.json`）。機器種別の保存は `write` を残し、slot の型の変更で外す。O1b（2026-11-19）: 機器種別の各 slot に「操作を定義する」（見出し、ボタンの見出しと書く値、number slot の数値の入力の範囲）を足し、問題はその場と保存時に場所つきで出す。割付の一覧表に「書込みタグの一覧」（操作を定義した slot に割り付けた外部名。コピーと CSV、未割付の件数）を足し、Hub 登録用 CSV の `writable` を操作を定義した slot の名前で `true` にした。書込みの経路（host）は O2 以降で、まだ書けない。
 
+O2a（2026-11-19）: banto-industrial を `v0.3.0-alpha.2`（`c0ac5206`。#1201・#1202 の書込み契約を含む）へ上げた（lock は banto-industrial の 2 件だけ）。書込みの API はまだ使わない。catalog の表示の行（`CatalogRow`・`catalog-view.schema.json`）に `writable` を足した。上流の確認で、`data_type` の語彙は 10 語（真偽値は `bit`）、Hub の版の文字列では #1201 の有無を確かめられないと分かった（[設計](../design/runtime/operation-stage3-design.md) §4.2・§11-8）。
+
 ## 実Hub・S7接続の着手方針（2026-11-05）
 
 サイドチャットの[実Hub・S7接続計画](real-hub-connection-plan.md)を採用し、ユーザー申告によりSOAK終了待ちを外した。C0の上流契約・対象環境・接続条件確認とC1の通常App読取接続を実施した。ローカル編集はオフラインのまま、デスクトップだけがread専用の製品host・IPCを使う。運用時の認証・管理操作は後続で確定する。

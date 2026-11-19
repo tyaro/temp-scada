@@ -39,7 +39,7 @@
         "decimals": 1,
         "period_ms": 100,
         "enabled": true,
-        "writable": true,
+        "writable": false,
         "tag_kind": "plc",
         "expression": null,
         "retain": false,
@@ -130,7 +130,8 @@
         "name": "液位",
         "dataType": "f64",
         "unit": "%",
-        "enabled": true
+        "enabled": true,
+        "writable": true
       },
       {
         "externalName": "opaque-running",
@@ -139,7 +140,8 @@
         "name": "運転",
         "dataType": "bit",
         "unit": null,
-        "enabled": true
+        "enabled": true,
+        "writable": false
       },
       {
         "externalName": "disabled-number",
@@ -148,7 +150,8 @@
         "name": "無効数値",
         "dataType": "u32",
         "unit": "%",
-        "enabled": false
+        "enabled": false,
+        "writable": true
       },
       {
         "externalName": "future-type",
@@ -157,7 +160,8 @@
         "name": "未知型",
         "dataType": "future",
         "unit": "%",
-        "enabled": true
+        "enabled": true,
+        "writable": true
       },
       {
         "externalName": "dotted.name.is.opaque",
@@ -166,7 +170,8 @@
         "name": "温度",
         "dataType": "f32",
         "unit": "%",
-        "enabled": true
+        "enabled": true,
+        "writable": true
       }
     ]
   }

@@ -30,6 +30,9 @@ pub struct CatalogRow {
     pub data_type: String,
     pub unit: Option<String>,
     pub enabled: bool,
+    /// The Hub accepts writes to the tag. Writing still needs the slot's
+    /// `write`, a write key and the checks of operation design §4.
+    pub writable: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -39,7 +42,8 @@ pub enum CatalogError {
     UnsafeInteger,
 }
 
-/// No address, expression, credential, current value or write capability escapes.
+/// No address, expression, credential or current value escapes. `writable` is
+/// shown so the Designer can tell a write tag the Hub refuses (O2a).
 pub fn catalog_view(
     project: &Project,
     catalog: &CatalogSnapshot,
@@ -99,6 +103,7 @@ fn project_catalog(
                 data_type: tag.data_type.clone(),
                 unit: tag.unit.clone(),
                 enabled: tag.enabled,
+                writable: tag.writable,
             })
             .collect(),
     })
