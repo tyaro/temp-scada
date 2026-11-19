@@ -448,6 +448,11 @@
   import PreviewFullscreen from "./lib/designer/PreviewFullscreen.svelte";
   import PreviewPopups from "./lib/designer/PreviewPopups.svelte";
   import OperatorView from "./lib/operator/OperatorView.svelte";
+  import {
+    createSimulatedOperationHost,
+    emptySimulation,
+    simulatedReadContext,
+  } from "./lib/operation-simulation";
   import AlarmListWindow from "./lib/alarm-list/AlarmListWindow.svelte";
   import AlarmSettingsWindow from "./lib/alarm-list/AlarmSettingsWindow.svelte";
   import { alarmSettingsEntryReason } from "./lib/alarm-settings";
@@ -1492,7 +1497,20 @@
     () => project,
     () => readSource,
   );
-  const readContext = $derived(readPresentation.context);
+  // 段階3 §8（O3c-2）: Editor の表示確認の書込みは模擬値を変えるだけ。模擬値は
+  // 編集 session に持ち、実 Hub を購読していないときだけ表示に重ねる。
+  let simulation = $state.raw(emptySimulation());
+  const readContext = $derived(
+    readSource
+      ? readPresentation.context
+      : simulatedReadContext(readPresentation.context, simulation, project),
+  );
+  const simulatedOperations = createSimulatedOperationHost({
+    project: () => project,
+    simulation: () => simulation,
+    readsHub: () => !!readSource,
+    update: (next) => (simulation = next),
+  });
   const catalogController = createCatalogController(
     () => project,
     () => catalogSource,
@@ -1621,7 +1639,11 @@
   });
   let previewPopups = $state<{
     showPicker: (origin: HTMLElement, kind?: "screen" | "equipment") => void;
-    showEquipment: (id: string, origin: HTMLElement | SVGElement) => void;
+    showEquipment: (
+      id: string,
+      origin: HTMLElement | SVGElement,
+      placement?: { screenId: string; objectId: string },
+    ) => void;
   }>();
   let equipmentDetailsButton = $state<HTMLButtonElement>();
   let equipmentLibrary = $state<EquipmentLibrary>();
@@ -4762,7 +4784,8 @@
           <CanvasWorkspace
             onopentrend={(objectId) => openTrendHistory(screen.id, objectId)}
             onopenequipment={mode === "preview" && !menuBlocked
-              ? (id, origin) => previewPopups?.showEquipment(id, origin)
+              ? (id, origin, placement) =>
+                  previewPopups?.showEquipment(id, origin, placement)
               : undefined}
             onnavigate={mode === "preview" && !menuBlocked
               ? (target) => {
@@ -4835,6 +4858,7 @@
               images={assetImages}
               onopenusage={openPreviewEquipmentUsage}
               onmessage={(message) => report("error", message)}
+              operations={simulatedOperations}
             />
           {/key}
         {/if}
@@ -5371,6 +5395,7 @@
     equipmentContext={readContext.equipmentContext}
     onclose={closeOperatorView}
     onmessage={(message) => report("error", message)}
+    operations={simulatedOperations}
     onopentrend={openTrendHistory}
     onretiretrend={retirePopupTrend}
     onopenalarms={openAlarmList}

@@ -74,7 +74,11 @@
     symbols: SymbolDefinition[];
     trends?: readonly TrendDefinition[];
     onopentrend?: (objectId: string) => void;
-    onopenequipment?: (equipmentId: string, origin: SVGElement) => void;
+    onopenequipment?: (
+      equipmentId: string,
+      origin: SVGElement,
+      placement: { screenId: string; objectId: string },
+    ) => void;
     /** 表示プレビューで画面切替ボタンを押したとき。編集中は渡さない。 */
     onnavigate?: (target: NavTarget) => void;
     /** ブザー停止を送れる（警報の host がある）。 */

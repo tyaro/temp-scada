@@ -188,7 +188,11 @@
     aria-label="機器の操作"
     data-operation-blocked={notice.disabled ? "true" : undefined}
   >
-    <h4>操作</h4>
+    <h4>
+      操作{#if host.simulated}<span class="simulated" data-operation-simulated
+          >模擬</span
+        >{/if}
+    </h4>
     {#if notice.banner}<p class="banner" role="status" data-operation-banner>
         {notice.banner}
       </p>{/if}
@@ -276,6 +280,9 @@
   focusFallback={() => null}
 >
   {#if pending}
+    {#if host.simulated}<p class="simulated-note" data-operation-simulated>
+        模擬: Hub へは送らず、模擬値を変えます
+      </p>{/if}
     <dl class="confirm">
       <dt>機器</dt>
       <dd>{pending.content.equipmentCode} · {pending.content.equipmentName}</dd>
@@ -309,6 +316,18 @@
   }
   p {
     margin: 4px 0;
+  }
+  .simulated {
+    margin-left: 8px;
+    padding: 0 6px;
+    border: 1px solid var(--banto-border);
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: normal;
+  }
+  .simulated-note {
+    margin: 0 0 12px;
+    color: var(--banto-text-muted);
   }
   .banner {
     padding: 4px 8px;

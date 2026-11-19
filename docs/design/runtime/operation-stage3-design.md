@@ -292,3 +292,10 @@ O3c-1 で決めたこと（2026-11-19）: O3c を O3c-1（Runtime の小窓の�
 - 送信中は、その小窓の操作の行をすべて押せなくする（host も端末で送信を 1 つに限る）。
 - 行の結果は、記録の最後の 1 件を出す。この小窓の直前の答えが記録に無い（記録しない拒否・`unrecorded`・答えの `recordId` が最後の 1 件と違う）か IPC が失敗したときは、その答えを出す（`unrecorded` は「記録に失敗」を並べる）。
 - Runtime の運転表示のバーの「表示確認（書込みなし）」は、操作を渡したときは出さない。
+
+O3c-2 で決めたこと（2026-11-19）: 設計に書いていなかった所は次のとおり。
+
+- 模擬値は Editor の編集 session に持ち、Project にも保存にも入れない。Project の `projectId` が変われば使わない。値は書いたタグ（外部名）ごとに持ち、同じタグを読む画面直下の結合と機器の slot の両方に、SIM つきの Good（出どころ `simulation`）として重ねる。重ねるのは実 Hub を購読していない（`readSource` が無い）ときだけ。
+- 「実 Hub の購読中」は Editor に `readSource` があることで判断する。そのときの照会は TS だけの理由のコード `simulated_on_hub`（「実Hubの購読中は模擬の書込みはできません」）を返し、host は返さない。デモの模擬値の読取も `readSource` なので同じく押せない（デモの Project に `write` は無い）。
+- 模擬の書込みは host の `resolve` と同じ順で検査する（Project・機器・押した配置・slot・`write`・ボタンか入力の値・割付け・`expectedValue`）。Hub のカタログが無いので、タグの有無・書込みの可否・整数の型（`type_mismatch`）は確かめない。拒否は記録に残さず、通ったものだけを機器・slot の最後の 1 件として残す（`recordId` は `simulated-<連番>`）。
+- 模擬の host の `projectDigest` は固定の `editor-simulation`、`phase` は `simulation`（初期設定中の文を出さない）。小窓の「操作」の見出しと確認の小窓に「模擬」と出し、Editor の運転表示のバーは「表示確認（模擬の書込み）」と出す。

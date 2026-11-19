@@ -35,7 +35,7 @@
     onretiretrend,
     operations,
   }: {
-    /** Runtime の host の運転操作（段階3 §8）。Editor では渡さない。 */
+    /** Runtime の host の運転操作（段階3 §8）。Editor では模擬の host（O3c-2）。 */
     operations?: OperationHost;
     onopentrend?: (screenId: string, objectId: string, token: object) => void;
     onretiretrend?: (token: object) => void;
@@ -177,8 +177,13 @@
     }
   }
   function open() {
-    if (candidate && !candidate.reason)
-      openTarget(candidate.id, pickerKind, candidate.cost);
+    if (!candidate || candidate.reason) return;
+    // 一覧から開いた機器の小窓は配置なし（操作できない）。既に配置から開いた
+    // 同じ機器の小窓を前面へ出すときも、前の配置を残さない（§8、O3c-1）。
+    if (pickerKind === "equipment")
+      placements[popupKey({ targetId: candidate.id, kind: "equipment" })] =
+        undefined;
+    openTarget(candidate.id, pickerKind, candidate.cost);
   }
   export function showEquipment(
     id: string,
