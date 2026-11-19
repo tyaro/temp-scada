@@ -165,7 +165,7 @@ async fn reopening_finishes_rows_an_earlier_process_left_pending() {
 async fn a_file_of_another_format_is_refused_without_changing_it() {
     // A file of a later format, and a foreign SQLite file without our
     // version, both in rollback-journal mode.
-    for setup in ["PRAGMA user_version = 4", "CREATE TABLE foreign_data (x)"] {
+    for setup in ["PRAGMA user_version = 5", "CREATE TABLE foreign_data (x)"] {
         let file = temp_file();
         let mut connection = <sqlx::sqlite::SqliteConnection as sqlx::Connection>::connect_with(
             &SqliteConnectOptions::new()
@@ -851,7 +851,9 @@ async fn a_format_1_file_gets_the_write_state_and_keeps_its_rows() {
         .await
         .unwrap();
     log.db()
-        .execute_for_test("DROP TABLE terminal_write; PRAGMA user_version = 1;")
+        .execute_for_test(
+            "DROP TABLE terminal_write; DROP TABLE terminal_settings; PRAGMA user_version = 1;",
+        )
         .await;
     log.close().await;
 
@@ -860,7 +862,7 @@ async fn a_format_1_file_gets_the_write_state_and_keeps_its_rows() {
         .fetch_one(&db.pool)
         .await
         .unwrap();
-    assert_eq!(version, 3);
+    assert_eq!(version, 4);
     let log = OperationLog::new(db);
     assert_eq!(log.write_status(), WriteStatus::default());
     assert_eq!(log.key_endpoint(), None);
@@ -887,7 +889,7 @@ async fn a_format_2_file_gets_the_key_endpoint_and_keeps_its_state() {
     // Back to format 2: the table without `key_endpoint`.
     log.db()
         .execute_for_test(
-            "ALTER TABLE terminal_write DROP COLUMN key_endpoint; ALTER TABLE terminal_write DROP COLUMN key_id; PRAGMA user_version = 2;",
+            "ALTER TABLE terminal_write DROP COLUMN key_endpoint; ALTER TABLE terminal_write DROP COLUMN key_id; DROP TABLE terminal_settings; PRAGMA user_version = 2;",
         )
         .await;
     log.close().await;
@@ -1044,5 +1046,77 @@ async fn the_send_starts_only_with_the_key_it_was_checked_with() {
     assert!(!started);
     // Another row than the one holding the slot never starts either.
     assert!(log.start_send("other", || ()).await.is_err());
+    log.close().await;
+}
+
+#[tokio::test]
+async fn the_minimum_interval_is_the_default_until_saved_and_survives_a_restart() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    assert_eq!(log.min_interval(), Duration::from_millis(1_000));
+    log.set_min_interval(2_500).await.unwrap();
+    assert_eq!(log.min_interval(), Duration::from_millis(2_500));
+    let status = log.write_status();
+    log.close().await;
+
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    assert_eq!(log.min_interval(), Duration::from_millis(2_500));
+    // Saving the interval never touches the write state or its time.
+    assert_eq!(log.write_status(), status);
+    log.close().await;
+}
+
+#[tokio::test]
+async fn a_minimum_interval_out_of_range_or_off_its_step_changes_nothing() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    for ms in [0, 99, 150, 60_100, -100] {
+        assert!(matches!(
+            log.set_min_interval(ms).await,
+            Err(OperationDbError::InvalidSetting)
+        ));
+    }
+    log.set_min_interval(100).await.unwrap();
+    log.set_min_interval(60_000).await.unwrap();
+    assert_eq!(log.min_interval(), Duration::from_secs(60));
+    // The table refuses the same values (#324 owner's review).
+    for ms in [150, 99, 60_100] {
+        assert!(
+            sqlx::query("UPDATE terminal_settings SET min_interval_ms = ? WHERE id = 1")
+                .bind(ms)
+                .execute(&log.db().pool)
+                .await
+                .is_err(),
+            "{ms}"
+        );
+    }
+    assert_eq!(log.min_interval(), Duration::from_secs(60));
+    log.close().await;
+}
+
+#[tokio::test]
+async fn a_format_3_file_gets_the_terminal_settings_and_keeps_its_key() {
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    log.key_registered(1_000, &key_ref("k1")).await.unwrap();
+    log.db()
+        .execute_for_test("DROP TABLE terminal_settings; PRAGMA user_version = 3;")
+        .await;
+    log.close().await;
+
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let version: i64 = sqlx::query_scalar("PRAGMA user_version")
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    assert_eq!(version, 4);
+    let log = OperationLog::new(db);
+    assert_eq!(log.key(), Some(key_ref("k1")));
+    assert_eq!(log.min_interval(), Duration::from_millis(1_000));
+    log.set_min_interval(3_000).await.unwrap();
     log.close().await;
 }

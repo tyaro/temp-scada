@@ -16,16 +16,21 @@ use sqlx::{Row, SqlitePool};
 
 use crate::durable;
 
+mod terminal_settings;
 #[cfg(test)]
 mod tests;
 mod write_state;
 
+pub use terminal_settings::{
+    valid_min_interval, DEFAULT_MIN_INTERVAL_MS, MIN_INTERVAL_RANGE_MS, MIN_INTERVAL_STEP_MS,
+};
 pub use write_state::{KeyRef, WriteState, WriteStatus};
 
 /// Format 2 added `terminal_write` (O2c-2), format 3 its write key
-/// (`key_endpoint`, `key_id`; O2c-3a); an older file is brought up to date
-/// when opened.
-const FORMAT: i64 = 3;
+/// (`key_endpoint`, `key_id`; O2c-3a), format 4 `terminal_settings` (the
+/// minimum interval; O2c-4b); an older file is brought up to date when
+/// opened.
+const FORMAT: i64 = 4;
 const PENDING: &str = "pending";
 
 /// Identical refusals of a slot are one row for this long after the row's
@@ -43,6 +48,8 @@ pub enum OperationDbError {
     UnsupportedFormat,
     /// A finish for a row that is not `pending` (or not there).
     InvalidRow,
+    /// A terminal setting out of its range (`set_min_interval`).
+    InvalidSetting,
 }
 
 impl From<std::io::Error> for OperationDbError {
@@ -190,6 +197,8 @@ pub struct OperationDb {
     write_status: WriteStatus,
     /// The registered write key when opened (§7).
     key: Option<KeyRef>,
+    /// The saved minimum interval when opened (§7, §11-10).
+    min_interval_ms: i64,
 }
 
 /// Finish a `pending` row; `InvalidRow` when it is not `pending`.
@@ -215,14 +224,28 @@ where
     }
 }
 
-/// Format 0 or 1 to 3: the write state's table (§7, O2c-2, O2c-3a).
-async fn add_write_state(
+/// Bring a format 0 (just created), 1, 2 or 3 file to [`FORMAT`]: the
+/// write state's table (O2c-2) or its write key (O2c-3a), then the
+/// terminal settings (O2c-4b).
+async fn upgrade(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    version: i64,
 ) -> Result<(), OperationDbError> {
-    sqlx::raw_sql(write_state::CREATE_TABLE)
-        .execute(&mut **tx)
-        .await?;
-    sqlx::raw_sql("PRAGMA user_version = 3;")
+    if version <= 1 {
+        sqlx::raw_sql(write_state::CREATE_TABLE)
+            .execute(&mut **tx)
+            .await?;
+    } else if version == 2 {
+        sqlx::raw_sql(write_state::ADD_KEY)
+            .execute(&mut **tx)
+            .await?;
+    }
+    if version <= 3 {
+        sqlx::raw_sql(terminal_settings::CREATE_TABLE)
+            .execute(&mut **tx)
+            .await?;
+    }
+    sqlx::raw_sql("PRAGMA user_version = 4;")
         .execute(&mut **tx)
         .await?;
     Ok(())
@@ -292,20 +315,11 @@ impl OperationDb {
             )
             .execute(&mut *tx)
             .await?;
-            add_write_state(&mut tx).await?;
+            upgrade(&mut tx, 0).await?;
             tx.commit().await?;
         } else if version < FORMAT {
             let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-            if version == 1 {
-                add_write_state(&mut tx).await?;
-            } else {
-                sqlx::raw_sql(write_state::ADD_KEY)
-                    .execute(&mut *tx)
-                    .await?;
-                sqlx::raw_sql("PRAGMA user_version = 3;")
-                    .execute(&mut *tx)
-                    .await?;
-            }
+            upgrade(&mut tx, version).await?;
             tx.commit().await?;
         }
         sqlx::query("PRAGMA journal_mode = WAL")
@@ -320,11 +334,13 @@ impl OperationDb {
         .await?
         .rows_affected();
         let (write_status, key) = write_state::load(&pool).await?;
+        let min_interval_ms = terminal_settings::load_min_interval(&pool).await?;
         Ok((
             Self {
                 pool,
                 write_status,
                 key,
+                min_interval_ms,
             },
             recovered,
         ))
@@ -666,13 +682,22 @@ pub struct OperationLog {
     /// a registration), so an older snapshot is never saved over a newer
     /// state.
     state_lock: tokio::sync::Mutex<()>,
+    /// The minimum interval between writes, in milliseconds (§7, §11-10):
+    /// the saved one, changed only after the file has the new one.
+    min_interval_ms: std::sync::atomic::AtomicI64,
+    /// Held across a save of the minimum interval and the change of the
+    /// in-memory copy, so two saves never end in the older value.
+    settings_lock: tokio::sync::Mutex<()>,
 }
 
 impl OperationLog {
     pub fn new(db: OperationDb) -> Self {
         let write = db.write_status;
         let key = db.key.clone();
+        let min_interval_ms = std::sync::atomic::AtomicI64::new(db.min_interval_ms);
         Self {
+            min_interval_ms,
+            settings_lock: tokio::sync::Mutex::new(()),
             db,
             in_flight: Mutex::new(InFlight {
                 write,
@@ -768,6 +793,29 @@ impl OperationLog {
         };
         in_flight.write_unsaved = false;
         Ok(true)
+    }
+
+    /// The minimum interval between writes (§7, §11-10).
+    pub fn min_interval(&self) -> Duration {
+        let ms = self
+            .min_interval_ms
+            .load(std::sync::atomic::Ordering::Acquire);
+        Duration::from_millis(u64::try_from(ms).unwrap_or(0))
+    }
+
+    /// Save `ms` as the minimum interval (O2c-4b). Out of the range (or off
+    /// its step) is `InvalidSetting` and changes nothing; the in-memory
+    /// interval changes only once the file has it. A write already past the
+    /// check keeps the interval it was checked with.
+    pub async fn set_min_interval(&self, ms: i64) -> Result<(), OperationDbError> {
+        if !valid_min_interval(ms) {
+            return Err(OperationDbError::InvalidSetting);
+        }
+        let _settings = self.settings_lock.lock().await;
+        terminal_settings::save_min_interval(&self.db.pool, ms).await?;
+        self.min_interval_ms
+            .store(ms, std::sync::atomic::Ordering::Release);
+        Ok(())
     }
 
     pub async fn close(self) {

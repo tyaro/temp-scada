@@ -4,6 +4,8 @@
   import {
     changedAtText,
     changeDoneText,
+    intervalSecondsText,
+    parseIntervalSeconds,
     keyPairing,
     normalizeSecret,
     operationSettingsReasonText,
@@ -43,6 +45,12 @@
   let issue = $state<string | null>(null);
   let done = $state<string | null>(null);
   let confirmingDelete = $state(false);
+  /** 最小間隔の入力（秒）。読めた・変えた状態で書き直す。 */
+  let intervalInput = $state("");
+  function show(next: OperationKeyStatus) {
+    status = next;
+    intervalInput = intervalSecondsText(next.minIntervalMs);
+  }
 
   const pairing = $derived(status ? keyPairing(status) : "none");
 
@@ -56,7 +64,7 @@
     try {
       const next = await host.status();
       if (!open || issued !== generation) return;
-      status = next;
+      show(next);
       loadIssue = null;
       onchanged({ status: next });
     } catch (error) {
@@ -82,7 +90,7 @@
   });
 
   async function change(
-    kind: "register" | "remove" | "resume",
+    kind: "register" | "remove" | "resume" | "interval",
     run: () => Promise<OperationKeyStatus>,
   ) {
     if (busy) return;
@@ -91,7 +99,7 @@
     generation++;
     try {
       const next = await run();
-      status = next;
+      show(next);
       done = changeDoneText(kind, next);
       if (kind === "register") secret = "";
       onchanged({ status: next });
@@ -116,6 +124,17 @@
       return;
     }
     void change("register", () => host.register(value));
+  }
+
+  function saveInterval(event: SubmitEvent) {
+    event.preventDefault();
+    const ms = parseIntervalSeconds(intervalInput);
+    if (ms === null) {
+      issue = operationSettingsReasonText("invalid_interval");
+      done = null;
+      return;
+    }
+    void change("interval", () => host.setMinInterval(ms));
   }
 </script>
 
@@ -230,6 +249,34 @@
           >
         {/if}
       </section>
+
+      <section aria-label="書込みの最小間隔">
+        <h3>書込みの最小間隔</h3>
+        <form class="register" onsubmit={saveInterval} data-operation-interval>
+          <label for="operation-min-interval"
+            >前の書込みからの最小の間隔（秒）</label
+          >
+          <div class="row">
+            <input
+              id="operation-min-interval"
+              class="interval"
+              type="text"
+              inputmode="decimal"
+              autocomplete="off"
+              bind:value={intervalInput}
+              oninput={() => (issue = done = null)}
+              disabled={busy}
+            />
+            <button type="submit" disabled={busy}>保存</button>
+          </div>
+          <small
+            >0.1〜60
+            秒。間隔の内の操作は「前の書込みから間がありません」で断ります。Hub
+            の回数制限で書き用キーが止められないよう、Hub
+            の制限に合わせてください。</small
+          >
+        </form>
+      </section>
     {/if}
 
     {#if issue}<p class="notice" role="alert" data-operation-settings-issue>
@@ -289,6 +336,9 @@
   .row input {
     flex: 1;
     min-width: 0;
+  }
+  .row input.interval {
+    flex: 0 0 8em;
   }
   .delete {
     display: flex;
