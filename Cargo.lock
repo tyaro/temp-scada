@@ -126,7 +126,7 @@ dependencies = [
 [[package]]
 name = "banto-hub-bootstrap"
 version = "0.1.0"
-source = "git+https://github.com/tyaro/banto-industrial.git?rev=33410f6d25d36559c5ce81375e243eb6f3e85038#33410f6d25d36559c5ce81375e243eb6f3e85038"
+source = "git+https://github.com/tyaro/banto-industrial.git?rev=c0ac52063dbb3731f1e08207ed8a39bec92f423a#c0ac52063dbb3731f1e08207ed8a39bec92f423a"
 dependencies = [
  "banto-tagclient",
  "reqwest",
@@ -149,8 +149,8 @@ dependencies = [
 
 [[package]]
 name = "banto-tagclient"
-version = "0.3.0-alpha.1"
-source = "git+https://github.com/tyaro/banto-industrial.git?rev=33410f6d25d36559c5ce81375e243eb6f3e85038#33410f6d25d36559c5ce81375e243eb6f3e85038"
+version = "0.3.0-alpha.2"
+source = "git+https://github.com/tyaro/banto-industrial.git?rev=c0ac52063dbb3731f1e08207ed8a39bec92f423a#c0ac52063dbb3731f1e08207ed8a39bec92f423a"
 dependencies = [
  "futures-util",
  "reqwest",

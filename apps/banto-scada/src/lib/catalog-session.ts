@@ -17,6 +17,8 @@ export interface CatalogView {
     dataType: string;
     unit: string | null;
     enabled: boolean;
+    /** The Hub accepts writes to the tag (O2a). */
+    writable: boolean;
   }[];
 }
 export interface CatalogSelection {

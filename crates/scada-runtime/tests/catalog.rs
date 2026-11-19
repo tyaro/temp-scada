@@ -54,11 +54,10 @@ fn shared_catalog_fixture_is_minimal_and_schema_valid() {
         serde_json::from_str(include_str!("../schema/catalog-view.schema.json")).unwrap();
     assert!(jsonschema::validator_for(&schema).unwrap().is_valid(&wire));
     for row in wire["tags"].as_array().unwrap() {
-        assert_eq!(row.as_object().unwrap().len(), 7);
+        assert_eq!(row.as_object().unwrap().len(), 8);
         for private in [
             "address",
             "expression",
-            "writable",
             "tagKey",
             "ids",
             "valueSource",

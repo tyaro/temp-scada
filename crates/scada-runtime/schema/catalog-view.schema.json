@@ -79,6 +79,9 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "writable": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -88,7 +91,8 @@
           "name",
           "dataType",
           "unit",
-          "enabled"
+          "enabled",
+          "writable"
         ],
         "additionalProperties": false
       }
