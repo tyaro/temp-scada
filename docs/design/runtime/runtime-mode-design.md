@@ -106,7 +106,7 @@ Rust 側の検査:
 3. 警報の定義は Runtime では適用しない（§10-7）。Runtime は、端末に適用済みの定義（Editor の保存・「警報を適用」で入ったもの）で動く（起動時の `start_events` が端末の適用済みのものを再開する）。起動時に、読んだ Project と適用の記録を比べ、上端に出す:
    - 適用の記録が無い: 「警報の定義が適用されていません（Editor で適用してください）」。警報は鳴らない。
    - 別の Project（Project の ID が違う）が適用済み: 「この端末の警報は、別の Project の定義で動いています」。警報の一覧・確認はその定義のまま使える（§10-7）。
-   - 同じ Project で `file_hash` が違う: 警報の定義だけを比べ（適用せずに定義ごとの hash を作る関数を `alarm_project.rs` に足し、`condition_hashes` と比べる）、違えば「警報の定義が、この Project と違います」。同じなら何も出さない。
+   - 同じ Project で `file_hash` が違う: 警報の部分だけを比べ、違えば「警報の定義が、この Project と違います」。同じなら何も出さない。比べるのは、評価の hash（`condition_hashes`）だけでなく、表示の情報（`displays` の重さ・文言・名前）と無効の一覧（`disabled`）も含む。読んだ Project と適用の記録の警報の文書を同じ関数（`alarm_project.rs` の `parse_alarm_document`）で正規化し、3 つを比べる関数を `alarm_project.rs` に足す（適用はしない）。評価の hash だけだと、重さを「低」から「高」に変えただけの未適用が「同じ」になり、操作者は古い重さを見たまま警告も出ない。
 4. Runtime の画面（`RuntimeShell`）:
    - 運転表示（今の `OperatorView`）を窓いっぱいに出す。開始画面は Project の運転表示の設定（`operatorFrame`）に従う。
    - 起動時に `runtime_hub_connect` で保存済みの接続先へつなぐ。接続先の入力欄は出さない。保存済みの接続先が無い端末は、Editor で 1 回接続してから Runtime を使う（画面にもそう出す）。
