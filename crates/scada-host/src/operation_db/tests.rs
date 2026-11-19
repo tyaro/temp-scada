@@ -700,6 +700,10 @@ async fn a_state_that_could_not_be_saved_holds_and_is_saved_later() {
     // The state holds in this process; the slot is free.
     assert_eq!(log.gate(Duration::ZERO), Err(Gate::Stopped));
     assert!(!log.is_sending());
+    // The record takes writes but the state still fails: the trip's row
+    // stays pending, so a restart never reads it with `ready`.
+    log.refuse(&request, "write_stopped", 2_050).await.unwrap();
+    assert!(log.db().row(&id).await.unwrap().unwrap().finish.is_none());
     log.db().execute_for_test("DROP TRIGGER fail_state").await;
     // The next write the DB takes saves both.
     log.refuse(&request, "write_stopped", 2_100).await.unwrap();

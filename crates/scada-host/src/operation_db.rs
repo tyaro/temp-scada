@@ -836,13 +836,20 @@ impl OperationLog {
     /// Rewrite outcomes this process could not write. Kept for a later try
     /// when the DB is still failing; dropped once the row is no longer
     /// `pending`.
+    ///
+    /// An outcome that moves the write state (a trip, a refused key) stays
+    /// `pending` while the state is not saved yet: the record never has the
+    /// trip with `ready` in the file. Once the state is saved, or a later
+    /// resume or registration saved a newer one, the row is finished.
     async fn retry_unrecorded(&self) {
         self.save_write_state().await;
         let pending: Vec<(String, Finish)> = {
             let in_flight = self.in_flight.lock().expect("operation log lock");
+            let state_saved = !in_flight.write_unsaved;
             in_flight
                 .unrecorded
                 .iter()
+                .filter(|(_, finish)| state_saved || WriteState::after(finish).is_none())
                 .map(|(id, finish)| (id.clone(), finish.clone()))
                 .collect()
         };
