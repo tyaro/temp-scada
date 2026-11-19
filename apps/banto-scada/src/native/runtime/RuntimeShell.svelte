@@ -192,7 +192,9 @@
       {#if message}
         <span class="runtime-message" role="alert">{message}</span>
       {/if}
-      <div class="runtime-auth"><AuthControls session={authSession} /></div>
+      <div class="runtime-auth">
+        <AuthControls session={authSession} align="end" />
+      </div>
     </header>
     <div class="runtime-stage">
       <RuntimeOperator

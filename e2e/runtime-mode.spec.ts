@@ -260,3 +260,18 @@ test("a second launch shows the already-running notice", async ({ page }) => {
     "すでに起動しています。別の Project・別の mode で使うときは、いまの窓を閉じてから起動してください",
   );
 });
+
+test("the authentication popover at the right of the bar stays inside the window", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page);
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  await page.locator(".runtime-auth summary").click();
+  const popover = page.locator(".runtime-auth .auth-popover");
+  await expect(popover).toBeVisible();
+  const box = await popover.boundingBox();
+  const width = page.viewportSize()!.width;
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+});

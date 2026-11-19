@@ -11,7 +11,12 @@
   import UserAdminDialog from "./UserAdminDialog.svelte";
   import AuthSettingsDialog from "./AuthSettingsDialog.svelte";
 
-  let { session }: { session: AuthSession } = $props();
+  // `align="end"` opens the popover leftward from the control's right edge,
+  // for a control placed at the right of a bar (Runtime's top bar).
+  let {
+    session,
+    align = "start",
+  }: { session: AuthSession; align?: "start" | "end" } = $props();
 
   let details: HTMLDetailsElement;
   let busy = $state(false);
@@ -138,7 +143,7 @@
     <span>認証</span>
     <span class="auth-summary-state">{busy ? "処理中" : summary}</span>
   </summary>
-  <div class="auth-popover">
+  <div class="auth-popover" class:align-end={align === "end"}>
     {#if view.status === "loading"}
       <p role="status">認証の状態を確認しています…</p>
     {:else if view.status === "unavailable"}
@@ -471,6 +476,10 @@
     background: var(--banto-bg);
     color: var(--banto-text);
     font: inherit;
+  }
+  .auth-popover.align-end {
+    left: auto;
+    right: 0;
   }
   .auth-popover p {
     margin: 8px 0 0;
