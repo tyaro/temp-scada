@@ -111,11 +111,14 @@ export function writeBadge(
   };
 }
 
-/** 窓の「書込みの状態」の文。 */
+/**
+ * 窓の「書込みの状態」の文。端末の止まり方だけを言う（`ready` はキーの有無・
+ * 接続先・Hub の対応を含まないので「書ける」とは言わない）。
+ */
 export function writeStateText(state: WriteState): string {
   switch (state) {
     case "ready":
-      return "書込みできます";
+      return "止まっていません（書込みには、この接続先と組の書き用キーと、Hub の書込みへの対応が要ります）。";
     case "stopped":
       return "停止中: Hub が書き用キーを止めました。Hub の管理画面で解除してから「書込みを再開」を押すか、キーを登録し直してください。";
     case "key_invalid":

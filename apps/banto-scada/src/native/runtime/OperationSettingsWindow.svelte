@@ -46,15 +46,21 @@
 
   const pairing = $derived(status ? keyPairing(status) : "none");
 
+  /**
+   * 読込みと変更の世代。変更を始めるたび・読むたびに進め、古い読込みの答え
+   * では窓と上端の札を上書きしない。
+   */
+  let generation = 0;
   async function load() {
+    const issued = ++generation;
     try {
       const next = await host.status();
-      if (!open) return;
+      if (!open || issued !== generation) return;
       status = next;
       loadIssue = null;
       onchanged({ status: next });
     } catch (error) {
-      if (!open) return;
+      if (!open || issued !== generation) return;
       const code = settingsErrorCode(error);
       loadIssue = operationSettingsReasonText(code);
       onchanged({ error: code });
@@ -82,6 +88,7 @@
     if (busy) return;
     busy = true;
     issue = done = null;
+    generation++;
     try {
       const next = await run();
       status = next;
@@ -92,7 +99,8 @@
       const code = settingsErrorCode(error);
       issue = operationSettingsReasonText(code);
       // 拒否の後も今の状態を読み直す（ほかの窓・書込みで変わっていることがある）。
-      void load();
+      // 読み終わるまで次の変更を受けない。
+      await load();
     } finally {
       busy = false;
       confirmingDelete = false;

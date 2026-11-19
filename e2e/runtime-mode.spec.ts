@@ -58,6 +58,8 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
         keySecrets: [] as string[],
         /** When set, the three key changes reject with this reason. */
         keyRefusal: null as null | string,
+        /** Milliseconds `operation_key_status` takes to answer. */
+        keyStatusDelayMs: 0,
         seq: 1,
         starts: [] as Record<string, unknown>[],
         acks: [] as unknown[],
@@ -203,8 +205,15 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                   })),
                 };
               }
-              case "operation_key_status":
-                return structuredClone(host.keyStatus);
+              case "operation_key_status": {
+                // The answer is the state when asked, however late it arrives.
+                const answer = structuredClone(host.keyStatus);
+                if (host.keyStatusDelayMs)
+                  await new Promise((done) =>
+                    setTimeout(done, host.keyStatusDelayMs),
+                  );
+                return answer;
+              }
               case "operation_key_register":
               case "operation_key_delete":
               case "operation_write_resume": {
@@ -1334,6 +1343,45 @@ test.describe("the write terminal settings (operation stage 3, O2c-4a)", () => {
     await expect(dialog.locator("[data-operation-key]")).toHaveText(
       "登録済み（http://10.0.0.1:8722）",
     );
+  });
+
+  test("the reread after a refusal holds the next change and never overwrites it", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page);
+    await page.goto("/runtime.html");
+    await page.locator(entry).click();
+    const dialog = page.getByRole("dialog", { name: "書込みの端末設定" });
+    await expect(dialog.locator("[data-operation-key]")).toHaveText(
+      "登録されていません",
+    );
+    await page.evaluate(() => {
+      const host = (window as any).__runtimeHost;
+      host.keyRefusal = "forbidden";
+      host.keyStatusDelayMs = 1500;
+    });
+    await dialog.getByLabel("書き用キーを登録する").fill("key-1");
+    const submit = dialog.getByRole("button", { name: "登録", exact: true });
+    await submit.click();
+    await expect(dialog.locator("[data-operation-settings-issue]")).toHaveText(
+      "書込みの設定の変更は Admin だけが行えます。",
+    );
+    // The reread of the state before the retry is still on its way.
+    await expect(submit).toBeDisabled();
+    await page.evaluate(() => {
+      const host = (window as any).__runtimeHost;
+      host.keyRefusal = null;
+    });
+    await expect(submit).toBeEnabled();
+    await submit.click();
+    await expect(dialog.locator("[data-operation-key]")).toHaveText(
+      "登録済み（http://127.0.0.1:8722）",
+    );
+    await page.waitForTimeout(2000);
+    await expect(dialog.locator("[data-operation-key]")).toHaveText(
+      "登録済み（http://127.0.0.1:8722）",
+    );
+    await expect(page.locator(entry)).toHaveText("書込み: キー登録済み");
   });
 
   test("an empty key is not sent", async ({ page }) => {

@@ -7,6 +7,7 @@ import {
   operationSettingsReasonText,
   settingsErrorCode,
   writeBadge,
+  writeStateText,
   type OperationKeyStatus,
   type WriteState,
 } from "./operation-settings";
@@ -117,6 +118,12 @@ describe("texts", () => {
     expect(changeDoneText("resume", status(HUB, "key_invalid"))).toContain(
       "停止中ではない",
     );
+  });
+
+  it("the ready state never claims that writes are possible", () => {
+    // `ready` is the default of a terminal with no key, too.
+    expect(writeStateText("ready")).not.toContain("書込みできます");
+    expect(writeStateText("ready")).toContain("止まっていません");
   });
 
   it("drops the whitespace a paste adds around the secret only", () => {
