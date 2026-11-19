@@ -2,11 +2,12 @@ import { expect, it } from "vitest";
 import sample from "../../../../examples/minimal.project.json";
 import equipmentSample from "../../../../examples/equipment.project.json";
 import cases from "../../../../examples/equipment-cases.json";
+import operationCases from "../../../../examples/operation-cases.json";
 import { parseProject, serializeProject } from "./project";
 import { applyCommand, type EditCommand } from "./editor";
 import { emptyHistory, recordEdit, travelHistory } from "./history";
 const fresh = () => parseProject(JSON.stringify(equipmentSample));
-it.each(cases)(
+it.each([...cases, ...operationCases])(
   "equipment shared contract: $name",
   ({ name: _, valid, ...config }) => {
     const read = () => parseProject(JSON.stringify({ ...sample, ...config }));

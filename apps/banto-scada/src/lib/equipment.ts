@@ -37,6 +37,18 @@ export interface EquipmentSlot extends SymbolReadSlot {
   tagSuffix?: string;
   boolDisplay?: { true: SlotStateLabel; false: SlotStateLabel };
   stateDisplay?: SlotStateDisplay;
+  /** Present only on slots an operator may write; the slot is still read. */
+  write?: SlotWrite;
+}
+/**
+ * Operation of one slot. A button value is a boolean on a bool slot, a finite
+ * number on a number slot and an integer 0-2147483647 on a state slot; `input`
+ * is for number slots only. At least one of `buttons` and `input` is present.
+ */
+export interface SlotWrite {
+  label: string;
+  buttons?: { label: string; value: boolean | number }[];
+  input?: { min: number; max: number };
 }
 export interface EquipmentType {
   id: string;
@@ -54,6 +66,14 @@ export interface EquipmentInstance {
   name: string;
   bindings: EquipmentBinding[];
 }
+/** Checks what the schema cannot; the Rust `validate_slot_write` matches it. */
+function validateSlotWrite(write: SlotWrite | undefined) {
+  if (write?.input && write.input.min > write.input.max)
+    throw new Error("操作の入力の下限が上限より大きいです");
+  const values = write?.buttons?.map((button) => button.value) ?? [];
+  if (new Set(values).size !== values.length)
+    throw new Error("操作のボタンの値が重複しています");
+}
 /** Schema validates structure; this checks identity and references without adding defaults. */
 export function validateEquipment(project: Project, ids: Set<string>) {
   const types = new Map<string, EquipmentType>();
@@ -68,6 +88,7 @@ export function validateEquipment(project: Project, ids: Set<string>) {
       const matches = new Set(slot.stateDisplay?.rows.map((row) => row.match));
       if (matches.size !== (slot.stateDisplay?.rows.length ?? 0))
         throw new Error("状態の行の値（ビット）が重複しています");
+      validateSlotWrite(slot.write);
     }
   }
   const equipmentIds = new Set(project.equipment?.map((item) => item.id));

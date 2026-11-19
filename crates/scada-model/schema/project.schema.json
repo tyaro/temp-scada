@@ -2010,6 +2010,53 @@
         }
       }
     },
+    "slotWriteLabel": {
+      "type": "string",
+      "minLength": 1,
+      "allOf": [
+        {
+          "pattern": "^[^\\u0020\\u00a0\\u1680\\u2000-\\u200a\\u202f\\u205f\\u3000\\ufeff](?:.*[^\\u0020\\u00a0\\u1680\\u2000-\\u200a\\u202f\\u205f\\u3000\\ufeff])?$"
+        },
+        {
+          "not": {
+            "pattern": "[\\u0000-\\u001f\\u007f-\\u009f\\u2028\\u2029]"
+          }
+        }
+      ]
+    },
+    "slotWriteButton": {
+      "type": "object",
+      "properties": {
+        "label": { "$ref": "#/$defs/slotWriteLabel", "maxLength": 12 },
+        "value": { "type": ["boolean", "number"] }
+      },
+      "required": ["label", "value"],
+      "additionalProperties": false
+    },
+    "slotWrite": {
+      "type": "object",
+      "properties": {
+        "label": { "$ref": "#/$defs/slotWriteLabel", "maxLength": 40 },
+        "buttons": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": { "$ref": "#/$defs/slotWriteButton" }
+        },
+        "input": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" }
+          },
+          "required": ["min", "max"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["label"],
+      "anyOf": [{ "required": ["buttons"] }, { "required": ["input"] }],
+      "additionalProperties": false
+    },
     "equipmentSlot": {
       "type": "object",
       "properties": {
@@ -2040,11 +2087,70 @@
         },
         "stateDisplay": {
           "$ref": "#/$defs/slotStateDisplay"
+        },
+        "write": {
+          "$ref": "#/$defs/slotWrite"
         }
       },
       "required": ["name", "type", "direction"],
       "additionalProperties": false,
       "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "bool" } } },
+          "then": {
+            "properties": {
+              "write": {
+                "properties": {
+                  "buttons": {
+                    "items": {
+                      "properties": { "value": { "type": "boolean" } }
+                    }
+                  }
+                },
+                "not": { "required": ["input"] }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "number" } } },
+          "then": {
+            "properties": {
+              "write": {
+                "properties": {
+                  "buttons": {
+                    "items": {
+                      "properties": { "value": { "type": "number" } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "type": { "const": "state" } } },
+          "then": {
+            "properties": {
+              "write": {
+                "properties": {
+                  "buttons": {
+                    "items": {
+                      "properties": {
+                        "value": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 2147483647
+                        }
+                      }
+                    }
+                  }
+                },
+                "not": { "required": ["input"] }
+              }
+            }
+          }
+        },
         {
           "if": {
             "properties": {
