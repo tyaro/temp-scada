@@ -22,6 +22,7 @@
     type BindingTableChange,
   } from "../equipment-binding-table";
   import { downloadBlob } from "../download";
+  import WriteTagList from "./WriteTagList.svelte";
   import {
     hubTagCsv,
     hubTagCsvFileName,
@@ -208,6 +209,8 @@
         : ""
     }`;
   }
+  /** The write-tag list (O1b) is shown under the toolbar while this is on. */
+  let writeTagsShown = $state(false);
   /** Names left out of the last Hub CSV because they cannot be split. */
   let skipped = $state<HubTagCsvSkip[]>([]);
   /** Exports saved bindings only, so unapplied cells must be applied first. */
@@ -453,6 +456,12 @@
         <button type="button" onclick={exportHubCsv}
           >Hub 登録用 CSV を書き出す</button
         >
+        <button
+          type="button"
+          aria-expanded={writeTagsShown}
+          onclick={() => (writeTagsShown = !writeTagsShown)}
+          >書込みタグの一覧</button
+        >
         <p aria-live="polite">
           変更 {changes.length}件{checking
             ? ` · 未解決 ${missing}件 · 型が合わない ${incompatible}件`
@@ -466,6 +475,12 @@
       </p>
       {#if message}<p aria-live="polite">{message}</p>{/if}
       {#if error}<p role="alert" class="error">{error}</p>{/if}
+      {#if writeTagsShown}
+        {#if changes.length}<p class="warn">
+            未適用の変更が{changes.length}件あります。書込みタグの一覧は保存済みの割付から作ります。
+          </p>{/if}
+        <WriteTagList {project} />
+      {/if}
       {#if ioCsv}
         <section class="io" aria-label="I/O 一覧の列">
           <p>

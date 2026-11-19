@@ -2,6 +2,7 @@ import type { Project } from "../../project";
 import type { EquipmentCommand } from "../../editor/commands";
 import type { EquipmentSlot } from "../../equipment";
 import { slotDisplayError } from "../../slot-display-edit";
+import { slotWriteError } from "../../slot-write-edit";
 import { tagSuffixProblem } from "../../equipment-binding-table";
 export function equipmentTypeFormCommand(
   input: {
@@ -54,6 +55,23 @@ export function equipmentTypeFormCommand(
       throw new Error("状態の定義の入力が不正です");
     if (extra.tagSuffix !== undefined && typeof extra.tagSuffix !== "string")
       throw new Error("タグ名の末尾の入力が不正です");
+    if (
+      extra.write !== undefined &&
+      (!extra.write ||
+        typeof extra.write !== "object" ||
+        typeof extra.write.label !== "string" ||
+        (extra.write.buttons !== undefined &&
+          !Array.isArray(extra.write.buttons)) ||
+        extra.write.buttons?.some(
+          (button) =>
+            !button ||
+            typeof button !== "object" ||
+            typeof button.label !== "string",
+        ) ||
+        (extra.write.input !== undefined &&
+          (!extra.write.input || typeof extra.write.input !== "object")))
+    )
+      throw new Error("操作の入力が不正です");
     return {
       name: row.name,
       type: row.type,
@@ -63,7 +81,6 @@ export function equipmentTypeFormCommand(
       ...(extra.tagSuffix ? { tagSuffix: extra.tagSuffix } : {}),
       ...(extra.boolDisplay ? { boolDisplay: extra.boolDisplay } : {}),
       ...(extra.stateDisplay ? { stateDisplay: extra.stateDisplay } : {}),
-      // No editor for it yet (O1b); keep it so saving the type does not drop it.
       ...(extra.write ? { write: extra.write } : {}),
     };
   });
@@ -79,7 +96,9 @@ export function equipmentTypeFormCommand(
     if (seen.has(slot.name)) throw new Error("slot名が重複しています");
     seen.add(slot.name);
     const problem =
-      tagSuffixProblem(slot.tagSuffix ?? "") ?? slotDisplayError(slot);
+      tagSuffixProblem(slot.tagSuffix ?? "") ??
+      slotDisplayError(slot) ??
+      slotWriteError(slot);
     if (problem) throw new Error(problem);
   }
   const name = String(data.get("name") ?? "");

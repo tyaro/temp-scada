@@ -5,6 +5,7 @@
   import type { EquipmentSlot, SlotType } from "../equipment";
   import type { createDraftGuard } from "./drafts.svelte";
   import SlotDisplayEditor from "./SlotDisplayEditor.svelte";
+  import SlotWriteEditor from "./SlotWriteEditor.svelte";
   import { emptyStateDisplay } from "../slot-display-edit";
   import { tagSuffixProblem } from "../equipment-binding-table";
   let {
@@ -248,6 +249,11 @@
                 onkeydown={inputKey}
               />
             {/if}
+            <SlotWriteEditor
+              slot={row}
+              onchange={(patch) => update(row.key, patch)}
+              onkeydown={inputKey}
+            />
             <span>採用機器 {count}件</span>
             <button
               type="button"

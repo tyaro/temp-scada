@@ -192,3 +192,32 @@ describe("hub tag csv", () => {
     expect(hubTagCsvFileName("  ")).toBe("hub-tags-project.csv");
   });
 });
+
+describe("writable column", () => {
+  it("is true only for names an operated slot writes, also when shared", () => {
+    const next = project([
+      ["P-1", "ポンプ1", [["run", "A.B.run1"], ["flow", "A.B.flow1"]]],
+      ["P-2", "ポンプ2", [["run", "A.B.shared"]]],
+      ["P-3", "ポンプ3", [["flow", "A.B.shared"]]],
+    ]);
+    next.equipmentTypes![0].slots[0].write = {
+      label: "運転指令",
+      buttons: [{ label: "運転", value: true }],
+    };
+    const lines = hubTagCsv(next, null).csv.replace("﻿", "").split("\r\n");
+    const column = HUB_TAG_CSV_COLUMNS.indexOf("writable");
+    const writable = new Map(
+      lines
+        .slice(1, -1)
+        .map((line) => line.split(","))
+        .map((cells) => [cells[2], cells[column]]),
+    );
+    expect(writable).toEqual(
+      new Map([
+        ["run1", "true"],
+        ["flow1", "false"],
+        ["shared", "true"],
+      ]),
+    );
+  });
+});

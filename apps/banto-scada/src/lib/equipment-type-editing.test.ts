@@ -175,7 +175,7 @@ it("rejects state rows the schema or the duplicate check refuses, in the form an
     ).toThrow(applyReason);
   }
 });
-it("keeps a slot's operation when the type is saved; the schema refuses a bad one", () => {
+it("keeps a slot's operation when the type is saved; the form refuses a bad one", () => {
   const write = {
     label: "回転数 設定",
     input: { min: 0, max: 60 },
@@ -191,17 +191,16 @@ it("keeps a slot's operation when the type is saved; the schema refuses a bad on
   const next = applyCommand(project, command, "edit");
   expect(next.equipmentTypes!.at(-1)!.slots).toEqual(saved);
   expect(parseProject(serializeProject(next))).toEqual(next);
-  const reversed = equipmentTypeFormCommand(
-    input(
-      "",
-      JSON.stringify([
-        { ...slots[0], write: { ...write, input: { min: 60, max: 0 } } },
-      ]),
+  expect(() =>
+    equipmentTypeFormCommand(
+      input(
+        "",
+        JSON.stringify([
+          { ...slots[0], write: { ...write, input: { min: 60, max: 0 } } },
+        ]),
+      ),
+      project,
+      3,
     ),
-    project,
-    3,
-  );
-  expect(() => applyCommand(project, reversed, "edit")).toThrow(
-    /下限が上限より大きい/,
-  );
+  ).toThrow("pressureの操作: 入力の下限が上限より大きいです");
 });
