@@ -78,4 +78,17 @@ describe("favorite UI preferences", () => {
         },
       ]);
   });
+  it("keeps the polygon presets as basic favorites", () => {
+    expect(
+      availableFavorites(
+        ["basic:trapezoid", "basic:diamond", "basic:arrowTag"],
+        projectA,
+        [],
+        false,
+      ).map((item) => item.label),
+    ).toEqual(["台形", "ひし形", "行き先の札"]);
+    expect(
+      parseFavorites(JSON.stringify(["basic:arrowTag", "basic:hexagon"])),
+    ).toEqual(["basic:arrowTag"]);
+  });
 });

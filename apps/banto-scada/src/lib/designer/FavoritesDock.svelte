@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from "svelte";
+  import { isPolygonPreset, polygonPresetIcon } from "../polygon-presets";
   import type { FavoriteItem } from "./favorites";
   import type { PalettePart } from "./palette-drag";
   import { PALETTE_MIME } from "./palette-drag";
@@ -107,8 +108,13 @@
                   rx="14"
                   ry="10"
                 />
-              {:else if item.part.type === "basic" && item.part.kind === "polygon"}<polygon
-                  points="20,6 34,26 6,26"
+              {:else if item.part.type === "basic" && isPolygonPreset(item.part.kind)}<polygon
+                  points={polygonPresetIcon(item.part.kind, {
+                    x: 6,
+                    y: 6,
+                    width: 28,
+                    height: 20,
+                  })}
                 />
               {:else if item.part.type === "basic" && item.part.kind === "text"}<path
                   d="M10 6h20M20 6v20M15 26h10"

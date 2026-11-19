@@ -1869,6 +1869,13 @@ mod tests {
         }
     }
     #[test]
+    fn polygon_symbol_sample_is_valid() {
+        let project = Project::from_json(include_str!(
+            "../../../examples/polygon-symbols.project.json"
+        ));
+        assert!(project.is_ok(), "{project:?}");
+    }
+    #[test]
     fn polygon_shares_the_browser_contract() {
         let cases: Value =
             serde_json::from_str(include_str!("../../../examples/polygon-cases.json")).unwrap();

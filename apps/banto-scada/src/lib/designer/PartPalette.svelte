@@ -3,6 +3,7 @@
   import { Modal } from "@banto/ui";
   import ContextActions from "./ContextActions.svelte";
   import type { AddKind } from "../editor";
+  import { isPolygonPreset, polygonPresetIcon } from "../polygon-presets";
   import type { SymbolDefinition } from "../project";
   import {
     BUILTIN_PARTS,
@@ -125,6 +126,27 @@
       keywords: "多角形 三角形 台形 ひし形 polygon",
       description:
         "直線の辺の塗りつぶした多角形を描画します。初期形は三角形です。位置・サイズ・色をプロパティで設定できます。",
+    },
+    {
+      kind: "trapezoid",
+      label: "台形を追加",
+      keywords: "多角形 台形 ホッパー シュート polygon trapezoid",
+      description:
+        "上が広い台形の多角形を描画します。ホッパーやシュートの胴に使えます。頂点はプロパティや画面の上で動かせます。",
+    },
+    {
+      kind: "diamond",
+      label: "ひし形を追加",
+      keywords: "多角形 ひし形 菱形 分岐 polygon diamond",
+      description:
+        "ひし形の多角形を描画します。フロー図の分岐に使えます。頂点はプロパティや画面の上で動かせます。",
+    },
+    {
+      kind: "arrowTag",
+      label: "行き先の札を追加",
+      keywords: "多角形 札 行き先 五角形 矢印 polygon tag",
+      description:
+        "右側が矢じり形の五角形の札を描画します。配管の行き先の表示に使えます。頂点はプロパティや画面の上で動かせます。",
     },
     {
       kind: "text",
@@ -561,8 +583,13 @@
                           rx="22"
                           ry="14"
                         />
-                      {:else if part.kind === "polygon"}<polygon
-                          points="30,6 52,34 8,34"
+                      {:else if isPolygonPreset(part.kind)}<polygon
+                          points={polygonPresetIcon(part.kind, {
+                            x: 8,
+                            y: 6,
+                            width: 44,
+                            height: 28,
+                          })}
                         />
                       {:else if part.kind === "text"}<text
                           x="21"
