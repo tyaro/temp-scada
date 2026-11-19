@@ -17,6 +17,7 @@
   import {
     faceplateNotice,
     ipcErrorText,
+    OPERATION_VIEW_REFRESH_MS,
     operationTimeText,
     rowStatus,
     type OperationHost,
@@ -75,6 +76,14 @@
     answers = {};
     inputErrors = {};
     void refresh();
+  });
+  // 開いている間は照会し直す。ログイン・フェーズの遷移・ほかの書込みの終了
+  // （busy）・送信中の行の確定は、この小窓の操作なしに変わるため（§8）。
+  $effect(() => {
+    equipmentId;
+    host;
+    const timer = setInterval(() => void refresh(), OPERATION_VIEW_REFRESH_MS);
+    return () => clearInterval(timer);
   });
 
   const notice = $derived(faceplateNotice(viewState, placement, sending, host));

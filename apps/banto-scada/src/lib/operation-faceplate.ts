@@ -55,6 +55,11 @@ export interface OperationPlacement {
 export const INITIALIZING_TEXT = "初期設定中: ログインなしで書込みできます";
 export const NO_PLACEMENT_TEXT = "配置から開いたときだけ操作できます";
 export const LOADING_TEXT = "操作の状態を読んでいます";
+/**
+ * 小窓を開いている間に `operation_view` を照会し直す間隔。押せるかは
+ * 認証・フェーズ・ほかの書込みで小窓の外から変わる（host が毎回決め直す）。
+ */
+export const OPERATION_VIEW_REFRESH_MS = 2000;
 
 export type ViewState =
   | { status: "loading" }

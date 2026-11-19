@@ -39,6 +39,8 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
         account: null as null | { username: string; displayName: string },
         writes: [] as Record<string, unknown>[],
         latest: null as null | Record<string, unknown>,
+        /** Overrides what `operation_view` answers in `blocked` when set. */
+        operationBlocked: undefined as undefined | null | string,
         seq: 1,
         starts: [] as Record<string, unknown>[],
         acks: [] as unknown[],
@@ -167,7 +169,12 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                 return {
                   projectId: options.projectId,
                   projectDigest: "00",
-                  blocked: ready ? null : "hub_unsupported",
+                  blocked:
+                    host.operationBlocked !== undefined
+                      ? host.operationBlocked
+                      : ready
+                        ? null
+                        : "hub_unsupported",
                   phase: ready ? "initializing" : "operational",
                   slots: ["running", "current"].map((slot) => ({
                     slot,
@@ -1076,5 +1083,30 @@ test.describe("the faceplate's operation rows (operation stage 3, O3c-1)", () =>
       .first()
       .getAttribute("data-object-id");
     expect(writes[0].objectId).toBe(objectId);
+  });
+
+  test("an open faceplate reads the host again and is released when busy ends", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page, { operation: "ready" });
+    await page.addInitScript(() => {
+      const wait = setInterval(() => {
+        const host = (window as any).__runtimeHost;
+        if (host) {
+          host.operationBlocked = "busy";
+          clearInterval(wait);
+        }
+      });
+    });
+    await page.goto("/runtime.html");
+    await page.locator(pump).first().click();
+    const rows = page.getByRole("region", { name: "機器の操作" });
+    const run = rows.getByRole("button", { name: "運転", exact: true });
+    await expect(run).toBeDisabled();
+    // Another write ends: the next read releases the rows without reopening.
+    await page.evaluate(() => {
+      (window as any).__runtimeHost.operationBlocked = null;
+    });
+    await expect(run).toBeEnabled({ timeout: 10_000 });
   });
 });
