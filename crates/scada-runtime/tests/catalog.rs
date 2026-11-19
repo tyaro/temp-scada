@@ -55,13 +55,7 @@ fn shared_catalog_fixture_is_minimal_and_schema_valid() {
     assert!(jsonschema::validator_for(&schema).unwrap().is_valid(&wire));
     for row in wire["tags"].as_array().unwrap() {
         assert_eq!(row.as_object().unwrap().len(), 8);
-        for private in [
-            "address",
-            "expression",
-            "tagKey",
-            "ids",
-            "valueSource",
-        ] {
+        for private in ["address", "expression", "tagKey", "ids", "valueSource"] {
             assert!(row.get(private).is_none());
         }
     }
