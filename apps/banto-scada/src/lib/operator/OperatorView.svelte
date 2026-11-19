@@ -62,7 +62,7 @@
     onsilencebuzzer?: () => void;
     /** 運転表示の上に重ねる窓（履歴トレンド・アラーム一覧）。運転表示の中に描くので裏の inert を受けない。 */
     overlay?: Snippet;
-    /** Runtime の host の運転操作（段階3 §8）。Editor の運転表示では渡さない（書込みなし）。 */
+    /** Runtime の host の運転操作（段階3 §8）。Editor の運転表示では模擬の host（O3c-2）。 */
     operations?: OperationHost;
   } = $props();
 
@@ -189,7 +189,10 @@
     <span class="current" data-testid="operator-current"
       >{main?.name ?? "画面が見つかりません"}</span
     >
-    {#if !operations}<span class="note">表示確認（書込みなし）</span>{/if}
+    {#if !operations}<span class="note">表示確認（書込みなし）</span
+      >{:else if operations.simulated}<span class="note"
+        >表示確認（模擬の書込み）</span
+      >{/if}
     <div class="actions">
       {#if onopenalarms}<button type="button" onclick={onopenalarms}
           >アラーム一覧</button

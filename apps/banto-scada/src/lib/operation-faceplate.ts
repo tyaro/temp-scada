@@ -18,6 +18,8 @@ import {
 
 /** Runtime の host（command `operation_view`・`operation_write`）と、起動時の Project。 */
 export interface OperationHost {
+  /** Editor の模擬の書込み（O3c-2）。小窓に「模擬」と出し、Hub へは送らない。 */
+  simulated: boolean;
   projectId: string;
   projectDigest: string;
   view(equipmentId: string): Promise<OperationView>;
@@ -35,6 +37,7 @@ export function createOperationHost(
   projectDigest: string,
 ): OperationHost {
   return {
+    simulated: false,
     projectId,
     projectDigest,
     view: async (equipmentId) =>

@@ -35,7 +35,7 @@
     onretiretrend,
     operations,
   }: {
-    /** Runtime の host の運転操作（段階3 §8）。Editor では渡さない。 */
+    /** Runtime の host の運転操作（段階3 §8）。Editor では模擬の host（O3c-2）。 */
     operations?: OperationHost;
     onopentrend?: (screenId: string, objectId: string, token: object) => void;
     onretiretrend?: (token: object) => void;
