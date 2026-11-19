@@ -20,7 +20,10 @@ function project(): Project {
           name: "command",
           type: "bool",
           direction: "read",
-          write: { label: "運転指令", buttons: [{ label: "運転", value: true }] },
+          write: {
+            label: "運転指令",
+            buttons: [{ label: "運転", value: true }],
+          },
         },
         {
           name: "speedSp",
@@ -60,8 +63,14 @@ function project(): Project {
 
 it("lists assigned write slots by name, keeps every use and reports unassigned ones", () => {
   const list = writeTagList(project());
-  expect(list.rows.map((row) => row.externalName)).toEqual(["A.B.cmd1", "A.B.sp"]);
-  expect(list.rows[1].uses.map((use) => use.equipmentCode)).toEqual(["P-1", "P-3"]);
+  expect(list.rows.map((row) => row.externalName)).toEqual([
+    "A.B.cmd1",
+    "A.B.sp",
+  ]);
+  expect(list.rows[1].uses.map((use) => use.equipmentCode)).toEqual([
+    "P-1",
+    "P-3",
+  ]);
   expect(list.unassigned).toEqual([
     {
       equipmentCode: "P-2",

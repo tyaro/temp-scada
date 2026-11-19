@@ -40,12 +40,25 @@ describe("slot write editing", () => {
   it("reads only half-width decimals", () => {
     expect(parseWriteNumber("-1.5")).toBe(-1.5);
     expect(parseWriteNumber("60")).toBe(60);
-    for (const text of ["", "-", "1.", "１", "1,000", "1e3", "NaN", "Infinity", " 1"])
+    for (const text of [
+      "",
+      "-",
+      "1.",
+      "１",
+      "1,000",
+      "1e3",
+      "NaN",
+      "Infinity",
+      " 1",
+    ])
       expect(parseWriteNumber(text), text).toBeNaN();
   });
 
   it("offers the next unused value for a new button", () => {
-    const bool: SlotWrite = { label: "a", buttons: [{ label: "入", value: true }] };
+    const bool: SlotWrite = {
+      label: "a",
+      buttons: [{ label: "入", value: true }],
+    };
     expect(nextButtonValue("bool", bool)).toBe(false);
     const state: SlotWrite = {
       label: "a",
@@ -55,7 +68,9 @@ describe("slot write editing", () => {
       ],
     };
     expect(nextButtonValue("state", state)).toBe(3);
-    expect(nextButtonValue("number", { label: "a", input: { min: 0, max: 1 } })).toBe(0);
+    expect(
+      nextButtonValue("number", { label: "a", input: { min: 0, max: 1 } }),
+    ).toBe(0);
   });
 
   it("names the slot and the button in the problem", () => {
@@ -75,10 +90,16 @@ describe("slot write editing", () => {
       "modeの操作: ボタン2: 同じ値のボタンが上にあります",
     );
     expect(
-      slotWriteError({ ...slot, write: { label: "モード", buttons: [{ label: "", value: 1 }] } }),
+      slotWriteError({
+        ...slot,
+        write: { label: "モード", buttons: [{ label: "", value: 1 }] },
+      }),
     ).toBe("modeの操作: ボタン1: 見出しを入れてください");
     expect(
-      slotWriteError({ ...slot, write: { label: "x", buttons: [{ label: "x", value: Number.NaN }] } }),
+      slotWriteError({
+        ...slot,
+        write: { label: "x", buttons: [{ label: "x", value: Number.NaN }] },
+      }),
     ).toMatch(/整数で入れて/);
   });
 });

@@ -196,7 +196,14 @@ describe("hub tag csv", () => {
 describe("writable column", () => {
   it("is true only for names an operated slot writes, also when shared", () => {
     const next = project([
-      ["P-1", "ポンプ1", [["run", "A.B.run1"], ["flow", "A.B.flow1"]]],
+      [
+        "P-1",
+        "ポンプ1",
+        [
+          ["run", "A.B.run1"],
+          ["flow", "A.B.flow1"],
+        ],
+      ],
       ["P-2", "ポンプ2", [["run", "A.B.shared"]]],
       ["P-3", "ポンプ3", [["flow", "A.B.shared"]]],
     ]);

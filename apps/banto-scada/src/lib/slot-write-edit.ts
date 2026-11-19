@@ -25,8 +25,7 @@ export function defaultSlotWrite(type: SlotType): SlotWrite {
         { label: "切", value: false },
       ],
     };
-  if (type === "number")
-    return { label: "設定", input: { min: 0, max: 100 } };
+  if (type === "number") return { label: "設定", input: { min: 0, max: 100 } };
   return { label: "選択", buttons: [{ label: "0", value: 0 }] };
 }
 
