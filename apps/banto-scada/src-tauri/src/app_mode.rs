@@ -18,7 +18,7 @@ use scada_host::recording_control::ControlError;
 use serde::{Serialize, Serializer};
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
-use tauri::{Manager, Runtime, State, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, Runtime, State, WebviewUrl, WebviewWindowBuilder};
 
 /// The mode of this process.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -107,7 +107,6 @@ pub fn report_arg_error(error: &ArgError) {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModeRefusal {
     EditorOnly,
-    #[allow(dead_code)] // The Runtime-only commands come with O0a-2.
     RuntimeOnly,
 }
 
@@ -189,7 +188,6 @@ impl AppMode {
     }
 
     /// Refuses a command only Runtime serves, and logs the refusal.
-    #[allow(dead_code)] // The Runtime-only commands come with O0a-2.
     pub fn require_runtime(&self) -> Result<(), ModeRefusal> {
         match self {
             Self::Runtime { .. } => Ok(()),
@@ -239,6 +237,69 @@ pub fn create_window<R: Runtime, M: Manager<R>>(manager: &M, mode: &AppMode) -> 
 #[tauri::command]
 pub fn app_mode(mode: State<'_, AppMode>) -> &'static str {
     mode.name()
+}
+
+/// The event the window of the first process gets when a second launch
+/// asked for another mode or another Project (design §7). Its screen comes
+/// with O0b.
+pub const SECOND_INSTANCE_EVENT: &str = "scada:second-instance";
+
+/// Why a second launch is worth telling the first process about.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SecondInstance {
+    /// Editor while Runtime runs, or Runtime while Editor runs.
+    OtherMode,
+    /// Runtime with another Project file.
+    OtherProject,
+}
+
+/// What a second launch with `args` (its whole command line, program
+/// first) from the working folder `cwd` asked for that this process does
+/// not serve, if anything. The second launch checked its own arguments
+/// before it reached the first (design §3), so arguments that do not parse
+/// here only bring the first window forward.
+pub fn second_instance(first: &AppMode, args: &[String], cwd: &Path) -> Option<SecondInstance> {
+    let second = parse_args(args.iter().skip(1).map(OsString::from), cwd).ok()?;
+    match (first, &second) {
+        (AppMode::Editor, AppMode::Editor) => None,
+        (AppMode::Runtime { project_path: a }, AppMode::Runtime { project_path: b }) => {
+            (!same_file(a, b)).then_some(SecondInstance::OtherProject)
+        }
+        _ => Some(SecondInstance::OtherMode),
+    }
+}
+
+/// Whether two absolute paths name one file: by the file system when both
+/// exist, else by the normalized path (case-insensitive on Windows).
+fn same_file(a: &Path, b: &Path) -> bool {
+    if let (Ok(a), Ok(b)) = (std::fs::canonicalize(a), std::fs::canonicalize(b)) {
+        return a == b;
+    }
+    if cfg!(windows) {
+        a.to_string_lossy().to_lowercase() == b.to_string_lossy().to_lowercase()
+    } else {
+        a == b
+    }
+}
+
+/// The single-instance callback in the first process: its window comes
+/// forward, and its mode and Project stay as they are (design §7).
+pub fn on_second_instance<R: Runtime>(app: &AppHandle<R>, args: Vec<String>, cwd: String) {
+    let mode = app.state::<AppMode>();
+    let label = mode.window_label();
+    if let Some(window) = app.get_webview_window(label) {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+    if let Some(reason) = second_instance(&mode, &args, Path::new(&cwd)) {
+        let _ = app.emit_to(
+            label,
+            SECOND_INSTANCE_EVENT,
+            serde_json::json!({ "reason": reason }),
+        );
+    }
 }
 
 #[cfg(test)]
@@ -309,6 +370,89 @@ mod tests {
         assert_eq!(
             parse_args(args(&["--runtime", "a.json", "b.json"]), &cwd()),
             Err(ArgError::Unknown("b.json".into()))
+        );
+    }
+
+    fn launch(list: &[&str]) -> Vec<String> {
+        std::iter::once("banto-scada-desktop")
+            .chain(list.iter().copied())
+            .map(str::to_owned)
+            .collect()
+    }
+
+    #[test]
+    fn a_second_launch_of_the_same_mode_and_project_only_comes_forward() {
+        let base = cwd().join("second-instance");
+        let first = parse_args(args(&["--runtime", "plant.json"]), &base).unwrap();
+        assert_eq!(
+            second_instance(&first, &launch(&["--runtime", "plant.json"]), &base),
+            None
+        );
+        // The relative path of the second resolves against its own cwd.
+        assert_eq!(
+            second_instance(
+                &first,
+                &launch(&["--runtime", "../plant.json"]),
+                &base.join("sub")
+            ),
+            None
+        );
+        let absolute = base.join("plant.json");
+        assert_eq!(
+            second_instance(
+                &first,
+                &launch(&["--runtime", absolute.to_str().unwrap()]),
+                &cwd()
+            ),
+            None
+        );
+        assert_eq!(second_instance(&AppMode::Editor, &launch(&[]), &base), None);
+    }
+
+    #[test]
+    fn a_second_launch_of_another_mode_or_project_is_told() {
+        let base = cwd().join("second-instance");
+        let first = parse_args(args(&["--runtime", "plant.json"]), &base).unwrap();
+        assert_eq!(
+            second_instance(&first, &launch(&["--runtime", "other.json"]), &base),
+            Some(SecondInstance::OtherProject)
+        );
+        assert_eq!(
+            second_instance(&first, &launch(&["--runtime", "plant.json"]), &cwd()),
+            Some(SecondInstance::OtherProject)
+        );
+        assert_eq!(
+            second_instance(&first, &launch(&[]), &base),
+            Some(SecondInstance::OtherMode)
+        );
+        assert_eq!(
+            second_instance(
+                &AppMode::Editor,
+                &launch(&["--runtime", "plant.json"]),
+                &base
+            ),
+            Some(SecondInstance::OtherMode)
+        );
+        // Broken arguments never reach the first process; here they only
+        // bring it forward.
+        assert_eq!(
+            second_instance(&first, &launch(&["--runtime"]), &base),
+            None
+        );
+        assert_eq!(
+            serde_json::to_value(SecondInstance::OtherProject).unwrap(),
+            serde_json::json!("otherProject")
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn paths_differing_only_in_case_are_one_project_on_windows() {
+        let base = cwd().join("second-instance");
+        let first = parse_args(args(&["--runtime", "Plant.json"]), &base).unwrap();
+        assert_eq!(
+            second_instance(&first, &launch(&["--runtime", "plant.JSON"]), &base),
+            None
         );
     }
 

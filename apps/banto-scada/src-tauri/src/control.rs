@@ -6,6 +6,7 @@
 //! plain `cargo test`.
 use crate::app_mode::{AppMode, Guarded};
 use crate::auth::AuthState;
+use crate::runtime::StartupProject;
 use crate::NativeHost;
 use scada_host::recording_control::{self, ControlError};
 use scada_host::recording_runtime::{ExitOutcome, RecordingRuntime};
@@ -29,6 +30,21 @@ pub async fn recording_context(
     mode.require_editor()?;
     let project = project(&project_json)?;
     Ok(recording_control::context(auth.get()?, &runtime, &project).await?)
+}
+
+/// `runtime_recording_context`: `recording_context` for the startup Project.
+#[tauri::command]
+pub async fn runtime_recording_context(
+    mode: State<'_, AppMode>,
+    startup: State<'_, StartupProject>,
+    auth: State<'_, AuthState>,
+    runtime: State<'_, RecordingRuntime>,
+) -> Result<Value, Guarded<ControlError>> {
+    mode.require_runtime()?;
+    let project = startup
+        .project()
+        .map_err(|reason| Guarded::Inner(ControlError::Refused(reason)))?;
+    Ok(recording_control::context(auth.get()?, &runtime, project).await?)
 }
 
 /// One RecordingInspectionResponse v1 for `request` (Viewer).

@@ -106,17 +106,8 @@ impl SavedAlarmProject {
     }
 
     pub fn from_bytes(path: &Path, bytes: &[u8]) -> Result<Self, AlarmProjectError> {
-        if bytes.len() as u64 > FILE_LIMIT {
-            return Err(AlarmProjectError::InvalidFile);
-        }
-        let file_hash = format!("{:x}", Sha256::digest(bytes));
-        let document = match ProjectFormat::of(path) {
-            Some(ProjectFormat::Json) => {
-                serde_json::from_slice(bytes).map_err(|_| AlarmProjectError::InvalidFile)?
-            }
-            Some(ProjectFormat::Package) => package_document(bytes)?,
-            None => return Err(AlarmProjectError::InvalidFile),
-        };
+        let file_hash = file_hash(bytes);
+        let document = project_document(path, bytes)?;
         let project =
             Project::from_json(&document.to_string()).map_err(AlarmProjectError::InvalidProject)?;
         let alarm_document = document
@@ -175,6 +166,78 @@ impl SavedAlarmProject {
             displays: self.displays.clone(),
         }
     }
+}
+
+/// The `file_hash` of a saved Project file: the lowercase hex SHA-256 of its
+/// bytes. Runtime mode's `projectDigest` is the same value.
+pub fn file_hash(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
+}
+
+/// The Project document of a saved file's bytes, by the format of `path`
+/// (`*.json`, or the checked `*.bantoscada` package with its manifest put
+/// back). Only the shape of the file is checked here, not the Project.
+pub fn project_document(path: &Path, bytes: &[u8]) -> Result<Value, AlarmProjectError> {
+    if bytes.len() as u64 > FILE_LIMIT {
+        return Err(AlarmProjectError::InvalidFile);
+    }
+    match ProjectFormat::of(path) {
+        Some(ProjectFormat::Json) => {
+            serde_json::from_slice(bytes).map_err(|_| AlarmProjectError::InvalidFile)
+        }
+        Some(ProjectFormat::Package) => package_document(bytes),
+        None => Err(AlarmProjectError::InvalidFile),
+    }
+}
+
+/// How a Project's alarm definitions stand against the terminal's applied
+/// record (Runtime mode design §6-3). Comparing never applies anything.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AlarmDefinitionMatch {
+    /// The terminal has no applied definitions: no alarm rings.
+    NotApplied,
+    /// The applied definitions belong to another Project.
+    OtherProject,
+    /// Same Project, but the alarm part differs from the applied one.
+    Differs,
+    /// The applied definitions are this Project's.
+    Same,
+}
+
+/// Compares `project` (a saved file) with the `applied` record. The same
+/// file (`file_hash`) is the same; otherwise both alarm documents go through
+/// [`parse_alarm_document`] and the evaluation hashes, the displays
+/// (severity, message, name) and the disabled ids are compared, so a change
+/// of severity alone is a difference and edits outside the alarms are not.
+pub fn compare_with_applied(
+    project: &SavedAlarmProject,
+    applied: Option<&AppliedDefinitions>,
+) -> Result<AlarmDefinitionMatch, AlarmProjectError> {
+    let Some(applied) = applied else {
+        return Ok(AlarmDefinitionMatch::NotApplied);
+    };
+    if applied.project_id != project.project_id {
+        return Ok(AlarmDefinitionMatch::OtherProject);
+    }
+    if applied.file_hash == project.file_hash {
+        return Ok(AlarmDefinitionMatch::Same);
+    }
+    let (definitions, disabled, displays) = parse_alarm_document(&applied.definitions)?;
+    let hashes = |definitions: &BTreeMap<String, Definition>| -> BTreeMap<String, String> {
+        definitions
+            .iter()
+            .map(|(id, definition)| (id.clone(), definition.evaluation_hash()))
+            .collect()
+    };
+    let same = hashes(&definitions) == hashes(&project.definitions)
+        && displays == project.displays
+        && disabled == project.disabled;
+    Ok(if same {
+        AlarmDefinitionMatch::Same
+    } else {
+        AlarmDefinitionMatch::Differs
+    })
 }
 
 type ExpandedAlarms = (

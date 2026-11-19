@@ -71,5 +71,12 @@ pub const BOTH: &[&str] = &[
 ];
 
 /// Commands only the Runtime window may call (`require_runtime` first).
-/// None yet: `runtime_*` come with O0a-2.
-pub const RUNTIME_ONLY: &[&str] = &[];
+/// They take no Project from the webview: the host's startup Project only.
+pub const RUNTIME_ONLY: &[&str] = &[
+    "runtime_project",
+    "runtime_hub_connect",
+    "runtime_read_start",
+    "runtime_history_context",
+    "runtime_recording_context",
+    "runtime_alarm_status",
+];

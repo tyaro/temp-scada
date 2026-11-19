@@ -53,7 +53,7 @@ impl AlarmState {
     }
 }
 
-fn reason(error: &AlarmServiceError) -> String {
+pub(crate) fn reason(error: &AlarmServiceError) -> String {
     match error {
         AlarmServiceError::Terminal(_) => "terminalUnavailable",
         AlarmServiceError::Db(_) => "alarmDbUnavailable",

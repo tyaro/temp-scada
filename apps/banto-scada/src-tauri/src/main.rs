@@ -8,6 +8,7 @@ mod control;
 mod history;
 mod project;
 mod recording;
+mod runtime;
 
 use app_mode::AppMode;
 use auth::AuthState;
@@ -75,6 +76,34 @@ async fn stop_read(active: &mut Active) {
     active.owner = None;
 }
 
+/// Stops the read, reconnects with `connect` and resumes the alarm Engine
+/// with the saved Hub: the one path of `hub_connect` and
+/// `runtime_hub_connect`, which differ only in how they reach the Hub.
+async fn reconnect<F, Fut>(
+    state: &NativeHost,
+    alarm: &alarm::AlarmState,
+    connect: F,
+) -> Result<HubStatus, String>
+where
+    F: FnOnce(Arc<Bootstrapper>) -> Fut,
+    Fut: std::future::Future<Output = Result<HubStatus, String>>,
+{
+    let _alarm_operation = state.alarm_operation.lock().await;
+    if state.exiting.load(Ordering::SeqCst) {
+        return Err("exiting".into());
+    }
+    let mut active = state.active.lock().await;
+    stop_read(&mut active).await;
+    active.connected = false;
+    let result = connect(state.bootstrap.clone()).await;
+    active.connected = result.as_ref().is_ok_and(HubStatus::is_connected);
+    drop(active);
+    if !state.exiting.load(Ordering::SeqCst) {
+        alarm::after_hub_connect(state, alarm).await;
+    }
+    result
+}
+
 #[tauri::command]
 async fn hub_connect(
     mode: State<'_, AppMode>,
@@ -83,24 +112,68 @@ async fn hub_connect(
     endpoint: String,
 ) -> Result<HubStatus, String> {
     mode.require_editor()?;
-    let _alarm_operation = state.alarm_operation.lock().await;
-    if state.exiting.load(Ordering::SeqCst) {
-        return Err("exiting".into());
+    reconnect(&state, &alarm, |bootstrap| async move {
+        bootstrap
+            .connect(&endpoint)
+            .await
+            .map(|connection| connection.status)
+            .map_err(|error| error.kind().as_str().to_owned())
+    })
+    .await
+}
+
+/// Why `runtime_hub_connect` did not connect: the saved Hub cannot be used
+/// without Editor (`{"reason": "reconnectInEditor", "status"}`), or the
+/// reason string of `hub_connect`.
+#[derive(Debug)]
+enum RuntimeHubFailure {
+    ReconnectInEditor(HubStatus),
+    Failed(String),
+}
+
+impl Serialize for RuntimeHubFailure {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::ReconnectInEditor(status) => {
+                serde_json::json!({"reason": "reconnectInEditor", "status": status})
+                    .serialize(serializer)
+            }
+            Self::Failed(reason) => serializer.serialize_str(reason),
+        }
     }
-    let mut active = state.active.lock().await;
-    stop_read(&mut active).await;
-    active.connected = false;
-    let result = state.bootstrap.connect(&endpoint).await;
-    active.connected = result
-        .as_ref()
-        .is_ok_and(|connection| connection.status.is_connected());
-    drop(active);
-    if !state.exiting.load(Ordering::SeqCst) {
-        alarm::after_hub_connect(&state, &alarm).await;
+}
+
+/// `runtime_hub_connect`: connects with the saved endpoint and the saved key
+/// and never issues a key (`Bootstrapper::status`, not `connect`, which may
+/// re-issue through the commissioning grant). The saved record and the
+/// keyring are left as they are. An unconfigured Hub or a key Runtime cannot
+/// renew (`notConfigured`, `authFailed`, `forbidden`, `needsPairing`) is
+/// `reconnectInEditor`; an unreachable Hub or a tripped key is answered as
+/// its status, like `hub_connect`, and may be retried.
+#[tauri::command]
+async fn runtime_hub_connect(
+    mode: State<'_, AppMode>,
+    state: State<'_, NativeHost>,
+    alarm: State<'_, alarm::AlarmState>,
+) -> Result<HubStatus, app_mode::Guarded<RuntimeHubFailure>> {
+    mode.require_runtime()?;
+    let status = reconnect(&state, &alarm, |bootstrap| async move {
+        bootstrap
+            .status()
+            .await
+            .map_err(|error| error.kind().as_str().to_owned())
+    })
+    .await
+    .map_err(|reason| app_mode::Guarded::Inner(RuntimeHubFailure::Failed(reason)))?;
+    match status {
+        HubStatus::NotConfigured
+        | HubStatus::AuthFailed
+        | HubStatus::Forbidden
+        | HubStatus::NeedsPairing => Err(app_mode::Guarded::Inner(
+            RuntimeHubFailure::ReconnectInEditor(status),
+        )),
+        status => Ok(status),
     }
-    result
-        .map(|connection| connection.status)
-        .map_err(|error| error.kind().as_str().to_owned())
 }
 
 #[tauri::command]
@@ -130,6 +203,31 @@ async fn hub_read_start<R: Runtime>(
 ) -> Result<(), String> {
     mode.require_editor()?;
     let project = Project::from_json(&project_json).map_err(|_| "invalid_project".to_owned())?;
+    start_read(app, &state, &project, subscription_id).await
+}
+
+/// `runtime_read_start`: `hub_read_start` with the startup Project.
+#[tauri::command]
+async fn runtime_read_start<R: Runtime>(
+    app: AppHandle<R>,
+    mode: State<'_, AppMode>,
+    state: State<'_, NativeHost>,
+    startup: State<'_, runtime::StartupProject>,
+    subscription_id: String,
+) -> Result<(), String> {
+    mode.require_runtime()?;
+    let project = startup.project()?;
+    start_read(app, &state, project, subscription_id).await
+}
+
+/// Starts the read subscription `subscription_id` of `project` and pumps
+/// its updates as `scada:read`.
+async fn start_read<R: Runtime>(
+    app: AppHandle<R>,
+    state: &NativeHost,
+    project: &Project,
+    subscription_id: String,
+) -> Result<(), String> {
     let mut active = state.active.lock().await;
     if !active.claim(&subscription_id) {
         return Err("subscription_retired".into());
@@ -143,8 +241,8 @@ async fn hub_read_start<R: Runtime>(
         .rest_client()
         .map_err(|error| error.kind().as_str().to_owned())?
         .ok_or("not_configured")?;
-    let mut read = ReadHost::new(&project).map_err(|_| "invalid_read_plan")?;
-    read.replace(&project, Some(client))
+    let mut read = ReadHost::new(project).map_err(|_| "invalid_read_plan")?;
+    read.replace(project, Some(client))
         .await
         .map_err(|_| "read_start_failed")?;
     let mut receiver = read.state_watch();
@@ -289,6 +387,12 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
         })
         .invoke_handler(tauri::generate_handler![
             app_mode::app_mode,
+            runtime::runtime_project,
+            runtime::runtime_alarm_status,
+            runtime_hub_connect,
+            runtime_read_start,
+            history::runtime_history_context,
+            control::runtime_recording_context,
             hub_connect,
             hub_disconnect,
             hub_saved_endpoint,
@@ -382,10 +486,18 @@ fn main() {
         ),
     };
     let alarm = tauri::async_runtime::block_on(alarm::AlarmState::open(local_data_dir()));
-    commands(tauri::Builder::default())
+    // The single-instance plugin first (design §7). A second launch, whose
+    // arguments were checked above, brings the first window forward and
+    // exits inside `build`, before the setup below: it reads no Project.
+    let builder = tauri::Builder::default().plugin(tauri_plugin_single_instance::init(
+        app_mode::on_second_instance,
+    ));
+    commands(builder)
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let mode = app.state::<AppMode>();
+            // Runtime reads its Project once, here (design §6).
+            app.manage(runtime::StartupProject::load(&mode));
             app_mode::create_window(app, &mode)?;
             alarm::start_events(app.handle().clone());
             Ok(())

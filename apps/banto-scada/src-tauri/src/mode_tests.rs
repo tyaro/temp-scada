@@ -5,16 +5,21 @@
 //! - the host's own check: in Runtime mode every Editor-only command is
 //!   refused with `"editorOnly"` before it touches anything (through the IPC
 //!   of a mock app, where capabilities are not enforced);
+//! - in Editor mode every Runtime-only command is refused with
+//!   `"runtimeOnly"`, and the Runtime-only commands serve the startup
+//!   Project, never one from the webview;
 //! - the ACL of the real capabilities by window label
 //!   (`tauri::generate_context!()`).
 use super::*;
 use crate::app_mode::AppMode;
 use crate::command_list::{BOTH, EDITOR_ONLY, RUNTIME_ONLY};
+use crate::runtime::StartupProject;
 use banto_hub_bootstrap::state::memory::{MemoryKeyStore, MemoryState};
+use scada_host::project_file::unframe;
 use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
-use tauri::ipc::{CallbackFn, InvokeBody};
+use tauri::ipc::{CallbackFn, InvokeBody, InvokeResponseBody};
 use tauri::test::{get_ipc_response, mock_builder, mock_context, noop_assets, INVOKE_KEY};
 use tauri::webview::{InvokeRequest, WebviewWindow};
 use tauri::{test::MockRuntime, App, WebviewWindowBuilder};
@@ -88,8 +93,8 @@ fn the_command_list_is_generate_handler_without_gaps_or_duplicates() {
         "a handler is registered twice"
     );
     assert_eq!(registered, unique);
-    // 56 commands before the mode, and `app_mode`.
-    assert_eq!(listed.len(), 57);
+    // 56 commands before the mode, `app_mode` and the 6 `runtime_*`.
+    assert_eq!(listed.len(), 63);
 }
 
 #[test]
@@ -191,6 +196,7 @@ fn app(
         tauri::async_runtime::block_on(AuthState::start(&dir.0, "no_recording_run"));
     let alarm = tauri::async_runtime::block_on(alarm::AlarmState::open(Ok::<_, ()>(&dir.0)));
     let app = commands(mock_builder())
+        .manage(StartupProject::load(&mode))
         .manage(mode)
         .manage(auth)
         .manage(recording)
@@ -216,6 +222,23 @@ fn app(
 }
 
 fn invoke(webview: &WebviewWindow<MockRuntime>, cmd: &str, args: Value) -> Result<Value, Value> {
+    invoke_body(webview, cmd, args).map(|body| body.deserialize::<Value>().unwrap())
+}
+
+/// The raw frame a command answers (`runtime_project`).
+fn invoke_frame(webview: &WebviewWindow<MockRuntime>, cmd: &str) -> (Value, Vec<u8>) {
+    let InvokeResponseBody::Raw(bytes) = invoke_body(webview, cmd, json!({})).unwrap() else {
+        panic!("{cmd} answered no frame");
+    };
+    let (header, body) = unframe::<Value>(&bytes).expect("frame");
+    (header, body.to_vec())
+}
+
+fn invoke_body(
+    webview: &WebviewWindow<MockRuntime>,
+    cmd: &str,
+    args: Value,
+) -> Result<InvokeResponseBody, Value> {
     get_ipc_response(
         webview,
         InvokeRequest {
@@ -234,7 +257,6 @@ fn invoke(webview: &WebviewWindow<MockRuntime>, cmd: &str, args: Value) -> Resul
             invoke_key: INVOKE_KEY.to_string(),
         },
     )
-    .map(|body| body.deserialize::<Value>().unwrap())
 }
 
 fn runtime_mode(dir: &TempDir) -> AppMode {
@@ -439,4 +461,209 @@ fn the_acl_refuses_editor_only_commands_from_the_runtime_window() {
     );
     assert_eq!(invoke(&runtime, "app_mode", json!({})), Ok(json!("editor")));
     assert_eq!(invoke(&editor, "app_mode", json!({})), Ok(json!("editor")));
+}
+
+const MINIMAL: &str = include_str!("../../../../examples/minimal.project.json");
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    scada_host::alarm_project::file_hash(bytes)
+}
+
+/// The arguments of every Runtime-only command: none but the subscription.
+fn runtime_only_calls() -> Vec<(&'static str, Value)> {
+    let calls = vec![
+        ("runtime_project", json!({})),
+        ("runtime_hub_connect", json!({})),
+        ("runtime_read_start", json!({"subscriptionId": "s"})),
+        ("runtime_history_context", json!({})),
+        ("runtime_recording_context", json!({})),
+        ("runtime_alarm_status", json!({})),
+    ];
+    let named: BTreeSet<&str> = calls.iter().map(|(name, _)| *name).collect();
+    assert_eq!(named, RUNTIME_ONLY.iter().copied().collect());
+    calls
+}
+
+#[test]
+fn editor_mode_refuses_every_runtime_only_command() {
+    let dir = TempDir::new();
+    let (_app, webview) = app(&dir, AppMode::Editor, "editor");
+    for (command, args) in runtime_only_calls() {
+        assert_eq!(
+            invoke(&webview, command, args),
+            Err(json!("runtimeOnly")),
+            "{command}"
+        );
+    }
+}
+
+#[test]
+fn runtime_project_is_the_startup_file_for_the_whole_run() {
+    let dir = TempDir::new();
+    let mode = runtime_mode(&dir);
+    let AppMode::Runtime { project_path } = &mode else {
+        unreachable!()
+    };
+    std::fs::write(project_path, MINIMAL).unwrap();
+    let (_app, webview) = app(&dir, mode.clone(), "runtime");
+
+    let expected = json!({
+        "status": "opened",
+        "fileName": "plant.project.json",
+        "projectDigest": sha256_hex(MINIMAL.as_bytes()),
+    });
+    let (header, body) = invoke_frame(&webview, "runtime_project");
+    assert_eq!(header, expected);
+    assert_eq!(body, MINIMAL.as_bytes());
+
+    // Replaced on disk after startup: the answer stays the startup file.
+    std::fs::write(project_path, b"{\"replaced\": true}").unwrap();
+    let (header, body) = invoke_frame(&webview, "runtime_project");
+    assert_eq!(header, expected);
+    assert_eq!(body, MINIMAL.as_bytes());
+}
+
+#[test]
+fn the_runtime_entries_take_the_startup_project_and_no_project_argument() {
+    let dir = TempDir::new();
+    let mode = runtime_mode(&dir);
+    let AppMode::Runtime { project_path } = &mode else {
+        unreachable!()
+    };
+    std::fs::write(project_path, MINIMAL).unwrap();
+    let (app, webview) = app(&dir, mode.clone(), "runtime");
+
+    // Past the mode and the Project: the commands' own answers.
+    assert_eq!(
+        invoke(
+            &webview,
+            "runtime_read_start",
+            json!({"subscriptionId": "s"})
+        ),
+        Err(json!("not_connected"))
+    );
+    assert_eq!(
+        invoke(&webview, "runtime_history_context", json!({})),
+        Ok(Value::Null)
+    );
+    let context = invoke(&webview, "runtime_recording_context", json!({}));
+    assert_ne!(context, Err(json!({"kind": "projectUnavailable"})));
+    assert_ne!(context, Err(json!("runtimeOnly")));
+    assert_eq!(
+        invoke(&webview, "runtime_alarm_status", json!({})),
+        Ok(json!("notApplied"))
+    );
+    // A Project from the webview is not a parameter: it changes nothing.
+    assert_eq!(
+        invoke(
+            &webview,
+            "runtime_history_context",
+            json!({"projectJson": "{}"})
+        ),
+        Ok(Value::Null)
+    );
+
+    // No saved Hub: nothing is issued, Editor must connect first.
+    assert_eq!(
+        invoke(&webview, "runtime_hub_connect", json!({})),
+        Err(json!({"reason": "reconnectInEditor", "status": {"state": "notConfigured"}}))
+    );
+    assert_eq!(
+        invoke(&webview, "hub_saved_endpoint", json!({})),
+        Ok(Value::Null)
+    );
+    assert!(app
+        .state::<NativeHost>()
+        .active
+        .try_lock()
+        .is_ok_and(|a| !a.connected));
+}
+
+#[test]
+fn a_startup_project_that_failed_is_shown_and_serves_nothing() {
+    let dir = TempDir::new();
+    // Missing: unreadable.
+    let (_app, webview) = app(&dir, runtime_mode(&dir), "runtime");
+    let (header, body) = invoke_frame(&webview, "runtime_project");
+    assert_eq!(
+        header,
+        json!({
+            "status": "failed",
+            "fileName": "plant.project.json",
+            "reason": "unreadable",
+            "detail": "not_found",
+        })
+    );
+    assert!(body.is_empty());
+    assert_eq!(
+        invoke(
+            &webview,
+            "runtime_read_start",
+            json!({"subscriptionId": "s"})
+        ),
+        Err(json!("projectUnavailable"))
+    );
+    assert_eq!(
+        invoke(&webview, "runtime_history_context", json!({})),
+        Err(json!("projectUnavailable"))
+    );
+    assert_eq!(
+        invoke(&webview, "runtime_recording_context", json!({})),
+        Err(json!({"kind": "projectUnavailable"}))
+    );
+    assert_eq!(
+        invoke(&webview, "runtime_alarm_status", json!({})),
+        Err(json!("projectUnavailable"))
+    );
+
+    // Not a Project: invalid format.
+    for (name, content) in [
+        ("broken.json", "{not json"),
+        ("empty.json", "{}"),
+        ("plant.txt", MINIMAL),
+    ] {
+        let path = dir.0.join(name);
+        std::fs::write(&path, content).unwrap();
+        let StartupProject::Failed(failure) =
+            StartupProject::load(&AppMode::Runtime { project_path: path })
+        else {
+            panic!("{name} loaded");
+        };
+        assert_eq!(failure.reason, "invalidFormat", "{name}");
+        assert_eq!(failure.file_name, name);
+    }
+}
+
+/// The real capabilities again, in Runtime mode: a Runtime-only command is
+/// refused by the ACL from the `editor` window and served to `runtime`.
+#[test]
+fn the_acl_refuses_runtime_only_commands_from_the_editor_window() {
+    let dir = TempDir::new();
+    let mode = runtime_mode(&dir);
+    let AppMode::Runtime { project_path } = &mode else {
+        unreachable!()
+    };
+    std::fs::write(project_path, MINIMAL).unwrap();
+    let app = commands(mock_builder())
+        .manage(StartupProject::load(&mode))
+        .manage(mode)
+        .build(tauri::generate_context!())
+        .unwrap();
+    let editor = WebviewWindowBuilder::new(&app, "editor", Default::default())
+        .build()
+        .unwrap();
+    let runtime = WebviewWindowBuilder::new(&app, "runtime", Default::default())
+        .build()
+        .unwrap();
+
+    let refused = invoke(&editor, "runtime_project", json!({})).unwrap_err();
+    assert!(
+        refused
+            .as_str()
+            .is_some_and(|message| message.contains("not allowed")),
+        "{refused}"
+    );
+    let (header, _) = invoke_frame(&runtime, "runtime_project");
+    assert_eq!(header["status"], "opened");
+    assert_eq!(header["projectDigest"], sha256_hex(MINIMAL.as_bytes()));
 }

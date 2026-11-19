@@ -921,6 +921,36 @@ impl AlarmService {
         Ok(snapshot)
     }
 
+    /// The terminal's applied definitions (those of the monitored Project),
+    /// read without changing anything: Runtime mode compares its Project
+    /// with them (Runtime mode design §6-3).
+    pub async fn applied(&self) -> Result<Option<AppliedDefinitions>, AlarmServiceError> {
+        let active = self.active.lock().await;
+        let monitored = self.terminal.monitored()?;
+        self.applied_locked(&active, monitored.as_ref()).await
+    }
+
+    async fn applied_locked(
+        &self,
+        active: &Active,
+        monitored: Option<&MonitoredProject>,
+    ) -> Result<Option<AppliedDefinitions>, AlarmServiceError> {
+        let Some(monitored) = monitored else {
+            return Ok(None);
+        };
+        if active.project_id.as_deref() == Some(&monitored.project_id) {
+            return Ok(active.applied.clone());
+        }
+        match AlarmDb::open_read(self.terminal.clone(), &monitored.project_id).await? {
+            Some(db) => {
+                let applied = db.applied().await;
+                db.close().await;
+                Ok(applied?)
+            }
+            None => Ok(None),
+        }
+    }
+
     async fn snapshot_locked(&self, active: &Active) -> Result<AlarmSnapshot, AlarmServiceError> {
         Ok(self.snapshot_locked_with_applied(active).await?.0)
     }
@@ -950,22 +980,7 @@ impl AlarmService {
                 None,
             ));
         }
-        let applied = if let Some(monitored) = &monitored {
-            if active.project_id.as_deref() == Some(&monitored.project_id) {
-                active.applied.clone()
-            } else {
-                match AlarmDb::open_read(self.terminal.clone(), &monitored.project_id).await? {
-                    Some(db) => {
-                        let applied = db.applied().await;
-                        db.close().await;
-                        applied?
-                    }
-                    None => None,
-                }
-            }
-        } else {
-            None
-        };
+        let applied = self.applied_locked(active, monitored.as_ref()).await?;
         let engine = match &active.runtime {
             Some(runtime) if matches!(*runtime.status().borrow(), AlarmRuntimeStatus::Running) => {
                 match runtime.snapshot().await {

@@ -2,6 +2,7 @@
 //! HistoryContext v2 of the applied plan, and one H1 query at a time through
 //! the History host. Reading history needs no sign-in, like the Hub reads.
 use crate::app_mode::AppMode;
+use crate::runtime::StartupProject;
 use scada_host::recording_runtime::RecordingRuntime;
 use scada_model::Project;
 use serde_json::Value;
@@ -20,6 +21,20 @@ pub fn history_context(
     let project = Project::from_json(&project_json).map_err(|_| "invalid_project".to_owned())?;
     runtime
         .history_context(&project)
+        .map_err(|reason| reason.to_owned())
+}
+
+/// `runtime_history_context`: `history_context` for the startup Project.
+/// Errors: `projectUnavailable`, or why the recording DB is unavailable.
+#[tauri::command]
+pub fn runtime_history_context(
+    mode: State<'_, AppMode>,
+    startup: State<'_, StartupProject>,
+    runtime: State<'_, RecordingRuntime>,
+) -> Result<Option<Value>, String> {
+    mode.require_runtime()?;
+    runtime
+        .history_context(startup.project()?)
         .map_err(|reason| reason.to_owned())
 }
 
