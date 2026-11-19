@@ -10,6 +10,7 @@
 //! or is destroyed ([`Pages`]); the subscription is then ended as well.
 //! Without a recording owner (the product host until C5), every command
 //! answers `{"kind": "recordingUnavailable", "reason": ...}`.
+use crate::app_mode::{AppMode, Guarded};
 use scada_host::desktop_recording::{
     DesktopRecording, RecordingCommandError, RecordingResult, RECORDING_EVENT,
 };
@@ -85,65 +86,99 @@ pub fn end_page<R: Runtime, M: Manager<R>>(manager: &M, label: &str) {
         .end(label, &manager.state::<DesktopRecording>());
 }
 
-type Reply = Result<RecordingResult, RecordingCommandError>;
+/// Every recording registry command is Editor-only (Runtime mode design §5):
+/// a refusal is `"editorOnly"`, any other error the registry's own.
+type Reply = Result<RecordingResult, Guarded<RecordingCommandError>>;
 
 #[tauri::command]
 pub async fn recording_workflow_reserve(
+    mode: State<'_, AppMode>,
     state: State<'_, DesktopRecording>,
     request: Value,
 ) -> Reply {
-    state.workflow_reserve(request).await
+    mode.require_editor()?;
+    Ok(state.workflow_reserve(request).await?)
 }
 
 #[tauri::command]
-pub async fn recording_workflow_resumption(state: State<'_, DesktopRecording>) -> Reply {
-    state.workflow_resumption().await
+pub async fn recording_workflow_resumption(
+    mode: State<'_, AppMode>,
+    state: State<'_, DesktopRecording>,
+) -> Reply {
+    mode.require_editor()?;
+    Ok(state.workflow_resumption().await?)
 }
 
 #[tauri::command]
 pub async fn recording_workflow_lease(
+    mode: State<'_, AppMode>,
     state: State<'_, DesktopRecording>,
     stage: String,
     operation_id: Option<String>,
     request: Value,
 ) -> Reply {
-    state.workflow_lease(&stage, operation_id, request).await
+    mode.require_editor()?;
+    Ok(state.workflow_lease(&stage, operation_id, request).await?)
 }
 
 #[tauri::command]
-pub async fn recording_lease(state: State<'_, DesktopRecording>, request: Value) -> Reply {
-    state.lease(request).await
+pub async fn recording_lease(
+    mode: State<'_, AppMode>,
+    state: State<'_, DesktopRecording>,
+    request: Value,
+) -> Reply {
+    mode.require_editor()?;
+    Ok(state.lease(request).await?)
 }
 
 #[tauri::command]
-pub async fn recording_admission(state: State<'_, DesktopRecording>, request: Value) -> Reply {
-    state.admission(request).await
+pub async fn recording_admission(
+    mode: State<'_, AppMode>,
+    state: State<'_, DesktopRecording>,
+    request: Value,
+) -> Reply {
+    mode.require_editor()?;
+    Ok(state.admission(request).await?)
 }
 
 #[tauri::command]
 pub async fn recording_admission_inspection(
+    mode: State<'_, AppMode>,
     state: State<'_, DesktopRecording>,
     request: Value,
 ) -> Reply {
-    state.admission_inspection(request).await
+    mode.require_editor()?;
+    Ok(state.admission_inspection(request).await?)
 }
 
 #[tauri::command]
-pub async fn recording_observation(state: State<'_, DesktopRecording>, request: Value) -> Reply {
-    state.observation(request).await
+pub async fn recording_observation(
+    mode: State<'_, AppMode>,
+    state: State<'_, DesktopRecording>,
+    request: Value,
+) -> Reply {
+    mode.require_editor()?;
+    Ok(state.observation(request).await?)
 }
 
 #[tauri::command]
-pub async fn recording_cancel(state: State<'_, DesktopRecording>, request: Value) -> Reply {
-    state.cancel(request).await
+pub async fn recording_cancel(
+    mode: State<'_, AppMode>,
+    state: State<'_, DesktopRecording>,
+    request: Value,
+) -> Reply {
+    mode.require_editor()?;
+    Ok(state.cancel(request).await?)
 }
 
 #[tauri::command]
 pub async fn recording_call_inspection(
+    mode: State<'_, AppMode>,
     state: State<'_, DesktopRecording>,
     request: Value,
 ) -> Reply {
-    state.call_inspection(request).await
+    mode.require_editor()?;
+    Ok(state.call_inspection(request).await?)
 }
 
 /// A new subscription's frames are emitted as `scada:recording` to the
@@ -152,10 +187,12 @@ pub async fn recording_call_inspection(
 pub async fn recording_attach<R: Runtime>(
     app: AppHandle<R>,
     webview: Webview<R>,
+    mode: State<'_, AppMode>,
     state: State<'_, DesktopRecording>,
     pages: State<'_, Pages>,
     request: Value,
 ) -> Reply {
+    mode.require_editor()?;
     let label = webview.label().to_owned();
     // Taken before the attach: a page that ends meanwhile stops the pump
     // at once rather than leaving it to the next page.
@@ -174,6 +211,11 @@ pub async fn recording_attach<R: Runtime>(
 }
 
 #[tauri::command]
-pub async fn recording_control(state: State<'_, DesktopRecording>, request: Value) -> Reply {
-    state.control(request).await
+pub async fn recording_control(
+    mode: State<'_, AppMode>,
+    state: State<'_, DesktopRecording>,
+    request: Value,
+) -> Reply {
+    mode.require_editor()?;
+    Ok(state.control(request).await?)
 }

@@ -1,5 +1,6 @@
 //! One embedded read-only host. Hub services and PLC connections stay external.
 mod alarm;
+mod app_mode;
 mod auth;
 mod buzzer;
 mod close;
@@ -8,6 +9,7 @@ mod history;
 mod project;
 mod recording;
 
+use app_mode::AppMode;
 use auth::AuthState;
 use scada_host::desktop_recording::DesktopRecording;
 use scada_host::recording_gate::NO_RECORDING_RUN;
@@ -75,10 +77,12 @@ async fn stop_read(active: &mut Active) {
 
 #[tauri::command]
 async fn hub_connect(
+    mode: State<'_, AppMode>,
     state: State<'_, NativeHost>,
     alarm: State<'_, alarm::AlarmState>,
     endpoint: String,
 ) -> Result<HubStatus, String> {
+    mode.require_editor()?;
     let _alarm_operation = state.alarm_operation.lock().await;
     if state.exiting.load(Ordering::SeqCst) {
         return Err("exiting".into());
@@ -119,10 +123,12 @@ fn hub_saved_endpoint(state: State<'_, NativeHost>) -> Result<Option<String>, St
 #[tauri::command]
 async fn hub_read_start<R: Runtime>(
     app: AppHandle<R>,
+    mode: State<'_, AppMode>,
     state: State<'_, NativeHost>,
     project_json: String,
     subscription_id: String,
 ) -> Result<(), String> {
+    mode.require_editor()?;
     let project = Project::from_json(&project_json).map_err(|_| "invalid_project".to_owned())?;
     let mut active = state.active.lock().await;
     if !active.claim(&subscription_id) {
@@ -227,11 +233,22 @@ mod control_tests;
 #[cfg(test)]
 mod project_tests;
 
+#[cfg(test)]
+mod mode_tests;
+
+/// The commands by mode (`command_list.rs`, also read by `build.rs`).
+#[cfg(test)]
+mod command_list {
+    include!("../command_list.rs");
+}
+
 #[tauri::command]
 async fn hub_catalog(
+    mode: State<'_, AppMode>,
     state: State<'_, NativeHost>,
     project_json: String,
 ) -> Result<scada_runtime::CatalogView, String> {
+    mode.require_editor()?;
     let project = Project::from_json(&project_json).map_err(|_| "invalid_project".to_owned())?;
     let active = state.active.lock().await;
     if !active.connected {
@@ -271,6 +288,7 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             _ => {}
         })
         .invoke_handler(tauri::generate_handler![
+            app_mode::app_mode,
             hub_connect,
             hub_disconnect,
             hub_saved_endpoint,
@@ -331,6 +349,16 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
 }
 
 fn main() {
+    // The mode is decided first; a refused command line opens no window
+    // (Runtime mode design §3).
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let mode = match app_mode::parse_args(std::env::args_os().skip(1), &cwd) {
+        Ok(mode) => mode,
+        Err(error) => {
+            app_mode::report_arg_error(&error);
+            std::process::exit(2);
+        }
+    };
     let bootstrap = local_bootstrap().expect("SCADA settings store unavailable");
     // The recording DB and the History host. A store that cannot be opened
     // does not stop the app (product-owner design §3).
@@ -357,9 +385,12 @@ fn main() {
     commands(tauri::Builder::default())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            let mode = app.state::<AppMode>();
+            app_mode::create_window(app, &mode)?;
             alarm::start_events(app.handle().clone());
             Ok(())
         })
+        .manage(mode)
         .manage(NativeHost {
             bootstrap: std::sync::Arc::new(bootstrap),
             active: Mutex::new(Active::default()),

@@ -44,6 +44,7 @@ fn app_with_alarm(
     alarm: alarm::AlarmState,
 ) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
     let app = commands(mock_builder())
+        .manage(crate::app_mode::AppMode::Editor)
         .manage(auth)
         .manage(alarm)
         .manage(NativeHost {
@@ -59,7 +60,7 @@ fn app_with_alarm(
         })
         .build(mock_context(noop_assets()))
         .unwrap();
-    let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
+    let webview = WebviewWindowBuilder::new(&app, "editor", Default::default())
         .build()
         .unwrap();
     (app, webview)

@@ -67,8 +67,8 @@ async function mockNativeHost(page: Page) {
     Object.defineProperty(window, "__TAURI_INTERNALS__", {
       value: {
         metadata: {
-          currentWindow: { label: "main" },
-          currentWebview: { windowLabel: "main", label: "main" },
+          currentWindow: { label: "editor" },
+          currentWebview: { windowLabel: "editor", label: "editor" },
         },
         transformCallback(callback: (event: unknown) => void) {
           const id = ++nextId;

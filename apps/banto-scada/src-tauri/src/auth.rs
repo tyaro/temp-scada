@@ -11,6 +11,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use crate::app_mode::{AppMode, Guarded};
 use scada_host::auth::Role;
 use scada_host::auth_phase::AuthHost;
 use scada_host::desktop_auth::{
@@ -125,15 +126,17 @@ pub async fn auth_change_password(
 
 #[tauri::command]
 pub async fn auth_transition_to_operational(
+    mode: State<'_, AppMode>,
     state: State<'_, AuthState>,
     username: String,
     password: String,
     display_name: String,
-) -> Result<TransitionResult, CommandError> {
-    state
+) -> Result<TransitionResult, Guarded<CommandError>> {
+    mode.require_editor()?;
+    Ok(state
         .get()?
         .transition_to_operational(&username, &password, &display_name)
-        .await
+        .await?)
 }
 
 #[tauri::command]
@@ -186,12 +189,14 @@ pub async fn auth_config_get(state: State<'_, AuthState>) -> Result<AuthSettings
 
 #[tauri::command]
 pub async fn auth_config_apply(
+    mode: State<'_, AppMode>,
     state: State<'_, AuthState>,
     disabled: bool,
     disabled_role: Role,
-) -> Result<AuthSettings, CommandError> {
-    state
+) -> Result<AuthSettings, Guarded<CommandError>> {
+    mode.require_editor()?;
+    Ok(state
         .get()?
         .auth_config_apply(disabled, disabled_role)
-        .await
+        .await?)
 }

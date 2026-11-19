@@ -1,6 +1,7 @@
 //! The history commands of the desktop host (product-owner design §7.1): the
 //! HistoryContext v2 of the applied plan, and one H1 query at a time through
 //! the History host. Reading history needs no sign-in, like the Hub reads.
+use crate::app_mode::AppMode;
 use scada_host::recording_runtime::RecordingRuntime;
 use scada_model::Project;
 use serde_json::Value;
@@ -11,9 +12,11 @@ use tauri::State;
 /// Errors: `invalid_project`, or why the recording DB is unavailable.
 #[tauri::command]
 pub fn history_context(
+    mode: State<'_, AppMode>,
     runtime: State<'_, RecordingRuntime>,
     project_json: String,
 ) -> Result<Option<Value>, String> {
+    mode.require_editor()?;
     let project = Project::from_json(&project_json).map_err(|_| "invalid_project".to_owned())?;
     runtime
         .history_context(&project)

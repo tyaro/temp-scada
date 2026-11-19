@@ -16,6 +16,7 @@ use tauri::{Runtime, State, WebviewWindow};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 use crate::alarm::{self, AlarmState};
+use crate::app_mode::AppMode;
 use crate::auth::AuthState;
 use crate::NativeHost;
 
@@ -93,8 +94,10 @@ async fn confirm_overwrite<R: Runtime>(window: &WebviewWindow<R>, path: &std::pa
 #[tauri::command]
 pub async fn project_open<R: Runtime>(
     window: WebviewWindow<R>,
+    mode: State<'_, AppMode>,
     files: State<'_, ProjectFileState>,
 ) -> Result<Response, String> {
+    mode.require_editor()?;
     let Some(path) = pick_open(&window).await else {
         return Ok(Response::new(frame(&json!({"status": "cancelled"}), &[])));
     };
@@ -114,12 +117,14 @@ pub async fn project_open<R: Runtime>(
 #[tauri::command]
 pub async fn project_save<R: Runtime>(
     window: WebviewWindow<R>,
+    mode: State<'_, AppMode>,
     files: State<'_, ProjectFileState>,
     auth: State<'_, AuthState>,
     alarm: State<'_, AlarmState>,
     host: State<'_, NativeHost>,
     request: Request<'_>,
 ) -> Result<Value, String> {
+    mode.require_editor()?;
     let InvokeBody::Raw(body) = request.body() else {
         return Err("invalid_request".into());
     };

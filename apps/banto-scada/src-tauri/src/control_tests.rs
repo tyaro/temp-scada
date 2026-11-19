@@ -42,6 +42,7 @@ fn app(dir: &TempDir) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
     let (auth, recording) =
         tauri::async_runtime::block_on(AuthState::start(&dir.0, "no_recording_run"));
     let app = commands(mock_builder())
+        .manage(crate::app_mode::AppMode::Editor)
         .manage(auth)
         .manage(recording)
         .manage(RecordingRuntime::start(&dir.0, "deployment-a"))
@@ -58,7 +59,7 @@ fn app(dir: &TempDir) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
         })
         .build(mock_context(noop_assets()))
         .unwrap();
-    let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
+    let webview = WebviewWindowBuilder::new(&app, "editor", Default::default())
         .build()
         .unwrap();
     (app, webview)

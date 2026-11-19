@@ -78,6 +78,7 @@ fn host() -> Host {
         generation.scope(context.clone()),
     ));
     let app = commands(mock_builder())
+        .manage(crate::app_mode::AppMode::Editor)
         .manage(AuthState::with_gate(gate.clone()))
         .manage(DesktopRecording::with_interval(
             gate.clone(),
@@ -85,7 +86,7 @@ fn host() -> Host {
         ))
         .build(mock_context(noop_assets()))
         .unwrap();
-    let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
+    let webview = WebviewWindowBuilder::new(&app, "editor", Default::default())
         .build()
         .unwrap();
     let events = listen(&webview);
@@ -442,11 +443,12 @@ fn a_host_with_an_empty_slot_answers_why() {
     let (auth, recording) =
         tauri::async_runtime::block_on(AuthState::start(&dir.0, "no_recording_run"));
     let app = commands(mock_builder())
+        .manage(crate::app_mode::AppMode::Editor)
         .manage(auth)
         .manage(recording)
         .build(mock_context(noop_assets()))
         .unwrap();
-    let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
+    let webview = WebviewWindowBuilder::new(&app, "editor", Default::default())
         .build()
         .unwrap();
     let h = |cmd: &str, args: Value| {
@@ -511,7 +513,7 @@ fn a_reloaded_page_ends_its_subscriptions_and_the_next_page_attaches_anew() {
     let old = first["reply"]["outcome"]["subscriptionRef"].clone();
     // What the page load hook does on a reload (`commands`); the mock
     // runtime emits no page load or destroy event.
-    recording::end_page(&h.app, "main");
+    recording::end_page(&h.app, "editor");
 
     // The next page of the same webview: the old subscription is over, so a
     // replay of its attach is told so; a new attach delivers.

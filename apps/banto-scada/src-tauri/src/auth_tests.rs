@@ -37,10 +37,11 @@ impl Drop for TempDir {
 
 fn app(auth: AuthState) -> (App<MockRuntime>, WebviewWindow<MockRuntime>) {
     let app = commands(mock_builder())
+        .manage(crate::app_mode::AppMode::Editor)
         .manage(auth)
         .build(mock_context(noop_assets()))
         .unwrap();
-    let webview = WebviewWindowBuilder::new(&app, "main", Default::default())
+    let webview = WebviewWindowBuilder::new(&app, "editor", Default::default())
         .build()
         .unwrap();
     (app, webview)

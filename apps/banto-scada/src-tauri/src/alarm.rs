@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, Runtime, State, WebviewWindow};
 use tauri_plugin_dialog::DialogExt;
 
+use crate::app_mode::AppMode;
 use crate::auth::AuthState;
 use crate::project::ProjectFileState;
 use crate::NativeHost;
@@ -328,7 +329,10 @@ pub async fn apply_file(
 }
 
 #[tauri::command]
+// Each host state is a separate Tauri state argument.
+#[allow(clippy::too_many_arguments)]
 pub async fn alarm_apply(
+    mode: State<'_, AppMode>,
     files: State<'_, ProjectFileState>,
     alarm: State<'_, AlarmState>,
     host: State<'_, NativeHost>,
@@ -337,6 +341,7 @@ pub async fn alarm_apply(
     confirmed: Vec<UnackedOccurrence>,
     confirmed_switch_from: Option<String>,
 ) -> Result<ApplyResult, String> {
+    mode.require_editor()?;
     let user = authorized_user(&auth).await?;
     let path = files.0.path(file_id).ok_or("unknownFileId")?;
     apply_file(
@@ -527,9 +532,11 @@ async fn import_picked(service: &AlarmService, path: PathBuf) -> Result<AlarmSet
 #[tauri::command]
 pub async fn alarm_sound_import<R: Runtime>(
     window: WebviewWindow<R>,
+    mode: State<'_, AppMode>,
     alarm: State<'_, AlarmState>,
     auth: State<'_, AuthState>,
 ) -> Result<Option<AlarmSettingsView>, String> {
+    mode.require_editor()?;
     let service = alarm.get()?.clone();
     authorize_alarm_settings(&auth).await?;
     let Some(path) = pick_wav(&window).await else {
