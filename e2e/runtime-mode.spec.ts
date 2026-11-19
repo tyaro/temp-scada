@@ -45,6 +45,19 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
         viewDelayMs: 0,
         /** `operation_write` rejects without an answer (a lost IPC answer). */
         writeLost: false,
+        /** The write key and the write state (`operation_key_status`, O2c-4a). */
+        keyStatus: {
+          keyEndpoint: null as null | string,
+          hubEndpoint: "http://127.0.0.1:8722" as null | string,
+          write: {
+            state: "ready" as string,
+            changedAtMs: null as null | number,
+          },
+        },
+        /** Secrets `operation_key_register` received. */
+        keySecrets: [] as string[],
+        /** When set, the three key changes reject with this reason. */
+        keyRefusal: null as null | string,
         seq: 1,
         starts: [] as Record<string, unknown>[],
         acks: [] as unknown[],
@@ -189,6 +202,24 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                     latest: slot === "running" ? host.latest : null,
                   })),
                 };
+              }
+              case "operation_key_status":
+                return structuredClone(host.keyStatus);
+              case "operation_key_register":
+              case "operation_key_delete":
+              case "operation_write_resume": {
+                if (host.keyRefusal) throw host.keyRefusal;
+                const status = host.keyStatus;
+                if (command === "operation_key_register") {
+                  host.keySecrets.push(args!.secret as string);
+                  status.keyEndpoint = status.hubEndpoint;
+                  status.write = { state: "ready", changedAtMs: 1 };
+                } else if (command === "operation_key_delete") {
+                  status.keyEndpoint = null;
+                } else if (status.write.state === "stopped") {
+                  status.write = { state: "ready", changedAtMs: 2 };
+                }
+                return structuredClone(status);
               }
               case "operation_write": {
                 host.writes.push(structuredClone(args!.request));
@@ -1183,5 +1214,140 @@ test.describe("the faceplate's operation rows (operation stage 3, O3c-1)", () =>
     await expect(notice).toContainText(
       "結果不明。現在値と実行記録を確認してください",
     );
+  });
+});
+
+test.describe("the write terminal settings (operation stage 3, O2c-4a)", () => {
+  const entry = "[data-runtime-write-entry]";
+
+  test("registers a pasted key, never shows it back, and deletes it after a confirmation", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page);
+    await page.goto("/runtime.html");
+    await expect(page.locator(entry)).toHaveText("書込み: キー未登録");
+    await page.locator(entry).click();
+    const dialog = page.getByRole("dialog", { name: "書込みの端末設定" });
+    await expect(dialog.locator("[data-operation-key]")).toHaveText(
+      "登録されていません",
+    );
+    await expect(dialog.locator("[data-operation-hub-endpoint]")).toHaveText(
+      "http://127.0.0.1:8722",
+    );
+    // No key: nothing to delete.
+    await expect(
+      dialog.getByRole("button", { name: "キーを削除" }),
+    ).toHaveCount(0);
+
+    const input = dialog.getByLabel("書き用キーを登録する");
+    await expect(input).toHaveAttribute("type", "password");
+    await input.fill("  secret-123\n");
+    await dialog.getByRole("button", { name: "登録", exact: true }).click();
+    await expect(dialog.locator("[data-operation-settings-done]")).toHaveText(
+      "書き用キーを登録しました。最初の書込みで Hub がキーを確かめます。",
+    );
+    expect(
+      await page.evaluate(() => (window as any).__runtimeHost.keySecrets),
+    ).toEqual(["secret-123"]);
+    await expect(dialog.getByLabel("書き用キーを登録し直す")).toHaveValue("");
+    await expect(dialog.locator("[data-operation-key]")).toHaveText(
+      "登録済み（http://127.0.0.1:8722）",
+    );
+    await expect(page.locator(entry)).toHaveText("書込み: キー登録済み");
+    await expect(dialog).not.toContainText("secret-123");
+
+    await dialog.getByRole("button", { name: "キーを削除" }).click();
+    await dialog.getByRole("button", { name: "取消" }).click();
+    expect(
+      await page.evaluate(
+        () => (window as any).__runtimeHost.keyStatus.keyEndpoint,
+      ),
+    ).toBe("http://127.0.0.1:8722");
+    await dialog.getByRole("button", { name: "キーを削除" }).click();
+    await dialog.getByRole("button", { name: "削除する" }).click();
+    await expect(dialog.locator("[data-operation-key]")).toHaveText(
+      "登録されていません",
+    );
+    await expect(page.locator(entry)).toHaveText("書込み: キー未登録");
+
+    // A secret typed and left behind is gone when the window opens again.
+    await dialog.getByLabel("書き用キーを登録する").fill("left-behind");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(page.locator(entry)).toBeFocused();
+    await page.locator(entry).click();
+    await expect(dialog.getByLabel("書き用キーを登録する")).toHaveValue("");
+  });
+
+  test("a tripped key shows on the top bar and 書込みを再開 resumes it", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page);
+    await page.addInitScript(() => {
+      const wait = setInterval(() => {
+        const host = (window as any).__runtimeHost;
+        if (!host) return;
+        clearInterval(wait);
+        host.keyStatus.keyEndpoint = "http://127.0.0.1:8722";
+        host.keyStatus.write = {
+          state: "stopped",
+          changedAtMs: Date.UTC(2026, 10, 20, 0, 0, 0),
+        };
+      });
+    });
+    await page.goto("/runtime.html");
+    await expect(page.locator(entry)).toHaveText("書込み: 停止中");
+    await page.locator(entry).click();
+    const dialog = page.getByRole("dialog", { name: "書込みの端末設定" });
+    await expect(
+      dialog.locator('[data-operation-write-state="stopped"]'),
+    ).toContainText("Hub の管理画面で解除してから");
+    await dialog.getByRole("button", { name: "書込みを再開" }).click();
+    await expect(dialog.locator("[data-operation-settings-done]")).toHaveText(
+      "書込みを再開しました。次の書込みで Hub がもう一度確かめます。",
+    );
+    await expect(
+      dialog.getByRole("button", { name: "書込みを再開" }),
+    ).toHaveCount(0);
+    await expect(page.locator(entry)).toHaveText("書込み: キー登録済み");
+  });
+
+  test("a refused change shows its reason and the state the host still has", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page);
+    await page.goto("/runtime.html");
+    await page.evaluate(() => {
+      const host = (window as any).__runtimeHost;
+      host.keyRefusal = "unauthorized";
+      host.keyStatus.keyEndpoint = "http://10.0.0.1:8722";
+    });
+    await page.locator(entry).click();
+    const dialog = page.getByRole("dialog", { name: "書込みの端末設定" });
+    await expect(dialog.locator("[data-operation-key-mismatch]")).toBeVisible();
+    await expect(page.locator(entry)).toHaveText("書込み: 接続先違い");
+    await dialog.getByLabel("書き用キーを登録し直す").fill("new-key");
+    await dialog.getByRole("button", { name: "登録", exact: true }).click();
+    await expect(dialog.locator("[data-operation-settings-issue]")).toHaveText(
+      "書込みの設定の変更には Admin でのログインが必要です。",
+    );
+    await expect(dialog.locator("[data-operation-key]")).toHaveText(
+      "登録済み（http://10.0.0.1:8722）",
+    );
+  });
+
+  test("an empty key is not sent", async ({ page }) => {
+    await mockRuntimeHost(page);
+    await page.goto("/runtime.html");
+    await page.locator(entry).click();
+    const dialog = page.getByRole("dialog", { name: "書込みの端末設定" });
+    await dialog.getByLabel("書き用キーを登録する").fill("   ");
+    await dialog.getByRole("button", { name: "登録", exact: true }).click();
+    await expect(dialog.locator("[data-operation-settings-issue]")).toHaveText(
+      "書き用キーを入れてください。",
+    );
+    expect(
+      await page.evaluate(() => (window as any).__runtimeHost.keySecrets),
+    ).toEqual([]);
   });
 });
