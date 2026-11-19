@@ -63,7 +63,7 @@ test("the preview's 実行 changes the simulated value and shows 模擬", async 
     "書込みました",
   );
   await expect(running.locator("[data-operation-result]")).toContainText(
-    "書いた値 運転（true）",
+    "要求値 運転（true）",
   );
   await expect(running.locator(".value")).toContainText("SIM · true");
   // The read details of the same popup show the simulated value too.
