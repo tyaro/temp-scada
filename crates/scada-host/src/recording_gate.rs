@@ -729,6 +729,12 @@ impl RecordingGate {
         &self.auth
     }
 
+    /// The shared auth, for a caller that outlives one borrow (the
+    /// operation write's spawned send, operation stage-3 design §4-8).
+    pub fn auth_host(&self) -> Arc<AuthHost> {
+        self.auth.clone()
+    }
+
     /// Re-validate the desktop session now and revoke the registry sessions
     /// of any other generation. Auth-changing commands (logout, role or
     /// password change, deletion, auth-mode switch) call this before they

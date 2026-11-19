@@ -79,4 +79,5 @@ pub const RUNTIME_ONLY: &[&str] = &[
     "runtime_history_context",
     "runtime_recording_context",
     "runtime_alarm_status",
+    "operation_write",
 ];

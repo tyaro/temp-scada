@@ -274,3 +274,5 @@ O2b-2 の分け方と O2b-2a で決めたこと（2026-11-19）: O2b-2a は host
 - 適用中の Project が無いときは 3 の `project_changed`、購読の catalog の revision が無いときは 4 の `catalog_pending`。認証を開けなかった host は `auth_unavailable`（記録のフェーズは `unknown`）。
 - 記録の `value` は、ボタンなら `{"button": 番号, "value": 値}`、入力なら `{"input": "入力の文字列", "value": 値}`。値を解決する前に止めたものは `value` を持たない。
 - 送信のタスクが異常終了したときは `uncertain`（理由 `interrupted`）とする。
+
+O2b-2b で決めたこと（2026-11-19）: command `operation_write` は Runtime の窓だけに許す（ACL の `runtime.json`、`require_runtime`）。Editor mode では要求を受け取る前に拒むので記録する要求が無く、`operations.db` は Runtime mode でだけ開く（host の `not_runtime` はこの command からは出ない）。記録を開けないときは 2〜5 を走らせずに `record_failed` を返す。購読の catalog の revision は、購読の最新の frame の値（`ReadHostFrame::catalog_revision`）を使う。購読が無いか catalog がまだ無ければ `catalog_pending`。
