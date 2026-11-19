@@ -7,11 +7,12 @@ if (import.meta.hot)
   import.meta.hot.dispose(() => {
     stop();
   });
-if (authClient) {
+// Several e2e specs patch this branch by its text: keep its shape.
+if ("__TAURI_INTERNALS__" in window) {
   const { default: NativeShell } = await import("./native/NativeShell.svelte");
   mount(NativeShell, {
     target: document.getElementById("app")!,
-    props: { authClient },
+    props: { authClient: authClient! },
   });
 } else {
   mount(App, { target: document.getElementById("app")! });
