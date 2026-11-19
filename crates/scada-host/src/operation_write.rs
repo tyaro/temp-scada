@@ -95,7 +95,8 @@ pub const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
 /// The default minimum interval between two sends of the terminal (§7,
 /// §11-10): writes inside it are refused with `too_soon`, so the Hub's rate
 /// limit does not trip the write key.
-pub const MIN_WRITE_INTERVAL: Duration = Duration::from_secs(1);
+pub const MIN_WRITE_INTERVAL: Duration =
+    Duration::from_millis(crate::operation_db::DEFAULT_MIN_INTERVAL_MS as u64);
 
 /// The user name of a write in the development / initial-setup phase (§6).
 pub const NOT_LOGGED_IN: &str = "未ログイン";

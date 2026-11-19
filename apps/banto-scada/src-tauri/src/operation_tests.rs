@@ -321,7 +321,8 @@ fn the_write_key_commands_work_login_free_before_operation() {
     assert_eq!(
         status,
         json!({"keyEndpoint": null, "hubEndpoint": null,
-            "write": {"state": "ready", "changedAtMs": null}})
+            "write": {"state": "ready", "changedAtMs": null},
+            "minIntervalMs": 1_000})
     );
     assert_eq!(
         invoke(
@@ -343,6 +344,31 @@ fn the_write_key_commands_work_login_free_before_operation() {
     assert_eq!(
         invoke(&webview, "operation_write_resume", json!({})).unwrap(),
         status
+    );
+    // The minimum interval (O2c-4b): out of the range or off its step is
+    // refused and changes nothing; a valid one is answered and kept.
+    for ms in [0, 99, 150, 60_100] {
+        assert_eq!(
+            invoke(
+                &webview,
+                "operation_min_interval_set",
+                json!({"minIntervalMs": ms})
+            ),
+            Err(json!("invalid_interval")),
+            "{ms}"
+        );
+    }
+    let saved = invoke(
+        &webview,
+        "operation_min_interval_set",
+        json!({"minIntervalMs": 2_500}),
+    )
+    .unwrap();
+    assert_eq!(saved["minIntervalMs"], 2_500);
+    assert_eq!(saved["write"], status["write"]);
+    assert_eq!(
+        invoke(&webview, "operation_key_status", json!({})).unwrap()["minIntervalMs"],
+        2_500
     );
 }
 
@@ -371,6 +397,10 @@ fn the_write_key_commands_need_an_admin_in_operation() {
         ("operation_key_register", json!({"secret": "write-key"})),
         ("operation_key_delete", json!({})),
         ("operation_write_resume", json!({})),
+        (
+            "operation_min_interval_set",
+            json!({"minIntervalMs": 2_000}),
+        ),
     ] {
         assert_eq!(
             invoke(&webview, command, args),
@@ -394,6 +424,10 @@ fn the_write_key_commands_without_the_record_are_record_failed() {
         ("operation_key_register", json!({"secret": "write-key"})),
         ("operation_key_delete", json!({})),
         ("operation_write_resume", json!({})),
+        (
+            "operation_min_interval_set",
+            json!({"minIntervalMs": 2_000}),
+        ),
     ] {
         assert_eq!(
             invoke(&webview, command, args),

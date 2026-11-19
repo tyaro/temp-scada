@@ -53,6 +53,7 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
             state: "ready" as string,
             changedAtMs: null as null | number,
           },
+          minIntervalMs: 1000,
         },
         /** Secrets `operation_key_register` received. */
         keySecrets: [] as string[],
@@ -216,9 +217,14 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
               }
               case "operation_key_register":
               case "operation_key_delete":
-              case "operation_write_resume": {
+              case "operation_write_resume":
+              case "operation_min_interval_set": {
                 if (host.keyRefusal) throw host.keyRefusal;
                 const status = host.keyStatus;
+                if (command === "operation_min_interval_set") {
+                  status.minIntervalMs = args!.minIntervalMs as number;
+                  return structuredClone(status);
+                }
                 if (command === "operation_key_register") {
                   host.keySecrets.push(args!.secret as string);
                   status.keyEndpoint = status.hubEndpoint;
@@ -1382,6 +1388,44 @@ test.describe("the write terminal settings (operation stage 3, O2c-4a)", () => {
       "登録済み（http://127.0.0.1:8722）",
     );
     await expect(page.locator(entry)).toHaveText("書込み: キー登録済み");
+  });
+
+  test("the minimum interval is saved in seconds and checked before it is sent (O2c-4b)", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page);
+    await page.goto("/runtime.html");
+    await page.locator(entry).click();
+    const dialog = page.getByRole("dialog", { name: "書込みの端末設定" });
+    const input = dialog.getByLabel("前の書込みからの最小の間隔（秒）");
+    await expect(input).toHaveValue("1");
+    const save = dialog.getByRole("button", { name: "保存" });
+
+    await input.fill("0.05");
+    await save.click();
+    await expect(dialog.locator("[data-operation-settings-issue]")).toHaveText(
+      "最小間隔は 0.1〜60 秒（0.1 秒刻み）で入れてください。",
+    );
+    expect(
+      await page.evaluate(
+        () => (window as any).__runtimeHost.keyStatus.minIntervalMs,
+      ),
+    ).toBe(1000);
+
+    await input.fill("2.5");
+    await save.click();
+    await expect(dialog.locator("[data-operation-settings-done]")).toHaveText(
+      "最小間隔を 2.5 秒にしました。次の書込みから使います。",
+    );
+    expect(
+      await page.evaluate(
+        () => (window as any).__runtimeHost.keyStatus.minIntervalMs,
+      ),
+    ).toBe(2500);
+    // Opened again, the window shows the saved interval.
+    await page.keyboard.press("Escape");
+    await page.locator(entry).click();
+    await expect(input).toHaveValue("2.5");
   });
 
   test("an empty key is not sent", async ({ page }) => {

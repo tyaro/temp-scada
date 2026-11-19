@@ -4,6 +4,7 @@ import {
   createOperationSettingsHost,
   keyPairing,
   normalizeSecret,
+  parseIntervalSeconds,
   operationSettingsReasonText,
   settingsErrorCode,
   writeBadge,
@@ -19,7 +20,12 @@ function status(
   state: WriteState = "ready",
   hubEndpoint: string | null = HUB,
 ): OperationKeyStatus {
-  return { keyEndpoint, hubEndpoint, write: { state, changedAtMs: null } };
+  return {
+    keyEndpoint,
+    hubEndpoint,
+    write: { state, changedAtMs: null },
+    minIntervalMs: 1000,
+  };
 }
 
 describe("keyPairing", () => {
@@ -80,11 +86,13 @@ describe("the command wrapper", () => {
     await host.register("abc");
     await host.remove();
     await host.resume();
+    await host.setMinInterval(2500);
     expect(calls).toEqual([
       ["operation_key_status", undefined],
       ["operation_key_register", { secret: "abc" }],
       ["operation_key_delete", undefined],
       ["operation_write_resume", undefined],
+      ["operation_min_interval_set", { minIntervalMs: 2500 }],
     ]);
   });
 
@@ -107,6 +115,7 @@ describe("texts", () => {
       "invalid_secret",
       "invalid_endpoint",
       "key_store",
+      "invalid_interval",
       "ipc_failed",
     ])
       expect(operationSettingsReasonText(code)).not.toContain(code);
@@ -128,5 +137,36 @@ describe("texts", () => {
 
   it("drops the whitespace a paste adds around the secret only", () => {
     expect(normalizeSecret("  abc def\r\n")).toBe("abc def");
+  });
+});
+
+describe("parseIntervalSeconds", () => {
+  it("takes 0.1 to 60 seconds in steps of 0.1 (the host's range)", () => {
+    expect(parseIntervalSeconds("1")).toBe(1000);
+    expect(parseIntervalSeconds(" 2.5 ")).toBe(2500);
+    expect(parseIntervalSeconds("0.1")).toBe(100);
+    expect(parseIntervalSeconds("60")).toBe(60000);
+    expect(parseIntervalSeconds("0.3")).toBe(300);
+  });
+
+  it("refuses what the host would refuse", () => {
+    for (const input of [
+      "",
+      "0",
+      "0.05",
+      "0.15",
+      "60.1",
+      "-1",
+      "1e3",
+      "abc",
+      "1,5",
+    ])
+      expect(parseIntervalSeconds(input), input).toBeNull();
+  });
+
+  it("names the interval it saved", () => {
+    expect(
+      changeDoneText("interval", { ...status(HUB), minIntervalMs: 2500 }),
+    ).toBe("最小間隔を 2.5 秒にしました。次の書込みから使います。");
   });
 });

@@ -14,7 +14,13 @@ export interface OperationKeyStatus {
   /** 保存した読み用の接続先。無ければ null。 */
   hubEndpoint: string | null;
   write: { state: WriteState; changedAtMs: number | null };
+  /** 書込みの最小間隔（ミリ秒、O2c-4b）。 */
+  minIntervalMs: number;
 }
+
+/** 最小間隔の範囲（host の `operation_db::valid_min_interval` と同じ）。 */
+export const MIN_INTERVAL_RANGE_MS = [100, 60_000] as const;
+export const MIN_INTERVAL_STEP_MS = 100;
 
 export type Invoke = <T>(
   command: string,
@@ -29,6 +35,10 @@ export function createOperationSettingsHost(invoke: Invoke) {
       invoke<OperationKeyStatus>("operation_key_register", { secret }),
     remove: () => invoke<OperationKeyStatus>("operation_key_delete"),
     resume: () => invoke<OperationKeyStatus>("operation_write_resume"),
+    setMinInterval: (minIntervalMs: number) =>
+      invoke<OperationKeyStatus>("operation_min_interval_set", {
+        minIntervalMs,
+      }),
   };
 }
 export type OperationSettingsHost = ReturnType<
@@ -146,6 +156,8 @@ export function operationSettingsReasonText(code: string): string {
       return "キーの形式が正しくありません（空白や全角を含まない文字列を入れてください）。";
     case "invalid_endpoint":
       return "Hub の接続先が http ではないため、書き用キーを登録できません。";
+    case "invalid_interval":
+      return "最小間隔は 0.1〜60 秒（0.1 秒刻み）で入れてください。";
     case "key_store":
       return "資格情報の保存先を使えないため、書き用キーを扱えません。";
     case "ipc_failed":
@@ -157,10 +169,12 @@ export function operationSettingsReasonText(code: string): string {
 
 /** 変更の結果の文（登録・削除・再開）。 */
 export function changeDoneText(
-  change: "register" | "remove" | "resume",
+  change: "register" | "remove" | "resume" | "interval",
   status: OperationKeyStatus,
 ): string {
   switch (change) {
+    case "interval":
+      return `最小間隔を ${intervalSecondsText(status.minIntervalMs)} 秒にしました。次の書込みから使います。`;
     case "register":
       return "書き用キーを登録しました。最初の書込みで Hub がキーを確かめます。";
     case "remove":
@@ -175,6 +189,25 @@ export function changeDoneText(
 /** 入力したキーの前後の空白（貼り付けで混ざる改行など）を落とす。中の空白は host が断る。 */
 export function normalizeSecret(input: string): string {
   return input.trim();
+}
+
+/** 最小間隔の秒の表記（0.1 秒刻み）。 */
+export function intervalSecondsText(ms: number): string {
+  return String(ms / 1000);
+}
+
+/**
+ * 秒で入れた最小間隔をミリ秒にする。数でない・範囲の外・0.1 秒刻みでない
+ * ときは null（host も同じ規則で断る）。
+ */
+export function parseIntervalSeconds(input: string): number | null {
+  const text = input.trim();
+  if (!/^\d+(\.\d+)?$/.test(text)) return null;
+  const ms = Math.round(Number(text) * 1000);
+  if (Math.abs(Number(text) * 1000 - ms) > 1e-6) return null;
+  if (ms < MIN_INTERVAL_RANGE_MS[0] || ms > MIN_INTERVAL_RANGE_MS[1])
+    return null;
+  return ms % MIN_INTERVAL_STEP_MS === 0 ? ms : null;
 }
 
 /** 状態が変わった時刻の表示。 */

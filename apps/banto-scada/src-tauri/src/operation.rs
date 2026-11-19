@@ -35,8 +35,7 @@ use scada_host::operation_db::{OperationDb, OperationLog, Outcome, WriteStatus};
 use scada_host::operation_key::{self, WriteKey, WriteKeyStore};
 use scada_host::operation_write::{
     self, check_shape, reason, HubAccess, OperationEnv, OperationView, OperationViewRequest,
-    OperationWrite, OperationWriteRequest, ViewContext, WriteResult, MIN_WRITE_INTERVAL,
-    WRITE_TIMEOUT,
+    OperationWrite, OperationWriteRequest, ViewContext, WriteResult, WRITE_TIMEOUT,
 };
 use scada_host::recording_runtime::NO_DATA_DIR;
 use serde::Serialize;
@@ -229,6 +228,7 @@ pub async fn operation_write(
     };
     let endpoint = read_endpoint(&host);
     let write = operations.write_key(&log);
+    let min_interval = log.min_interval();
     let read = host.bootstrap.rest_client().ok().flatten();
     let context = OperationWrite {
         env: Arc::new(HostEnv {
@@ -241,8 +241,8 @@ pub async fn operation_write(
             endpoint,
             read: read.as_ref(),
             subscribed_revision: host.read_revision.get(),
+            min_interval,
             write,
-            min_interval: MIN_WRITE_INTERVAL,
             timeout: WRITE_TIMEOUT,
         },
     };
@@ -268,6 +268,9 @@ pub async fn operation_view(
     let read = host.bootstrap.rest_client().ok().flatten();
     let log = operations.log().ok();
     let write = log.as_deref().and_then(|log| operations.write_key(log));
+    let min_interval = log
+        .as_deref()
+        .map_or(Duration::ZERO, OperationLog::min_interval);
     let context = ViewContext {
         env: Arc::new(HostEnv {
             runtime: matches!(*mode, AppMode::Runtime { .. }),
@@ -279,8 +282,8 @@ pub async fn operation_view(
             endpoint: read_endpoint(&host),
             read: read.as_ref(),
             subscribed_revision: None,
+            min_interval,
             write,
-            min_interval: MIN_WRITE_INTERVAL,
             timeout: VIEW_TIMEOUT,
         },
     };
@@ -299,6 +302,9 @@ pub struct OperationKeyStatus {
     pub key_endpoint: Option<String>,
     pub hub_endpoint: Option<String>,
     pub write: WriteStatus,
+    /// The minimum interval between writes in milliseconds (§7, §11-10;
+    /// O2c-4b). Saved with `operation_min_interval_set`.
+    pub min_interval_ms: u64,
 }
 
 fn key_status(log: &OperationLog, host: &NativeHost) -> OperationKeyStatus {
@@ -306,6 +312,7 @@ fn key_status(log: &OperationLog, host: &NativeHost) -> OperationKeyStatus {
         key_endpoint: log.key_endpoint(),
         hub_endpoint: read_endpoint(host),
         write: log.write_status(),
+        min_interval_ms: u64::try_from(log.min_interval().as_millis()).unwrap_or(u64::MAX),
     }
 }
 
@@ -444,3 +451,38 @@ pub async fn operation_write_resume(
     .await?;
     Ok(key_status(&log, &host))
 }
+
+/// `operation_min_interval_set`: save the minimum interval between writes
+/// (§7, §11-10; O2c-4b) as `minIntervalMs`: 100–60,000 ms in steps of 100
+/// (`operation_db::valid_min_interval`). The next write's check uses it; a
+/// write already checked keeps the interval it was checked with. Admin only;
+/// the errors are the auth refusals, `invalid_interval` and `record_failed`.
+#[tauri::command]
+pub async fn operation_min_interval_set(
+    mode: State<'_, AppMode>,
+    auth: State<'_, AuthState>,
+    operations: State<'_, OperationState>,
+    host: State<'_, NativeHost>,
+    min_interval_ms: i64,
+) -> Result<OperationKeyStatus, String> {
+    mode.require_runtime()?;
+    let log = open_log(&operations)?;
+    if !scada_host::operation_db::valid_min_interval(min_interval_ms) {
+        return Err(INVALID_INTERVAL.into());
+    }
+    as_admin(&auth, || async {
+        log.set_min_interval(min_interval_ms)
+            .await
+            .map_err(|error| {
+                eprintln!(
+                    "[banto-scada] operation settings: the minimum interval could not be saved: {error:?}"
+                );
+                reason::RECORD_FAILED.to_owned()
+            })
+    })
+    .await?;
+    Ok(key_status(&log, &host))
+}
+
+/// A minimum interval out of its range (`operation_min_interval_set`).
+const INVALID_INTERVAL: &str = "invalid_interval";
