@@ -149,6 +149,7 @@ O0 で記録の開始（`recording_initial_setup`）を Editor 専用にし、Ed
    - 推奨: `auth_setup`（最初の管理者の作成）と `users_*`・`auth_config_get` は Runtime でも使える（Admin のまま）。Runtime だけの端末でも利用者を管理できるようにする。
    - 推奨: `auth_transition_to_operational`（運用フェーズへの遷移）と `auth_config_apply`（ログイン不要モードの切替など）は Editor 専用。フェーズとログイン不要は書込みの解禁（親設計 §6）に直結するので、運転の画面から変えられないようにする。
    - 代案は全部 Runtime でも使える、または全部 Editor 専用。
+   - 実装時の補足（2026-11-19 ユーザー確認、O0b-2b）: host の `auth_setup` は認証無効モードの間は断り、認証無効を解くのは運用への移行だけなので、初期設定のフェーズの端末では Runtime から最初の管理者を作れない。**最初の管理者は Editor の運用への移行で作るままとする**。Runtime の「最初の管理者を作成」は、認証が有効で管理者がいない場合（通常の経路では起きない）だけに出る。Runtime だけの端末は、初期設定を Editor で済ませてから使う。
 3. **記録の再開・停止（§8）**: **案 A（O0 では Editor 専用、Runtime での記録は C6 で作る）を推奨**。O0 の範囲を広げず、C6 で Runtime の記録の運用（自動再開を含む）をまとめて決める。代案は案 B（O0 で Runtime に再開・停止を許す）。
 4. **`alarm_sound_import` は Editor 専用にする（推奨）**。Runtime の端末で OS のファイル選択の窓を開かない。音を戻す（`alarm_sound_reset`）と試聴は Runtime でも使える。代案は Runtime でも取り込める（Admin のまま）。
 5. **mode で断った要求は監査に残さず、host のログに残す（推奨）**。届くのは capability の設定誤り・不具合・改ざんのとき。代案は監査に `denied` で残す（認証 DB を開けないときの扱いが要る）。
