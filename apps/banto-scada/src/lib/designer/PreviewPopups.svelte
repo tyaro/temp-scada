@@ -20,6 +20,10 @@
   } from "../preview-popups";
   import PreviewWindow from "./PreviewWindow.svelte";
   import type { EquipmentContext } from "../symbol-slots";
+  import type {
+    OperationHost,
+    OperationPlacement,
+  } from "../operation-faceplate";
   let {
     project,
     equipmentContext,
@@ -29,7 +33,10 @@
     onopenusage,
     onopentrend,
     onretiretrend,
+    operations,
   }: {
+    /** Runtime の host の運転操作（段階3 §8）。Editor では渡さない。 */
+    operations?: OperationHost;
     onopentrend?: (screenId: string, objectId: string, token: object) => void;
     onretiretrend?: (token: object) => void;
     project: Project;
@@ -56,6 +63,8 @@
   type FocusOrigin = HTMLElement | SVGElement;
   const origins = new Map<string, FocusOrigin>();
   const trendTokens = new Map<string, object>();
+  // 機器の小窓を最後に開いた配置（操作の要求に使う）。一覧から開いたら無し。
+  const placements = $state<Record<string, OperationPlacement | undefined>>({});
   const controllers = $state<
     Record<string, { cancel: () => void } | undefined>
   >({});
@@ -171,10 +180,15 @@
     if (candidate && !candidate.reason)
       openTarget(candidate.id, pickerKind, candidate.cost);
   }
-  export function showEquipment(id: string, origin: FocusOrigin) {
+  export function showEquipment(
+    id: string,
+    origin: FocusOrigin,
+    placement?: OperationPlacement,
+  ) {
     if (!active || !project.equipment?.some((item) => item.id === id)) return;
     for (const controller of Object.values(controllers)) controller?.cancel();
     opener = origin;
+    placements[popupKey({ targetId: id, kind: "equipment" })] = placement;
     openTarget(id, "equipment", 0);
   }
   function front(id: string, kind: PopupKind) {
@@ -195,6 +209,7 @@
     if (token) onretiretrend?.(token);
     trendTokens.delete(key);
     windows = closePopup(windows, id, kind);
+    delete placements[key];
     origins.delete(popupKey({ targetId: id, kind }));
     if (restore)
       void tick().then(() => {
@@ -232,6 +247,8 @@
       {area}
       {equipmentContext}
       {onopenusage}
+      {operations}
+      placement={placements[popupKey(entry)] ?? null}
       rank={windows.findIndex((w) => popupKey(w) === popupKey(entry))}
       {images}
       {readings}

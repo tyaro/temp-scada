@@ -284,3 +284,11 @@ O3 の分け方と O3a で決めたこと（2026-11-19）: O3a は Runtime の�
 - `blocked` は、要求に依らない 2 と 5 の検査を書込みと同じ関数で記録せずに評価したもの（`not_runtime`・`auth_unavailable`・`phase_unavailable`・`not_authorized`・`project_changed`・`hub_unsupported`・`no_write_key`）と、送信中の `busy`。順は書込みと同じで、記録を開けない・読めないときは最初に `record_failed`（slot は並べ、`latest` は null）。製品では `hub_unsupported` になる。要求ごとの 1・3・4 の拒否は書込みのときに決まる。
 - 適用中の Project に無い機器は `unknown_equipment`、id の形が違えば `invalid_request` のエラーで、記録しない。適用中の Project が無ければ `blocked: "project_changed"` で `slots` は空。
 - 照会は遷移のロックも送信枠も取らない。
+
+O3c-1 で決めたこと（2026-11-19）: O3c を O3c-1（Runtime の小窓の操作の行・確認の小窓・結果の表示）と O3c-2（Editor の模擬の書込み）に分けた。設計に書いていなかった所は次のとおり。
+
+- 押した配置（`screenId`・`objectId`）は機器の小窓ごとに最後に押した 1 つを持つ。一覧などから配置なしで開いた小窓は、操作の行を出すが押せなくし「配置から開いたときだけ操作できます」と出す。
+- 要求の `projectId`・`projectDigest` は Runtime の窓の起動時の Project のもの。`operation_view` の答えの Project が無いか、それと違うときは `project_changed` の文で押せなくする。
+- 送信中は、その小窓の操作の行をすべて押せなくする（host も端末で送信を 1 つに限る）。
+- 行の結果は、記録の最後の 1 件を出す。この小窓の直前の答えが記録に無い（記録しない拒否・`unrecorded`・答えの `recordId` が最後の 1 件と違う）か IPC が失敗したときは、その答えを出す（`unrecorded` は「記録に失敗」を並べる）。
+- Runtime の運転表示のバーの「表示確認（書込みなし）」は、操作を渡したときは出さない。

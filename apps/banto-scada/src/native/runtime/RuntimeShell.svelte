@@ -26,6 +26,7 @@
     type HistoryService,
   } from "../../lib/history/workspace-model";
   import RuntimeOperator from "./RuntimeOperator.svelte";
+  import { createOperationHost } from "../../lib/operation-faceplate";
   import {
     createNativeRecordingManagement,
     runtimeRecordingContext,
@@ -59,6 +60,16 @@
   const authSession = new AuthSession(authClient);
 
   let loaded = $state.raw<RuntimeProject>();
+  // The faceplate's operation rows (operation stage 3 §8) for the startup Project.
+  const operations = $derived(
+    loaded?.status === "opened"
+      ? createOperationHost(
+          (command, args) => invoke(command, args),
+          loaded.project.manifest.projectId,
+          loaded.projectDigest,
+        )
+      : undefined,
+  );
   let wrongMode = $state(false);
   let hub = $state<RuntimeHubView>({
     connected: false,
@@ -449,6 +460,7 @@
         onopenalarms={openAlarmList}
         onsilencebuzzer={alarms.canSilence ? alarms.silenceBuzzer : undefined}
         {overlays}
+        {operations}
       />
     </div>
   {/if}

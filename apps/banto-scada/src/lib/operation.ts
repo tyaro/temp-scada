@@ -336,3 +336,15 @@ export interface OperationView {
   phase: string;
   slots: { slot: string; latest: OperationLatest | null }[];
 }
+
+/** host の `WriteResult`（command `operation_write` の答え、§5）。 */
+export interface WriteResult {
+  outcome: OperationOutcome;
+  reason: string | null;
+  tag: string | null;
+  value: unknown;
+  auditId: number | null;
+  recordId: string | null;
+  /** 送信を終えたが結果を記録できなかった。 */
+  unrecorded: boolean;
+}

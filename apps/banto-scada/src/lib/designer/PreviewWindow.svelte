@@ -1,6 +1,11 @@
 <script lang="ts">
   import { equipmentUsages, type EquipmentUsage } from "../equipment";
   import EquipmentReadDetails from "./EquipmentReadDetails.svelte";
+  import EquipmentOperationRows from "./EquipmentOperationRows.svelte";
+  import type {
+    OperationHost,
+    OperationPlacement,
+  } from "../operation-faceplate";
   import SlotReadStatus from "./SlotReadStatus.svelte";
   import type { EquipmentContext } from "../symbol-slots";
   import { onDestroy, untrack } from "svelte";
@@ -20,6 +25,8 @@
     equipmentContext,
     onopenusage,
     onopentrend,
+    operations,
+    placement = null,
     onfront,
     onframe,
     onclose,
@@ -37,6 +44,9 @@
     readings?: TagReadings;
     equipmentContext?: EquipmentContext;
     onopenusage?: (usage: EquipmentUsage) => void;
+    /** Runtime の host の運転操作。あれば機器の小窓に操作の行を出す（段階3 §8）。 */
+    operations?: OperationHost;
+    placement?: OperationPlacement | null;
     onfront: () => void;
     onframe: (frame: PopupFrame) => void;
     onclose: () => void;
@@ -229,6 +239,15 @@
         usages={equipmentUsages(project, entry.targetId)}
         {onopenusage}
       />
+      {#if operations}
+        <EquipmentOperationRows
+          equipmentId={entry.targetId}
+          {project}
+          equipmentContext={equipmentContext ?? project}
+          host={operations}
+          {placement}
+        />
+      {/if}
     </div>
   {:else if screen}
     <SlotReadStatus

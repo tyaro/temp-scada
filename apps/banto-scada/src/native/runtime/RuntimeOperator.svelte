@@ -8,6 +8,7 @@
   } from "../../lib/designer/controllers/read-presentation.svelte";
   import type { AssetStore } from "../../lib/image-assets";
   import type { Project } from "../../lib/project";
+  import type { OperationHost } from "../../lib/operation-faceplate";
 
   /**
    * The operator view of the startup Project, filling the Runtime window
@@ -24,6 +25,7 @@
     onopenalarms,
     onsilencebuzzer,
     overlays,
+    operations,
   }: {
     project: Project;
     store: AssetStore;
@@ -35,6 +37,8 @@
     onsilencebuzzer?: () => void;
     /** The alarm list, alarm settings and history windows (top bar's entries). */
     overlays?: Snippet;
+    /** 機器の小窓の操作の行（段階3の運転操作 §8）。 */
+    operations?: OperationHost;
   } = $props();
 
   const readPresentation = createReadPresentationController(
@@ -73,6 +77,7 @@
     {onopenalarms}
     {onsilencebuzzer}
     overlay={overlays}
+    {operations}
   />
 {:else}
   <p class="runtime-empty" role="status">

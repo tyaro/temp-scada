@@ -19,6 +19,12 @@ interface RuntimeHostOptions {
   recording?: "unconfigured" | "running";
   /** `blocked`: listening to `alarm_changed` fails until the test sets `alarmListenBlocked = false`. */
   alarmListen?: "ok" | "blocked";
+  /**
+   * What `operation_view` answers (operation stage 3, O3c-1): the product's
+   * `hub_unsupported`, or writable in the initializing phase. Either way the
+   * Project gets the `write` definitions of `operationProject`.
+   */
+  operation?: "hubUnsupported" | "ready";
 }
 
 async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
@@ -31,6 +37,14 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
         calls: [] as string[],
         setups: [] as Record<string, unknown>[],
         account: null as null | { username: string; displayName: string },
+        writes: [] as Record<string, unknown>[],
+        latest: null as null | Record<string, unknown>,
+        /** Overrides what `operation_view` answers in `blocked` when set. */
+        operationBlocked: undefined as undefined | null | string,
+        /** Milliseconds `operation_view` takes to answer. */
+        viewDelayMs: 0,
+        /** `operation_write` rejects without an answer (a lost IPC answer). */
+        writeLost: false,
         seq: 1,
         starts: [] as Record<string, unknown>[],
         acks: [] as unknown[],
@@ -153,6 +167,52 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                   },
                   encoder.encode(kind === "invalidBody" ? "{}" : projectJson),
                 );
+              }
+              case "operation_view": {
+                if (host.viewDelayMs)
+                  await new Promise((done) =>
+                    setTimeout(done, host.viewDelayMs),
+                  );
+                const ready = options.operation === "ready";
+                return {
+                  projectId: options.projectId,
+                  projectDigest: "00",
+                  blocked:
+                    host.operationBlocked !== undefined
+                      ? host.operationBlocked
+                      : ready
+                        ? null
+                        : "hub_unsupported",
+                  phase: ready ? "initializing" : "operational",
+                  slots: ["running", "current"].map((slot) => ({
+                    slot,
+                    latest: slot === "running" ? host.latest : null,
+                  })),
+                };
+              }
+              case "operation_write": {
+                host.writes.push(structuredClone(args!.request));
+                if (host.writeLost) throw new Error("the answer was lost");
+                host.latest = {
+                  id: `record-${host.writes.length}`,
+                  state: "finished",
+                  outcome: "ok",
+                  reason: null,
+                  requestedAtMs: Date.UTC(2026, 10, 19, 1, 2, 3),
+                  finishedAtMs: Date.UTC(2026, 10, 19, 1, 2, 4),
+                  tag: "Plant.Run",
+                  value: true,
+                  auditId: 42,
+                };
+                return {
+                  outcome: "ok",
+                  reason: null,
+                  tag: "Plant.Run",
+                  value: true,
+                  auditId: 42,
+                  recordId: host.latest.id,
+                  unrecorded: false,
+                };
               }
               case "runtime_hub_connect":
                 if (options.hub === "reconnectInEditor")
@@ -389,10 +449,30 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
     },
     {
       options: { ...options, projectId: sample.manifest.projectId },
-      projectJson: JSON.stringify(sample),
+      projectJson: JSON.stringify(
+        options.operation ? operationProject() : sample,
+      ),
       historyResult: rawCases[0].expected as any,
     },
   );
+}
+
+/** The sample with `write` on the motor type's slots (operation stage 3 §3). */
+function operationProject() {
+  const project = structuredClone(sample) as any;
+  for (const type of project.equipmentTypes)
+    for (const slot of type.slots)
+      if (slot.name === "running")
+        slot.write = {
+          label: "運転指令",
+          buttons: [
+            { label: "運転", value: true },
+            { label: "停止", value: false },
+          ],
+        };
+      else if (slot.name === "current")
+        slot.write = { label: "電流 設定", input: { min: 0, max: 100 } };
+  return project;
 }
 
 const calls = (page: Page) =>
@@ -939,4 +1019,169 @@ test("after re-subscribing, the top bar stays 再同期中 until a snapshot read
   });
   await expect(entry).toHaveText("警報: 監視中");
   await expect(dialog.locator('[data-alarm-row="cond-b"]')).toBeVisible();
+});
+
+test.describe("the faceplate's operation rows (operation stage 3, O3c-1)", () => {
+  const pump = "[data-equipment-link='0199f700-0000-7000-8000-000000000002']";
+
+  test("the product's hub_unsupported disables every row with its reason", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page, { operation: "hubUnsupported" });
+    await page.goto("/runtime.html");
+    await page.locator(pump).first().click();
+    const rows = page.getByRole("region", { name: "機器の操作" });
+    await expect(rows).toBeVisible();
+    await expect(rows.locator("[data-operation-disabled]")).toHaveText(
+      "Hub が書込みに対応していません",
+    );
+    await expect(rows.locator("[data-operation-banner]")).toHaveCount(0);
+    await expect(rows.getByRole("button", { name: "運転" })).toBeDisabled();
+    await expect(rows.getByRole("button", { name: "設定" })).toBeDisabled();
+    await expect(page.getByText("表示確認（書込みなし）")).toHaveCount(0);
+  });
+
+  test("a button asks with 取消 focused and 実行 sends operation_write", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page, { operation: "ready" });
+    await page.goto("/runtime.html");
+    await page.locator(pump).first().click();
+    const rows = page.getByRole("region", { name: "機器の操作" });
+    await expect(rows.locator("[data-operation-banner]")).toHaveText(
+      "初期設定中: ログインなしで書込みできます",
+    );
+    // An input outside the range is stopped before the confirmation.
+    await rows.getByRole("textbox", { name: /電流 設定/ }).fill("120");
+    await rows.getByRole("button", { name: "設定" }).click();
+    await expect(rows.getByRole("alert")).toHaveText("値が範囲の外です");
+    await expect(page.getByRole("dialog", { name: "操作の確認" })).toHaveCount(
+      0,
+    );
+
+    await rows.getByRole("button", { name: "運転", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "操作の確認" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "取消" })).toBeFocused();
+    await expect(
+      dialog.locator("[data-operation-confirm-value]"),
+    ).toContainText("→ 運転（true）");
+    await dialog.getByRole("button", { name: "実行" }).click();
+    await expect(dialog).toHaveCount(0);
+    const result = rows.locator(
+      "[data-operation-slot='running'] [data-operation-result]",
+    );
+    await expect(result).toContainText("書込みました");
+    await expect(result).toContainText("要求値 運転（true）");
+    const writes = await page.evaluate(
+      () => (window as any).__runtimeHost.writes,
+    );
+    expect(writes).toEqual([
+      {
+        projectId: sample.manifest.projectId,
+        projectDigest: "00",
+        screenId: expect.any(String),
+        objectId: expect.any(String),
+        equipmentId: "0199f700-0000-7000-8000-000000000002",
+        slotName: "running",
+        expectedValue: true,
+        buttonIndex: 0,
+      },
+    ]);
+    const objectId = await page
+      .locator(pump)
+      .first()
+      .getAttribute("data-object-id");
+    expect(writes[0].objectId).toBe(objectId);
+  });
+
+  test("an open faceplate reads the host again and is released when busy ends", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page, { operation: "ready" });
+    await page.addInitScript(() => {
+      const wait = setInterval(() => {
+        const host = (window as any).__runtimeHost;
+        if (host) {
+          host.operationBlocked = "busy";
+          clearInterval(wait);
+        }
+      });
+    });
+    await page.goto("/runtime.html");
+    await page.locator(pump).first().click();
+    const rows = page.getByRole("region", { name: "機器の操作" });
+    const run = rows.getByRole("button", { name: "運転", exact: true });
+    await expect(run).toBeDisabled();
+    // Another write ends: the next read releases the rows without reopening.
+    await page.evaluate(() => {
+      (window as any).__runtimeHost.operationBlocked = null;
+    });
+    await expect(run).toBeEnabled({ timeout: 10_000 });
+  });
+
+  test("a faceplate whose reads take longer than the refresh still loads", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page, { operation: "ready" });
+    await page.addInitScript(() => {
+      const wait = setInterval(() => {
+        const host = (window as any).__runtimeHost;
+        if (host) {
+          host.viewDelayMs = 2_500;
+          clearInterval(wait);
+        }
+      });
+    });
+    await page.goto("/runtime.html");
+    await page.locator(pump).first().click();
+    const rows = page.getByRole("region", { name: "機器の操作" });
+    await expect(
+      rows.getByRole("button", { name: "運転", exact: true }),
+    ).toBeEnabled({ timeout: 10_000 });
+  });
+
+  test("a write whose answer is lost reads as unknown, not as refused", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page, { operation: "ready" });
+    await page.goto("/runtime.html");
+    await page.evaluate(() => {
+      (window as any).__runtimeHost.writeLost = true;
+    });
+    await page.locator(pump).first().click();
+    const rows = page.getByRole("region", { name: "機器の操作" });
+    await rows.getByRole("button", { name: "運転", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "操作の確認" });
+    await dialog.getByRole("button", { name: "実行" }).click();
+    const slot = rows.locator("[data-operation-slot='running']");
+    const notice = slot.locator("[data-operation-notice]");
+    await expect(notice).toContainText(
+      "結果不明。現在値と実行記録を確認してください",
+    );
+    await expect(notice).toContainText("要求値 運転（true）");
+    await expect(slot).not.toContainText("受け付けませんでした");
+    // Another operation's row arrives in the record: it is shown, and the
+    // notice of the lost answer stays (the two cannot be matched).
+    await page.evaluate(() => {
+      (window as any).__runtimeHost.latest = {
+        id: "another-operation",
+        state: "finished",
+        outcome: "refused",
+        reason: "busy",
+        requestedAtMs: Date.UTC(2026, 10, 19, 1, 2, 3),
+        finishedAtMs: Date.UTC(2026, 10, 19, 1, 2, 4),
+        tag: "Plant.Run",
+        value: false,
+        auditId: null,
+      };
+    });
+    await expect(slot.locator("[data-operation-result]")).toContainText(
+      "送っていません",
+      { timeout: 10_000 },
+    );
+    await expect(notice).toContainText(
+      "結果不明。現在値と実行記録を確認してください",
+    );
+  });
 });
