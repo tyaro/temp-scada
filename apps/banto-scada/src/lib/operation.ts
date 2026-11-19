@@ -281,6 +281,7 @@ const reasonTexts: Record<string, string> = {
   write_stopped: "この端末の書込みは停止中です",
   key_invalid: "書き用キーが無効です",
   too_soon: "前の書込みから間がありません",
+  key_changed: "書き用キーが登録し直されました。もう一度操作してください",
   // TS だけ（Editor の模擬の書込み、O3c-2）。host は返さない。
   simulated_on_hub: "実Hubの購読中は模擬の書込みはできません",
   // 送信のタスクの異常終了（host `operation_db::INTERRUPTED`）

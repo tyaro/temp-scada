@@ -78,6 +78,9 @@ pub mod reason {
     pub const KEY_INVALID: &str = "key_invalid";
     pub const TOO_SOON: &str = "too_soon";
     pub const BUSY: &str = "busy";
+    /// The write key was registered again or deleted between step 5 and
+    /// the send slot (§7): the request is not sent with the previous key.
+    pub const KEY_CHANGED: &str = "key_changed";
     pub const RECORD_FAILED: &str = "record_failed";
     pub const INVALID_OPERATOR: &str = "invalid_operator";
     pub const AUTH_CHANGED: &str = "auth_changed";
@@ -227,14 +230,19 @@ pub async fn operation_write(
         Err(code) => return refuse(context, &record, code).await,
     };
     // 5. The Hub's contract and the write key.
-    let client = match write_client(&context.hub, &context.log, Interval::Check).await {
-        Ok(client) => client,
+    let (client, key_id) = match write_client(&context.hub, &context.log, Interval::Check).await {
+        Ok(found) => found,
         Err(code) => return refuse(context, &record, code).await,
     };
     // 6. The `pending` row; `busy` when another write holds the send slot.
-    let id = match context.log.begin(&record, context.hub.min_interval).await {
+    let id = match context
+        .log
+        .begin(&record, context.hub.min_interval, &key_id)
+        .await
+    {
         Ok(id) => id,
         Err(BeginError::Busy) => return refuse(context, &record, reason::BUSY).await,
+        Err(BeginError::KeyChanged) => return refuse(context, &record, reason::KEY_CHANGED).await,
         Err(BeginError::Gate(gate)) => return refuse(context, &record, gate_reason(gate)).await,
         Err(BeginError::Record(error)) => {
             eprintln!("operation write: the pending row could not be written: {error:?}");
@@ -374,7 +382,7 @@ async fn write_client(
     hub: &HubAccess<'_>,
     log: &OperationLog,
     interval: Interval,
-) -> Result<Arc<RestClient>, &'static str> {
+) -> Result<(Arc<RestClient>, String), &'static str> {
     if !write_contract_confirmed(hub).await {
         return Err(reason::HUB_UNSUPPORTED);
     }
@@ -382,13 +390,13 @@ async fn write_client(
     if hub.endpoint.as_deref() != Some(key.endpoint.as_str()) {
         return Err(reason::HUB_MISMATCH);
     }
-    let client = key.client.clone();
+    let found = (key.client.clone(), key.id.clone());
     let min_interval = match interval {
         Interval::Check => hub.min_interval,
         Interval::Skip => Duration::ZERO,
     };
     log.gate(min_interval).map_err(gate_reason)?;
-    Ok(client)
+    Ok(found)
 }
 
 /// The refusal code of a gate (§4-5).

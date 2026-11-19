@@ -28,6 +28,8 @@ O2c-2（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) §7�
 
 O2c-3a（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) §7）: host に書き用キーを足した。秘密は keyring（`temp-scada-hub-write`）、組にした接続先は `operations.db`（形式 3）に持ち、読み用の接続先と違えば `hub_mismatch`。登録・削除・読込みの関数まで。Tauri の command・権限・画面（O2c-3b・O2c-4）は未実装で、製品はまだ書き用キーを読まず送らない。
 
+O2c-3b-1（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) §7）: 送信に使った書き用キーの世代（keyring の項目 id）を送信枠に持たせ、結果で書込み状態を変えるのはそのキーがまだ登録されているときだけにした（登録し直した後に返った前のキーの 401・trip が `ready` を上書きしない）。確かめた後・送信枠の前にキーが変わったら `key_changed` で送らない。Tauri の command・権限・画面（O2c-3b-2・O2c-4）は未実装。
+
 ## 実Hub・S7接続の着手方針（2026-11-05）
 
 サイドチャットの[実Hub・S7接続計画](real-hub-connection-plan.md)を採用し、ユーザー申告によりSOAK終了待ちを外した。C0の上流契約・対象環境・接続条件確認とC1の通常App読取接続を実施した。ローカル編集はオフラインのまま、デスクトップだけがread専用の製品host・IPCを使う。運用時の認証・管理操作は後続で確定する。

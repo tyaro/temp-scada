@@ -568,6 +568,10 @@ pub enum Gate {
 pub enum BeginError {
     /// Another write of this terminal is in flight (`busy`, §4).
     Busy,
+    /// The write key the request was checked with is no longer the
+    /// registered one (registered again or deleted meanwhile, §7): nothing
+    /// is sent with a key the record no longer points at (`key_changed`).
+    KeyChanged,
     /// The write state or the minimum interval refused it (§7), checked
     /// again with the send slot taken.
     Gate(Gate),
@@ -579,6 +583,10 @@ pub enum BeginError {
 #[derive(Default)]
 struct InFlight {
     sending: Option<String>,
+    /// The keyring entry id of the write key `sending` was sent with
+    /// (`KeyRef::id`): its outcome moves the write state only while that
+    /// key is still the registered one (§7).
+    sending_key: Option<String>,
     /// Rows whose outcome this process knows but could not write.
     unrecorded: BTreeMap<String, Finish>,
     /// The terminal's write state (§7); the file follows it.
@@ -594,6 +602,13 @@ struct InFlight {
 }
 
 impl InFlight {
+    /// Whether the row `id` holds the send slot with the key registered now.
+    fn sent_with_current_key(&self, id: &str) -> bool {
+        self.sending.as_deref() == Some(id)
+            && self.sending_key.is_some()
+            && self.sending_key.as_deref() == self.key.as_ref().map(|key| key.id.as_str())
+    }
+
     fn gate(&self, min_interval: Duration) -> Result<(), Gate> {
         match self.write.state {
             WriteState::Stopped => return Err(Gate::Stopped),
@@ -629,6 +644,7 @@ impl Drop for Reservation<'_> {
         let mut in_flight = self.in_flight.lock().unwrap_or_else(|e| e.into_inner());
         if in_flight.sending.as_deref() == Some(self.id) {
             in_flight.sending = None;
+            in_flight.sending_key = None;
         }
     }
 }
@@ -752,7 +768,10 @@ impl OperationLog {
     }
 
     /// Reserve the terminal's single send slot and write the `pending` row
-    /// (log-before-write). Returns the row id, which is also the Hub's
+    /// (log-before-write). `key_id` is the keyring entry id of the write key
+    /// the request was checked with (`KeyRef::id`); when the record points
+    /// at another key now (registered again or deleted since), nothing
+    /// starts (`KeyChanged`). Returns the row id, which is also the Hub's
     /// `correlation_id` (UUID v7, 36 chars). On `Record` the slot is free
     /// again and nothing may be sent. When the future is dropped before it
     /// returns, the slot is freed too (the caller never got the id, so it
@@ -761,6 +780,7 @@ impl OperationLog {
         &self,
         request: &RequestRecord,
         min_interval: Duration,
+        key_id: &str,
     ) -> Result<String, BeginError> {
         let id = uuid::Uuid::now_v7().to_string();
         {
@@ -768,8 +788,12 @@ impl OperationLog {
             if in_flight.sending.is_some() {
                 return Err(BeginError::Busy);
             }
+            if in_flight.key.as_ref().map(|key| key.id.as_str()) != Some(key_id) {
+                return Err(BeginError::KeyChanged);
+            }
             in_flight.gate(min_interval).map_err(BeginError::Gate)?;
             in_flight.sending = Some(id.clone());
+            in_flight.sending_key = Some(key_id.into());
             in_flight.last_begin = Some(Instant::now());
         }
         let reservation = Reservation {
@@ -819,19 +843,33 @@ impl OperationLog {
     /// 「記録に失敗」 to the actual outcome.
     ///
     /// A tripped or refused key moves the write state (§7) before the slot
-    /// is freed, so the next write already sees it. The row and the state
+    /// is freed, so the next write already sees it — only when the key the
+    /// row was sent with is still the registered one. An outcome of a key
+    /// registered again or deleted while it was in flight is recorded as it
+    /// is but leaves the state alone: a late 401 or trip of the previous
+    /// key never stops the terminal the new key made `ready`. The row and the state
     /// are one transaction; when it fails, the state still holds in this
     /// process and is saved on its own again, now and after the next write
     /// the DB takes.
     pub async fn complete(&self, id: &str, finish: Finish) -> Result<(), OperationDbError> {
-        let moved = WriteState::after(&finish).map(|state| WriteStatus {
-            state,
-            changed_at_ms: Some(finish.finished_at_ms),
-        });
-        let state_guard = match moved {
+        let candidate = WriteState::after(&finish);
+        // Under the state lock: a registration or deletion (which take it
+        // too) is ordered before or after this check, never in between.
+        let state_guard = match candidate {
             Some(_) => Some(self.state_lock.lock().await),
             None => None,
         };
+        let moved = candidate
+            .filter(|_| {
+                self.in_flight
+                    .lock()
+                    .expect("operation log lock")
+                    .sent_with_current_key(id)
+            })
+            .map(|state| WriteStatus {
+                state,
+                changed_at_ms: Some(finish.finished_at_ms),
+            });
         let result = match moved {
             Some(status) => self.db.finish_with_state(id, &finish, status).await,
             None => self.db.finish(id, &finish).await,
@@ -844,6 +882,7 @@ impl OperationLog {
             }
             if in_flight.sending.as_deref() == Some(id) {
                 in_flight.sending = None;
+                in_flight.sending_key = None;
             }
             match result {
                 // `InvalidRow` means the row is no longer pending: nothing to keep.

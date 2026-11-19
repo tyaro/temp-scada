@@ -19,7 +19,7 @@ use super::tests::{
 };
 use super::*;
 use crate::auth_phase::AuthHost;
-use crate::operation_db::{OperationDb, RecordState};
+use crate::operation_db::{OperationDb, RecordState, WriteState};
 use crate::operation_key::WriteKey;
 
 const READ_KEY: &str = "operation-read-test-only-key";
@@ -263,6 +263,18 @@ impl OperationEnv for TestEnv {
     }
 }
 
+/// The keyring entry id of the fixture's write key.
+const TEST_KEY_ID: &str = "test";
+
+/// The record's side of the fixture's write key (`WriteKey::id` is
+/// [`TEST_KEY_ID`]).
+fn test_key(endpoint: &str) -> crate::operation_db::KeyRef {
+    crate::operation_db::KeyRef {
+        endpoint: endpoint.into(),
+        id: TEST_KEY_ID.into(),
+    }
+}
+
 struct Fixture {
     hub: Hub,
     auth: Arc<AuthHost>,
@@ -290,10 +302,12 @@ impl Fixture {
         let hub = Hub::new().await;
         let read = hub.client(READ_KEY, LONG);
         let write = Arc::new(hub.client(WRITE_KEY, timeout));
+        let log = Arc::new(OperationLog::new(db));
+        log.key_registered(0, &test_key(&hub.url)).await.unwrap();
         Self {
             hub,
             auth,
-            log: Arc::new(OperationLog::new(db)),
+            log,
             env: Arc::new(TestEnv {
                 runtime: AtomicBool::new(true),
                 clock_calls: AtomicU64::new(0),
@@ -323,6 +337,7 @@ impl Fixture {
                 subscribed_revision: Some(REVISION),
                 write: Some(WriteKey {
                     endpoint: self.hub.url.clone(),
+                    id: TEST_KEY_ID.into(),
                     client: self.write.clone(),
                 }),
                 timeout: LONG,
@@ -520,13 +535,7 @@ async fn each_hub_answer_finishes_with_the_outcome_of_section_5() {
         // A tripped or refused key stops the terminal (§7); the next case
         // starts from a registered key.
         fx.log
-            .key_registered(
-                0,
-                &crate::operation_db::KeyRef {
-                    endpoint: fx.hub.url.clone(),
-                    id: "test".into(),
-                },
-            )
+            .key_registered(0, &test_key(&fx.hub.url))
             .await
             .unwrap();
     }
@@ -1337,4 +1346,28 @@ async fn a_key_of_another_hub_is_never_used() {
     .await;
     assert_eq!(view.blocked, Some(reason::HUB_MISMATCH));
     assert!(fx.hub.writes().is_empty());
+}
+
+#[tokio::test]
+async fn a_key_registered_again_after_the_check_is_not_sent() {
+    // The host loaded the key, then it was registered again (or deleted)
+    // before step 6: the request is not sent with the previous key.
+    let fx = Fixture::new().await;
+    let command = button("command", 0, json!(true));
+    fx.log
+        .key_registered(
+            0,
+            &crate::operation_db::KeyRef {
+                endpoint: fx.hub.url.clone(),
+                id: "newer".into(),
+            },
+        )
+        .await
+        .unwrap();
+    let result = fx.run(&command).await;
+    assert_eq!(result.outcome, Outcome::Refused);
+    assert_eq!(result.reason.as_deref(), Some(reason::KEY_CHANGED));
+    assert!(result.record_id.is_some());
+    assert!(fx.hub.writes().is_empty());
+    assert_eq!(fx.log.write_status().state, WriteState::Ready);
 }
