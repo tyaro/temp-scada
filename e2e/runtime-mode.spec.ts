@@ -14,6 +14,8 @@ interface RuntimeHostOptions {
   /** `failOnce`: the first `runtime_read_start` fails, later ones succeed. */
   readStart?: "ok" | "failOnce";
   auth?: "operational" | "setup" | "transitioning";
+  /** `blocked`: listening to `alarm_changed` fails until the test sets `alarmListenBlocked = false`. */
+  alarmListen?: "ok" | "blocked";
 }
 
 async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
@@ -26,6 +28,7 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
         calls: [] as string[],
         starts: [] as Record<string, unknown>[],
         acks: [] as unknown[],
+        alarmListenBlocked: options.alarmListen === "blocked",
         alarm: {
           monitored: { projectId: options.projectId },
           applied: {
@@ -102,6 +105,8 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
             host.calls.push(command);
             switch (command) {
               case "plugin:event|listen": {
+                if (args!.event === "alarm_changed" && host.alarmListenBlocked)
+                  throw "listenFailed";
                 const id = ++nextId;
                 listeners.set(id, {
                   event: args!.event,
@@ -594,4 +599,53 @@ test("the top bar opens the history trend window over runtime_history_context", 
   expect(used).toContain("runtime_history_context");
   expect(used).toContain("history_query");
   expect(used).not.toContain("history_context");
+});
+
+test("a failed alarm subscription keeps a warning until a refresh re-subscribes, then changes arrive", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { alarmListen: "blocked" });
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  const entry = page.locator("[data-runtime-alarm-entry]");
+  // The snapshot is still read, but without the subscription it is not 監視中.
+  await expect(entry).toHaveText("警報: 変化を受け取れません");
+  await entry.click();
+  const dialog = alarmDialog(page);
+  const row = dialog.locator('[data-alarm-row="cond-a"]');
+  await expect(row).toContainText("未確認（発生中）");
+  await expect(entry).toHaveText("警報: 変化を受け取れません");
+
+  // The host recovers; the refresh after ACK subscribes again.
+  await page.evaluate(
+    () => ((window as any).__runtimeHost.alarmListenBlocked = false),
+  );
+  await row.getByRole("checkbox").check();
+  await dialog
+    .getByRole("button", { name: "選んだ警報を ACK", exact: true })
+    .click();
+  await expect(row.locator("[data-alarm-row-result]")).toHaveText("受理");
+  await expect(entry).toHaveText("警報: 監視中");
+
+  // A new alarm reaches the list only through the subscription.
+  await page.evaluate(() => {
+    const host = (window as any).__runtimeHost;
+    const engine = host.alarm.engine;
+    engine.seq += 1;
+    const state = {
+      ...engine.conditions["cond-a"],
+      acked: false,
+      occurrence: "occ-b",
+      orderKey: { generation: 1, seq: engine.seq },
+    };
+    engine.conditions["cond-b"] = state;
+    host.emit("alarm_changed", {
+      session: engine.session,
+      seq: engine.seq,
+      conditions: { "cond-b": state },
+      engineUnavailable: null,
+    });
+  });
+  await expect(dialog.locator('[data-alarm-row="cond-b"]')).toBeVisible();
+  await expect(entry).toHaveText("警報: 監視中");
 });

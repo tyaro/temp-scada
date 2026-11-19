@@ -57,4 +57,25 @@ describe("上端の警報の状態", () => {
     );
     expect(alarmHealthy(failing, "project-a")).toBe(false);
   });
+
+  it("購読を張れない間は snapshot が取れても監視中にしない", () => {
+    expect(alarmStatusLabel(base, null, null, "project-a", "offline")).toBe(
+      "警報: 変化を受け取れません",
+    );
+    expect(alarmHealthy(base, "project-a", "offline")).toBe(false);
+    expect(alarmStatusLabel(null, null, null, "project-a", "offline")).toBe(
+      "警報: 変化を受け取れません",
+    );
+    // snapshot を取れない方を先に出す。
+    expect(alarmStatusLabel(null, "busy", null, "project-a", "offline")).toBe(
+      "警報: 状態を取得できません",
+    );
+    // 購読の失敗の理由が「この端末では使えない」なら、それを出す。
+    expect(
+      alarmStatusLabel(null, null, null, "project-a", "terminalUnavailable"),
+    ).toBe("警報: この端末ではEngineを利用できません");
+    expect(alarmStatusLabel(base, null, null, "project-a", null)).toBe(
+      "警報: 監視中",
+    );
+  });
 });

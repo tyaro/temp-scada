@@ -3,15 +3,17 @@ import { ALARM_STATUS_LABELS, labelOf } from "../alarm-banner";
 
 /**
  * 上端（Editor のステータス・Runtime の上端）に出す警報の状態の文。
- * `unavailable` は適用で host が返した理由、`readError` は snapshot を取れなかった理由。
+ * `unavailable` は適用で host が返した理由、`readError` は snapshot を取れなかった理由、
+ * `subscribeError` は変化の購読を張れなかった理由（張り直せるまで残す）。
  */
 export function alarmStatusLabel(
   snapshot: AlarmSnapshot | null,
   readError: string | null,
   unavailableReason: string | null,
   projectId: string,
+  subscribeError: string | null = null,
 ): string {
-  const unavailable = unavailableReason ?? readError;
+  const unavailable = unavailableReason ?? readError ?? subscribeError;
   if (unavailable && snapshot?.status !== "running") {
     if (unavailable === "terminalUnavailable")
       return "警報: この端末ではEngineを利用できません";
@@ -20,6 +22,8 @@ export function alarmStatusLabel(
       return "警報: 認証切替中で適用できません";
   }
   if (readError) return "警報: 状態を取得できません";
+  // A snapshot alone goes stale: new alarms only arrive via the subscription.
+  if (subscribeError) return "警報: 変化を受け取れません";
   if (!snapshot) return "警報: 確認中";
   if (snapshot.status !== "running")
     return `警報: ${labelOf(ALARM_STATUS_LABELS, snapshot.status)}`;
@@ -50,8 +54,10 @@ export function alarmStatusLabel(
 export function alarmHealthy(
   snapshot: AlarmSnapshot | null,
   projectId: string,
+  subscribeError: string | null = null,
 ): boolean {
   return (
+    !subscribeError &&
     snapshot?.status === "running" &&
     snapshot.monitored?.projectId === projectId &&
     !snapshot.engine?.unavailable &&
