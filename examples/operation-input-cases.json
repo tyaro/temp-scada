@@ -1,0 +1,467 @@
+[
+  {
+    "name": "integer",
+    "text": "60",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "value": 60,
+      "fractional": false
+    }
+  },
+  {
+    "name": "negative fraction",
+    "text": "-1.5",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": -10,
+      "max": 10
+    },
+    "expect": {
+      "value": -1.5,
+      "fractional": true
+    }
+  },
+  {
+    "name": "leading zeros and trailing zero",
+    "text": "007.10",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "value": 7.1,
+      "fractional": true
+    }
+  },
+  {
+    "name": "zero fraction is not fractional",
+    "text": "12.00",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "value": 12,
+      "fractional": false
+    }
+  },
+  {
+    "name": "fraction lost to f64 rounding is still fractional",
+    "text": "1.00000000000000001",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "value": 1,
+      "fractional": true
+    }
+  },
+  {
+    "name": "within decimals",
+    "text": "1.25",
+    "slotType": "number",
+    "decimals": 2,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "value": 1.25,
+      "fractional": true
+    }
+  },
+  {
+    "name": "more digits than decimals is not rounded",
+    "text": "1.250",
+    "slotType": "number",
+    "decimals": 2,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "zero decimals takes integers",
+    "text": "1",
+    "slotType": "number",
+    "decimals": 0,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "value": 1,
+      "fractional": false
+    }
+  },
+  {
+    "name": "zero decimals refuses a point",
+    "text": "1.0",
+    "slotType": "number",
+    "decimals": 0,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "empty",
+    "text": "",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "minus only",
+    "text": "-",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "trailing point",
+    "text": "1.",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "leading point",
+    "text": ".5",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "full-width digit",
+    "text": "１",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "thousand separator",
+    "text": "1,000",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 2000
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "exponent",
+    "text": "1e3",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 2000
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "upper exponent",
+    "text": "1E3",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 2000
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "NaN",
+    "text": "NaN",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "Infinity",
+    "text": "Infinity",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "negative Infinity",
+    "text": "-Infinity",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "leading space",
+    "text": " 1",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "trailing space",
+    "text": "1 ",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "plus sign",
+    "text": "+1",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "double minus",
+    "text": "--1",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": -10,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "hexadecimal",
+    "text": "0x10",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "two points",
+    "text": "1.2.3",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "below the range",
+    "text": "-0.5",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "out_of_range"
+    }
+  },
+  {
+    "name": "above the range",
+    "text": "60.5",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "out_of_range"
+    }
+  },
+  {
+    "name": "range bounds are inclusive",
+    "text": "-10",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": -10,
+      "max": 0
+    },
+    "expect": {
+      "value": -10,
+      "fractional": false
+    }
+  },
+  {
+    "name": "a 128-digit number is out of the range",
+    "text": "99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "out_of_range"
+    }
+  },
+  {
+    "name": "128 characters are taken",
+    "text": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "value": 7,
+      "fractional": false
+    }
+  },
+  {
+    "name": "over 128 characters is a malformed request",
+    "text": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007",
+    "slotType": "number",
+    "decimals": null,
+    "input": {
+      "min": 0,
+      "max": 60
+    },
+    "expect": {
+      "reason": "invalid_request"
+    }
+  },
+  {
+    "name": "over 128 characters even when malformed",
+    "text": "あああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ",
+    "slotType": "bool",
+    "decimals": null,
+    "input": null,
+    "expect": {
+      "reason": "invalid_request"
+    }
+  },
+  {
+    "name": "number slot without input",
+    "text": "1",
+    "slotType": "number",
+    "decimals": null,
+    "input": null,
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "bool slot takes no input",
+    "text": "1",
+    "slotType": "bool",
+    "decimals": null,
+    "input": null,
+    "expect": {
+      "reason": "invalid_value"
+    }
+  },
+  {
+    "name": "state slot takes no input",
+    "text": "1",
+    "slotType": "state",
+    "decimals": null,
+    "input": null,
+    "expect": {
+      "reason": "invalid_value"
+    }
+  }
+]
