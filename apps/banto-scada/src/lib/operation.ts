@@ -324,11 +324,13 @@ export interface OperationLatest {
   finishedAtMs: number | null;
   tag: string | null;
   value: unknown;
-  auditId: string | null;
+  /** Hub の監査行の id（Rust の `Option<i64>`）。成功で得られたときだけ。 */
+  auditId: number | null;
 }
 export interface OperationView {
-  projectId: string;
-  projectDigest: string;
+  /** 適用中の Project。無いときは null（`blocked` は `project_changed`）。 */
+  projectId: string | null;
+  projectDigest: string | null;
   /** 操作の行を押せなくする理由のコード。null は押せる。 */
   blocked: string | null;
   phase: string;

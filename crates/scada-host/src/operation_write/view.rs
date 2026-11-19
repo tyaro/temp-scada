@@ -141,14 +141,15 @@ pub async fn operation_view(
             .or(log.is_sending().then_some(reason::BUSY)),
     };
     let mut views = Vec::with_capacity(slots.len());
+    let mut unreadable = false;
     for slot in slots {
         let latest = match (&context.log, &context.project) {
-            (Some(log), Some(applied)) => {
+            (Some(log), Some(applied)) if !unreadable => {
                 match log.latest(applied.id, &request.equipment_id, &slot).await {
                     Ok(found) => found.map(|(row, state)| LatestRow::new(row, state)),
                     Err(error) => {
                         eprintln!("operation view: the record could not be read: {error:?}");
-                        blocked = Some(reason::RECORD_FAILED);
+                        unreadable = true;
                         None
                     }
                 }
@@ -156,6 +157,15 @@ pub async fn operation_view(
             _ => None,
         };
         views.push(SlotView { slot, latest });
+    }
+    // A record read only in part is not shown: `latest: null` must mean
+    // "no request" or "the record cannot be read" (with `record_failed`),
+    // never a mix of the two.
+    if unreadable {
+        blocked = Some(reason::RECORD_FAILED);
+        for view in &mut views {
+            view.latest = None;
+        }
     }
     Ok(OperationView {
         project_id: context.project.map(|applied| applied.id.to_owned()),
