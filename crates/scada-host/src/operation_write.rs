@@ -11,11 +11,12 @@
 //! started unfinished.
 //!
 //! Repeated refusals are folded into one row by `OperationLog::refuse`
-//! (`repeat_count`, §7, O2c-1).
+//! (`repeat_count`, §7, O2c-1). The terminal's write state (`write_stopped`,
+//! `key_invalid`) and the minimum interval (`too_soon`) are the log's gate
+//! (§7, O2c-2), checked at step 5 and again when step 6 takes the slot.
 //!
-//! TODO(O2c): the write key's registration and its pairing with the Hub
-//! (`hub_mismatch`), the terminal's write state (`write_stopped`,
-//! `key_invalid`) and the minimum interval (`too_soon`).
+//! TODO(O2c-3): the write key's registration and its pairing with the Hub
+//! (`hub_mismatch`).
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -26,7 +27,7 @@ use serde_json::{json, Value};
 use crate::auth::CurrentSession;
 use crate::auth_phase::{AuthHost, AuthPhase};
 use crate::operation_db::{
-    BeginError, Finish, OperationDbError, OperationLog, Outcome, RequestRecord, INTERRUPTED,
+    BeginError, Finish, Gate, OperationDbError, OperationLog, Outcome, RequestRecord, INTERRUPTED,
 };
 
 mod catalog;
@@ -71,6 +72,9 @@ pub mod reason {
     pub const TYPE_MISMATCH: &str = "type_mismatch";
     pub const HUB_UNSUPPORTED: &str = "hub_unsupported";
     pub const NO_WRITE_KEY: &str = "no_write_key";
+    pub const WRITE_STOPPED: &str = "write_stopped";
+    pub const KEY_INVALID: &str = "key_invalid";
+    pub const TOO_SOON: &str = "too_soon";
     pub const BUSY: &str = "busy";
     pub const RECORD_FAILED: &str = "record_failed";
     pub const INVALID_OPERATOR: &str = "invalid_operator";
@@ -82,6 +86,11 @@ pub mod reason {
 /// §11-1). The write client is made with
 /// `RestClient::with_request_timeout(.., WRITE_TIMEOUT)`.
 pub const WRITE_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// The default minimum interval between two sends of the terminal (§7,
+/// §11-10): writes inside it are refused with `too_soon`, so the Hub's rate
+/// limit does not trip the write key.
+pub const MIN_WRITE_INTERVAL: Duration = Duration::from_secs(1);
 
 /// The user name of a write in the development / initial-setup phase (§6).
 pub const NOT_LOGGED_IN: &str = "未ログイン";
@@ -113,6 +122,9 @@ pub struct HubAccess<'a> {
     pub subscribed_revision: Option<u64>,
     /// The write-key client; `None` is `no_write_key` (§7).
     pub write: Option<Arc<RestClient>>,
+    /// The minimum interval between sends (§7, [`MIN_WRITE_INTERVAL`] in
+    /// the product).
+    pub min_interval: Duration,
     /// The bound of the catalog and status fetches, the write's own for
     /// the write.
     pub timeout: Duration,
@@ -212,14 +224,15 @@ pub async fn operation_write(
         Err(code) => return refuse(context, &record, code).await,
     };
     // 5. The Hub's contract and the write key.
-    let client = match write_client(&context.hub).await {
+    let client = match write_client(&context.hub, &context.log, Interval::Check).await {
         Ok(client) => client,
         Err(code) => return refuse(context, &record, code).await,
     };
     // 6. The `pending` row; `busy` when another write holds the send slot.
-    let id = match context.log.begin(&record).await {
+    let id = match context.log.begin(&record, context.hub.min_interval).await {
         Ok(id) => id,
         Err(BeginError::Busy) => return refuse(context, &record, reason::BUSY).await,
+        Err(BeginError::Gate(gate)) => return refuse(context, &record, gate_reason(gate)).await,
         Err(BeginError::Record(error)) => {
             eprintln!("operation write: the pending row could not be written: {error:?}");
             return WriteResult {
@@ -343,14 +356,41 @@ async fn admission(env: &dyn OperationEnv, auth: Option<&AuthHost>) -> Admission
     }
 }
 
-/// Step 5: the Hub's write contract and the write key. Shared by the write
-/// and the view. TODO(O2c): `hub_mismatch`, `write_stopped`, `key_invalid`,
-/// `too_soon`.
-async fn write_client(hub: &HubAccess<'_>) -> Result<Arc<RestClient>, &'static str> {
+/// Whether step 5 checks the minimum interval: the write does; the view
+/// does not, since `too_soon` depends on when the next request comes.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Interval {
+    Check,
+    Skip,
+}
+
+/// Step 5: the Hub's write contract, the write key and the terminal's gate
+/// (§7: the write state, then the minimum interval). Shared by the write
+/// and the view. TODO(O2c-3): `hub_mismatch`.
+async fn write_client(
+    hub: &HubAccess<'_>,
+    log: &OperationLog,
+    interval: Interval,
+) -> Result<Arc<RestClient>, &'static str> {
     if !write_contract_confirmed(hub).await {
         return Err(reason::HUB_UNSUPPORTED);
     }
-    hub.write.clone().ok_or(reason::NO_WRITE_KEY)
+    let client = hub.write.clone().ok_or(reason::NO_WRITE_KEY)?;
+    let min_interval = match interval {
+        Interval::Check => hub.min_interval,
+        Interval::Skip => Duration::ZERO,
+    };
+    log.gate(min_interval).map_err(gate_reason)?;
+    Ok(client)
+}
+
+/// The refusal code of a gate (§4-5).
+fn gate_reason(gate: Gate) -> &'static str {
+    match gate {
+        Gate::Stopped => reason::WRITE_STOPPED,
+        Gate::KeyInvalid => reason::KEY_INVALID,
+        Gate::TooSoon => reason::TOO_SOON,
+    }
 }
 
 /// Whether the Hub lists the #1201 write contract (`write_contract_v1`) in

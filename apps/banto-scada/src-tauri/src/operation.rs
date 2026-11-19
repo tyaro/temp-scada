@@ -25,7 +25,8 @@ use scada_host::alarm_service::RestClient;
 use scada_host::operation_db::{OperationDb, OperationLog, Outcome};
 use scada_host::operation_write::{
     self, check_shape, reason, HubAccess, OperationEnv, OperationView, OperationViewRequest,
-    OperationWrite, OperationWriteRequest, ViewContext, WriteResult, WRITE_TIMEOUT,
+    OperationWrite, OperationWriteRequest, ViewContext, WriteResult, MIN_WRITE_INTERVAL,
+    WRITE_TIMEOUT,
 };
 use scada_host::recording_runtime::NO_DATA_DIR;
 use tauri::State;
@@ -187,8 +188,9 @@ pub async fn operation_write(
             endpoint,
             read: read.as_ref(),
             subscribed_revision: host.read_revision.get(),
-            // Until the write key (O2c): never sent.
+            // Until the write key (O2c-3): never sent.
             write: write_key(),
+            min_interval: MIN_WRITE_INTERVAL,
             timeout: WRITE_TIMEOUT,
         },
     };
@@ -224,6 +226,7 @@ pub async fn operation_view(
             read: read.as_ref(),
             subscribed_revision: None,
             write: write_key(),
+            min_interval: MIN_WRITE_INTERVAL,
             timeout: VIEW_TIMEOUT,
         },
     };

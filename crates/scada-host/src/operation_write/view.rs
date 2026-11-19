@@ -7,13 +7,14 @@
 //! `blocked` is a dry run of the parts of steps 2 and 5 (§4) that do not
 //! depend on a request, by the same functions the write uses
 //! ([`admission`], [`write_client`]), plus the record and the send slot. A
-//! request can still be refused for its own reasons (steps 1, 3, 4).
+//! request can still be refused for its own reasons (steps 1, 3, 4), and
+//! for `too_soon`, which depends on when it comes (§7).
 use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use super::{admission, reason, write_client, AppliedProject, HubAccess, OperationEnv};
+use super::{admission, reason, write_client, AppliedProject, HubAccess, Interval, OperationEnv};
 use super::{MAX_ID_CHARS, PHASE_UNKNOWN};
 use crate::auth_phase::AuthHost;
 use crate::operation_db::{OperationLog, Outcome, RecordState, StoredRow};
@@ -140,7 +141,7 @@ pub async fn operation_view(
             .or(context.project.is_none().then_some(reason::PROJECT_CHANGED))
         {
             Some(code) => Some(code),
-            None => write_client(&context.hub)
+            None => write_client(&context.hub, log, Interval::Skip)
                 .await
                 .err()
                 .or(log.is_sending().then_some(reason::BUSY)),
