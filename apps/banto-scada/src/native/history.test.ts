@@ -8,6 +8,7 @@ import {
   createNativeHistory,
   nativeHistorySource,
   type NativeInvoke,
+  runtimeHistoryContext,
 } from "./history";
 
 const invoke = vi.fn();
@@ -132,6 +133,22 @@ it("asks the host for a context only when the Project's key changes", async () =
   await vi.waitFor(() => expect(published).toHaveLength(6));
   // One source for every service.
   expect(published[5]?.source).toBe(published[1]?.source);
+});
+
+it("asks Runtime's context without a Project (runtime_history_context)", async () => {
+  const context = { version: 2, kind: "historyContext" };
+  invoke.mockResolvedValue(context);
+  const published: (HistoryService | undefined)[] = [];
+  const history = createNativeHistory(
+    invoke,
+    (s) => published.push(s),
+    runtimeHistoryContext,
+  );
+  history.update(project(1, "plan-a"));
+  await vi.waitFor(() => expect(published).toHaveLength(2));
+  expect(invoke).toHaveBeenCalledWith("runtime_history_context", {});
+  expect(invoke).not.toHaveBeenCalledWith("history_context", expect.anything());
+  expect(published[1]?.context).toBe(context);
 });
 
 it("publishes no service for a null context, a host error, an earlier Project or after dispose", async () => {

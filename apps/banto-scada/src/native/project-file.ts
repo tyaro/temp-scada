@@ -2,6 +2,7 @@ import {
   ProjectFileError,
   type AlarmAckResult,
   type AlarmApplyResult,
+  type AlarmFeed,
   type AlarmEventRead,
   type ProjectFileService,
 } from "../lib/project-file-service";
@@ -148,4 +149,14 @@ export function nativeProjectFiles(invoke: RawInvoke): ProjectFileService {
       },
     },
   };
+}
+
+/**
+ * The alarm host of the Runtime window (Runtime mode design §5, §10-4): the
+ * Editor's feed without the Editor-only sound import (`alarm_sound_import`).
+ * `alarm_apply` is not part of the feed.
+ */
+export function runtimeAlarmFeed(invoke: RawInvoke): AlarmFeed {
+  const feed = nativeProjectFiles(invoke).alarmFeed!;
+  return { ...feed, importAlarmSound: undefined };
 }

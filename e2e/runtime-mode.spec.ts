@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import sample from "../examples/read-presentation.project.json" with { type: "json" };
+import fixtures from "../examples/read-display-cases.json" with { type: "json" };
+import rawCases from "../examples/history-query-cases.json" with { type: "json" };
 
 /**
  * The Runtime window (Runtime mode design §6, §9 O0b) against a mock host
@@ -12,17 +14,71 @@ interface RuntimeHostOptions {
   /** `failOnce`: the first `runtime_read_start` fails, later ones succeed. */
   readStart?: "ok" | "failOnce";
   auth?: "operational" | "setup" | "transitioning";
+  /** `blocked`: listening to `alarm_changed` fails until the test sets `alarmListenBlocked = false`. */
+  alarmListen?: "ok" | "blocked";
 }
 
 async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
   await page.addInitScript(
-    ({ options, projectJson }) => {
+    ({ options, projectJson, historyResult }) => {
       const callbacks = new Map<number, (event: unknown) => void>();
       const listeners = new Map<number, { event: string; handler: number }>();
       let nextId = 0;
       const host = {
         calls: [] as string[],
         starts: [] as Record<string, unknown>[],
+        acks: [] as unknown[],
+        alarmListenBlocked: options.alarmListen === "blocked",
+        alarm: {
+          monitored: { projectId: options.projectId },
+          applied: {
+            projectId: options.projectId,
+            projectRevision: 1,
+            appliedAtMs: 1,
+            displays: {
+              "cond-a": {
+                name: "T-01 温度 H",
+                message: "温度 高",
+                severity: "high",
+                limitLabel: null,
+              },
+            },
+          },
+          engine: {
+            session: { id: "session-1", generation: 1 },
+            seq: 10,
+            unavailable: null,
+            conditions: {
+              "cond-a": {
+                active: true,
+                occurrence: "occ-1",
+                recurrence: 0,
+                acked: false,
+                timer: null,
+                unavailable: null,
+                reportedUnavailable: null,
+                orderKey: { generation: 1, seq: 1 },
+                occurredAtMs: Date.UTC(2026, 10, 17, 0, 0, 1),
+                observation: null,
+              },
+            },
+          },
+          status: "running",
+          pendingConditionChanges: false,
+          pendingDisplayChanges: false,
+          pendingUnknown: false,
+          historyWriteFailure: null,
+          rereadFailure: null,
+          buzzer: "quiet",
+        } as any,
+        /** While true, `alarm_snapshot` answers only when `releaseSnapshots()` is called. */
+        holdSnapshots: false,
+        unblockListenOnAck: false,
+        heldSnapshots: [] as (() => void)[],
+        releaseSnapshots() {
+          const held = host.heldSnapshots.splice(0);
+          for (const release of held) release();
+        },
         emit(event: string, payload: unknown) {
           for (const listener of listeners.values())
             if (listener.event === event)
@@ -57,6 +113,8 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
             host.calls.push(command);
             switch (command) {
               case "plugin:event|listen": {
+                if (args!.event === "alarm_changed" && host.alarmListenBlocked)
+                  throw "listenFailed";
                 const id = ++nextId;
                 listeners.set(id, {
                   event: args!.event,
@@ -109,6 +167,62 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                 return null;
               case "runtime_alarm_status":
                 return options.alarm ?? "same";
+              // The alarm commands Runtime may use (Runtime mode design §5).
+              case "alarm_snapshot":
+                if (host.holdSnapshots)
+                  return new Promise((resolve) =>
+                    host.heldSnapshots.push(() =>
+                      resolve(structuredClone(host.alarm)),
+                    ),
+                  );
+                return structuredClone(host.alarm);
+              case "alarm_ack": {
+                host.acks.push(structuredClone(args!.items));
+                if (host.unblockListenOnAck) host.alarmListenBlocked = false;
+                for (const item of args!.items)
+                  host.alarm.engine.conditions[item.conditionId].acked = true;
+                host.alarm.engine.seq += 10;
+                return args!.items.map((item: any) => ({
+                  conditionId: item.conditionId,
+                  result: { kind: "accepted" },
+                }));
+              }
+              case "alarm_history":
+                return [];
+              case "alarm_settings_get":
+                return {
+                  retention: { kind: "days", days: 365, count: 1_000_000 },
+                  reread: {
+                    intervalSec: 10,
+                    timeoutSec: 5,
+                    failureLimitSec: 30,
+                    reconnectFailures: 3,
+                  },
+                  sound: { kind: "default" },
+                  soundFallback: null,
+                  warnings: [],
+                  retentionStatus: null,
+                };
+              case "runtime_history_context":
+                return {
+                  version: 2,
+                  kind: "historyContext",
+                  contextId: "applied:1",
+                  historianNamespace: "historian:test",
+                  projectId: options.projectId,
+                  projectRevision: 1,
+                  series: [{ seriesId: "number", label: "温度" }],
+                };
+              case "history_query": {
+                const result = structuredClone(historyResult);
+                result.query = structuredClone(args!.query);
+                result.series = args!.query.seriesIds.map((id: string) =>
+                  result.series.find((row: any) => row.seriesId === id),
+                );
+                return result;
+              }
+              case "history_cancel":
+                return null;
               case "auth_phase":
                 return options.auth === "setup"
                   ? {
@@ -145,7 +259,11 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
         },
       });
     },
-    { options, projectJson: JSON.stringify(sample) },
+    {
+      options: { ...options, projectId: sample.manifest.projectId },
+      projectJson: JSON.stringify(sample),
+      historyResult: rawCases[0].expected as any,
+    },
   );
 }
 
@@ -332,17 +450,29 @@ test("a failed read subscription start is shown and can be retried", async ({
   const subscriptionId = await page.evaluate(
     () => (window as any).__runtimeHost.starts[1].subscriptionId,
   );
+  // A valid update from the retried subscription reaches the screen.
+  const update = structuredClone(
+    fixtures.find((item) => item.name === "good")!.update,
+  );
+  update.sequence = 1;
+  update.sdkGeneration = 1;
   await page.evaluate(
-    (subscriptionId) =>
+    ({ subscriptionId, update }) =>
       (window as any).__runtimeHost.emit("scada:read", {
         subscriptionId,
-        update: { text: { connection: "live" } },
+        update,
       }),
-    subscriptionId,
+    { subscriptionId, update },
   );
   await expect(page.locator("[data-runtime-stream]")).toHaveText(
-    /読取: (受信中|表示データを検証できません)/,
+    "読取: 受信中",
   );
+  const number = page
+    .getByTestId("operator-frame")
+    .locator('[data-tag-name="Demo.Number"]')
+    .first();
+  await expect(number).toHaveAttribute("data-tag-state", "good");
+  await expect(number.locator("[data-text-content]")).toHaveText("0");
   expect(await calls(page)).not.toContain("auth_config_apply");
 });
 
@@ -383,4 +513,208 @@ test("a Runtime in the middle of the move asks to re-run it in Editor", async ({
     "Editor で管理者の資格情報を使って移行を再実行してください",
   );
   await expect(popover.getByRole("button", { name: /移行/ })).toHaveCount(0);
+});
+
+const alarmDialog = (page: Page) =>
+  page.getByRole("dialog", { name: "アラーム一覧" });
+
+test("the top bar alarm entry shows the alarm state and opens the alarm list; ACK goes to alarm_ack", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page);
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  const entry = page.locator("[data-runtime-alarm-entry]");
+  await expect(entry).toHaveText("警報: 監視中");
+  await entry.click();
+  const dialog = alarmDialog(page);
+  await expect(dialog).toBeVisible();
+  const row = dialog.locator('[data-alarm-row="cond-a"]');
+  await expect(row).toContainText("未確認（発生中）");
+  await row.getByRole("checkbox").check();
+  await dialog
+    .getByRole("button", { name: "選んだ警報を ACK", exact: true })
+    .click();
+  await expect(row.locator("[data-alarm-row-result]")).toHaveText("受理");
+  expect(await page.evaluate(() => (window as any).__runtimeHost.acks)).toEqual(
+    [[{ conditionId: "cond-a", occurrence: "occ-1", recurrence: 0 }]],
+  );
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(entry).toBeFocused();
+  const used = await calls(page);
+  expect(used).toContain("alarm_snapshot");
+  expect(used).not.toContain("alarm_apply");
+});
+
+test("the operator view opens the same alarm list and the terminal settings have no sound import", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page);
+  await page.goto("/runtime.html");
+  const view = page.getByRole("region", { name: "運転表示" });
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  await view.getByRole("button", { name: "アラーム一覧", exact: true }).click();
+  const dialog = alarmDialog(page);
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator('[data-alarm-row="cond-a"]')).toBeVisible();
+  await dialog.getByRole("button", { name: "端末設定", exact: true }).click();
+  const settings = page.getByRole("dialog", { name: "警報の端末設定" });
+  await expect(settings).toBeVisible();
+  await expect(settings.locator("[data-alarm-sound]")).toContainText(
+    "既定のビープ",
+  );
+  await expect(
+    settings.getByRole("button", { name: "ファイルを選ぶ" }),
+  ).toHaveCount(0);
+  await expect(
+    settings.getByRole("button", { name: "既定に戻す" }),
+  ).toBeVisible();
+  await expect(settings).not.toContainText(
+    "この版では端末設定を変更できません",
+  );
+  const used = await calls(page);
+  expect(used).toContain("alarm_settings_get");
+  expect(used).not.toContain("alarm_sound_import");
+  expect(used).not.toContain("alarm_apply");
+});
+
+test("the top bar opens the history trend window over runtime_history_context", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page);
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  await page.locator("[data-runtime-history-entry]").click();
+  const dialog = page.getByRole("dialog", {
+    name: "履歴トレンド",
+    exact: true,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("履歴系列一覧を確認しました");
+  await dialog
+    .getByRole("checkbox", { name: "温度 number", exact: true })
+    .check();
+  await dialog
+    .getByLabel("開始UTC", { exact: true })
+    .fill("1970-01-01T00:00:00.500Z");
+  await dialog
+    .getByLabel("終了UTC", { exact: true })
+    .fill("1970-01-01T00:00:02.000Z");
+  await dialog.getByLabel("取得モード").selectOption("raw");
+  await dialog.getByLabel("系列ごとの点数上限").fill("20");
+  await dialog.getByRole("button", { name: "取得", exact: true }).click();
+  const trend = dialog.locator("[data-history-phase]");
+  await expect(trend).toHaveAttribute("data-history-phase", "ready");
+  await expect(trend.locator("[data-history-point]")).toHaveCount(2);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator("[data-runtime-history-entry]")).toBeFocused();
+  const used = await calls(page);
+  expect(used).toContain("runtime_history_context");
+  expect(used).toContain("history_query");
+  expect(used).not.toContain("history_context");
+});
+
+test("a failed alarm subscription keeps a warning until a refresh re-subscribes, then changes arrive", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { alarmListen: "blocked" });
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  const entry = page.locator("[data-runtime-alarm-entry]");
+  // The snapshot is still read, but without the subscription it is not 監視中.
+  await expect(entry).toHaveText("警報: 変化を受け取れません");
+  await entry.click();
+  const dialog = alarmDialog(page);
+  const row = dialog.locator('[data-alarm-row="cond-a"]');
+  await expect(row).toContainText("未確認（発生中）");
+  await expect(entry).toHaveText("警報: 変化を受け取れません");
+
+  // The host recovers; the refresh after ACK subscribes again.
+  await page.evaluate(
+    () => ((window as any).__runtimeHost.alarmListenBlocked = false),
+  );
+  await row.getByRole("checkbox").check();
+  await dialog
+    .getByRole("button", { name: "選んだ警報を ACK", exact: true })
+    .click();
+  await expect(row.locator("[data-alarm-row-result]")).toHaveText("受理");
+  await expect(entry).toHaveText("警報: 監視中");
+
+  // A new alarm reaches the list only through the subscription.
+  await page.evaluate(() => {
+    const host = (window as any).__runtimeHost;
+    const engine = host.alarm.engine;
+    engine.seq += 1;
+    const state = {
+      ...engine.conditions["cond-a"],
+      acked: false,
+      occurrence: "occ-b",
+      orderKey: { generation: 1, seq: engine.seq },
+    };
+    engine.conditions["cond-b"] = state;
+    host.emit("alarm_changed", {
+      session: engine.session,
+      seq: engine.seq,
+      conditions: { "cond-b": state },
+      engineUnavailable: null,
+    });
+  });
+  await expect(dialog.locator('[data-alarm-row="cond-b"]')).toBeVisible();
+  await expect(entry).toHaveText("警報: 監視中");
+});
+
+test("after re-subscribing, the top bar stays 再同期中 until a snapshot read after it arrives", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { alarmListen: "blocked" });
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  const entry = page.locator("[data-runtime-alarm-entry]");
+  await expect(entry).toHaveText("警報: 変化を受け取れません");
+  await entry.click();
+  const dialog = alarmDialog(page);
+  const row = dialog.locator('[data-alarm-row="cond-a"]');
+  await expect(row).toContainText("未確認（発生中）");
+
+  // The host recovers, and an alarm happens while nothing is subscribed (never redelivered).
+  await page.evaluate(() => {
+    const host = (window as any).__runtimeHost;
+    // Recover only at the ACK, so the retry timer cannot subscribe first.
+    host.unblockListenOnAck = true;
+    host.holdSnapshots = true;
+    const engine = host.alarm.engine;
+    engine.seq += 1;
+    engine.conditions["cond-b"] = {
+      ...engine.conditions["cond-a"],
+      occurrence: "occ-b",
+      orderKey: { generation: 1, seq: engine.seq },
+    };
+  });
+  // The refresh after ACK subscribes again; the snapshot it reads is held.
+  await row.getByRole("checkbox").check();
+  await dialog
+    .getByRole("button", { name: "選んだ警報を ACK", exact: true })
+    .click();
+  await expect(row.locator("[data-alarm-row-result]")).toHaveText("受理");
+  await expect(entry).toHaveText("警報: 再同期中");
+  await expect(dialog.locator('[data-alarm-row="cond-b"]')).toHaveCount(0);
+
+  // The read already in flight before the subscription does not end the resync;
+  // a fresh read follows it.
+  const held = () =>
+    page.evaluate(() => (window as any).__runtimeHost.heldSnapshots.length);
+  await expect.poll(held).toBeGreaterThan(0);
+  await page.evaluate(() => (window as any).__runtimeHost.releaseSnapshots());
+  await expect.poll(held).toBeGreaterThan(0);
+  await expect(entry).toHaveText("警報: 再同期中");
+
+  await page.evaluate(() => {
+    const host = (window as any).__runtimeHost;
+    host.holdSnapshots = false;
+    host.releaseSnapshots();
+  });
+  await expect(entry).toHaveText("警報: 監視中");
+  await expect(dialog.locator('[data-alarm-row="cond-b"]')).toBeVisible();
 });
