@@ -463,38 +463,52 @@ fn main() {
             std::process::exit(2);
         }
     };
-    let bootstrap = local_bootstrap().expect("SCADA settings store unavailable");
-    // The recording DB and the History host. A store that cannot be opened
-    // does not stop the app (product-owner design §3).
-    let recording_runtime = match (local_data_dir(), local_installation_id()) {
-        (Ok(dir), Ok(deployment)) => RecordingRuntime::start(&dir, &deployment),
-        _ => RecordingRuntime::unavailable(NO_DATA_DIR),
-    };
-    // A failed auth start does not stop the app either: reading and editing
-    // still work, and each auth command reports why (host-gate design §6).
-    // The auth and the recording registry share one gate, whose slot stays
-    // empty until a recording runs (product-owner design §4).
-    let empty = match recording_runtime.unavailable_reason() {
-        Some(_) => STORE_UNAVAILABLE,
-        None => NO_RECORDING_RUN,
-    };
-    let (auth, recording) = match local_data_dir() {
-        Ok(dir) => tauri::async_runtime::block_on(AuthState::start(&dir, empty)),
-        Err(_) => (
-            AuthState::unavailable(NO_DATA_DIR),
-            DesktopRecording::unavailable(NO_DATA_DIR),
-        ),
-    };
-    let alarm = tauri::async_runtime::block_on(alarm::AlarmState::open(local_data_dir()));
     // The single-instance plugin first (design §7). A second launch, whose
     // arguments were checked above, brings the first window forward and
-    // exits inside `build`, before the setup below: it reads no Project.
+    // exits inside `build`, before the setup below: it opens none of the
+    // terminal's stores (settings, recording, auth, alarm - the alarm open
+    // also recovers an interrupted switch) and reads no Project.
     let builder = tauri::Builder::default().plugin(tauri_plugin_single_instance::init(
         app_mode::on_second_instance,
     ));
     commands(builder)
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // Only the one process of the terminal gets here (design §7).
+            let bootstrap = local_bootstrap()
+                .map_err(|error| format!("SCADA settings store unavailable: {error}"))?;
+            // The recording DB and the History host. A store that cannot be opened
+            // does not stop the app (product-owner design §3).
+            let recording_runtime = match (local_data_dir(), local_installation_id()) {
+                (Ok(dir), Ok(deployment)) => RecordingRuntime::start(&dir, &deployment),
+                _ => RecordingRuntime::unavailable(NO_DATA_DIR),
+            };
+            // A failed auth start does not stop the app either: reading and editing
+            // still work, and each auth command reports why (host-gate design §6).
+            // The auth and the recording registry share one gate, whose slot stays
+            // empty until a recording runs (product-owner design §4).
+            let empty = match recording_runtime.unavailable_reason() {
+                Some(_) => STORE_UNAVAILABLE,
+                None => NO_RECORDING_RUN,
+            };
+            let (auth, recording) = match local_data_dir() {
+                Ok(dir) => tauri::async_runtime::block_on(AuthState::start(&dir, empty)),
+                Err(_) => (
+                    AuthState::unavailable(NO_DATA_DIR),
+                    DesktopRecording::unavailable(NO_DATA_DIR),
+                ),
+            };
+            let alarm = tauri::async_runtime::block_on(alarm::AlarmState::open(local_data_dir()));
+            app.manage(NativeHost {
+                bootstrap: std::sync::Arc::new(bootstrap),
+                active: Mutex::new(Active::default()),
+                alarm_operation: Mutex::new(()),
+                exiting: AtomicBool::new(false),
+            });
+            app.manage(auth);
+            app.manage(alarm);
+            app.manage(recording_runtime);
+            app.manage(recording);
             let mode = app.state::<AppMode>();
             // Runtime reads its Project once, here (design §6).
             app.manage(runtime::StartupProject::load(&mode));
@@ -503,16 +517,6 @@ fn main() {
             Ok(())
         })
         .manage(mode)
-        .manage(NativeHost {
-            bootstrap: std::sync::Arc::new(bootstrap),
-            active: Mutex::new(Active::default()),
-            alarm_operation: Mutex::new(()),
-            exiting: AtomicBool::new(false),
-        })
-        .manage(auth)
-        .manage(alarm)
-        .manage(recording_runtime)
-        .manage(recording)
         .build(tauri::generate_context!())
         .expect("SCADA desktop failed")
         .run(on_exit());

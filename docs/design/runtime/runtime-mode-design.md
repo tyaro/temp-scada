@@ -117,7 +117,7 @@ Rust 側の検査:
 
 ## 7. 多重起動
 
-- `tauri-plugin-single-instance`（banto-industrial の banto-hub・chronogazer と同じ）で、端末で 1 プロセスにする。plugin は Builder の最初に登録する。
+- `tauri-plugin-single-instance`（banto-industrial の banto-hub・chronogazer と同じ）で、端末で 1 プロセスにする。plugin は Builder の最初に登録する。端末の各ストア（設定・記録・認証・警報。警報を開く処理は中断した切替の復旧も行う）は、単一起動の判定を通ったプロセスだけが開く。判定は `build()` の中の plugin の初期化で行われ、2 つ目はそこで終わるので、ストアはアプリの `setup` で開く（`main()` の頭で開かない）。
 - **mode に関わらず 1 つ**（§10-8）。Editor と Runtime を同時に動かさない。認証 DB・記録 DB・警報の端末 DB と、段階3の「端末で送信中の書込みは 1 つ」を 1 つのプロセスで持つため。親設計は「Runtime の多重起動」だけを禁じていたので、親 §10・§11-9 に追記する。
 - 2 つ目の起動は、1 つ目の窓を前に出して終わる。1 つ目の mode・Project は変えない。2 つ目が違う mode か、Runtime で違う Project（正規化した絶対パスで比べる）を指したときは、1 つ目の窓に「すでに起動しています。別の Project・別の mode で使うときは、いまの窓を閉じてから起動してください」と出す。
 - 1 つ目が失敗の画面（§6 の 1）を出しているときも同じ（前に出すだけ）。
