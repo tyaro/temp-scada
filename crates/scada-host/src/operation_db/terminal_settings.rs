@@ -13,12 +13,30 @@ pub const DEFAULT_MIN_INTERVAL_MS: i64 = 1_000;
 pub const MIN_INTERVAL_RANGE_MS: std::ops::RangeInclusive<i64> = 100..=60_000;
 pub const MIN_INTERVAL_STEP_MS: i64 = 100;
 
-/// The table, created with the record (format 4) or added to an older file.
+/// The table, created with the record (format 5) or added to an older
+/// file. The CHECK is `valid_min_interval`: an integer (SQLite keeps a REAL
+/// in an INTEGER column, and `%` would truncate it) in the range, on the
+/// step.
 pub(super) const CREATE_TABLE: &str = "CREATE TABLE terminal_settings (
        id INTEGER PRIMARY KEY CHECK (id = 1),
        min_interval_ms INTEGER NOT NULL
-         CHECK (min_interval_ms BETWEEN 100 AND 60000 AND min_interval_ms % 100 = 0)
+         CHECK (typeof(min_interval_ms) = 'integer'
+                AND min_interval_ms BETWEEN 100 AND 60000
+                AND min_interval_ms % 100 = 0)
      );";
+
+/// Format 4 to 5: the table again with the integer CHECK (#324 owner's
+/// review). A saved value the new CHECK allows is kept; any other is
+/// dropped, which reads as the default (as `load_min_interval` already
+/// read it).
+pub(super) const REBUILD_TABLE: &str =
+    "ALTER TABLE terminal_settings RENAME TO terminal_settings_4;";
+pub(super) const COPY_FROM_4: &str = "INSERT INTO terminal_settings (id, min_interval_ms)
+       SELECT id, min_interval_ms FROM terminal_settings_4
+        WHERE typeof(min_interval_ms) = 'integer'
+          AND min_interval_ms BETWEEN 100 AND 60000
+          AND min_interval_ms % 100 = 0;
+     DROP TABLE terminal_settings_4;";
 
 /// Whether `ms` may be saved as the minimum interval.
 pub fn valid_min_interval(ms: i64) -> bool {

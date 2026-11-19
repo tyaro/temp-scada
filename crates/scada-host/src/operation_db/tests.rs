@@ -165,7 +165,7 @@ async fn reopening_finishes_rows_an_earlier_process_left_pending() {
 async fn a_file_of_another_format_is_refused_without_changing_it() {
     // A file of a later format, and a foreign SQLite file without our
     // version, both in rollback-journal mode.
-    for setup in ["PRAGMA user_version = 5", "CREATE TABLE foreign_data (x)"] {
+    for setup in ["PRAGMA user_version = 6", "CREATE TABLE foreign_data (x)"] {
         let file = temp_file();
         let mut connection = <sqlx::sqlite::SqliteConnection as sqlx::Connection>::connect_with(
             &SqliteConnectOptions::new()
@@ -862,7 +862,7 @@ async fn a_format_1_file_gets_the_write_state_and_keeps_its_rows() {
         .fetch_one(&db.pool)
         .await
         .unwrap();
-    assert_eq!(version, 4);
+    assert_eq!(version, 5);
     let log = OperationLog::new(db);
     assert_eq!(log.write_status(), WriteStatus::default());
     assert_eq!(log.key_endpoint(), None);
@@ -1082,8 +1082,9 @@ async fn a_minimum_interval_out_of_range_or_off_its_step_changes_nothing() {
     log.set_min_interval(100).await.unwrap();
     log.set_min_interval(60_000).await.unwrap();
     assert_eq!(log.min_interval(), Duration::from_secs(60));
-    // The table refuses the same values (#324 owner's review).
-    for ms in [150, 99, 60_100] {
+    // The table refuses the same values (#324 owner's review), and a REAL
+    // that `%` would truncate.
+    for ms in [150.0, 99.0, 60_100.0, 100.5] {
         assert!(
             sqlx::query("UPDATE terminal_settings SET min_interval_ms = ? WHERE id = 1")
                 .bind(ms)
@@ -1113,10 +1114,62 @@ async fn a_format_3_file_gets_the_terminal_settings_and_keeps_its_key() {
         .fetch_one(&db.pool)
         .await
         .unwrap();
-    assert_eq!(version, 4);
+    assert_eq!(version, 5);
     let log = OperationLog::new(db);
     assert_eq!(log.key(), Some(key_ref("k1")));
     assert_eq!(log.min_interval(), Duration::from_millis(1_000));
     log.set_min_interval(3_000).await.unwrap();
     log.close().await;
+}
+
+/// The format 4 table had no integer CHECK (#324 owner's review): opened,
+/// it is made again with it, keeping a value it allows and dropping any
+/// other (the default, as it read before).
+#[tokio::test]
+async fn a_format_4_file_gets_the_integer_check_and_keeps_a_valid_interval() {
+    const FORMAT_4: &str = "DROP TABLE terminal_settings;
+         CREATE TABLE terminal_settings (
+           id INTEGER PRIMARY KEY CHECK (id = 1),
+           min_interval_ms INTEGER NOT NULL
+             CHECK (min_interval_ms BETWEEN 100 AND 60000 AND min_interval_ms % 100 = 0));
+         PRAGMA user_version = 4;";
+    for (saved, kept) in [("2500", 2_500), ("100.5", 1_000)] {
+        let file = temp_file();
+        let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+        let log = OperationLog::new(db);
+        log.key_registered(1_000, &key_ref("k1")).await.unwrap();
+        log.db()
+            .execute_for_test(Box::leak(
+                format!("{FORMAT_4} INSERT INTO terminal_settings VALUES (1, {saved});")
+                    .into_boxed_str(),
+            ))
+            .await;
+        log.close().await;
+
+        let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+        let version: i64 = sqlx::query_scalar("PRAGMA user_version")
+            .fetch_one(&db.pool)
+            .await
+            .unwrap();
+        assert_eq!(version, 5, "{saved}");
+        let log = OperationLog::new(db);
+        assert_eq!(log.key(), Some(key_ref("k1")), "{saved}");
+        assert_eq!(log.min_interval(), Duration::from_millis(kept), "{saved}");
+        log.set_min_interval(3_000).await.unwrap();
+        // The rebuilt table has the integer CHECK.
+        assert!(
+            sqlx::query("UPDATE terminal_settings SET min_interval_ms = 100.5")
+                .execute(&log.db().pool)
+                .await
+                .is_err(),
+            "{saved}"
+        );
+        log.close().await;
+        let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+        assert_eq!(
+            OperationLog::new(db).min_interval(),
+            Duration::from_secs(3),
+            "{saved}"
+        );
+    }
 }
