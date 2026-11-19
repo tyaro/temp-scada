@@ -189,6 +189,12 @@ impl Project {
         self.0["manifest"]["projectId"].as_str().unwrap()
     }
 
+    /// The checked Project document, read-only (for host checks such as the
+    /// operation write's resolution, which read parts no typed view covers).
+    pub fn as_value(&self) -> &Value {
+        &self.0
+    }
+
     pub fn revision(&self) -> u64 {
         // 共通 schema が JS safe integer に制限する。JSON の 1.0 も整数として受理する。
         self.0["manifest"]["projectRevision"].as_f64().unwrap() as u64

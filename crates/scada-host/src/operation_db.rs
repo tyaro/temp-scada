@@ -257,6 +257,12 @@ impl OperationDb {
         Ok((Self { pool }, recovered))
     }
 
+    /// Run raw SQL against the record (tests make writes fail with it).
+    #[cfg(test)]
+    pub(crate) async fn execute_for_test(&self, sql: &'static str) {
+        sqlx::query(sql).execute(&self.pool).await.unwrap();
+    }
+
     /// Release the SQLite handles (shutdown, or a test removing its dir).
     pub async fn close(self) {
         self.pool.close().await;
@@ -623,7 +629,7 @@ impl OperationLog {
     }
 
     #[cfg(test)]
-    fn db(&self) -> &OperationDb {
+    pub(crate) fn db(&self) -> &OperationDb {
         &self.db
     }
 }
