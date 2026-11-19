@@ -25,6 +25,8 @@ source scripts/cloud-env.sh
 pnpm dev
 ```
 
+デスクトップ版（Tauri）は引数なしで Editor、`--runtime <Project のファイル>` で Runtime の窓（運転表示と上端の状態だけ。[Runtime mode 設計](docs/design/runtime/runtime-mode-design.md)）を開きます。
+
 `cloud-install.sh` はこの Linux x86_64 クラウド向けです。ツールとキャッシュを `/workspace/.toolchains`、`/workspace/.cache` に保存します。システム Chromium があれば E2E で利用し、なければ Playwright の Chromium を導入します。ローカルの別環境では上記バージョンのツールを用意して `pnpm install --frozen-lockfile` と `cargo fetch --locked` を実行してください。
 
 画面ではサンプルの Rectangle / Ellipse / Text を表示します。「編集」→左の「部品」から図形を追加し、画面上のクリックまたは「レイヤー」の配置一覧で選択できます。画面・共有 Symbol の管理は「プロジェクト」で行います。ドラッグで移動、プロパティで座標・サイズ・色・文字列を変更して適用、選択図形を削除できます。「表示プレビュー」では同じ Project を編集用の枠なしで確認できます。Project JSON を開く、JSON を保存、画面を選択する操作ができます。読み込んだファイルが不正なら、現在表示中の Project を保持してエラーを表示します。アップロード先やネットワーク保存はありません。

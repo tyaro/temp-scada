@@ -7,5 +7,15 @@ export default defineConfig({
     exclude: ["@banto/admin-core", "@banto/image-assets", "@banto/ui"],
   },
   server: { port: 5173, strictPort: true },
+  // Two windows, two entries: Editor (index.html) and Runtime (runtime.html,
+  // Runtime mode design §6-5). runtime.html never loads the Editor bundle.
+  build: {
+    rollupOptions: {
+      input: {
+        index: "index.html",
+        runtime: "runtime.html",
+      },
+    },
+  },
   test: { include: ["src/**/*.test.ts"] },
 });

@@ -11,7 +11,20 @@
   import UserAdminDialog from "./UserAdminDialog.svelte";
   import AuthSettingsDialog from "./AuthSettingsDialog.svelte";
 
-  let { session }: { session: AuthSession } = $props();
+  // `align="end"` opens the popover leftward from the control's right edge,
+  // for a control placed at the right of a bar (Runtime's top bar).
+  // `runtime` hides the Editor-only operations (Runtime mode design §5,
+  // §10-2): the move to operation and the authentication settings, whose
+  // commands the Runtime capability rejects.
+  let {
+    session,
+    align = "start",
+    runtime = false,
+  }: {
+    session: AuthSession;
+    align?: "start" | "end";
+    runtime?: boolean;
+  } = $props();
 
   let details: HTMLDetailsElement;
   let busy = $state(false);
@@ -36,8 +49,9 @@
   /** A move that creates the first administrator asks for a name and a confirmation. */
   const creatingAdmin = $derived(ready ? !ready.phase.hasAdmin : false);
   const showTransition = $derived(
-    ready?.phase.phase === "transitioning" ||
-      (transitionOpen && canTransition(view)),
+    !runtime &&
+      (ready?.phase.phase === "transitioning" ||
+        (transitionOpen && canTransition(view))),
   );
 
   const summary = $derived.by(() => {
@@ -138,7 +152,7 @@
     <span>認証</span>
     <span class="auth-summary-state">{busy ? "処理中" : summary}</span>
   </summary>
-  <div class="auth-popover">
+  <div class="auth-popover" class:align-end={align === "end"}>
     {#if view.status === "loading"}
       <p role="status">認証の状態を確認しています…</p>
     {:else if view.status === "unavailable"}
@@ -176,10 +190,16 @@
 
       {#if view.phase.phase === "transitioning"}
         <p role="alert" class="failed">
-          運用への移行が完了していません。管理者の資格情報で移行を再実行してください。完了するまで記録の変更と照会は使えません。
+          {runtime
+            ? "運用への移行が完了していません。Editor で管理者の資格情報を使って移行を再実行してください。完了するまで記録の変更と照会は使えません。"
+            : "運用への移行が完了していません。管理者の資格情報で移行を再実行してください。完了するまで記録の変更と照会は使えません。"}
         </p>
       {:else if view.phase.phase === "initializing" && view.phase.authDisabled}
-        {#if canTransition(view)}
+        {#if runtime}
+          <p class="note" data-auth-editor-only>
+            運用への移行は Editor で行ってください。
+          </p>
+        {:else if canTransition(view)}
           {#if !transitionOpen}
             <div class="auth-actions">
               <button
@@ -359,7 +379,7 @@
         </div>
       {/if}
 
-      {#if canManageUsers(view) || canEditSettings(view)}
+      {#if canManageUsers(view) || (!runtime && canEditSettings(view))}
         <div class="auth-actions">
           {#if canManageUsers(view)}
             <button
@@ -368,7 +388,7 @@
               onclick={() => openDialog("users")}>利用者管理…</button
             >
           {/if}
-          {#if canEditSettings(view)}
+          {#if !runtime && canEditSettings(view)}
             <button
               type="button"
               disabled={busy}
@@ -389,11 +409,13 @@
   {session}
   onclose={() => (usersOpen = false)}
 />
-<AuthSettingsDialog
-  open={settingsOpen}
-  {session}
-  onclose={() => (settingsOpen = false)}
-/>
+{#if !runtime}
+  <AuthSettingsDialog
+    open={settingsOpen}
+    {session}
+    onclose={() => (settingsOpen = false)}
+  />
+{/if}
 
 <style>
   .auth-control {
@@ -471,6 +493,10 @@
     background: var(--banto-bg);
     color: var(--banto-text);
     font: inherit;
+  }
+  .auth-popover.align-end {
+    left: auto;
+    right: 0;
   }
   .auth-popover p {
     margin: 8px 0 0;
