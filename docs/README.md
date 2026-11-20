@@ -17,7 +17,7 @@ docs/
 │   ├── runtime/   SDK境界・認証方針
 │   └── proposals/追加構想
 ├── guides/        操作ガイド
-├── engineering/   コード対応表・リファクタリング
+├── engineering/   コード対応表・開発の進め方・リファクタリング
 ├── history/       日付付きの実装・検証記録
 ├── performance/   性能・CIの記録と計測資産
 ├── reviews/       上流比較・共通機能引渡し・再現fixture
@@ -38,6 +38,7 @@ docs/
 | 操作・ショートカット     | [操作ガイド](guides/user-guide.md)                                                                                        |
 | ブラウザのデモ（模擬値） | [GitHub Pages のデモ](guides/demo-pages.md)。題材の Project・模擬値の筋書き・配信                                         |
 | コード・責務・関連テスト | [コード対応表](engineering/code-map.md)                                                                                   |
+| PR・整形・検証の注意     | [開発の進め方](engineering/dev-workflow.md)                                                                               |
 | 過去の仕様・実装・検証   | [実装履歴](history/implementation-history.md)。当時の「次は」「未実装」を現在情報として読まない                           |
 | 構造整理の不変条件・結果 | [リファクタリング計画](engineering/maintenance-refactoring-plan.md)                                                       |
 
