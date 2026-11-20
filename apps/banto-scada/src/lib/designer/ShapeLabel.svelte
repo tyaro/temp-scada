@@ -53,6 +53,7 @@
 <form
   use:drafts.track={values}
   data-editor-form="shape-label"
+  data-draft-order="last"
   data-object-id={object.id}
   data-target-key={targetKey}
   aria-label="図形の文字"
