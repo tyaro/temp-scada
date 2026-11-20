@@ -80,7 +80,6 @@
         aria-describedby="shape-label-help"
         rows="3"
         wrap="off"
-        maxlength="1000"
         onkeydown={textAreaKey}></textarea></label
     >
     <div class="options">

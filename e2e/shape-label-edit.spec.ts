@@ -95,6 +95,22 @@ test("shape label does not commit while composing with an IME", async ({
   await expect(lines(page)).toHaveText("ポンプ");
 });
 
+test("the text field accepts 1000 supplementary characters", async ({
+  page,
+}) => {
+  // HTML の maxlength は UTF-16 で数えるので付けない。上限は保存契約と同じ 1000 文字（コードポイント）。
+  await start(page);
+  const full = "𠮷".repeat(1000);
+  await text(page).fill(full);
+  await expect(text(page)).toHaveValue(full);
+  await text(page).press("Control+Enter");
+  await expect(
+    mainCanvas(page).locator(
+      `[data-object-id="${rect.id}"] [data-shape-label]`,
+    ),
+  ).toHaveCount(1);
+});
+
 test("unapplied shape label drafts are prevalidated and applied on leaving", async ({
   page,
 }) => {
