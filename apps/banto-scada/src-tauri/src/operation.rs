@@ -30,6 +30,8 @@
 //!   equipment (§8): the write slots, their last request and why a write
 //!   would be refused now. It records nothing and takes neither the
 //!   transition lock nor the send slot.
+//! - `operation_history` (O4b) reads the operation history window's rows
+//!   (§9 照会) of the applied Project: read-only, allowed as the view is.
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -41,8 +43,9 @@ use scada_host::operation_db::{
 };
 use scada_host::operation_key::{self, WriteKey, WriteKeyStore};
 use scada_host::operation_write::{
-    self, check_shape, reason, HubAccess, OperationEnv, OperationView, OperationViewRequest,
-    OperationWrite, OperationWriteRequest, ViewContext, WriteResult, WRITE_TIMEOUT,
+    self, check_shape, reason, HubAccess, OperationEnv, OperationHistory, OperationHistoryRequest,
+    OperationView, OperationViewRequest, OperationWrite, OperationWriteRequest, ViewContext,
+    WriteResult, WRITE_TIMEOUT,
 };
 use scada_host::recording_runtime::NO_DATA_DIR;
 use serde::Serialize;
@@ -310,6 +313,26 @@ pub async fn operation_view(
         },
     };
     operation_write::operation_view(&context, &request)
+        .await
+        .map_err(str::to_owned)
+}
+
+/// `operation_history`: a page of the operation history (§9 照会; O4b) of
+/// the applied Project, newest first. The answer is `OperationHistory`
+/// (`projectId`, `rows`, `nextBeforeSeq`); no applied Project is no rows.
+/// The errors are `"runtimeOnly"`, `"invalid_request"` and
+/// `"record_failed"` (a record that is not open or cannot be read).
+#[tauri::command]
+pub async fn operation_history(
+    mode: State<'_, AppMode>,
+    startup: State<'_, StartupProject>,
+    operations: State<'_, OperationState>,
+    request: OperationHistoryRequest,
+) -> Result<OperationHistory, String> {
+    mode.require_runtime()?;
+    let log = operations.log().ok();
+    let project_id = startup.applied().map(|applied| applied.id);
+    operation_write::operation_history(log.as_deref(), project_id, &request)
         .await
         .map_err(str::to_owned)
 }

@@ -306,6 +306,44 @@ fn editor_mode_refuses_the_view() {
     );
 }
 
+/// The operation history (`operation_history`, O4b): the applied Project's
+/// rows newest first, narrowed by the request (Editor mode refuses it by
+/// mode, `mode_tests`).
+#[test]
+fn the_history_lists_the_recorded_requests_of_the_applied_project() {
+    let dir = TempDir::new();
+    let mode = runtime_mode(&dir);
+    let request = startup(&mode);
+    let (_app, webview) = app(&dir, mode, "runtime");
+
+    let history = invoke(&webview, "operation_history", json!({"request": {}})).unwrap();
+    assert_eq!(history["projectId"], request["projectId"], "{history}");
+    assert_eq!(history["rows"], json!([]));
+    assert_eq!(history["nextBeforeSeq"], Value::Null);
+
+    invoke(&webview, "operation_write", json!({"request": request})).unwrap();
+    let history = invoke(&webview, "operation_history", json!({"request": {}})).unwrap();
+    let row = &history["rows"][0];
+    assert_eq!(row["state"], "finished", "{history}");
+    assert_eq!(row["outcome"], "refused");
+    assert_eq!(row["reason"], "catalog_unavailable");
+    assert_eq!(row["equipmentId"], PUMP);
+    assert_eq!(row["slot"], "command");
+    assert_eq!(row["repeatCount"], 1);
+
+    let narrowed = json!({"request": {"equipmentId": "other", "outcomes": ["ok"]}});
+    let history = invoke(&webview, "operation_history", narrowed).unwrap();
+    assert_eq!(history["rows"], json!([]), "{history}");
+    assert_eq!(
+        invoke(
+            &webview,
+            "operation_history",
+            json!({"request": {"limit": 0}})
+        ),
+        Err(json!("invalid_request"))
+    );
+}
+
 /// The terminal settings' commands (§7, O2c-3b-2): the status answers the
 /// state and no secret; in development / initial setup the local Admin
 /// needs no login. With no saved Hub there is no endpoint to pair a key

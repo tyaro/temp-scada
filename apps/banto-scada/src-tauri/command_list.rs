@@ -81,6 +81,7 @@ pub const RUNTIME_ONLY: &[&str] = &[
     "runtime_alarm_status",
     "operation_write",
     "operation_view",
+    "operation_history",
     "operation_key_status",
     "operation_key_register",
     "operation_key_delete",

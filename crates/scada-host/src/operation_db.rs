@@ -36,7 +36,8 @@ pub use write_state::{KeyRef, WriteState, WriteStatus};
 /// retention (O4a) and the index the retention deletes by; an older file is
 /// brought up to date when opened.
 const FORMAT: i64 = 6;
-const PENDING: &str = "pending";
+/// The stored word of a row whose outcome is not in the record yet.
+pub const PENDING: &str = "pending";
 
 /// Identical refusals of a slot are one row for this long after the row's
 /// first request (§7, after upstream #711's folding).
@@ -190,6 +191,9 @@ impl Finish {
 /// A row as stored. `finish` is `None` while the row is `pending`.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StoredRow {
+    /// The row's place in the record: newer rows have larger ones. The
+    /// history's cursor (O4b).
+    pub seq: i64,
     pub id: String,
     pub request: RequestRecord,
     pub repeat_count: i64,
@@ -231,11 +235,17 @@ where
     }
 }
 
+/// The order of the history (O4b): the Project's rows by `seq`, for the
+/// newest page and the cursor's next one. Format 6 (not yet released when
+/// it was added, so no format of its own).
+const HISTORY_INDEX: &str =
+    "CREATE INDEX IF NOT EXISTS operation_project_seq ON operation(project_id, seq);";
+
 /// Bring a format 0 (just created), 1, 2, 3, 4 or 5 file to [`FORMAT`]: the
 /// write state's table (O2c-2) or its write key (O2c-3a), then the
 /// terminal settings (O2c-4b), or their table again with the integer
-/// CHECK (format 4), or their retention columns (format 5), and the index
-/// of the retention (O4a).
+/// CHECK (format 4), or their retention columns (format 5), and the indexes
+/// of the retention (O4a) and the history (O4b).
 async fn upgrade(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     version: i64,
@@ -272,6 +282,7 @@ async fn upgrade(
     sqlx::raw_sql(retention::CREATE_INDEX)
         .execute(&mut **tx)
         .await?;
+    sqlx::raw_sql(HISTORY_INDEX).execute(&mut **tx).await?;
     sqlx::raw_sql("PRAGMA user_version = 6;")
         .execute(&mut **tx)
         .await?;
@@ -542,6 +553,23 @@ impl OperationDb {
         row.map(|row| stored_row(&row)).transpose()
     }
 
+    /// The rows of a Project the operation history shows (§9; O4b), newest
+    /// first (`seq DESC`), at most `limit`. Every condition of `filter` is
+    /// optional; `outcomes` matches the stored word, so `pending` selects
+    /// the rows whose outcome is not in the record.
+    pub async fn history(
+        &self,
+        project_id: &str,
+        filter: &HistoryFilter,
+        limit: usize,
+    ) -> Result<Vec<StoredRow>, OperationDbError> {
+        let rows = history_query("SELECT", project_id, filter, limit)
+            .build()
+            .fetch_all(&self.pool)
+            .await?;
+        rows.iter().map(stored_row).collect()
+    }
+
     async fn row(&self, id: &str) -> Result<Option<StoredRow>, OperationDbError> {
         let row = sqlx::query("SELECT * FROM operation WHERE id = ?")
             .bind(id)
@@ -549,6 +577,52 @@ impl OperationDb {
             .await?;
         row.map(|row| stored_row(&row)).transpose()
     }
+}
+
+/// The query of [`OperationDb::history`]. Only the conditions given are in
+/// the SQL, so the planner can use the index that fits them: the Project
+/// and the cursor (`operation_project_seq`, a range on `seq`) or the period
+/// (`operation_requested`, then sorted by `seq` within the period). A
+/// catch-all `? IS NULL OR …` would read the whole Project (#334's review).
+/// `head` is `SELECT` (tests put `EXPLAIN QUERY PLAN` in front).
+fn history_query(
+    head: &str,
+    project_id: &str,
+    filter: &HistoryFilter,
+    limit: usize,
+) -> sqlx::QueryBuilder<sqlx::Sqlite> {
+    let mut query = sqlx::QueryBuilder::new(format!("{head} * FROM operation WHERE project_id = "));
+    query.push_bind(project_id.to_owned());
+    if let Some(from_ms) = filter.from_ms {
+        query.push(" AND requested_at_ms >= ").push_bind(from_ms);
+    }
+    if let Some(to_ms) = filter.to_ms {
+        query.push(" AND requested_at_ms <= ").push_bind(to_ms);
+    }
+    if let Some(equipment_id) = &filter.equipment_id {
+        query
+            .push(" AND equipment_id = ")
+            .push_bind(equipment_id.clone());
+    }
+    if let Some(words) = &filter.outcomes {
+        // `,ok,refused,`: one bind for the set, matched with `instr`.
+        let mut set = String::from(",");
+        for word in words {
+            set.push_str(word);
+            set.push(',');
+        }
+        query
+            .push(" AND instr(")
+            .push_bind(set)
+            .push(", ',' || outcome || ',') > 0");
+    }
+    if let Some(before_seq) = filter.before_seq {
+        query.push(" AND seq < ").push_bind(before_seq);
+    }
+    query
+        .push(" ORDER BY seq DESC LIMIT ")
+        .push_bind(i64::try_from(limit).unwrap_or(i64::MAX));
+    query
 }
 
 fn stored_row(row: &sqlx::sqlite::SqliteRow) -> Result<StoredRow, OperationDbError> {
@@ -567,6 +641,7 @@ fn stored_row(row: &sqlx::sqlite::SqliteRow) -> Result<StoredRow, OperationDbErr
     };
     let value: String = row.try_get("value")?;
     Ok(StoredRow {
+        seq: row.try_get("seq")?,
         id: row.try_get("id")?,
         request: RequestRecord {
             requested_at_ms: row.try_get("requested_at_ms")?,
@@ -586,6 +661,19 @@ fn stored_row(row: &sqlx::sqlite::SqliteRow) -> Result<StoredRow, OperationDbErr
         repeat_count: row.try_get("repeat_count")?,
         finish,
     })
+}
+
+/// The conditions of the operation history (§9; O4b). `None` is no
+/// condition. The period is on `requested_at_ms`, both ends included;
+/// `outcomes` holds stored words (`ok` … `uncertain`, and `pending`);
+/// `before_seq` is the cursor: only rows older than it.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct HistoryFilter {
+    pub from_ms: Option<i64>,
+    pub to_ms: Option<i64>,
+    pub equipment_id: Option<String>,
+    pub outcomes: Option<Vec<&'static str>>,
+    pub before_seq: Option<i64>,
 }
 
 /// The last request of a slot as the screen shows it (§8, §9). The webview
@@ -1106,6 +1194,22 @@ impl OperationLog {
             return Ok(None);
         };
         self.resolve(row).await.map(Some)
+    }
+
+    /// The rows of the operation history (§9; O4b), each with its
+    /// `pending` state resolved as for [`Self::latest`].
+    pub async fn history(
+        &self,
+        project_id: &str,
+        filter: &HistoryFilter,
+        limit: usize,
+    ) -> Result<Vec<(StoredRow, RecordState)>, OperationDbError> {
+        let rows = self.db.history(project_id, filter, limit).await?;
+        let mut resolved = Vec::with_capacity(rows.len());
+        for row in rows {
+            resolved.push(self.resolve(row).await?);
+        }
+        Ok(resolved)
     }
 
     /// The state of a row read from the DB. A `pending` row that this

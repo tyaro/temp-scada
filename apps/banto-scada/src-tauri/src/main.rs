@@ -432,6 +432,7 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             close::app_close_reply,
             operation::operation_write,
             operation::operation_view,
+            operation::operation_history,
             operation::operation_key_status,
             operation::operation_key_register,
             operation::operation_key_delete,

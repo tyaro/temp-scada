@@ -380,3 +380,12 @@ O4a で決めたこと（2026-11-20）: 実行記録の保持（§9、§11-7）�
 - command は `operation_retention_set(retentionDays, retentionCount)`（Runtime だけ、Admin。範囲の外は `invalid_retention`。ほかの誤りは最小間隔と同じ）。答えの `operation_key_status` の形に、`retention`（`days`・`count`）を足した。
 - 今の行数と最古の時刻は別の command `operation_record_size`（Runtime だけ、権限の検査はしない。答えは `rowCount`・`oldestRequestedAtMs`、読めなければ `record_failed`）で読む。数えるのに索引を全部読み、書込みの記録と同じ 1 接続を使うので、上端の札が 5 秒おきに読む `operation_key_status` には含めない。窓を開いたときと保持を保存した後だけ読む（#333 のレビュー）。
 - 画面は「書込みの端末設定」の窓に「記録の保持」の欄（日数・件数と「保存」）と今の行数・最古の時刻を置き、範囲を host と同じ規則で先に確かめる。
+
+O4b で決めたこと（2026-11-20）: 操作履歴の窓（§9 の照会）は次のとおりにした。
+
+- 照会する Project は、Runtime が適用中の Project だけとする（記録は端末に 1 つで行に Project を持つが、別の Project の機器の名前・操作の見出しを今の Project からは引けないため）。適用中の Project が無ければ行を返さない。全 Project の照会は作らない。
+- command は `operation_history(request)`（Runtime だけ。読むだけなので、権限は照会 `operation_view` と同じく mode の検査だけとし、Admin を求めない）。条件は `fromMs`・`toMs`（`requested_at_ms`、両端を含む）・`equipmentId`・`outcomes`（§5 の語と、結果が記録に無い行の `pending`）・`beforeSeq`（カーソル）・`limit`（1〜500、既定 500）で、どれも省略できる。区分の空の集合は行を返さない（画面は 1 つ以上選ばせる）。
+- SQL には指定した条件だけを入れる（`? IS NULL OR …` で全部を並べると、Project の行を全部読んでから並べ替えるため）。索引 `operation_project_seq(project_id, seq)` を形式 6 に足し（形式 6 は未公開のため形式を分けない）、最新の頁と `beforeSeq` の続きは並べ替えなしで索引から 500 行まで読む。期間の指定は planner が索引を選ぶ（統計があれば `operation_requested` の範囲を読んで並べ替える）。終了だけの指定は、その時刻より新しい行を索引の順に読み飛ばす。合成 25 万行のメモリ DB で、最新・深い頁・期間はどれも 1 ms 前後、終了だけで約 40 ms（実機は未測定）（#334 のレビュー）。
+- 答えは `projectId`・`rows`（`seq DESC`）・`nextBeforeSeq`（続きの行が残っていれば最後の行の `seq`、無ければ null。上限より 1 行多く読んで決める）。行は小窓の最後の 1 件と同じ形（`state`・`outcome`・`reason`・時刻・`tag`・`value`・`auditId`）に、`seq`・`user`・`equipmentId`・`equipmentCode`・`slot`・`input`・`repeatCount` を足した。`pending` の行は小窓と同じく host が `sending`／`unrecorded` に読み分け、区分 `pending` の絞り込みは記録の語で当てる（記録できなかった結果をこのプロセスが持っていても `pending` に入る）。
+- 記録を開けない・読めないときは `record_failed`、条件の形の誤り（`limit` の範囲外、空か 128 文字を超える `equipmentId`、知らない区分・項目）は `invalid_request` とし、どちらも記録しない。
+- 窓は上端の「操作履歴」のボタンから開き、開くたびに今の絞り込みで読み直す（自動の再読込みはしない）。列は受付時刻・利用者・機器（記録のコードと今の Project の名前）・操作（slot の `write` の見出し。無ければ slot 名）・書こうとした値・区分・理由・回数（`repeat_count` が 2 以上のときだけ「×n」）・所要時間・監査 id。区分・理由の文は小窓の結果の表示と同じ規則（`rowStatus`）で作る。値は記録どおりの値（無ければ入力の文字列）を出し、ボタンの名前は付けない。履歴は同じ Project ID の旧版の行も含み、今のボタン定義がその操作の時点と同じとは限らないため（#334 のレビュー）。「さらに読む」は最後に照会した条件の続きを読む。画面切替ボタンの行き先 `operationList` は O4c で足す。
