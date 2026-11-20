@@ -44,6 +44,16 @@ export const POLYGON_PRESETS = {
       { x: 0, y: 1 },
     ],
   },
+  /** フロー図の手入力の箱。上辺が右上がりの四角形。 */
+  manualBox: {
+    label: "手入力の箱",
+    points: [
+      { x: 0, y: 0.25 },
+      { x: 1, y: 0 },
+      { x: 1, y: 1 },
+      { x: 0, y: 1 },
+    ],
+  },
 } as const satisfies Record<string, { label: string; points: Point[] }>;
 
 export type PolygonPresetKind = keyof typeof POLYGON_PRESETS;
