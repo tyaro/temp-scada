@@ -725,7 +725,7 @@ fn validate_groups<'a>(project: &'a Value, ids: &mut HashSet<&'a str>) -> Result
 }
 
 /// 画面切替ボタンの行き先の画面が存在すること。自身の画面を行き先にしてよい。
-/// 戻る・進む・アラーム一覧（`alarmList`）・ブザー停止（`silenceBuzzer`）は画面を指さないので、形は schema だけで検査する。
+/// 戻る・進む・アラーム一覧（`alarmList`）・操作履歴（`operationList`）・ブザー停止（`silenceBuzzer`）は画面を指さないので、形は schema だけで検査する。
 /// 仕様: docs/design/graphics/nav-button.md
 fn validate_nav_buttons(project: &Value) -> Result<(), String> {
     let screens = project["screens"].as_array().unwrap();

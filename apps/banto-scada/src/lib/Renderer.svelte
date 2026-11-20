@@ -177,11 +177,13 @@
               ? "前の画面へ戻る"
               : target.kind === "alarmList"
                 ? "アラーム一覧を開く"
-                : target.kind === "silenceBuzzer"
-                  ? "ブザーを止める"
-                  : target.kind === "forward"
-                    ? "次の画面へ進む"
-                    : `${navTargetLabel(target, screens)}へ移る`
+                : target.kind === "operationList"
+                  ? "操作履歴を開く"
+                  : target.kind === "silenceBuzzer"
+                    ? "ブザーを止める"
+                    : target.kind === "forward"
+                      ? "次の画面へ進む"
+                      : `${navTargetLabel(target, screens)}へ移る`
           }`,
         }
       : undefined;

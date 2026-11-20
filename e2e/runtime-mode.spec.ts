@@ -589,6 +589,23 @@ function operationProject() {
         };
       else if (slot.name === "current")
         slot.write = { label: "電流 設定", input: { min: 0, max: 100 } };
+  project.screens[0].objects.push({
+    id: "0199f6ab-0000-7000-8000-0000000008a1",
+    order: 990,
+    x: 700,
+    y: 800,
+    width: 140,
+    height: 40,
+    rotation: 0,
+    shape: {
+      type: "navButton",
+      target: { kind: "operationList" },
+      label: "操作履歴へ",
+      fontSize: 16,
+      fill: "#334155",
+      textColor: "#f8fafc",
+    },
+  });
   return project;
 }
 
@@ -1301,6 +1318,16 @@ test.describe("the faceplate's operation rows (operation stage 3, O3c-1)", () =>
       "結果不明。現在値と実行記録を確認してください",
     );
   });
+});
+
+test("a navButton to operationList opens the operation history window (O4c)", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { operation: "ready" });
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  await page.getByRole("button", { name: /操作履歴へ/ }).click();
+  await expect(page.getByRole("dialog", { name: "操作履歴" })).toBeVisible();
 });
 
 test("the top bar opens the operation history; its filters and さらに読む go to operation_history (O4b)", async ({

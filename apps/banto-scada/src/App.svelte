@@ -4791,6 +4791,7 @@
               ? (target) => {
                   if (target.kind === "screen") openScreen(target.screenId);
                   else if (target.kind === "alarmList") openAlarmList();
+                  // operationList は Runtime だけの窓（O4c）。Editor では何もしない。
                   else if (target.kind === "silenceBuzzer") silenceBuzzer();
                 }
               : undefined}
