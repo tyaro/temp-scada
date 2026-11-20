@@ -1,10 +1,7 @@
 import { sameOwnedJson } from "./json-equality";
 /** Pure operation JSON only. No owner registry, service, transport or mutation. */
-import Ajv2020 from "ajv/dist/2020.js";
-import schema from "../../../../crates/scada-model/schema/recording-operations.schema.json";
-import managementSchema from "../../../../crates/scada-model/schema/recording-management.schema.json";
-import planSchema from "../../../../crates/scada-model/schema/recording-plan.schema.json";
-import historySchema from "../../../../crates/scada-historian/schema/history-contract.schema.json";
+import type { ValidateFunction } from "ajv";
+import { validateRecordingOperations as generatedValidate } from "./generated/validators/recording.js";
 import { ownHistoryJson, freezeHistory } from "./history/owned-json";
 import { scalarJson } from "./json-text";
 import { parseRecordingManagementContext } from "./recording-management-contract";
@@ -28,11 +25,8 @@ export const MAX_RECORDING_OPERATIONS_JSON_BYTES = 128 * 1024;
 export const MAX_RECORDING_OPERATIONS_JSON_NODES = 4096;
 export const MAX_RECORDING_OPERATION_RESULT_JSON_BYTES = 256 * 1024;
 export const MAX_RECORDING_OPERATION_RESULT_JSON_NODES = 8192;
-const validateSchema = new Ajv2020({ strictNumbers: true })
-  .addSchema(historySchema)
-  .addSchema(planSchema)
-  .addSchema(managementSchema)
-  .compile<RecordingOperationsDocument>(schema);
+const validateSchema =
+  generatedValidate as ValidateFunction<RecordingOperationsDocument>;
 function small(value: unknown): void {
   ownHistoryJson(
     value,

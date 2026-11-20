@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "kind",
+    "contextId",
+    "projectId",
+    "projectRevision",
+    "series"
+  ],
+  "properties": {
+    "version": { "enum": [1, 2] },
+    "historianNamespace": { "$ref": "#/$defs/id" },
+    "kind": { "const": "historyContext" },
+    "contextId": { "$ref": "#/$defs/id" },
+    "projectId": { "type": "string" },
+    "projectRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "series": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["seriesId", "label"],
+        "properties": {
+          "seriesId": { "$ref": "#/$defs/id" },
+          "label": { "type": "string", "minLength": 1, "maxLength": 512 }
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": { "version": { "const": 1 } },
+      "not": { "required": ["historianNamespace"] }
+    },
+    {
+      "properties": { "version": { "const": 2 } },
+      "required": ["historianNamespace"]
+    }
+  ],
+  "$defs": {
+    "id": {
+      "$ref": "https://temp-scada.invalid/schema/history-contract-v1.json#/$defs/id"
+    }
+  }
+}

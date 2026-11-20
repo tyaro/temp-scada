@@ -1,7 +1,5 @@
-import Ajv2020 from "ajv/dist/2020.js";
-import slotSchema from "../../../../crates/scada-runtime/schema/read-slot-view.schema.json";
-import textSchema from "../../../../crates/scada-runtime/schema/runtime-view.schema.json";
-import updateSchema from "../../../../crates/scada-runtime/schema/read-display-update.schema.json";
+import type { ValidateFunction } from "ajv";
+import { validateReadDisplayUpdate as generatedValidate } from "./generated/validators/read-display-update.js";
 import { bindingReferences } from "./binding-references";
 import { parseProject, type Project } from "./project";
 import {
@@ -23,10 +21,7 @@ export interface ReadDisplayUpdate {
   text: RuntimeView;
   slots: ReadSlotView;
 }
-const validate = new Ajv2020({ allErrors: true, strictNumbers: true })
-  .addSchema(slotSchema)
-  .addSchema(textSchema)
-  .compile<ReadDisplayUpdate>(updateSchema);
+const validate = generatedValidate as ValidateFunction<ReadDisplayUpdate>;
 
 export type ReadPresentationToken = Readonly<{
   kind: "read-presentation-token";

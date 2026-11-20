@@ -1,6 +1,6 @@
 /** H1 pure contract checks. No storage, transport, recorder or UI is connected. */
-import Ajv2020 from "ajv/dist/2020.js";
-import schema from "../../../../crates/scada-historian/schema/history-contract.schema.json";
+import type { ValidateFunction } from "ajv";
+import { validateHistoryContract as generatedValidate } from "./generated/validators/history-contract.js";
 
 export type HistoryIssue = "accepted" | "schema" | "semantic";
 type Source =
@@ -121,10 +121,8 @@ export type HistoryCoverage = Coverage;
 
 // The schema is shared with Rust. Finiteness is an explicit semantic check;
 // non-finite JS inputs cannot occur in a parsed JSON document.
-const validate = new Ajv2020({
-  strictNumbers: false,
-  allowUnionTypes: true,
-}).compile<HistoryContract>(schema);
+// Pre-generated with { strictNumbers: false, allowUnionTypes: true }.
+const validate = generatedValidate as ValidateFunction<HistoryContract>;
 const allowedSource = (source: Source | null) =>
   source !== null && ["real", "computed", "internal", "db"].includes(source);
 const key = (...parts: string[]) => JSON.stringify(parts);

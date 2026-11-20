@@ -13,6 +13,7 @@
     "build:pages": "pnpm --filter banto-scada build:pages",
     "check": "pnpm --filter banto-scada check",
     "test": "pnpm --filter banto-scada test",
+    "generate:validators": "pnpm --filter banto-scada generate:validators",
     "e2e": "playwright test",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

@@ -6,3 +6,4 @@ dist
 docs/upstream
 test-results
 playwright-report
+apps/banto-scada/src/lib/generated

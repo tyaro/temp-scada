@@ -1,5 +1,5 @@
-import Ajv2020 from "ajv/dist/2020.js";
-import historySchema from "../../../../../crates/scada-historian/schema/history-contract.schema.json";
+import type { ValidateFunction } from "ajv";
+import { validateHistoryContext as generatedValidateContext } from "../generated/validators/history-context.js";
 import { parseHistoryContract, type HistoryQuery } from "../history-contract";
 import type { Project } from "../project";
 import type { HistorySource } from "./presentation";
@@ -28,53 +28,9 @@ export interface HistoryPreset {
   definitionId: string;
   token: object;
 }
-const validateContext = new Ajv2020({
-  strictNumbers: true,
-}).compile<HistoryContext>({
-  type: "object",
-  additionalProperties: false,
-  required: [
-    "version",
-    "kind",
-    "contextId",
-    "projectId",
-    "projectRevision",
-    "series",
-  ],
-  properties: {
-    version: { enum: [1, 2] },
-    historianNamespace: { $ref: "#/$defs/id" },
-    kind: { const: "historyContext" },
-    contextId: { $ref: "#/$defs/id" },
-    projectId: { type: "string" },
-    projectRevision: {
-      type: "integer",
-      minimum: 0,
-      maximum: Number.MAX_SAFE_INTEGER,
-    },
-    series: {
-      type: "array",
-      maxItems: 256,
-      items: {
-        type: "object",
-        additionalProperties: false,
-        required: ["seriesId", "label"],
-        properties: {
-          seriesId: { $ref: "#/$defs/id" },
-          label: { type: "string", minLength: 1, maxLength: 512 },
-        },
-      },
-    },
-  },
-  oneOf: [
-    {
-      properties: { version: { const: 1 } },
-      not: { required: ["historianNamespace"] },
-    },
-    { properties: { version: { const: 2 } }, required: ["historianNamespace"] },
-  ],
-  $defs: { id: historySchema.$defs.id },
-});
+// Schema: ./history-context.schema.json (pre-generated validator).
+const validateContext =
+  generatedValidateContext as ValidateFunction<HistoryContext>;
 export type HistoryContextState =
   | { phase: "ready"; context: HistoryContext }
   | { phase: "offline" | "invalid" | "mismatch" };
