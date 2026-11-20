@@ -94,10 +94,13 @@ fn the_command_list_is_generate_handler_without_gaps_or_duplicates() {
     );
     assert_eq!(registered, unique);
     // 56 commands before the mode, `app_mode`, the 6 `runtime_*` and
-    // `operation_write` and `operation_view`, and the 4 of the write key
+    // `operation_write` and `operation_view`, the history
+    // (`operation_history`), and the 4 of the write key
     // (`operation_key_*`, `operation_write_resume`) and the minimum interval
-    // (`operation_min_interval_set`).
-    assert_eq!(listed.len(), 70);
+    // (`operation_min_interval_set`) and the retention
+    // (`operation_retention_set`) and the record size
+    // (`operation_record_size`).
+    assert_eq!(listed.len(), 73);
 }
 
 #[test]
@@ -520,6 +523,7 @@ fn runtime_only_calls() -> Vec<(&'static str, Value)> {
                 "buttonIndex": 0, "expectedValue": true}}),
         ),
         ("operation_view", json!({"request": {"equipmentId": "e"}})),
+        ("operation_history", json!({"request": {}})),
         ("operation_key_status", json!({})),
         ("operation_key_register", json!({"secret": "s"})),
         ("operation_key_delete", json!({})),
@@ -528,6 +532,11 @@ fn runtime_only_calls() -> Vec<(&'static str, Value)> {
             "operation_min_interval_set",
             json!({"minIntervalMs": 2_000}),
         ),
+        (
+            "operation_retention_set",
+            json!({"retentionDays": 30, "retentionCount": 20_000}),
+        ),
+        ("operation_record_size", json!({})),
     ];
     let named: BTreeSet<&str> = calls.iter().map(|(name, _)| *name).collect();
     assert_eq!(named, RUNTIME_ONLY.iter().copied().collect());
@@ -713,7 +722,7 @@ fn the_acl_refuses_runtime_only_commands_from_the_editor_window() {
             .is_some_and(|message| message.contains("not allowed")),
         "{refused}"
     );
-    for command in ["operation_write", "operation_view"] {
+    for command in ["operation_write", "operation_view", "operation_history"] {
         let refused = invoke(&editor, command, json!({"request": {}})).unwrap_err();
         assert!(
             refused

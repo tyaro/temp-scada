@@ -1683,6 +1683,7 @@
                     <option value="back">戻る（運転表示の履歴）</option>
                     <option value="forward">進む（運転表示の履歴）</option>
                     <option value="alarmList">アラーム一覧を開く</option>
+                    <option value="operationList">操作履歴を開く</option>
                     <option value="silenceBuzzer">ブザー停止</option>
                   </select></label
                 >

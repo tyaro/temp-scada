@@ -165,7 +165,7 @@ async fn reopening_finishes_rows_an_earlier_process_left_pending() {
 async fn a_file_of_another_format_is_refused_without_changing_it() {
     // A file of a later format, and a foreign SQLite file without our
     // version, both in rollback-journal mode.
-    for setup in ["PRAGMA user_version = 6", "CREATE TABLE foreign_data (x)"] {
+    for setup in ["PRAGMA user_version = 7", "CREATE TABLE foreign_data (x)"] {
         let file = temp_file();
         let mut connection = <sqlx::sqlite::SqliteConnection as sqlx::Connection>::connect_with(
             &SqliteConnectOptions::new()
@@ -862,7 +862,7 @@ async fn a_format_1_file_gets_the_write_state_and_keeps_its_rows() {
         .fetch_one(&db.pool)
         .await
         .unwrap();
-    assert_eq!(version, 5);
+    assert_eq!(version, 6);
     let log = OperationLog::new(db);
     assert_eq!(log.write_status(), WriteStatus::default());
     assert_eq!(log.key_endpoint(), None);
@@ -1114,7 +1114,7 @@ async fn a_format_3_file_gets_the_terminal_settings_and_keeps_its_key() {
         .fetch_one(&db.pool)
         .await
         .unwrap();
-    assert_eq!(version, 5);
+    assert_eq!(version, 6);
     let log = OperationLog::new(db);
     assert_eq!(log.key(), Some(key_ref("k1")));
     assert_eq!(log.min_interval(), Duration::from_millis(1_000));
@@ -1151,7 +1151,7 @@ async fn a_format_4_file_gets_the_integer_check_and_keeps_a_valid_interval() {
             .fetch_one(&db.pool)
             .await
             .unwrap();
-        assert_eq!(version, 5, "{saved}");
+        assert_eq!(version, 6, "{saved}");
         let log = OperationLog::new(db);
         assert_eq!(log.key(), Some(key_ref("k1")), "{saved}");
         assert_eq!(log.min_interval(), Duration::from_millis(kept), "{saved}");
@@ -1172,4 +1172,212 @@ async fn a_format_4_file_gets_the_integer_check_and_keeps_a_valid_interval() {
             "{saved}"
         );
     }
+}
+
+/// A format 5 file gets the retention columns (O4a): its saved interval is
+/// kept and the retention reads as the default until saved.
+#[tokio::test]
+async fn a_format_5_file_gets_the_retention_and_keeps_its_interval() {
+    const FORMAT_5: &str = "DROP INDEX operation_requested;
+         DROP INDEX operation_project_seq;
+         DROP TABLE terminal_settings;
+         CREATE TABLE terminal_settings (
+           id INTEGER PRIMARY KEY CHECK (id = 1),
+           min_interval_ms INTEGER NOT NULL
+             CHECK (typeof(min_interval_ms) = 'integer'
+                    AND min_interval_ms BETWEEN 100 AND 60000
+                    AND min_interval_ms % 100 = 0));
+         INSERT INTO terminal_settings VALUES (1, 2500);
+         PRAGMA user_version = 5;";
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    log.key_registered(1_000, &key_ref("k1")).await.unwrap();
+    log.db().execute_for_test(FORMAT_5).await;
+    log.close().await;
+
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let version: i64 = sqlx::query_scalar("PRAGMA user_version")
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    assert_eq!(version, 6);
+    let index: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index'
+           AND name IN ('operation_requested', 'operation_project_seq')",
+    )
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
+    assert_eq!(index, 2);
+    let log = OperationLog::new(db);
+    assert_eq!(log.key(), Some(key_ref("k1")));
+    assert_eq!(log.min_interval(), Duration::from_millis(2_500));
+    assert_eq!(log.retention(), OperationRetention::default());
+    let saved = OperationRetention {
+        days: 30,
+        count: 20_000,
+    };
+    log.set_retention(saved).await.unwrap();
+    // The added columns have their CHECK.
+    assert!(
+        sqlx::query("UPDATE terminal_settings SET retention_days = 0")
+            .execute(&log.db().pool)
+            .await
+            .is_err()
+    );
+    log.close().await;
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    assert_eq!(log.retention(), saved);
+    assert_eq!(log.min_interval(), Duration::from_millis(2_500));
+    log.close().await;
+}
+
+/// The operation history (§9 照会; O4b): the rows of one Project, newest
+/// first, narrowed by the period, the equipment and the stored outcome, and
+/// read on from a `seq` cursor.
+#[tokio::test]
+async fn history_lists_a_projects_rows_newest_first_by_its_conditions() {
+    let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
+    let project = request("command").project_id;
+    let at = |ms: i64, equipment: &str, slot: &str| {
+        let mut row = request(slot);
+        row.requested_at_ms = ms;
+        row.equipment_id = equipment.into();
+        row
+    };
+    db.insert_finished(
+        "a",
+        &at(1_000, "eq-1", "command"),
+        &finish(Outcome::Ok, 1_100),
+    )
+    .await
+    .unwrap();
+    db.insert_finished(
+        "b",
+        &at(2_000, "eq-2", "command"),
+        &finish(Outcome::Failed, 2_100),
+    )
+    .await
+    .unwrap();
+    db.insert_pending("c", &at(3_000, "eq-1", "speedSp"))
+        .await
+        .unwrap();
+    db.insert_finished(
+        "d",
+        &at(4_000, "eq-1", "command"),
+        &finish(Outcome::Refused, 4_000),
+    )
+    .await
+    .unwrap();
+    let mut other = at(5_000, "eq-1", "command");
+    other.project_id = "other".into();
+    db.insert_finished("e", &other, &finish(Outcome::Ok, 5_100))
+        .await
+        .unwrap();
+
+    let ids = |rows: Vec<StoredRow>| rows.into_iter().map(|row| row.id).collect::<Vec<_>>();
+    let all = HistoryFilter::default();
+    let rows = db.history(&project, &all, 10).await.unwrap();
+    assert!(rows.windows(2).all(|pair| pair[0].seq > pair[1].seq));
+    assert_eq!(ids(rows), ["d", "c", "b", "a"]);
+
+    let period = HistoryFilter {
+        from_ms: Some(2_000),
+        to_ms: Some(3_000),
+        ..HistoryFilter::default()
+    };
+    assert_eq!(
+        ids(db.history(&project, &period, 10).await.unwrap()),
+        ["c", "b"]
+    );
+    let from = HistoryFilter {
+        from_ms: Some(3_000),
+        ..HistoryFilter::default()
+    };
+    assert_eq!(
+        ids(db.history(&project, &from, 10).await.unwrap()),
+        ["d", "c"]
+    );
+    let equipment = HistoryFilter {
+        equipment_id: Some("eq-1".into()),
+        ..HistoryFilter::default()
+    };
+    assert_eq!(
+        ids(db.history(&project, &equipment, 10).await.unwrap()),
+        ["d", "c", "a"]
+    );
+    let outcomes = HistoryFilter {
+        outcomes: Some(vec!["ok", PENDING]),
+        ..HistoryFilter::default()
+    };
+    assert_eq!(
+        ids(db.history(&project, &outcomes, 10).await.unwrap()),
+        ["c", "a"]
+    );
+    let none = HistoryFilter {
+        outcomes: Some(Vec::new()),
+        ..HistoryFilter::default()
+    };
+    assert!(db.history(&project, &none, 10).await.unwrap().is_empty());
+
+    // A page of 2, then the rows older than its last `seq`.
+    let page = db.history(&project, &all, 2).await.unwrap();
+    let cursor = page.last().unwrap().seq;
+    assert_eq!(ids(page), ["d", "c"]);
+    let next = HistoryFilter {
+        before_seq: Some(cursor),
+        ..HistoryFilter::default()
+    };
+    assert_eq!(
+        ids(db.history(&project, &next, 2).await.unwrap()),
+        ["b", "a"]
+    );
+    db.close().await;
+}
+
+/// The history's SQL holds only the conditions given, so the newest page,
+/// the cursor's next page and a period read through an index, not the whole
+/// table (#334's review).
+#[tokio::test]
+async fn history_reads_through_an_index() {
+    let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
+    let cursor = HistoryFilter {
+        before_seq: Some(1_000),
+        ..HistoryFilter::default()
+    };
+    let period = HistoryFilter {
+        from_ms: Some(1_000),
+        to_ms: Some(2_000),
+        ..HistoryFilter::default()
+    };
+    // The newest page and the next one read in `seq` order with no sort.
+    // A period is not read whole either; which index it takes is the
+    // planner's choice (with statistics, the period's range then a sort).
+    for (filter, unsorted) in [
+        (HistoryFilter::default(), true),
+        (cursor, true),
+        (period, false),
+    ] {
+        let plan: Vec<String> = history_query("EXPLAIN QUERY PLAN SELECT", "p", &filter, 500)
+            .build()
+            .fetch_all(&db.pool)
+            .await
+            .unwrap()
+            .iter()
+            .map(|row| row.get::<String, _>("detail"))
+            .collect();
+        assert!(
+            plan.iter().all(|step| step != "SCAN operation"),
+            "{filter:?}: {plan:?}"
+        );
+        if unsorted {
+            assert!(
+                plan.iter().all(|step| !step.contains("TEMP B-TREE")),
+                "{filter:?}: {plan:?}"
+            );
+        }
+    }
+    db.close().await;
 }

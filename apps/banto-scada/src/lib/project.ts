@@ -202,6 +202,7 @@ export type NavTarget =
   | { kind: "back" }
   | { kind: "forward" }
   | { kind: "alarmList" }
+  | { kind: "operationList" }
   | { kind: "silenceBuzzer" };
 /**
  * 画面切替ボタン。画面の直下にだけ置ける（Symbol 定義には置かない）。

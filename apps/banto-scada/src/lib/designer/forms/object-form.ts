@@ -300,6 +300,7 @@ export function objectFormCommand(
       targetValue === "back" ||
       targetValue === "forward" ||
       targetValue === "alarmList" ||
+      targetValue === "operationList" ||
       targetValue === "silenceBuzzer"
         ? { kind: targetValue }
         : targetValue.startsWith("screen:")

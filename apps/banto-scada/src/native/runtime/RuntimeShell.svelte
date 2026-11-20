@@ -28,6 +28,8 @@
   import RuntimeOperator from "./RuntimeOperator.svelte";
   import { createOperationHost } from "../../lib/operation-faceplate";
   import OperationSettingsWindow from "./OperationSettingsWindow.svelte";
+  import OperationHistoryWindow from "./OperationHistoryWindow.svelte";
+  import { createOperationHistoryHost } from "../../lib/operation-history";
   import {
     createOperationSettingsHost,
     settingsErrorCode,
@@ -123,6 +125,19 @@
     if (alarmListOpen) return;
     alarmListOpener = document.activeElement;
     alarmListOpen = true;
+  }
+  // The operation history (operation stage 3 §9, O4b): read-only, opened
+  // from the top bar like the alarm list.
+  const operationHistory = createOperationHistoryHost((command, args) =>
+    invoke(command, args),
+  );
+  let operationHistoryOpen = $state(false);
+  let operationHistoryOpener: Element | null = null;
+  let operationHistoryEntry = $state<HTMLButtonElement>();
+  function openOperationHistory() {
+    if (operationHistoryOpen) return;
+    operationHistoryOpener = document.activeElement;
+    operationHistoryOpen = true;
   }
   function openAlarmSettings() {
     if (alarmSettingsOpen || alarmSettingsReason) return;
@@ -475,6 +490,12 @@
           label={alarms.label}
         /></button
       >
+      <button
+        type="button"
+        bind:this={operationHistoryEntry}
+        onclick={openOperationHistory}
+        data-runtime-operation-history-entry>操作履歴</button
+      >
       {#if alarms.soundNotice}<span data-alarm-sound-fallback
           ><StatusBadge variant="warning" label={alarms.soundNotice} /></span
         >{/if}
@@ -530,6 +551,7 @@
         onopentrend={openTrend}
         onretiretrend={retireTrend}
         onopenalarms={openAlarmList}
+        onopenoperations={openOperationHistory}
         onsilencebuzzer={alarms.canSilence ? alarms.silenceBuzzer : undefined}
         {overlays}
         {operations}
@@ -571,6 +593,17 @@
         const opener = alarmListOpener;
         alarmListOpener = null;
         return restoreFocus(opener, alarmEntry);
+      }}
+    />
+    <OperationHistoryWindow
+      open={operationHistoryOpen}
+      host={operationHistory}
+      {project}
+      onclose={() => (operationHistoryOpen = false)}
+      focusFallback={() => {
+        const opener = operationHistoryOpener;
+        operationHistoryOpener = null;
+        return restoreFocus(opener, operationHistoryEntry);
       }}
     />
     <OperationSettingsWindow

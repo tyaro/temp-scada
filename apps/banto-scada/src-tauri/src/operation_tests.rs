@@ -306,6 +306,44 @@ fn editor_mode_refuses_the_view() {
     );
 }
 
+/// The operation history (`operation_history`, O4b): the applied Project's
+/// rows newest first, narrowed by the request (Editor mode refuses it by
+/// mode, `mode_tests`).
+#[test]
+fn the_history_lists_the_recorded_requests_of_the_applied_project() {
+    let dir = TempDir::new();
+    let mode = runtime_mode(&dir);
+    let request = startup(&mode);
+    let (_app, webview) = app(&dir, mode, "runtime");
+
+    let history = invoke(&webview, "operation_history", json!({"request": {}})).unwrap();
+    assert_eq!(history["projectId"], request["projectId"], "{history}");
+    assert_eq!(history["rows"], json!([]));
+    assert_eq!(history["nextBeforeSeq"], Value::Null);
+
+    invoke(&webview, "operation_write", json!({"request": request})).unwrap();
+    let history = invoke(&webview, "operation_history", json!({"request": {}})).unwrap();
+    let row = &history["rows"][0];
+    assert_eq!(row["state"], "finished", "{history}");
+    assert_eq!(row["outcome"], "refused");
+    assert_eq!(row["reason"], "catalog_unavailable");
+    assert_eq!(row["equipmentId"], PUMP);
+    assert_eq!(row["slot"], "command");
+    assert_eq!(row["repeatCount"], 1);
+
+    let narrowed = json!({"request": {"equipmentId": "other", "outcomes": ["ok"]}});
+    let history = invoke(&webview, "operation_history", narrowed).unwrap();
+    assert_eq!(history["rows"], json!([]), "{history}");
+    assert_eq!(
+        invoke(
+            &webview,
+            "operation_history",
+            json!({"request": {"limit": 0}})
+        ),
+        Err(json!("invalid_request"))
+    );
+}
+
 /// The terminal settings' commands (§7, O2c-3b-2): the status answers the
 /// state and no secret; in development / initial setup the local Admin
 /// needs no login. With no saved Hub there is no endpoint to pair a key
@@ -322,7 +360,13 @@ fn the_write_key_commands_work_login_free_before_operation() {
         status,
         json!({"keyEndpoint": null, "hubEndpoint": null,
             "write": {"state": "ready", "changedAtMs": null},
-            "minIntervalMs": 1_000})
+            "minIntervalMs": 1_000,
+            "retention": {"days": 365, "count": 100_000}})
+    );
+    // The record size is its own command, not part of the polled status.
+    assert_eq!(
+        invoke(&webview, "operation_record_size", json!({})).unwrap(),
+        json!({"rowCount": 0, "oldestRequestedAtMs": null})
     );
     assert_eq!(
         invoke(
@@ -370,6 +414,37 @@ fn the_write_key_commands_work_login_free_before_operation() {
         invoke(&webview, "operation_key_status", json!({})).unwrap()["minIntervalMs"],
         2_500
     );
+    // The retention (O4a): out of either range is refused and changes
+    // nothing; a valid one is answered and kept with the interval.
+    for (days, count) in [
+        (0, 100_000),
+        (3_651, 100_000),
+        (365, 9_999),
+        (365, 10_000_001),
+        (-1, 100_000),
+    ] {
+        assert_eq!(
+            invoke(
+                &webview,
+                "operation_retention_set",
+                json!({"retentionDays": days, "retentionCount": count})
+            ),
+            Err(json!("invalid_retention")),
+            "{days} {count}"
+        );
+    }
+    let saved = invoke(
+        &webview,
+        "operation_retention_set",
+        json!({"retentionDays": 30, "retentionCount": 20_000}),
+    )
+    .unwrap();
+    assert_eq!(saved["retention"], json!({"days": 30, "count": 20_000}));
+    assert_eq!(saved["minIntervalMs"], 2_500);
+    assert_eq!(
+        invoke(&webview, "operation_key_status", json!({})).unwrap()["retention"],
+        json!({"days": 30, "count": 20_000})
+    );
 }
 
 /// In operation, changing the key or resuming needs a logged-in Admin; the
@@ -401,6 +476,10 @@ fn the_write_key_commands_need_an_admin_in_operation() {
             "operation_min_interval_set",
             json!({"minIntervalMs": 2_000}),
         ),
+        (
+            "operation_retention_set",
+            json!({"retentionDays": 30, "retentionCount": 20_000}),
+        ),
     ] {
         assert_eq!(
             invoke(&webview, command, args),
@@ -409,6 +488,7 @@ fn the_write_key_commands_need_an_admin_in_operation() {
         );
     }
     assert!(invoke(&webview, "operation_key_status", json!({})).is_ok());
+    assert!(invoke(&webview, "operation_record_size", json!({})).is_ok());
 }
 
 /// The record could not be opened: the settings answer `record_failed`.
@@ -421,12 +501,17 @@ fn the_write_key_commands_without_the_record_are_record_failed() {
     tauri::async_runtime::block_on(app.state::<OperationState>().close());
     for (command, args) in [
         ("operation_key_status", json!({})),
+        ("operation_record_size", json!({})),
         ("operation_key_register", json!({"secret": "write-key"})),
         ("operation_key_delete", json!({})),
         ("operation_write_resume", json!({})),
         (
             "operation_min_interval_set",
             json!({"minIntervalMs": 2_000}),
+        ),
+        (
+            "operation_retention_set",
+            json!({"retentionDays": 30, "retentionCount": 20_000}),
         ),
     ] {
         assert_eq!(

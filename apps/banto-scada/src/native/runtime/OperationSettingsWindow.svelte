@@ -6,12 +6,15 @@
     changeDoneText,
     intervalSecondsText,
     parseIntervalSeconds,
+    parseRetention,
+    recordSizeText,
     keyPairing,
     normalizeSecret,
     operationSettingsReasonText,
     settingsErrorCode,
     writeStateText,
     type OperationKeyStatus,
+    type OperationRecordSize,
     type OperationSettingsHost,
   } from "./operation-settings";
 
@@ -39,6 +42,19 @@
   } = $props();
 
   let status = $state.raw<OperationKeyStatus | null>(null);
+  /** 記録の行数（O4a）。数えるのが重いので、開いたときと保持の保存の後だけ読む。 */
+  let recordSize = $state.raw<OperationRecordSize | null>(null);
+  let sizeGeneration = 0;
+  async function loadRecordSize() {
+    const issued = ++sizeGeneration;
+    try {
+      const next = await host.recordSize();
+      if (open && issued === sizeGeneration) recordSize = next;
+    } catch {
+      // 読めなければ件数を出さない（host が記録に残す）。
+      if (open && issued === sizeGeneration) recordSize = null;
+    }
+  }
   let loadIssue = $state<string | null>(null);
   let secret = $state("");
   let busy = $state(false);
@@ -47,9 +63,14 @@
   let confirmingDelete = $state(false);
   /** 最小間隔の入力（秒）。読めた・変えた状態で書き直す。 */
   let intervalInput = $state("");
+  /** 記録の保持の入力（日数・件数）。読めた・変えた状態で書き直す。 */
+  let retentionDaysInput = $state("");
+  let retentionCountInput = $state("");
   function show(next: OperationKeyStatus) {
     status = next;
     intervalInput = intervalSecondsText(next.minIntervalMs);
+    retentionDaysInput = String(next.retention.days);
+    retentionCountInput = String(next.retention.count);
   }
 
   const pairing = $derived(status ? keyPairing(status) : "none");
@@ -79,9 +100,11 @@
     if (!open) return;
     untrack(() => {
       status = null;
+      recordSize = null;
       loadIssue = issue = done = null;
       confirmingDelete = false;
       void load();
+      void loadRecordSize();
     });
     return () => {
       // 窓を閉じたら入力した秘密を残さない。
@@ -90,7 +113,7 @@
   });
 
   async function change(
-    kind: "register" | "remove" | "resume" | "interval",
+    kind: "register" | "remove" | "resume" | "interval" | "retention",
     run: () => Promise<OperationKeyStatus>,
   ) {
     if (busy) return;
@@ -102,6 +125,7 @@
       show(next);
       done = changeDoneText(kind, next);
       if (kind === "register") secret = "";
+      if (kind === "retention") void loadRecordSize();
       onchanged({ status: next });
     } catch (error) {
       const code = settingsErrorCode(error);
@@ -135,6 +159,19 @@
       return;
     }
     void change("interval", () => host.setMinInterval(ms));
+  }
+
+  function saveRetention(event: SubmitEvent) {
+    event.preventDefault();
+    const retention = parseRetention(retentionDaysInput, retentionCountInput);
+    if (retention === null) {
+      issue = operationSettingsReasonText("invalid_retention");
+      done = null;
+      return;
+    }
+    void change("retention", () =>
+      host.setRetention(retention.days, retention.count),
+    );
   }
 </script>
 
@@ -275,6 +312,48 @@
             の回数制限で書き用キーが止められないよう、Hub
             の制限に合わせてください。</small
           >
+        </form>
+      </section>
+
+      <section aria-label="記録の保持">
+        <h3>記録の保持</h3>
+        <form
+          class="register"
+          onsubmit={saveRetention}
+          data-operation-retention
+        >
+          <div class="row">
+            <label for="operation-retention-days">日数</label>
+            <input
+              id="operation-retention-days"
+              class="interval"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              bind:value={retentionDaysInput}
+              oninput={() => (issue = done = null)}
+              disabled={busy}
+            />
+            <label for="operation-retention-count">件数</label>
+            <input
+              id="operation-retention-count"
+              class="interval"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              bind:value={retentionCountInput}
+              oninput={() => (issue = done = null)}
+              disabled={busy}
+            />
+            <button type="submit" disabled={busy}>保存</button>
+          </div>
+          <small
+            >1〜3650 日、10000〜10000000
+            件。どちらかを超えた古い記録から消します（結果を待つ記録は消しません）。</small
+          >
+          {#if recordSize}<p class="hint" data-operation-record-size>
+              {recordSizeText(recordSize)}
+            </p>{/if}
         </form>
       </section>
     {/if}

@@ -54,11 +54,21 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
             changedAtMs: null as null | number,
           },
           minIntervalMs: 1000,
+          retention: { days: 365, count: 100_000 },
         },
+        /** What `operation_record_size` answers (O4a). */
+        recordSize: {
+          rowCount: 2,
+          oldestRequestedAtMs: Date.UTC(2026, 0, 2) as null | number,
+        },
+        /** How many times `operation_record_size` was asked. */
+        recordSizeCalls: 0,
         /** Secrets `operation_key_register` received. */
         keySecrets: [] as string[],
         /** When set, the three key changes reject with this reason. */
         keyRefusal: null as null | string,
+        /** The requests `operation_history` received (O4b). */
+        histories: [] as Record<string, unknown>[],
         /** Milliseconds `operation_key_status` takes to answer. */
         keyStatusDelayMs: 0,
         seq: 1,
@@ -206,6 +216,56 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                   })),
                 };
               }
+              case "operation_history": {
+                // Two pages: the first says where the second starts.
+                const request = args!.request as Record<string, unknown>;
+                host.histories.push(request);
+                const row = (seq: number, patch: Record<string, unknown>) => ({
+                  seq,
+                  id: `row-${seq}`,
+                  state: "finished",
+                  outcome: "ok",
+                  reason: null,
+                  requestedAtMs: Date.UTC(2026, 10, 20, 0, 0, seq),
+                  finishedAtMs: Date.UTC(2026, 10, 20, 0, 0, seq) + 250,
+                  tag: "Line1.P101.Run",
+                  value: true,
+                  auditId: 900 + seq,
+                  user: "未ログイン",
+                  equipmentId: "0199f700-0000-7000-8000-000000000002",
+                  equipmentCode: "P-101",
+                  slot: "running",
+                  input: null,
+                  repeatCount: 1,
+                  ...patch,
+                });
+                return request.beforeSeq === undefined
+                  ? {
+                      projectId: options.projectId,
+                      rows: [
+                        row(12, {}),
+                        row(11, {
+                          outcome: "refused",
+                          reason: "phase_unavailable",
+                          auditId: null,
+                          repeatCount: 3,
+                        }),
+                      ],
+                      nextBeforeSeq: 11,
+                    }
+                  : {
+                      projectId: options.projectId,
+                      rows: [
+                        row(4, {
+                          state: "unrecorded",
+                          outcome: null,
+                          finishedAtMs: null,
+                          auditId: null,
+                        }),
+                      ],
+                      nextBeforeSeq: null,
+                    };
+              }
               case "operation_key_status": {
                 // The answer is the state when asked, however late it arrives.
                 const answer = structuredClone(host.keyStatus);
@@ -215,14 +275,25 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                   );
                 return answer;
               }
+              case "operation_record_size":
+                host.recordSizeCalls++;
+                return structuredClone(host.recordSize);
               case "operation_key_register":
               case "operation_key_delete":
               case "operation_write_resume":
-              case "operation_min_interval_set": {
+              case "operation_min_interval_set":
+              case "operation_retention_set": {
                 if (host.keyRefusal) throw host.keyRefusal;
                 const status = host.keyStatus;
                 if (command === "operation_min_interval_set") {
                   status.minIntervalMs = args!.minIntervalMs as number;
+                  return structuredClone(status);
+                }
+                if (command === "operation_retention_set") {
+                  status.retention = {
+                    days: args!.retentionDays as number,
+                    count: args!.retentionCount as number,
+                  };
                   return structuredClone(status);
                 }
                 if (command === "operation_key_register") {
@@ -518,6 +589,23 @@ function operationProject() {
         };
       else if (slot.name === "current")
         slot.write = { label: "電流 設定", input: { min: 0, max: 100 } };
+  project.screens[0].objects.push({
+    id: "0199f6ab-0000-7000-8000-0000000008a1",
+    order: 990,
+    x: 700,
+    y: 800,
+    width: 140,
+    height: 40,
+    rotation: 0,
+    shape: {
+      type: "navButton",
+      target: { kind: "operationList" },
+      label: "操作履歴へ",
+      fontSize: 16,
+      fill: "#334155",
+      textColor: "#f8fafc",
+    },
+  });
   return project;
 }
 
@@ -1232,6 +1320,88 @@ test.describe("the faceplate's operation rows (operation stage 3, O3c-1)", () =>
   });
 });
 
+test("a navButton to operationList opens the operation history window (O4c)", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { operation: "ready" });
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  await page.getByRole("button", { name: /操作履歴へ/ }).click();
+  await expect(page.getByRole("dialog", { name: "操作履歴" })).toBeVisible();
+});
+
+test("the top bar opens the operation history; its filters and さらに読む go to operation_history (O4b)", async ({
+  page,
+}) => {
+  await mockRuntimeHost(page, { operation: "ready" });
+  await page.goto("/runtime.html");
+  await expect(page.getByTestId("operator-frame")).toBeVisible();
+  const entry = page.locator("[data-runtime-operation-history-entry]");
+  await entry.click();
+  const dialog = page.getByRole("dialog", { name: "操作履歴" });
+  await expect(dialog).toBeVisible();
+  const histories = () =>
+    page.evaluate(() => (window as any).__runtimeHost.histories);
+  await expect.poll(histories).toEqual([{}]);
+
+  const newest = dialog.locator('[data-operation-history-row="12"]');
+  await expect(newest).toContainText("P-101 ");
+  await expect(newest).toContainText("運転指令");
+  // The value as recorded, without the current Project's button name.
+  await expect(newest).toContainText("true");
+  await expect(newest).not.toContainText("運転（true）");
+  await expect(newest).toContainText("書込みました");
+  await expect(newest).toContainText("250 ms");
+  await expect(newest).toContainText("912");
+  const refused = dialog.locator('[data-operation-history-row="11"]');
+  await expect(refused).toContainText("送っていません");
+  await expect(refused).toContainText("運用の段階を確かめられません");
+  await expect(refused.locator("[data-operation-history-repeat]")).toHaveText(
+    "×3",
+  );
+  await expect(newest.locator("[data-operation-history-repeat]")).toHaveText(
+    "",
+  );
+
+  // The filters change the request; さらに読む reads on with the same ones.
+  await dialog
+    .locator("[data-operation-history-equipment]")
+    .selectOption("0199f700-0000-7000-8000-000000000002");
+  await dialog.locator('[data-operation-history-outcome="ok"]').uncheck();
+  await dialog
+    .locator("[data-operation-history-from]")
+    .fill("2026-11-20T08:00");
+  await dialog.getByRole("button", { name: "照会", exact: true }).click();
+  const fromMs = await page.evaluate(() =>
+    new Date("2026-11-20T08:00").getTime(),
+  );
+  const narrowed = {
+    fromMs,
+    equipmentId: "0199f700-0000-7000-8000-000000000002",
+    outcomes: [
+      "refused",
+      "not_sent",
+      "stopped",
+      "failed",
+      "uncertain",
+      "pending",
+    ],
+  };
+  await expect.poll(histories).toEqual([{}, narrowed]);
+  await dialog.locator("[data-operation-history-more]").click();
+  await expect
+    .poll(histories)
+    .toEqual([{}, narrowed, { ...narrowed, beforeSeq: 11 }]);
+  await expect(
+    dialog.locator('[data-operation-history-row="4"]'),
+  ).toContainText("結果を記録できませんでした");
+  await expect(dialog.locator("[data-operation-history-more]")).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(entry).toBeFocused();
+});
+
 test.describe("the write terminal settings (operation stage 3, O2c-4a)", () => {
   const entry = "[data-runtime-write-entry]";
 
@@ -1399,7 +1569,9 @@ test.describe("the write terminal settings (operation stage 3, O2c-4a)", () => {
     const dialog = page.getByRole("dialog", { name: "書込みの端末設定" });
     const input = dialog.getByLabel("前の書込みからの最小の間隔（秒）");
     await expect(input).toHaveValue("1");
-    const save = dialog.getByRole("button", { name: "保存" });
+    const save = dialog
+      .locator("[data-operation-interval]")
+      .getByRole("button", { name: "保存" });
 
     await input.fill("0.05");
     await save.click();
@@ -1426,6 +1598,62 @@ test.describe("the write terminal settings (operation stage 3, O2c-4a)", () => {
     await page.keyboard.press("Escape");
     await page.locator(entry).click();
     await expect(input).toHaveValue("2.5");
+  });
+
+  test("the record's retention is saved as days and a count (O4a)", async ({
+    page,
+  }) => {
+    await mockRuntimeHost(page);
+    await page.goto("/runtime.html");
+    // The header's status does not count the record; the window does.
+    await expect(page.locator(entry)).toBeVisible();
+    expect(
+      await page.evaluate(() => (window as any).__runtimeHost.recordSizeCalls),
+    ).toBe(0);
+    await page.locator(entry).click();
+    const dialog = page.getByRole("dialog", { name: "書込みの端末設定" });
+    const form = dialog.locator("[data-operation-retention]");
+    const days = form.getByLabel("日数");
+    const count = form.getByLabel("件数");
+    await expect(days).toHaveValue("365");
+    await expect(count).toHaveValue("100000");
+    await expect(form.locator("[data-operation-record-size]")).toContainText(
+      "今の記録: 2 件（最古",
+    );
+    const save = form.getByRole("button", { name: "保存" });
+
+    await count.fill("9999");
+    await save.click();
+    await expect(dialog.locator("[data-operation-settings-issue]")).toHaveText(
+      "記録の保持は 1〜3650 日、10000〜10000000 件の整数で入れてください。",
+    );
+    expect(
+      await page.evaluate(
+        () => (window as any).__runtimeHost.keyStatus.retention,
+      ),
+    ).toEqual({ days: 365, count: 100_000 });
+
+    await days.fill("30");
+    await count.fill("20000");
+    await page.evaluate(() => {
+      (window as any).__runtimeHost.recordSize = {
+        rowCount: 1,
+        oldestRequestedAtMs: null,
+      };
+    });
+    await save.click();
+    await expect(dialog.locator("[data-operation-settings-done]")).toHaveText(
+      "記録の保持を 30 日・20000 件にしました。古い記録はどちらかを超えたものから消します。",
+    );
+    // The size is read again after the save.
+    await expect(form.locator("[data-operation-record-size]")).toHaveText(
+      "今の記録: 1 件",
+    );
+    // Opened again, the window shows the saved retention.
+    await page.keyboard.press("Escape");
+    await page.locator(entry).click();
+    await expect(days).toHaveValue("30");
+    await expect(count).toHaveValue("20000");
   });
 
   test("an empty key is not sent", async ({ page }) => {
