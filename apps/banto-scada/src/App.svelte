@@ -248,9 +248,8 @@
     type WorkTabKind,
   } from "./lib/designer/controllers/work-tabs.svelte";
   import CanvasControls from "./lib/designer/CanvasControls.svelte";
-  import TreeSection from "./lib/designer/TreeSection.svelte";
   import { createLayerTreeController } from "./lib/designer/controllers/layer-tree.svelte";
-  import LayerTree from "./lib/designer/LayerTree.svelte";
+  import LayersPanel from "./lib/designer/LayersPanel.svelte";
   import DesignerSidebar, {
     type DesignerPanel,
   } from "./lib/designer/DesignerSidebar.svelte";
@@ -735,7 +734,7 @@
     setAuxPanelVisibility({ sidebar: true }, "sidebar");
     activePanel = "parts";
   }
-  import PartPalette from "./lib/designer/PartPalette.svelte";
+  import PartsPanel from "./lib/designer/PartsPanel.svelte";
   import type { PalettePart } from "./lib/designer/palette-drag";
   let paletteDrag: {
     token: string;
@@ -828,7 +827,7 @@
       if (committed) onplaced?.();
     });
   }
-  import SymbolLibrary from "./lib/designer/SymbolLibrary.svelte";
+  import ProjectPanel from "./lib/designer/ProjectPanel.svelte";
   import {
     parseProject,
     strokeOverflowIds,
@@ -1722,7 +1721,19 @@
         ),
       ),
     );
+  } // 左ペインの「タグ参照一覧を開く」。W10: 作業画面の表示中は画面タブを選んでから下部の帯を開く。
+  function openReferences() {
+    transition(() => {
+      const open = () => {
+        canvasWorkspace?.preparePanelResize();
+        referencesExpanded = true;
+        setAuxPanelVisibility({ references: true }, "references");
+      };
+      if (workScreenShown) afterCanvasReturn(open);
+      else open();
+    });
   }
+
   // W10 の安全網: 画面または定義の編集対象が変わったら画面タブを選ぶ。
   $effect(() => {
     screenId;
@@ -2856,6 +2867,13 @@
     };
     run();
   }
+  // 左ペインの ⋮ が開いたまま古い対象を指さないための文脈キー。画面一覧・SymbolLibrary 用と、部品パレット用とで中身が違う。
+  const projectContextKey = $derived(
+    `${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${mode}:${busy}:${!!drafts.pending}:${!!replacement}`,
+  );
+  const paletteContextKey = $derived(
+    `${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}`,
+  );
   function screenContextItems(id: string): ContextAction[] {
     const command = (action: EditCommand) => () =>
       withScreen(id, () => edit(action));
@@ -3616,12 +3634,6 @@
     onchange={load}
   />
 {/key}
-{#snippet canvasOnlyNote()}
-  <!-- W4: 作業画面の表示中、レイヤー・部品は inert にして理由を示す。 -->
-  {#if !canvasActive}<p class="canvas-only-note">
-      画面タブを選ぶと使えます
-    </p>{/if}
-{/snippet}
 {#snippet browserHubStatus()}
   {#if !readSource}<StatusBadge
       variant={mode === "preview" ? "warning" : "neutral"}
@@ -4040,175 +4052,62 @@
       />{/if}
     <DesignerSidebar bind:active={activePanel} editable={mode === "edit"}>
       {#snippet projectPanel()}
-        <div class="project-root" title={project.manifest.name}>
-          <span aria-hidden="true">▦</span>
-          {project.manifest.name}
-        </div>
-        <TreeSection label="画面" count={project.screens.length}>
-          {#snippet action()}
-            {#if mode === "edit"}<button
-                class="tree-add"
-                aria-label="画面を追加（画面一覧）"
-                title="画面を追加"
-                disabled={project.screens.length >= 100}
-                onclick={addScreen}>＋</button
-              >{/if}
-          {/snippet}
-          <nav aria-label="画面一覧">
-            {#each project.screens as item (item.id)}
-              {#snippet row()}
-                <button
-                  class="screen-row"
-                  data-screen-id={item.id}
-                  class:active={!activeDefinition && screen.id === item.id}
-                  aria-pressed={!activeDefinition && screen.id === item.id}
-                  onclick={() => openScreen(item.id)}
-                  ><svg
-                    class="screen-icon"
-                    aria-hidden="true"
-                    width="17"
-                    height="17"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.6"
-                    ><path d="M5 3h9l5 5v13H5V3zm9 0v6h5M8 13h8M8 17h8" /></svg
-                  >{item.name}</button
-                >
-              {/snippet}
-              {#if mode === "edit"}
-                <ContextActions
-                  flat
-                  label={`画面：${item.name}`}
-                  contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${mode}:${busy}:${!!drafts.pending}:${!!replacement}`}
-                  items={screenContextItems(item.id)}
-                  >{@render row()}</ContextActions
-                >
-              {:else}{@render row()}{/if}
-            {/each}
-          </nav>
-        </TreeSection>
-        {#if mode === "edit"}
-          <TreeSection label="タグ参照" count={references.length}>
-            <button
-              class="reference-link"
-              disabled={!references.length}
-              onclick={() =>
-                transition(() => {
-                  const open = () => {
-                    canvasWorkspace?.preparePanelResize();
-                    referencesExpanded = true;
-                    setAuxPanelVisibility({ references: true }, "references");
-                  };
-                  // W10: 作業画面の表示中は画面タブを選んでから下部の帯を開く。
-                  if (workScreenShown) afterCanvasReturn(open);
-                  else open();
-                })}>タグ参照一覧を開く</button
-            >
-            <p class="hint">
-              {references.length
-                ? "Project 内の割り当てと使用先を確認します。"
-                : "表示タグの割り当てはありません。"}
-            </p>
-          </TreeSection>
-          <TreeSection label="シンボル" count={project.symbols.length}>
-            <SymbolLibrary
-              images={assetImages}
-              {project}
-              selectedId={libraryId}
-              workspaceKey={workspaceGeneration}
-              onopenusage={openSymbolUsage}
-              screenId={screen.id}
-              editingDefinition={!!activeDefinition}
-              contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}:${mode}:${busy}:${!!drafts.pending}:${!!replacement}`}
-              onchoose={(id) => (libraryId = id)}
-              onedit={openDefinition}
-              ondelete={deleteDefinition}
-              oncommand={symbolLibraryCommand}
-            />
-          </TreeSection>
-          <TreeSection label="機器" count={project.equipment?.length ?? 0}>
-            {#snippet action()}
-              <button
-                class="tree-add"
-                aria-label="機器を新規登録（機器台帳）"
-                title="機器を新規登録"
-                disabled={editBlocked ||
-                  !!activeDefinition ||
-                  !project.equipmentTypes?.length}
-                onclick={newEquipment}>＋</button
-              >
-            {/snippet}
-            <div class="settings-rows">
-              <button
-                disabled={editBlocked || !!activeDefinition}
-                onclick={() => workTabs.open("equipment")}
-                >機器台帳を開く</button
-              >
-            </div>
-            {#if activeDefinition}
-              <p class="hint">Symbol 定義の編集中は使えません。</p>
-            {/if}
-          </TreeSection>
-          <TreeSection label="設定">
-            <div class="settings-rows">
-              <button
-                disabled={editBlocked || !!activeDefinition}
-                onclick={() => workTabs.open("project-settings")}
-                >プロジェクト設定</button
-              >
-              <button
-                disabled={editBlocked || !!activeDefinition}
-                onclick={() => workTabs.open("alarm-definitions")}
-                >警報の定義</button
-              >
-              <button
-                disabled={editBlocked || !!activeDefinition}
-                onclick={openRecordingPlan}>記録希望設定</button
-              >
-            </div>
-            {#if activeDefinition}
-              <p class="hint">Symbol 定義の編集中は使えません。</p>
-            {/if}
-          </TreeSection>
-        {/if}
+        <ProjectPanel
+          {project}
+          editing={mode === "edit"}
+          editingDefinition={!!activeDefinition}
+          {editBlocked}
+          screenId={screen.id}
+          contextKey={projectContextKey}
+          referenceCount={references.length}
+          images={assetImages}
+          {libraryId}
+          workspaceKey={workspaceGeneration}
+          {screenContextItems}
+          onopenscreen={(id) => openScreen(id)}
+          onaddscreen={addScreen}
+          onopenreferences={openReferences}
+          onopenusage={openSymbolUsage}
+          onchooseSymbol={(id) => (libraryId = id)}
+          oneditSymbol={openDefinition}
+          ondeleteSymbol={deleteDefinition}
+          onsymbolCommand={symbolLibraryCommand}
+          onnewEquipment={newEquipment}
+          onopenwork={(kind) => workTabs.open(kind)}
+          onopenRecordingPlan={openRecordingPlan}
+        />
       {/snippet}
       {#snippet layersPanel()}
-        {#if mode === "edit"}
-          {@render canvasOnlyNote()}
-          <div class="canvas-only" inert={!canvasActive}>
-            <LayerTree images={assetImages} tree={layerTreeBindings} />
-          </div>
-        {/if}
+        <LayersPanel
+          editing={mode === "edit"}
+          {canvasActive}
+          images={assetImages}
+          tree={layerTreeBindings}
+        />
       {/snippet}
       {#snippet partsPanel()}
-        {#if mode === "edit"}
-          {@render canvasOnlyNote()}
-          <div class="canvas-only" inert={!canvasActive}>
-            <PartPalette
-              images={assetImages}
-              {isFavorite}
-              {positionPlacement}
-              {isArmed}
-              onarm={armPart}
-              onimmediate={placeFavorite}
-              ontoggleFavorite={toggleFavorite}
-              contextKey={`${workspaceGeneration}:${project.manifest.projectRevision}:${screen.id}:${selectedIds.join(",")}:${activePanel}:${showSidebar}`}
-              onedit={openDefinition}
-              onduplicate={(id) =>
-                edit({ type: "duplicate-symbol", symbolId: id })}
-              definitions={project.symbols}
-              allowSymbols={!activeDefinition}
-              hasAlarmDefinitions={!!project.alarms?.definitions.length}
-              onadd={(kind) => choosePart({ type: "basic", kind })}
-              onstartdrag={beginPartDrag}
-              onenddrag={() => (paletteDrag = null)}
-              onbuiltin={(template) =>
-                choosePart({ type: "builtin", template })}
-              onplace={(id) => choosePart({ type: "symbol", symbolId: id })}
-            />
-          </div>
-        {/if}
+        <PartsPanel
+          editing={mode === "edit"}
+          {canvasActive}
+          images={assetImages}
+          definitions={project.symbols}
+          allowSymbols={!activeDefinition}
+          hasAlarmDefinitions={!!project.alarms?.definitions.length}
+          contextKey={paletteContextKey}
+          {positionPlacement}
+          {isFavorite}
+          {isArmed}
+          onarm={armPart}
+          onimmediate={placeFavorite}
+          ontoggleFavorite={toggleFavorite}
+          onedit={openDefinition}
+          onduplicate={(id) => edit({ type: "duplicate-symbol", symbolId: id })}
+          onadd={(kind) => choosePart({ type: "basic", kind })}
+          onstartdrag={beginPartDrag}
+          onenddrag={() => (paletteDrag = null)}
+          onbuiltin={(template) => choosePart({ type: "builtin", template })}
+          onplace={(id) => choosePart({ type: "symbol", symbolId: id })}
+        />
       {/snippet}
     </DesignerSidebar>
     {#if floatingSidebar.floating && floatingSidebar.rect}
@@ -5090,24 +4989,6 @@
     outline: none;
     box-shadow: var(--banto-focus-ring);
   }
-  .tree-add {
-    width: 24px;
-    height: 24px;
-    padding: 0;
-    border: 0;
-    border-radius: 3px;
-    background: transparent;
-    color: var(--banto-primary);
-    font-size: 14px;
-    cursor: pointer;
-  }
-  .tree-add:hover {
-    background: color-mix(in srgb, var(--banto-primary) 8%, transparent);
-  }
-  .tree-add:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
   .canvas-navigation > :global(.favorites-dock) {
     margin-left: auto;
     margin-right: auto;
@@ -5135,56 +5016,6 @@
     flex-direction: column;
     padding: 0;
     overflow: hidden;
-  }
-  .project-root {
-    padding: 6px 4px 4px;
-    font-weight: 600;
-    overflow-wrap: anywhere;
-  }
-  .project-root > span {
-    color: var(--banto-primary);
-    margin-right: 6px;
-  }
-  .screen-icon {
-    color: var(--banto-text-muted);
-    margin-right: 8px;
-    vertical-align: middle;
-  }
-  .screen-row {
-    width: 100%;
-    padding-right: 24px;
-    overflow-wrap: anywhere;
-  }
-  .screen-row {
-    margin: 0;
-    padding: 4px 22px 4px 6px;
-    min-height: 28px;
-    border: 0;
-    border-radius: 3px;
-    background: transparent;
-    color: var(--banto-text);
-  }
-  .screen-row:hover {
-    background: color-mix(in srgb, var(--banto-primary) 6%, transparent);
-  }
-  .screen-row.active {
-    background: color-mix(in srgb, var(--banto-primary) 13%, transparent);
-    color: var(--banto-text);
-  }
-  .screen-row:focus-visible {
-    box-shadow: inset var(--banto-focus-ring);
-  }
-  .project-sidebar .reference-link {
-    margin: 0;
-    border: 0;
-    background: transparent;
-    padding: 7px 8px;
-    font-size: 12px;
-    color: var(--banto-text-muted);
-  }
-  .project-sidebar .reference-link:enabled:hover {
-    color: var(--banto-primary);
-    background: color-mix(in srgb, var(--banto-primary) 6%, transparent);
   }
   .placement-bar {
     display: flex;
@@ -5572,14 +5403,6 @@
   .project-settings-work .open-recording-plan {
     width: auto;
     justify-self: start;
-  }
-  .canvas-only-note {
-    margin: 4px 0 8px;
-    font-size: 12px;
-    color: var(--banto-text-muted);
-  }
-  .canvas-only[inert] {
-    opacity: 0.55;
   }
   .tab-strip {
     display: flex;

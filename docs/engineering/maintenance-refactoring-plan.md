@@ -212,7 +212,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R4 App機能分離  | 完了               | R4a〜R4e実装・全体CI成功（`faf7c75`）。全ブラウザ509件を確認                             |
 | R5 編集コマンド | 完了               | R5a〜R5f実装・ローカル全体検証・最終CI成功                                               |
 | R6 性能         | 計測・限定改善済み | [計測条件・結果と採否理由](../performance/editor-performance.md)。候補コピーの重複を削減 |
-| R7 第2巡（App） | R7a 完了           | [§10](#r7-second-round)。#331 の dock 載せ替えの前提。R7b から                           |
+| R7 第2巡（App） | R7a・R7b 完了      | [§10](#r7-second-round)。#331 の dock 載せ替えの前提。R7c から                           |
 
 各小区切りの記録は、次の項目だけを残せば再開できる。
 
@@ -619,3 +619,15 @@ R7e〜R7g は #331 のどの段の前提でもない。#331 と並べて進め�
 | 判断       | `binding-replacement`は自前の submit で確定し、一括確定では`validateDrafts`が先に拒否するので登録表に入れない（種類の一覧には入れる）。`validateDrafts`・`revealDraftForm`の種類の比較は`isEditorForm`で型検査するだけにした                                                                                          |
 | チェック   | 型チェック エラー0（既存の警告6件は別ファイル）。handler を省くと型エラーになることを一時的な種類で確認。単体 全11,469件成功（追加`form-commands.test.ts`4件：`.svelte`／`.ts`の`data-editor-form`の全種類の登録、代表3種類とフォールバックの振分け）。関連 E2E 32 spec・197件成功（2並列）                           |
 | 残り・次   | 全 E2E と CI は未実行。次は R7b（左3タブの中身のコンポーネント）                                                                                                                                                                                                                                                      |
+
+### R7b：左3タブの中身
+
+基準は`95f91c9`、開始時clean。`DesignerSidebar`へ渡す`projectPanel`／`layersPanel`／`partsPanel`の snippet の中身を`lib/designer/`の`ProjectPanel.svelte`・`LayersPanel.svelte`・`PartsPanel.svelte`へ移し、作業画面の表示中の案内と inert の包み（App の snippet `canvasOnlyNote`、使い先は2タブだけ）を`CanvasOnlyArea.svelte`にまとめた。App は 5,656 行から 5,479 行になった。
+
+| 項目       | 内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 移動先     | `ProjectPanel`：project-root、画面一覧の行と ⋮（`ContextActions`）と＋、タグ参照・シンボル（`SymbolLibrary`）・機器・設定の各`TreeSection`。`LayersPanel`／`PartsPanel`：`CanvasOnlyArea`の中で`LayerTree`／`PartPalette`へ受け渡す。所有 CSS（`project-root`・`screen-row`・`screen-icon`・`reference-link`・`tree-add`・`canvas-only*`）も移した                                                                                                                                             |
+| App に残す | `<aside id="designer-project-panel">`の枠と属性、`FloatingPanelHeader`、浮動時のサイズ変更、`DesignerSidebar`、`main > aside`の CSS。状態と処理（`openScreen`・`addScreen`・`screenContextItems`・`armPart`など）は props の値と callback で渡し、store・context は作らない。「タグ参照一覧を開く」は App の`openReferences`にまとめた。⋮ の文脈キーは`projectContextKey`（画面一覧・`SymbolLibrary`）と`paletteContextKey`（`PartPalette`）の`$derived`に分け、文字列の中身と順番は従来どおり |
+| 守った条件 | I1〜I10 と §10.4：DOM の入れ子・セレクタ・aria-label・data 属性は不変（コンポーネントは要素を足さない）。App の要素向けの基本規則（`button`・`p`・`.active`・`.hint`・focus）は scoped CSS が子へ効かないので、同じ値を各コンポーネントへ置いた。`.hint`・`button`などは App のほかの場所でも使うので App にも残す                                                                                                                                                                             |
+| チェック   | 型チェック エラー0（既存の警告6件は別ファイル）。単体 全11,469件成功。関連 E2E 29 spec・190件成功（2並列）。見た目は左ペインの3タブと作業画面の表示中の3タブを、両テーマ・1920×1080・1536×864 で変更前後に撮り、24枚すべて画素一致                                                                                                                                                                                                                                                             |
+| 残り・次   | 全 E2E と CI は未実行。シンボル定義の編集中・タグ参照ありの状態の見た目は撮っていない。次は R7c（中央の部品）                                                                                                                                                                                                                                                                                                                                                                                  |
