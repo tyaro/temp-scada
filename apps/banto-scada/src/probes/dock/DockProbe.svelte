@@ -84,6 +84,7 @@
           locked={false}
           {drafts}
           onsubmit={(event) => {
+            // 確定（Project への適用）はせず、submit の発火の回数だけを数える。
             event.preventDefault();
             submits++;
           }}

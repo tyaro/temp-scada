@@ -54,7 +54,7 @@ async function placement(page: Page, id: string): Promise<Placement> {
 }
 
 /** 同じ form 要素のまま、未適用の値・dirty が残り、確定（submit）が走っていないこと。 */
-async function expectKept(page: Page, focused?: string) {
+async function expectKept(page: Page, focused?: string, submits = 0) {
   const state = await page.evaluate(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any;
@@ -70,7 +70,7 @@ async function expectKept(page: Page, focused?: string) {
       active: document.activeElement?.getAttribute("aria-label") ?? null,
     };
   });
-  expect(state).toMatchObject({ same: true, dirty: 1, submits: 0, errors: 0 });
+  expect(state).toMatchObject({ same: true, dirty: 1, submits, errors: 0 });
   if (focused) expect(state.active).toBe(focused);
   // 裏のタブ・隠した pane の中でも値を見るため、role ではなく name で引く。
   await expect(form(page).locator('[name="labelText"]')).toHaveValue(draftText);
@@ -84,6 +84,11 @@ async function expectKept(page: Page, focused?: string) {
  * 数値の欄の文字列は先に入れる。数値の欄は離れると（blur）確定する製品の仕様なので、
  * 文言の欄へ移るときに 1 回確定が走る（実証のページの submit は何も適用しない）。それを基準にする。
  */
+async function submitCount(page: Page): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return page.evaluate(() => (window as any).__dockProbe.submits);
+}
+
 async function typeDrafts(page: Page) {
   await size(page).fill(draftSize);
   await text(page).click();
@@ -179,7 +184,7 @@ test("組み替えても同じフォームと未適用の入力が残る", async
   expect(remounts.length).toBeGreaterThan(0);
   expect(remounts.every((remount: boolean) => remount === false)).toBe(true);
 
-  // 組み替えの後もフォームは働く: 適用で確定（submit）が 1 回走る。
+  // 組み替えの後もフォームは働く: 適用ボタンで submit が 1 回発火する（実証のページは何も適用しない）。
   await page.getByRole("button", { name: "文字を適用", exact: true }).click();
   await expect
     .poll(() =>
@@ -236,6 +241,7 @@ test("IME 変換中の組み替えは変換の確定まで待ち、変換中の�
     placement: "docked",
   });
   await expect(text(page)).toHaveValue("ポンプてんけん");
+  expect(await submitCount(page)).toBe(0);
   // 変換を確定すると、保留していた浮動化が適用される。
   await cdp.send("Input.insertText", { text: "点検" });
   expect(
@@ -255,23 +261,40 @@ test("IME 変換中の組み替えは変換の確定まで待ち、変換中の�
         document.querySelector('form[data-editor-form="shape-label"]') ===
         w.__probeForm,
       dirty: w.__dockProbe.drafts.count,
+      submits: w.__dockProbe.submits,
       active: document.activeElement?.getAttribute("aria-label") ?? null,
     };
   });
-  expect(state).toEqual({ same: true, dirty: 1, active: "図形の文言" });
+  expect(state).toEqual({
+    same: true,
+    dirty: 1,
+    submits: 0,
+    active: "図形の文言",
+  });
   await expect(text(page)).toHaveValue("ポンプ点検");
 });
 
-// 既知の不具合（D1 で見つけた）: 据え置きのパネルを組み替えると、Svelte が古い受け皿を消すときに
-// 中のフォーカス中の欄が一度文書から外れ、blur が出る（dock はその後にフォーカスを戻す）。
-// SCADA の数値の欄は blur で確定するので、確定前の文字列が submit される。
-// Banto の persistent が Element.moveBefore で移すようになれば合格する（予期しない合格で知らせる。tyaro/banto#763）。
-test("数値の欄にフォーカスがあるまま浮かせても確定しない", async ({ page }) => {
-  test.fail();
+// 既知の不具合（D1 で見つけた、tyaro/banto#763）: 据え置きのパネルを組み替えると、Svelte が古い受け皿を
+// 消すときに中のフォーカス中の欄が一度文書から外れ、blur が出る（dock はその後にフォーカスを戻す）。
+// SCADA の数値の欄は blur で確定するので、確定前の文字列で submit が発火する。
+// 浮動化・同じ DOM・入力・フォーカスは通常どおり確かめ、submit は今の挙動（1 回）をそのまま確かめる。
+// 上流が直って 0 回になればこの試験が落ちるので、そのときに 0 回へ直して D2 の判断に戻る。
+test("数値の欄にフォーカスがあるまま浮かせると blur で submit が 1 回発火する（#763 の再現）", async ({
+  page,
+}) => {
   await open(page);
   await text(page).fill(draftText);
   await size(page).click();
   await size(page).fill(draftSize);
-  expect(await call(page, "float", "right")).toBe("applied");
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    w.__baseSubmits = w.__dockProbe.submits;
+  });
   await expectKept(page, "図形の文字サイズ");
+  expect(await call(page, "float", "right")).toBe("applied");
+  expect(await placement(page, "right")).toMatchObject({
+    placement: "floating",
+  });
+  await expectKept(page, "図形の文字サイズ", 1);
 });
