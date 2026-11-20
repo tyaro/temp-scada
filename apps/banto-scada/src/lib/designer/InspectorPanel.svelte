@@ -21,6 +21,8 @@
   import { connectionUsages } from "../connections";
   import ImageCrop from "./ImageCrop.svelte";
   import ShapePaint from "./ShapePaint.svelte";
+  import ShapeLabel from "./ShapeLabel.svelte";
+  import { labelCanvasBackground } from "../shape-label";
   import SelectionColor from "./SelectionColor.svelte";
   import SelectionOutline from "./SelectionOutline.svelte";
   import SelectionLine from "./SelectionLine.svelte";
@@ -1907,6 +1909,17 @@
             />
           {/if}
         </form>
+        <!-- 面の図形の文字（#305 L2）。独立した draft のフォーム。object フォームの適用バーを押し下げないよう後ろに置く。 -->
+        {#if isAreaShape(selected.shape)}
+          <ShapeLabel
+            object={selected}
+            background={labelCanvasBackground(screen)}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            locked={selectionLocked}
+            {drafts}
+            onsubmit={properties}
+          />
+        {/if}
       {/key}
     {:else}<p>
         図形をクリック、または一覧から選んでください。図形はドラッグして移動できます。

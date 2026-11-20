@@ -23,6 +23,7 @@ import type {
   LineHopStyle,
   Point,
   ShapePaint,
+  ShapeLabel,
   LevelShape,
   TableShape,
   ClockShape,
@@ -85,6 +86,8 @@ export interface ObjectPatch {
   /** Whole content of a nav button; a missing target or current color clears it. */
   navButton?: Omit<NavButtonShape, "type">;
   stateColor?: StateColor | null;
+  /** 面の図形の中の文字（#305）。null は削除。文言は改行を正規化して保存契約と同じ検査をする。 */
+  label?: ShapeLabel | null;
   symbolId?: string;
   equipmentId?: string | null;
   sourceScreenId?: string;

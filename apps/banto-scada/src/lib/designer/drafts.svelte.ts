@@ -165,7 +165,13 @@ export function createDraftGuard(
   async function apply() {
     const action = pending;
     if (!action) return;
-    const forms = [...dirty];
+    // `data-draft-order="last"` のフォームは、ほかの draft の確定の後に送る（入力の順に依らない）。
+    // 図形の文字（#305）は、新しく作るときの既定の色を確定後の塗り・不透明度で選ぶため。
+    const forms = [...dirty].sort(
+      (a, b) =>
+        Number(a.dataset.draftOrder === "last") -
+        Number(b.dataset.draftOrder === "last"),
+    );
     pending = null;
     prompting = false;
     await tick();
