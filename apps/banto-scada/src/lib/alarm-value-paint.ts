@@ -90,8 +90,10 @@ export function alarmTextPaint(
 }
 
 /**
- * 警報の色を持つ Text の計測の箱を、黒の縁（外側に `alarmOutlineWidth / 2`）と下線（縁を含む）の分だけ
- * 広げる。状態に関係なく広げるので、警報の状態が変わっても文字の配置・省略は変わらない。
+ * 警報の色を持つ Text の計測の箱を、左右は黒の縁（外側に `alarmOutlineWidth / 2`）、下は下線の下端
+ * （縁を含む）まで広げる。上は広げない（計測の箱はフォントの箱で、字形の上に縁の半幅
+ * `fontSize × 0.06` より広い余白がある）。状態に関係なく広げるので、警報の状態が変わっても
+ * 文字の配置・省略は変わらない。
  * `fitText` はこの箱で収まりを判定し、揃えの余白（2）も縁の外側から取る。
  * 計測は baseline を y=0 とした座標（`TextPrimitive` の probe）。
  */
@@ -101,12 +103,15 @@ export function alarmReservedMetrics(
 ): { x: number; y: number; width: number; height: number } {
   const bleed = alarmOutlineWidth(fontSize) / 2;
   const thickness = Math.max(1, fontSize * 0.08);
-  const bottom = Math.max(box.y + box.height, fontSize * 0.15 + thickness / 2);
+  const bottom = Math.max(
+    box.y + box.height,
+    fontSize * 0.15 + thickness / 2 + bleed,
+  );
   return {
     x: box.x - bleed,
-    y: box.y - bleed,
+    y: box.y,
     width: box.width + bleed * 2,
-    height: bottom - box.y + bleed * 2,
+    height: bottom - box.y,
   };
 }
 

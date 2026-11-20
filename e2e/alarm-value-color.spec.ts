@@ -450,11 +450,9 @@ for (const theme of ["light", "dark"] as const) {
       expect(box.line.x + box.line.w + half).toBeLessThanOrEqual(
         box.width + 0.01,
       );
-      // 文字の縁が縦に切られない。
-      expect(box.ink.y - half).toBeGreaterThanOrEqual(-0.01);
-      expect(box.ink.y + box.ink.h + half).toBeLessThanOrEqual(
-        box.height + 0.01,
-      );
+      // 文字の箱（フォントの箱）は枠の内側。字形の上下はその中にあり、縁の半幅より広い余白がある。
+      expect(box.ink.y).toBeGreaterThanOrEqual(-0.01);
+      expect(box.ink.y + box.ink.h).toBeLessThanOrEqual(box.height + 0.01);
       // 文字の縁（文字の箱 + 縁の半分）が横に切られない。
       expect(box.ink.x - half).toBeGreaterThanOrEqual(-0.01);
       expect(box.ink.x + box.ink.w + half).toBeLessThanOrEqual(

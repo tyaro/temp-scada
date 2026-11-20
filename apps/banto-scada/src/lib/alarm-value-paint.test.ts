@@ -174,19 +174,20 @@ describe("outline and underline geometry", () => {
   });
 
   it("reserves the outline and the underline in the measured box", () => {
-    // 64px: 縁は外側に 3.84、下線の下端は baseline から 64 × 0.15 + 2.56 = 12.16。
+    // 64px: 縁は外側に 3.84、下線の下端は縁を含めて baseline から 64 × 0.15 + 2.56 + 3.84 = 16。
+    // 左右だけを縁の分広げ、上は広げない（フォントの箱の上に余白がある）。
     const box = { x: 1, y: -60, width: 100, height: 80 };
     const reserved = alarmReservedMetrics(box, 64);
     expect(reserved.x).toBeCloseTo(1 - 3.84, 10);
-    expect(reserved.y).toBeCloseTo(-60 - 3.84, 10);
+    expect(reserved.y).toBe(-60);
     expect(reserved.width).toBeCloseTo(100 + 7.68, 10);
-    expect(reserved.height).toBeCloseTo(80 + 7.68, 10);
+    expect(reserved.height).toBe(80);
     // 文字の箱が下線より上で終わるときは、下線の下端まで広げる。
     const short = alarmReservedMetrics(
       { x: 0, y: -50, width: 10, height: 50 },
       64,
     );
-    expect(short.y + short.height).toBeCloseTo(12.16 + 3.84, 10);
+    expect(short.y + short.height).toBeCloseTo(16, 10);
     // 広げた分（bleed）を戻すと、下線は文字の墨の幅に戻る。
     const line = alarmUnderlineBox(
       { baseline: 70, left: reserved.x, inkWidth: reserved.width },
