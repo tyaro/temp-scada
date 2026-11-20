@@ -1,0 +1,1622 @@
+[
+  {
+    "name": "矩形の label（wrap 無し）",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "楕円の label",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "ellipse",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "多角形の label",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "wrap が none",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center",
+          "wrap": "none"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "wrap が word",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center",
+          "wrap": "word"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "改行を含む文言",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "一行目\n二行目",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "expectedText": "一行目\n二行目",
+    "valid": true
+  },
+  {
+    "name": "CR は LF に正規化",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "上\r下",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "expectedText": "上\n下",
+    "valid": true
+  },
+  {
+    "name": "CRLF は LF に正規化",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "ellipse",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "上\r\n下",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "expectedText": "上\n下",
+    "valid": true
+  },
+  {
+    "name": "U+2028 は LF に正規化",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "上\u2028下",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "expectedText": "上\n下",
+    "valid": true
+  },
+  {
+    "name": "U+2029 は LF に正規化",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "上\u2029下",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "expectedText": "上\n下",
+    "valid": true
+  },
+  {
+    "name": "正規化の後でちょうど 1000 文字（999 文字＋CRLF）",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\r\n",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "expectedText": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n",
+    "valid": true
+  },
+  {
+    "name": "空白だけの文言（trim しない）",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "   ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "expectedText": "   ",
+    "valid": true
+  },
+  {
+    "name": "改行だけの文言（CR を LF に）",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "\r",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "expectedText": "\n",
+    "valid": true
+  },
+  {
+    "name": "ちょうど 1 文字",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "A",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "ちょうど 1000 文字",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "サロゲートペアだけでちょうど 1000 文字（UTF-16 では 2000 単位）",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "サロゲートペアを含むちょうど 1000 文字",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa😀😀",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "文字サイズ 512",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 512,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "大文字の hex の色",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#AABBCC"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "label 付きで flipX が真",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "objectPatch": {
+      "flipX": true
+    },
+    "valid": true
+  },
+  {
+    "name": "label 付きで flipY が真",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "ellipse",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "objectPatch": {
+      "flipY": true
+    },
+    "valid": true
+  },
+  {
+    "name": "label 付きで flipX・flipY が真の多角形",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "objectPatch": {
+      "flipX": true,
+      "flipY": true
+    },
+    "valid": true
+  },
+  {
+    "name": "Symbol 定義の中の矩形の label",
+    "sample": "stateColor",
+    "target": "/symbols/0/objects/7",
+    "shapePatch": {
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "Symbol 定義の中の楕円の label（CRLF を正規化）",
+    "sample": "stateColor",
+    "target": "/symbols/0/objects/8",
+    "shapePatch": {
+      "label": {
+        "text": "上\r\n下",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "expectedText": "上\n下",
+    "valid": true
+  },
+  {
+    "name": "Symbol 定義の中の多角形の label",
+    "sample": "stateColor",
+    "target": "/symbols/0/objects/7",
+    "shape": {
+      "type": "polygon",
+      "points": [
+        {
+          "x": 0,
+          "y": 1
+        },
+        {
+          "x": 0.5,
+          "y": 0
+        },
+        {
+          "x": 1,
+          "y": 1
+        }
+      ],
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": true
+  },
+  {
+    "name": "空の text",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "1001 文字",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "サロゲートペアを含む 1001 文字",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa😀😀",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "label が null",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": null
+    },
+    "valid": false
+  },
+  {
+    "name": "text の欠落",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "style の欠落",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "color の欠落",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "label の中の未知の項目（binding）",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233",
+        "binding": {
+          "externalName": "PV1"
+        }
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "label の中の未知の項目（stateColors）",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233",
+        "stateColors": []
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "style の中の未知の項目",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center",
+          "color": "#112233"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "文字サイズ 0",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 0,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "文字サイズ 513",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 513,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "未知の太さ",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "heavy",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "未知の揃え",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "justify"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "未知の折返し",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center",
+          "wrap": "char"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "3 桁の色",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#abc"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "名前の色",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "red"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "α 付きの色",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#11223344"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "label 付きでも root の fill",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "objectPatch": {
+      "fill": "#112233"
+    },
+    "valid": false
+  },
+  {
+    "name": "label 付きでも root の colorAlpha",
+    "sample": "process",
+    "target": "/screens/0/objects/2",
+    "shape": {
+      "type": "rectangle",
+      "paint": {
+        "fill": {
+          "enabled": true,
+          "paint": {
+            "type": "solid",
+            "color": "#83bfcd",
+            "alpha": 1
+          }
+        },
+        "stroke": {
+          "color": "#112233",
+          "width": 2
+        }
+      },
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "objectPatch": {
+      "colorAlpha": 0.5
+    },
+    "valid": false
+  },
+  {
+    "name": "Text への label",
+    "sample": "process",
+    "target": "/screens/0/objects/0",
+    "shapePatch": {
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "Symbol 配置への label",
+    "sample": "process",
+    "target": "/screens/0/objects/10",
+    "shapePatch": {
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "Polyline への label",
+    "sample": "process",
+    "target": "/screens/0/objects/7",
+    "shapePatch": {
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "時計への label",
+    "sample": "process",
+    "target": "/screens/1/objects/3",
+    "shapePatch": {
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "画面切替ボタンの label に object",
+    "sample": "process",
+    "target": "/screens/1/objects/0",
+    "shapePatch": {
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "Image への label",
+    "sample": "symbolImage",
+    "target": "/symbols/0/objects/1",
+    "shapePatch": {
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "液位への label",
+    "sample": "demoWater",
+    "target": "/screens/0/objects/14",
+    "shapePatch": {
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  },
+  {
+    "name": "表への label",
+    "sample": "demoWater",
+    "target": "/screens/0/objects/90",
+    "shapePatch": {
+      "label": {
+        "text": "ポンプ",
+        "style": {
+          "fontSize": 14,
+          "fontWeight": "normal",
+          "align": "center"
+        },
+        "color": "#112233"
+      }
+    },
+    "valid": false
+  }
+]

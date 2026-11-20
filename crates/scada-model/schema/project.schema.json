@@ -284,6 +284,9 @@
                 },
                 "stateColor": {
                   "$ref": "#/$defs/stateColor"
+                },
+                "label": {
+                  "$ref": "#/$defs/shapeLabel"
                 }
               },
               "required": ["type", "paint"],
@@ -300,6 +303,9 @@
                 },
                 "stateColor": {
                   "$ref": "#/$defs/stateColor"
+                },
+                "label": {
+                  "$ref": "#/$defs/shapeLabel"
                 }
               },
               "required": ["type", "paint"],
@@ -338,6 +344,9 @@
                 },
                 "stateColor": {
                   "$ref": "#/$defs/stateColor"
+                },
+                "label": {
+                  "$ref": "#/$defs/shapeLabel"
                 }
               },
               "required": ["type", "points", "paint"],
@@ -1168,6 +1177,27 @@
         }
       },
       "required": ["fontSize", "fontWeight", "align"],
+      "additionalProperties": false
+    },
+    "shapeLabel": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000,
+          "not": {
+            "pattern": "[\\r\\u2028\\u2029]"
+          }
+        },
+        "style": {
+          "$ref": "#/$defs/textStyle"
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        }
+      },
+      "required": ["text", "style", "color"],
       "additionalProperties": false
     },
     "lineStyle": {

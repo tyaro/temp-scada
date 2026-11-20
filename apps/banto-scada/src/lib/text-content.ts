@@ -18,6 +18,16 @@ export function normalizeProjectText(value: unknown): void {
         const shape = record(record(object)?.shape);
         if (shape?.type === "text" && typeof shape.text === "string")
           shape.text = normalizeTextNewlines(shape.text);
+        // 面の図形の文字（#305）。種類で分ける（画面切替ボタンの label は文字列で別の型）。
+        if (
+          shape?.type === "rectangle" ||
+          shape?.type === "ellipse" ||
+          shape?.type === "polygon"
+        ) {
+          const label = record(shape.label);
+          if (label && typeof label.text === "string")
+            label.text = normalizeTextNewlines(label.text);
+        }
       }
     }
   }
