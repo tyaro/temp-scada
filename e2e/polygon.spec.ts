@@ -273,6 +273,7 @@ test("polygon presets are inserted and the polygon part sample opens", async ({
     ["台形を追加", "0,0 160,0 120,100 40,100"],
     ["ひし形を追加", "80,0 160,50 80,100 0,50"],
     ["行き先の札を追加", "0,0 128,0 160,50 128,100 0,100"],
+    ["手入力の箱を追加", "0,25 160,0 160,100 0,100"],
   ] as const) {
     await page.getByRole("button", { name, exact: true }).click();
     await expect(last).toHaveAttribute("points", points);

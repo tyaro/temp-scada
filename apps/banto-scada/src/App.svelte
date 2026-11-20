@@ -286,6 +286,7 @@
   import processSample from "../../../examples/process.project.json";
   import shapePaintSample from "../../../examples/shape-paint.project.json";
   import polygonSymbolSample from "../../../examples/polygon-symbols.project.json";
+  import shapeLabelFlowSample from "../../../examples/shape-label-flow.project.json";
   import symbolColorSample from "../../../examples/symbol-color.project.json";
   import CanvasWorkspace, {
     type CanvasView,
@@ -3877,6 +3878,11 @@
       openPolygonSample: () =>
         projectFiles.requestReplacement(
           parseProject(JSON.stringify(polygonSymbolSample)),
+          "sample",
+        ),
+      openFlowSample: () =>
+        projectFiles.requestReplacement(
+          parseProject(JSON.stringify(shapeLabelFlowSample)),
           "sample",
         ),
       openScreenViewDialog,

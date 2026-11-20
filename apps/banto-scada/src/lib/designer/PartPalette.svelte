@@ -149,6 +149,13 @@
         "右側が矢じり形の五角形の札を描画します。配管の行き先の表示に使えます。頂点はプロパティや画面の上で動かせます。",
     },
     {
+      kind: "manualBox",
+      label: "手入力の箱を追加",
+      keywords: "多角形 手入力 箱 フロー図 工程 polygon manual",
+      description:
+        "上辺が右上がりの四角形の多角形を描画します。フロー図の手入力の工程に使えます。文字は Inspector の「文字」で入れられます。",
+    },
+    {
       kind: "text",
       label: "Text を追加",
       keywords: "文字 テキスト text",

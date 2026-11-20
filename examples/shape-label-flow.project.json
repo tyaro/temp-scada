@@ -1,0 +1,1033 @@
+{
+  "manifest": {
+    "product": "banto-scada",
+    "schemaVersion": "0.37.0",
+    "projectId": "0199f306-0000-7000-8000-000000000f00",
+    "projectRevision": 1,
+    "minRuntimeVersion": "0.37.0",
+    "name": "フロー図のサンプル（図形の文字）"
+  },
+  "screens": [
+    {
+      "id": "0199f306-0000-7000-8000-000000000f01",
+      "name": "起動手順のフロー図",
+      "width": 1080,
+      "height": 640,
+      "objects": [
+        {
+          "id": "0199f306-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "端子 開始",
+          "x": 50,
+          "y": 52,
+          "width": 140,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "ellipse",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dcfce7",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "開始",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000002",
+          "order": 1,
+          "name": "工程 起動指令",
+          "x": 300,
+          "y": 52,
+          "width": 160,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dbeafe",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "起動指令",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000003",
+          "order": 2,
+          "name": "手入力の箱 設定値",
+          "x": 560,
+          "y": 48,
+          "width": 160,
+          "height": 64,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0,
+                "y": 0.25
+              },
+              {
+                "x": 1,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 1
+              },
+              {
+                "x": 0,
+                "y": 1
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#fce7f3",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "設定値 手入力",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000004",
+          "order": 3,
+          "name": "工程 送風機 起動",
+          "x": 820,
+          "y": 52,
+          "width": 160,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dbeafe",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "送風機 起動",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000005",
+          "order": 4,
+          "name": "判断 風量",
+          "x": 800,
+          "y": 190,
+          "width": 200,
+          "height": 100,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0.5,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.5
+              },
+              {
+                "x": 0.5,
+                "y": 1
+              },
+              {
+                "x": 0,
+                "y": 0.5
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#fef9c3",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "風量 規定値以上",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000006",
+          "order": 5,
+          "name": "工程 バーナ 点火",
+          "x": 560,
+          "y": 212,
+          "width": 160,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dbeafe",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "バーナ 点火",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000007",
+          "order": 6,
+          "name": "工程 昇温 開始",
+          "x": 300,
+          "y": 212,
+          "width": 160,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dbeafe",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "昇温 開始",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000008",
+          "order": 7,
+          "name": "判断 温度",
+          "x": 20,
+          "y": 190,
+          "width": 200,
+          "height": 100,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0.5,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.5
+              },
+              {
+                "x": 0.5,
+                "y": 1
+              },
+              {
+                "x": 0,
+                "y": 0.5
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#fef9c3",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "温度 200 ℃以上",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000009",
+          "order": 8,
+          "name": "工程 原料 供給",
+          "x": 40,
+          "y": 372,
+          "width": 160,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dbeafe",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "原料 供給 開始",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000000a",
+          "order": 9,
+          "name": "工程 排出 コンベヤ",
+          "x": 300,
+          "y": 372,
+          "width": 160,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dbeafe",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "排出コンベヤ\n起動",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000000b",
+          "order": 10,
+          "name": "判断 排出",
+          "x": 540,
+          "y": 350,
+          "width": 200,
+          "height": 100,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0.5,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.5
+              },
+              {
+                "x": 0.5,
+                "y": 1
+              },
+              {
+                "x": 0,
+                "y": 0.5
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#fef9c3",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "排出 正常",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000000c",
+          "order": 11,
+          "name": "工程 負荷 運転",
+          "x": 820,
+          "y": 372,
+          "width": 160,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dbeafe",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "負荷 運転",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000000d",
+          "order": 12,
+          "name": "工程 データ 記録",
+          "x": 820,
+          "y": 532,
+          "width": 160,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dbeafe",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "運転データ\n記録",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000000e",
+          "order": 13,
+          "name": "工程 異常 監視",
+          "x": 560,
+          "y": 532,
+          "width": 160,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dbeafe",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "異常 監視",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000000f",
+          "order": 14,
+          "name": "工程 状態 表示",
+          "x": 300,
+          "y": 532,
+          "width": 160,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dbeafe",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "運転 状態 表示",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000010",
+          "order": 15,
+          "name": "端子 運転中",
+          "x": 50,
+          "y": 532,
+          "width": 140,
+          "height": 56,
+          "rotation": 0,
+          "shape": {
+            "type": "ellipse",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dcfce7",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "運転中",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000011",
+          "order": 16,
+          "name": "矢印 t1 → r1",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 190,
+                "y": 80
+              },
+              {
+                "x": 300,
+                "y": 80
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000012",
+          "order": 17,
+          "name": "矢印 r1 → m1",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 460,
+                "y": 80
+              },
+              {
+                "x": 560,
+                "y": 80
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000013",
+          "order": 18,
+          "name": "矢印 m1 → r2",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 720,
+                "y": 80
+              },
+              {
+                "x": 820,
+                "y": 80
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000014",
+          "order": 19,
+          "name": "矢印 r2 → d1",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 900,
+                "y": 108
+              },
+              {
+                "x": 900,
+                "y": 190
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000015",
+          "order": 20,
+          "name": "矢印 d1 → r3",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 800,
+                "y": 240
+              },
+              {
+                "x": 720,
+                "y": 240
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000016",
+          "order": 21,
+          "name": "矢印 r3 → r4",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 560,
+                "y": 240
+              },
+              {
+                "x": 460,
+                "y": 240
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000017",
+          "order": 22,
+          "name": "矢印 r4 → d2",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 300,
+                "y": 240
+              },
+              {
+                "x": 220,
+                "y": 240
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000018",
+          "order": 23,
+          "name": "矢印 d2 → r5",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 120,
+                "y": 290
+              },
+              {
+                "x": 120,
+                "y": 372
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-000000000019",
+          "order": 24,
+          "name": "矢印 r5 → r6",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 200,
+                "y": 400
+              },
+              {
+                "x": 300,
+                "y": 400
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000001a",
+          "order": 25,
+          "name": "矢印 r6 → d3",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 460,
+                "y": 400
+              },
+              {
+                "x": 540,
+                "y": 400
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000001b",
+          "order": 26,
+          "name": "矢印 d3 → r7",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 740,
+                "y": 400
+              },
+              {
+                "x": 820,
+                "y": 400
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000001c",
+          "order": 27,
+          "name": "矢印 r7 → r8",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 900,
+                "y": 428
+              },
+              {
+                "x": 900,
+                "y": 532
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000001d",
+          "order": 28,
+          "name": "矢印 r8 → r9",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 820,
+                "y": 560
+              },
+              {
+                "x": 720,
+                "y": 560
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000001e",
+          "order": 29,
+          "name": "矢印 r9 → r10",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 560,
+                "y": 560
+              },
+              {
+                "x": 460,
+                "y": 560
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f306-0000-7000-8000-00000000001f",
+          "order": 30,
+          "name": "矢印 r10 → t2",
+          "x": 0,
+          "y": 0,
+          "fill": "#475569",
+          "shape": {
+            "type": "polyline",
+            "points": [
+              {
+                "x": 300,
+                "y": 560
+              },
+              {
+                "x": 190,
+                "y": 560
+              }
+            ],
+            "strokeWidth": 2,
+            "arrow": "end"
+          },
+          "rotation": 0
+        }
+      ],
+      "background": "#ffffff",
+      "folders": [],
+      "groups": []
+    }
+  ],
+  "symbols": [],
+  "assets": []
+}

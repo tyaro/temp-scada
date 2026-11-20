@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import shapeLabelSample from "../../../../examples/shape-label.project.json";
+import flowSample from "../../../../examples/shape-label-flow.project.json";
 import stateColorSample from "../../../../examples/state-color.project.json";
 import minimal from "../../../../examples/minimal.project.json";
 import { applyCommand } from "./editor";
@@ -471,5 +472,26 @@ describe("label の往復（#305 L2）", () => {
       store.dispose();
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe("フロー図のサンプル（#305 L3）", () => {
+  it("工程の箱 10・ひし形 3・手入力の箱 1・端子 2 が label を持ち、Text を置かない", () => {
+    const project = parseProject(JSON.stringify(flowSample));
+    expect(parseProject(serializeProject(project))).toEqual(project);
+    const objects = project.screens[0].objects;
+    const kinds = (type: string, pred: (o: ScreenObject) => boolean) =>
+      objects.filter((o) => o.shape.type === type && pred(o));
+    const labelled = (o: ScreenObject) =>
+      "label" in o.shape && typeof o.shape.label === "object";
+    const vertices = (o: ScreenObject) =>
+      o.shape.type === "polygon" ? o.shape.points.length : 0;
+    expect(kinds("rectangle", labelled)).toHaveLength(10);
+    expect(kinds("ellipse", labelled)).toHaveLength(2);
+    expect(
+      kinds("polygon", (o) => labelled(o) && vertices(o) === 4),
+    ).toHaveLength(4);
+    expect(objects.filter((o) => o.shape.type === "text")).toHaveLength(0);
+    expect(objects.filter((o) => o.shape.type === "polyline")).toHaveLength(15);
   });
 });

@@ -19,7 +19,13 @@ const kinds = Object.keys(POLYGON_PRESETS) as PolygonPresetKind[];
 
 describe("多角形の初期形", () => {
   it("どの初期形も保存形式の検証を通る", () => {
-    expect(kinds).toEqual(["polygon", "trapezoid", "diamond", "arrowTag"]);
+    expect(kinds).toEqual([
+      "polygon",
+      "trapezoid",
+      "diamond",
+      "arrowTag",
+      "manualBox",
+    ]);
     for (const kind of kinds)
       expect(() =>
         validatePolygonPoints(polygonPresetPoints(kind)),
@@ -34,6 +40,17 @@ describe("多角形の初期形", () => {
     const points = polygonPresetPoints("diamond");
     points[0].x = 0.3;
     expect(POLYGON_PRESETS.diamond.points[0].x).toBe(0.5);
+  });
+  it("手入力の箱は上辺が右上がりの四角形", () => {
+    expect(polygonPresetPoints("manualBox")).toEqual([
+      { x: 0, y: 0.25 },
+      { x: 1, y: 0 },
+      { x: 1, y: 1 },
+      { x: 0, y: 1 },
+    ]);
+    expect(
+      polygonPresetIcon("manualBox", { x: 8, y: 6, width: 40, height: 20 }),
+    ).toBe("8,11 48,6 48,26 8,26");
   });
   it("アイコンは初期形を箱へ当てはめる", () => {
     expect(

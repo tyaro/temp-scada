@@ -25,9 +25,9 @@ test("finds flow-diagram parts by alias and places them at their own size", asyn
   await expect(
     palette(page).getByRole("button", { name: /を追加$/ }),
   ).toHaveCount(
-    // 基本図形 15（多角形とその初期形の台形・ひし形・行き先の札、表・時計・画面切替ボタン・
+    // 基本図形 16（多角形とその初期形の台形・ひし形・行き先の札・手入力の箱、表・時計・画面切替ボタン・
     // 警報の小札・警報の帯を含む） + 組込 11
-    26,
+    27,
   );
 
   await search.fill("集じん");

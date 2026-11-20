@@ -96,7 +96,7 @@ docs/
 - [配管の分岐の点](design/graphics/line-junction.md)
 - [配管の交差のまたぎ](design/graphics/line-hop.md)
 - [塗りつぶした多角形（polygon）](design/graphics/polygon.md)
-- [図形の中の文字（面の図形の label、設計・未実装）](design/graphics/shape-label.md)
+- [図形の中の文字（面の図形の label）](design/graphics/shape-label.md)
 - [矩形・楕円の2色線形グラデーション](design/graphics/linear-gradient-design.md)
 - [静的Textの明示改行](design/graphics/multiline-text-design.md)
 - [配置全体の不透明度](design/graphics/opacity-design.md)

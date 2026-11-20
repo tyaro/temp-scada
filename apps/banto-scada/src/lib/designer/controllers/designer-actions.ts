@@ -107,6 +107,7 @@ export interface DesignerActionsHost {
     openSymbolSample(): void;
     openPaintSample(): void;
     openPolygonSample(): void;
+    openFlowSample(): void;
     openScreenViewDialog(): void;
     openTrendDefinitions(): void;
     openRecordingPlan(): void;
@@ -697,6 +698,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
                 { kind: "trapezoid", label: "台形を挿入" },
                 { kind: "diamond", label: "ひし形を挿入" },
                 { kind: "arrowTag", label: "行き先の札を挿入" },
+                { kind: "manualBox", label: "手入力の箱を挿入" },
                 { kind: "text", label: "Text を挿入" },
                 { kind: "line", label: "線を挿入" },
                 { kind: "pipe", label: "配管を挿入" },
@@ -927,6 +929,11 @@ export function createDesignerActions(host: DesignerActionsHost) {
             label: "多角形の部品サンプルを開く",
             disabled: host.view.menuBlocked,
             run: host.files.openPolygonSample,
+          },
+          {
+            label: "フロー図のサンプルを開く",
+            disabled: host.view.menuBlocked,
+            run: host.files.openFlowSample,
           },
         ],
       },
@@ -1174,6 +1181,7 @@ export function createDesignerActions(host: DesignerActionsHost) {
               { kind: "trapezoid", label: "台形を追加" },
               { kind: "diamond", label: "ひし形を追加" },
               { kind: "arrowTag", label: "行き先の札を追加" },
+              { kind: "manualBox", label: "手入力の箱を追加" },
               { kind: "text", label: "Text を追加" },
               { kind: "line", label: "線を追加" },
               { kind: "pipe", label: "配管を追加" },

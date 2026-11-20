@@ -40,6 +40,7 @@ export type AddKind =
   | "trapezoid"
   | "diamond"
   | "arrowTag"
+  | "manualBox"
   | "text"
   | "line"
   | "pipe"
