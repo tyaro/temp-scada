@@ -22,6 +22,10 @@
 //!   back.
 //! - A record that could not be opened answers `refused` / `record_failed`
 //!   with `unrecorded: true`: nothing can be recorded, so nothing is sent.
+//! - The record's retention (O4a, §9, §11-7) runs while the record is open
+//!   (`operation_db::run_retention`): a round at once, then hourly (every
+//!   5 s while a round reaches its batch) and at once after
+//!   `operation_retention_set`. It is stopped before the record is closed.
 //! - `operation_view` (O3a) reads the faceplate's operation rows of one
 //!   equipment (§8): the write slots, their last request and why a write
 //!   would be refused now. It records nothing and takes neither the
@@ -31,7 +35,10 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use scada_host::desktop_auth::SettingsRefusal;
-use scada_host::operation_db::{OperationDb, OperationLog, Outcome, WriteStatus};
+use scada_host::operation_db::{
+    run_retention, OperationDb, OperationLog, OperationRetention, Outcome, RetentionStatus,
+    WriteStatus,
+};
 use scada_host::operation_key::{self, WriteKey, WriteKeyStore};
 use scada_host::operation_write::{
     self, check_shape, reason, HubAccess, OperationEnv, OperationView, OperationViewRequest,
@@ -72,6 +79,8 @@ pub struct OperationState {
     /// interleave (the previous entry is read, then replaced). Waited for
     /// before the transition lock.
     key_lock: tokio::sync::Mutex<()>,
+    /// The retention loop of the open record (O4a), stopped at `close`.
+    retention_task: Mutex<Option<tokio::task::JoinHandle<()>>>,
 }
 
 impl OperationState {
@@ -100,10 +109,13 @@ impl OperationState {
                         "[banto-scada] operation record: {recovered} interrupted row(s) finished as uncertain"
                     );
                 }
+                let log = Arc::new(OperationLog::new(db));
+                let task = tokio::spawn(run_retention(Arc::downgrade(&log)));
                 Self {
-                    log: Mutex::new(Ok(Arc::new(OperationLog::new(db)))),
+                    log: Mutex::new(Ok(log)),
                     keys,
                     key_lock: tokio::sync::Mutex::new(()),
+                    retention_task: Mutex::new(Some(task)),
                 }
             }
             Err(error) => {
@@ -118,6 +130,7 @@ impl OperationState {
             log: Mutex::new(Err(reason)),
             keys: Err(NO_KEY_STORE),
             key_lock: tokio::sync::Mutex::new(()),
+            retention_task: Mutex::new(None),
         }
     }
 
@@ -153,6 +166,17 @@ impl OperationState {
     /// left to the process exit (a `pending` row is finished at the next
     /// start, §9).
     pub async fn close(&self) {
+        // The retention loop holds the log during a round: stopped first
+        // (a round cut short rolls back).
+        let task = self
+            .retention_task
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take();
+        if let Some(task) = task {
+            task.abort();
+            let _ = task.await;
+        }
         let taken = std::mem::replace(
             &mut *self.log.lock().unwrap_or_else(|e| e.into_inner()),
             Err(CLOSED),
@@ -303,14 +327,18 @@ pub struct OperationKeyStatus {
     /// The minimum interval between writes in milliseconds (§7, §11-10;
     /// O2c-4b). Saved with `operation_min_interval_set`.
     pub min_interval_ms: u64,
+    /// The record's retention (§9, §11-7; O4a): `days` and `count`, both
+    /// applied. Saved with `operation_retention_set`.
+    pub retention: OperationRetention,
 }
 
-fn key_status(log: &OperationLog, host: &NativeHost) -> OperationKeyStatus {
+async fn key_status(log: &OperationLog, host: &NativeHost) -> OperationKeyStatus {
     OperationKeyStatus {
         key_endpoint: log.key_endpoint(),
         hub_endpoint: read_endpoint(host),
         write: log.write_status(),
         min_interval_ms: u64::try_from(log.min_interval().as_millis()).unwrap_or(u64::MAX),
+        retention: log.retention(),
     }
 }
 
@@ -372,7 +400,25 @@ pub async fn operation_key_status(
 ) -> Result<OperationKeyStatus, String> {
     mode.require_runtime()?;
     let log = open_log(&operations)?;
-    Ok(key_status(&log, &host))
+    Ok(key_status(&log, &host).await)
+}
+
+/// `operation_record_size`: the record's row count and oldest request time
+/// (O4a). Runtime only; no permission. Counting reads the whole request
+/// index, so it is asked for when the settings window opens or saves the
+/// retention, never with the status the Runtime header polls.
+/// `record_failed` when the record is not open or could not be read.
+#[tauri::command]
+pub async fn operation_record_size(
+    mode: State<'_, AppMode>,
+    operations: State<'_, OperationState>,
+) -> Result<RetentionStatus, String> {
+    mode.require_runtime()?;
+    let log = open_log(&operations)?;
+    log.retention_status().await.map_err(|error| {
+        eprintln!("[banto-scada] operation settings: the record size could not be read: {error:?}");
+        reason::RECORD_FAILED.to_owned()
+    })
 }
 
 /// `operation_key_register`: register `secret` as the write key for the
@@ -401,7 +447,7 @@ pub async fn operation_key_register(
             .map_err(|error| error.as_str().to_owned())
     })
     .await?;
-    Ok(key_status(&log, &host))
+    Ok(key_status(&log, &host).await)
 }
 
 /// `operation_key_delete`: drop the write key from the record, then its
@@ -424,7 +470,7 @@ pub async fn operation_key_delete(
             .map_err(|error| error.as_str().to_owned())
     })
     .await?;
-    Ok(key_status(&log, &host))
+    Ok(key_status(&log, &host).await)
 }
 
 /// `operation_write_resume`: 「書込みを再開」 (§7). A `stopped` terminal
@@ -447,7 +493,7 @@ pub async fn operation_write_resume(
         })
     })
     .await?;
-    Ok(key_status(&log, &host))
+    Ok(key_status(&log, &host).await)
 }
 
 /// `operation_min_interval_set`: save the minimum interval between writes
@@ -479,8 +525,49 @@ pub async fn operation_min_interval_set(
             })
     })
     .await?;
-    Ok(key_status(&log, &host))
+    Ok(key_status(&log, &host).await)
 }
 
 /// A minimum interval out of its range (`operation_min_interval_set`).
 const INVALID_INTERVAL: &str = "invalid_interval";
+
+/// `operation_retention_set`: save the record's retention (§9, §11-7; O4a)
+/// as `retentionDays` (1–3,650) and `retentionCount` (10,000–10,000,000),
+/// both applied, the earlier deleting first. A deletion round runs at once.
+/// Admin only; the errors are the auth refusals, `invalid_retention` and
+/// `record_failed`.
+#[tauri::command]
+pub async fn operation_retention_set(
+    mode: State<'_, AppMode>,
+    auth: State<'_, AuthState>,
+    operations: State<'_, OperationState>,
+    host: State<'_, NativeHost>,
+    retention_days: i64,
+    retention_count: i64,
+) -> Result<OperationKeyStatus, String> {
+    mode.require_runtime()?;
+    let log = open_log(&operations)?;
+    let retention = match (
+        u32::try_from(retention_days),
+        u32::try_from(retention_count),
+    ) {
+        (Ok(days), Ok(count)) => OperationRetention { days, count },
+        _ => return Err(INVALID_RETENTION.into()),
+    };
+    if !retention.is_valid() {
+        return Err(INVALID_RETENTION.into());
+    }
+    as_admin(&auth, || async {
+        log.set_retention(retention).await.map_err(|error| {
+            eprintln!(
+                "[banto-scada] operation settings: the retention could not be saved: {error:?}"
+            );
+            reason::RECORD_FAILED.to_owned()
+        })
+    })
+    .await?;
+    Ok(key_status(&log, &host).await)
+}
+
+/// A retention out of its ranges (`operation_retention_set`).
+const INVALID_RETENTION: &str = "invalid_retention";

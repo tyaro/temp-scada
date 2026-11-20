@@ -86,4 +86,6 @@ pub const RUNTIME_ONLY: &[&str] = &[
     "operation_key_delete",
     "operation_write_resume",
     "operation_min_interval_set",
+    "operation_retention_set",
+    "operation_record_size",
 ];

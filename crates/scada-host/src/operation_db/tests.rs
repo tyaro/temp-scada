@@ -165,7 +165,7 @@ async fn reopening_finishes_rows_an_earlier_process_left_pending() {
 async fn a_file_of_another_format_is_refused_without_changing_it() {
     // A file of a later format, and a foreign SQLite file without our
     // version, both in rollback-journal mode.
-    for setup in ["PRAGMA user_version = 6", "CREATE TABLE foreign_data (x)"] {
+    for setup in ["PRAGMA user_version = 7", "CREATE TABLE foreign_data (x)"] {
         let file = temp_file();
         let mut connection = <sqlx::sqlite::SqliteConnection as sqlx::Connection>::connect_with(
             &SqliteConnectOptions::new()
@@ -862,7 +862,7 @@ async fn a_format_1_file_gets_the_write_state_and_keeps_its_rows() {
         .fetch_one(&db.pool)
         .await
         .unwrap();
-    assert_eq!(version, 5);
+    assert_eq!(version, 6);
     let log = OperationLog::new(db);
     assert_eq!(log.write_status(), WriteStatus::default());
     assert_eq!(log.key_endpoint(), None);
@@ -1114,7 +1114,7 @@ async fn a_format_3_file_gets_the_terminal_settings_and_keeps_its_key() {
         .fetch_one(&db.pool)
         .await
         .unwrap();
-    assert_eq!(version, 5);
+    assert_eq!(version, 6);
     let log = OperationLog::new(db);
     assert_eq!(log.key(), Some(key_ref("k1")));
     assert_eq!(log.min_interval(), Duration::from_millis(1_000));
@@ -1151,7 +1151,7 @@ async fn a_format_4_file_gets_the_integer_check_and_keeps_a_valid_interval() {
             .fetch_one(&db.pool)
             .await
             .unwrap();
-        assert_eq!(version, 5, "{saved}");
+        assert_eq!(version, 6, "{saved}");
         let log = OperationLog::new(db);
         assert_eq!(log.key(), Some(key_ref("k1")), "{saved}");
         assert_eq!(log.min_interval(), Duration::from_millis(kept), "{saved}");
@@ -1172,4 +1172,62 @@ async fn a_format_4_file_gets_the_integer_check_and_keeps_a_valid_interval() {
             "{saved}"
         );
     }
+}
+
+/// A format 5 file gets the retention columns (O4a): its saved interval is
+/// kept and the retention reads as the default until saved.
+#[tokio::test]
+async fn a_format_5_file_gets_the_retention_and_keeps_its_interval() {
+    const FORMAT_5: &str = "DROP INDEX operation_requested;
+         DROP TABLE terminal_settings;
+         CREATE TABLE terminal_settings (
+           id INTEGER PRIMARY KEY CHECK (id = 1),
+           min_interval_ms INTEGER NOT NULL
+             CHECK (typeof(min_interval_ms) = 'integer'
+                    AND min_interval_ms BETWEEN 100 AND 60000
+                    AND min_interval_ms % 100 = 0));
+         INSERT INTO terminal_settings VALUES (1, 2500);
+         PRAGMA user_version = 5;";
+    let file = temp_file();
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    log.key_registered(1_000, &key_ref("k1")).await.unwrap();
+    log.db().execute_for_test(FORMAT_5).await;
+    log.close().await;
+
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let version: i64 = sqlx::query_scalar("PRAGMA user_version")
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    assert_eq!(version, 6);
+    let index: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'operation_requested'",
+    )
+    .fetch_one(&db.pool)
+    .await
+    .unwrap();
+    assert_eq!(index, 1);
+    let log = OperationLog::new(db);
+    assert_eq!(log.key(), Some(key_ref("k1")));
+    assert_eq!(log.min_interval(), Duration::from_millis(2_500));
+    assert_eq!(log.retention(), OperationRetention::default());
+    let saved = OperationRetention {
+        days: 30,
+        count: 20_000,
+    };
+    log.set_retention(saved).await.unwrap();
+    // The added columns have their CHECK.
+    assert!(
+        sqlx::query("UPDATE terminal_settings SET retention_days = 0")
+            .execute(&log.db().pool)
+            .await
+            .is_err()
+    );
+    log.close().await;
+    let (db, _) = OperationDb::open(&file, 0).await.unwrap();
+    let log = OperationLog::new(db);
+    assert_eq!(log.retention(), saved);
+    assert_eq!(log.min_interval(), Duration::from_millis(2_500));
+    log.close().await;
 }

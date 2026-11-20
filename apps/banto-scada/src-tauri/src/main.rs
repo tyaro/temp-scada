@@ -437,6 +437,8 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             operation::operation_key_delete,
             operation::operation_write_resume,
             operation::operation_min_interval_set,
+            operation::operation_retention_set,
+            operation::operation_record_size,
             project::project_open,
             project::project_save,
             alarm::alarm_apply,
