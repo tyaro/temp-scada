@@ -1179,6 +1179,7 @@ async fn a_format_4_file_gets_the_integer_check_and_keeps_a_valid_interval() {
 #[tokio::test]
 async fn a_format_5_file_gets_the_retention_and_keeps_its_interval() {
     const FORMAT_5: &str = "DROP INDEX operation_requested;
+         DROP INDEX operation_project_seq;
          DROP TABLE terminal_settings;
          CREATE TABLE terminal_settings (
            id INTEGER PRIMARY KEY CHECK (id = 1),
@@ -1202,12 +1203,13 @@ async fn a_format_5_file_gets_the_retention_and_keeps_its_interval() {
         .unwrap();
     assert_eq!(version, 6);
     let index: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'operation_requested'",
+        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index'
+           AND name IN ('operation_requested', 'operation_project_seq')",
     )
     .fetch_one(&db.pool)
     .await
     .unwrap();
-    assert_eq!(index, 1);
+    assert_eq!(index, 2);
     let log = OperationLog::new(db);
     assert_eq!(log.key(), Some(key_ref("k1")));
     assert_eq!(log.min_interval(), Duration::from_millis(2_500));
@@ -1332,5 +1334,50 @@ async fn history_lists_a_projects_rows_newest_first_by_its_conditions() {
         ids(db.history(&project, &next, 2).await.unwrap()),
         ["b", "a"]
     );
+    db.close().await;
+}
+
+/// The history's SQL holds only the conditions given, so the newest page,
+/// the cursor's next page and a period read through an index, not the whole
+/// table (#334's review).
+#[tokio::test]
+async fn history_reads_through_an_index() {
+    let (db, _) = OperationDb::open(&temp_file(), 0).await.unwrap();
+    let cursor = HistoryFilter {
+        before_seq: Some(1_000),
+        ..HistoryFilter::default()
+    };
+    let period = HistoryFilter {
+        from_ms: Some(1_000),
+        to_ms: Some(2_000),
+        ..HistoryFilter::default()
+    };
+    // The newest page and the next one read in `seq` order with no sort.
+    // A period is not read whole either; which index it takes is the
+    // planner's choice (with statistics, the period's range then a sort).
+    for (filter, unsorted) in [
+        (HistoryFilter::default(), true),
+        (cursor, true),
+        (period, false),
+    ] {
+        let plan: Vec<String> = history_query("EXPLAIN QUERY PLAN SELECT", "p", &filter, 500)
+            .build()
+            .fetch_all(&db.pool)
+            .await
+            .unwrap()
+            .iter()
+            .map(|row| row.get::<String, _>("detail"))
+            .collect();
+        assert!(
+            plan.iter().all(|step| step != "SCAN operation"),
+            "{filter:?}: {plan:?}"
+        );
+        if unsorted {
+            assert!(
+                plan.iter().all(|step| !step.contains("TEMP B-TREE")),
+                "{filter:?}: {plan:?}"
+            );
+        }
+    }
     db.close().await;
 }

@@ -235,11 +235,17 @@ where
     }
 }
 
+/// The order of the history (O4b): the Project's rows by `seq`, for the
+/// newest page and the cursor's next one. Format 6 (not yet released when
+/// it was added, so no format of its own).
+const HISTORY_INDEX: &str =
+    "CREATE INDEX IF NOT EXISTS operation_project_seq ON operation(project_id, seq);";
+
 /// Bring a format 0 (just created), 1, 2, 3, 4 or 5 file to [`FORMAT`]: the
 /// write state's table (O2c-2) or its write key (O2c-3a), then the
 /// terminal settings (O2c-4b), or their table again with the integer
-/// CHECK (format 4), or their retention columns (format 5), and the index
-/// of the retention (O4a).
+/// CHECK (format 4), or their retention columns (format 5), and the indexes
+/// of the retention (O4a) and the history (O4b).
 async fn upgrade(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     version: i64,
@@ -276,6 +282,7 @@ async fn upgrade(
     sqlx::raw_sql(retention::CREATE_INDEX)
         .execute(&mut **tx)
         .await?;
+    sqlx::raw_sql(HISTORY_INDEX).execute(&mut **tx).await?;
     sqlx::raw_sql("PRAGMA user_version = 6;")
         .execute(&mut **tx)
         .await?;
@@ -556,39 +563,10 @@ impl OperationDb {
         filter: &HistoryFilter,
         limit: usize,
     ) -> Result<Vec<StoredRow>, OperationDbError> {
-        // `,ok,refused,`: one bind for the set, matched with `instr`.
-        let outcomes = filter.outcomes.as_ref().map(|words| {
-            let mut set = String::from(",");
-            for word in words {
-                set.push_str(word);
-                set.push(',');
-            }
-            set
-        });
-        let rows = sqlx::query(
-            "SELECT * FROM operation
-             WHERE project_id = ?
-               AND (? IS NULL OR requested_at_ms >= ?)
-               AND (? IS NULL OR requested_at_ms <= ?)
-               AND (? IS NULL OR equipment_id = ?)
-               AND (? IS NULL OR instr(?, ',' || outcome || ',') > 0)
-               AND (? IS NULL OR seq < ?)
-             ORDER BY seq DESC LIMIT ?",
-        )
-        .bind(project_id)
-        .bind(filter.from_ms)
-        .bind(filter.from_ms)
-        .bind(filter.to_ms)
-        .bind(filter.to_ms)
-        .bind(&filter.equipment_id)
-        .bind(&filter.equipment_id)
-        .bind(&outcomes)
-        .bind(&outcomes)
-        .bind(filter.before_seq)
-        .bind(filter.before_seq)
-        .bind(i64::try_from(limit).unwrap_or(i64::MAX))
-        .fetch_all(&self.pool)
-        .await?;
+        let rows = history_query("SELECT", project_id, filter, limit)
+            .build()
+            .fetch_all(&self.pool)
+            .await?;
         rows.iter().map(stored_row).collect()
     }
 
@@ -599,6 +577,52 @@ impl OperationDb {
             .await?;
         row.map(|row| stored_row(&row)).transpose()
     }
+}
+
+/// The query of [`OperationDb::history`]. Only the conditions given are in
+/// the SQL, so the planner can use the index that fits them: the Project
+/// and the cursor (`operation_project_seq`, a range on `seq`) or the period
+/// (`operation_requested`, then sorted by `seq` within the period). A
+/// catch-all `? IS NULL OR …` would read the whole Project (#334's review).
+/// `head` is `SELECT` (tests put `EXPLAIN QUERY PLAN` in front).
+fn history_query(
+    head: &str,
+    project_id: &str,
+    filter: &HistoryFilter,
+    limit: usize,
+) -> sqlx::QueryBuilder<sqlx::Sqlite> {
+    let mut query = sqlx::QueryBuilder::new(format!("{head} * FROM operation WHERE project_id = "));
+    query.push_bind(project_id.to_owned());
+    if let Some(from_ms) = filter.from_ms {
+        query.push(" AND requested_at_ms >= ").push_bind(from_ms);
+    }
+    if let Some(to_ms) = filter.to_ms {
+        query.push(" AND requested_at_ms <= ").push_bind(to_ms);
+    }
+    if let Some(equipment_id) = &filter.equipment_id {
+        query
+            .push(" AND equipment_id = ")
+            .push_bind(equipment_id.clone());
+    }
+    if let Some(words) = &filter.outcomes {
+        // `,ok,refused,`: one bind for the set, matched with `instr`.
+        let mut set = String::from(",");
+        for word in words {
+            set.push_str(word);
+            set.push(',');
+        }
+        query
+            .push(" AND instr(")
+            .push_bind(set)
+            .push(", ',' || outcome || ',') > 0");
+    }
+    if let Some(before_seq) = filter.before_seq {
+        query.push(" AND seq < ").push_bind(before_seq);
+    }
+    query
+        .push(" ORDER BY seq DESC LIMIT ")
+        .push_bind(i64::try_from(limit).unwrap_or(i64::MAX));
+    query
 }
 
 fn stored_row(row: &sqlx::sqlite::SqliteRow) -> Result<StoredRow, OperationDbError> {

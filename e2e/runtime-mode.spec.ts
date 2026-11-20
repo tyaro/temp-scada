@@ -1320,7 +1320,9 @@ test("the top bar opens the operation history; its filters and さらに読む g
   const newest = dialog.locator('[data-operation-history-row="12"]');
   await expect(newest).toContainText("P-101 ");
   await expect(newest).toContainText("運転指令");
-  await expect(newest).toContainText("運転（true）");
+  // The value as recorded, without the current Project's button name.
+  await expect(newest).toContainText("true");
+  await expect(newest).not.toContainText("運転（true）");
   await expect(newest).toContainText("書込みました");
   await expect(newest).toContainText("250 ms");
   await expect(newest).toContainText("912");

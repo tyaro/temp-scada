@@ -141,8 +141,10 @@ export function durationText(row: OperationLatest): string {
 
 /**
  * 行の表示文。機器の名前と操作の見出しは今の Project から引き、無ければ
- * 記録のコード・slot 名を出す。区分・理由・値は小窓の結果の表示（`rowStatus`）
- * と同じ規則で作る。
+ * 記録のコード・slot 名を出す。区分・理由は小窓の結果の表示（`rowStatus`）
+ * と同じ規則で作る。値は記録どおりの値（無ければ入力の文字列）で、ボタンの
+ * 名前は付けない。履歴は同じ Project ID の旧版の行も含み、今のボタン定義が
+ * その操作の時点と同じとは限らないため（#334 のレビュー）。
  */
 export function operationHistoryLine(
   row: OperationHistoryRow,
@@ -157,7 +159,7 @@ export function operationHistoryLine(
         (item) => item.slotName === row.slot,
       )
     : undefined;
-  const status = rowStatus(row, null, write ?? null);
+  const status = rowStatus(row, null, null);
   return {
     seq: row.seq,
     time: operationTimeText(row.requestedAtMs),

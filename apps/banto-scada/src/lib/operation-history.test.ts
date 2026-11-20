@@ -112,7 +112,8 @@ describe("operationHistoryLine", () => {
       user: "未ログイン",
       equipment: expect.stringMatching(/^P-101 .+/),
       operation: "運転指令",
-      value: "運転（true）",
+      // 記録どおりの値。今のボタン名（運転）は付けない。
+      value: "true",
       outcome: outcomeText("ok"),
       reason: "",
       repeat: "",
