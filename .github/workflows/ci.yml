@@ -25,7 +25,9 @@ jobs:
           if [[ "$EVENT_NAME" == pull_request ]]; then
             merge_base=$(git merge-base "$BASE" "$HEAD")
             git diff --no-renames --name-only -z "$merge_base" "$HEAD" > "$RUNNER_TEMP/changed-files"
-          elif [[ "$BEFORE" =~ ^0+$ ]]; then
+          elif [[ "$BEFORE" =~ ^0+$ ]] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            # A new branch, or a force push whose previous head is gone:
+            # compare with the default branch instead.
             merge_base=$(git merge-base "origin/$DEFAULT_BRANCH" "$GITHUB_SHA")
             git diff --no-renames --name-only -z "$merge_base" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files"
           else
