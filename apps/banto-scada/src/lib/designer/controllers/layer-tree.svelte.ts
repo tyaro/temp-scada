@@ -18,6 +18,7 @@ import type {
   Point,
 } from "../../project";
 import type { EditCommand } from "../../editor";
+import { isAreaShape } from "../../project";
 import { placementLabel } from "../../placement-label";
 import { shapeTagBindings } from "../../shape-bindings";
 import { folderNeighbour, type FolderDirection } from "../../folder-order";
@@ -73,6 +74,10 @@ export function createLayerTreeController(host: LayerTreeHost) {
       object.id,
       ...(object.shape.type === "text" ? [object.shape.text] : []),
       ...(object.shape.type === "navButton" ? [object.shape.label] : []),
+      // 面の図形の中の文字（#305）。画面切替ボタンの label（文字列）とは種類で分ける。
+      ...(isAreaShape(object.shape) && object.shape.label
+        ? [object.shape.label.text]
+        : []),
       ...(object.shape.type === "alarmBadge" ? [object.shape.text] : []),
       ...shapeTagBindings(object.shape).map((binding) => binding.externalName),
     ].join(" ");

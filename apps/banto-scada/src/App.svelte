@@ -146,6 +146,7 @@
   } from "./lib/designer/forms/project-form";
   import { moveFormCommand } from "./lib/designer/forms/move-form";
   import { shapePaintCommand } from "./lib/designer/forms/shape-paint";
+  import { shapeLabelCommand } from "./lib/designer/forms/shape-label";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
   import { createProjectFilesController } from "./lib/designer/controllers/project-files.svelte";
@@ -3095,6 +3096,20 @@
       );
     if (form.dataset.editorForm === "shape-paint")
       return shapePaintCommand(
+        {
+          data,
+          objectId: form.dataset.objectId,
+          targetKey: form.dataset.targetKey,
+        },
+        {
+          generation: workspaceGeneration,
+          screenId: screen.id,
+          definition: !!activeDefinition,
+          selected,
+        },
+      );
+    if (form.dataset.editorForm === "shape-label")
+      return shapeLabelCommand(
         {
           data,
           objectId: form.dataset.objectId,

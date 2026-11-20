@@ -17,6 +17,7 @@ import { validateTableShape } from "../table";
 import { validateClockShape } from "../clock-format";
 import { validateAlarmBadgeTarget } from "../alarm-badge";
 import { validateNavButtonShape } from "../nav-button";
+import { parseShapeLabel } from "../shape-label";
 import type { SingleObjectCommand } from "./commands";
 import { newId, copySymbol } from "./model-helpers";
 import { isImageEditCommand, applyImageEdit } from "./image-handler";
@@ -150,6 +151,7 @@ export function applySingleObjectCommand(
       alarmBadge,
       alarmBanner,
       stateColor,
+      label,
       symbolId,
       equipmentId,
       sourceScreenId,
@@ -283,6 +285,13 @@ export function applySingleObjectCommand(
         throw new Error("状態色の追従は矩形・楕円・線だけに設定できます");
       if (stateColor === null) delete object.shape.stateColor;
       else object.shape.stateColor = structuredClone(stateColor);
+    }
+    if (label !== undefined) {
+      if (!isAreaShape(object.shape))
+        throw new Error("図形の文字は矩形・楕円・多角形にだけ設定できます");
+      // 同じ値なら finish の比較で no-op になる。
+      if (label === null) delete object.shape.label;
+      else object.shape.label = parseShapeLabel(label);
     }
     if (stateColors !== undefined) {
       if (object.shape.type !== "text" || !definitionId)
