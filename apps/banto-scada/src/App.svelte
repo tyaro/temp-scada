@@ -84,14 +84,12 @@
   import EquipmentBindingTable from "./lib/designer/EquipmentBindingTable.svelte";
   import type { BindingTableChange } from "./lib/equipment-binding-table";
   import SymbolSlots from "./lib/designer/SymbolSlots.svelte";
-  import {
-    createDesignerActions,
-    type DesignerCommandId,
-  } from "./lib/designer/controllers/designer-actions";
+  import { createDesignerActions } from "./lib/designer/controllers/designer-actions";
   import { createClipboardController } from "./lib/designer/controllers/clipboard.svelte";
   import { createImageImportController } from "./lib/designer/controllers/image-import.svelte";
   import { createRuntimeWindowsController } from "./lib/designer/controllers/runtime-windows.svelte";
   import { createRecordingTrendWindowsController } from "./lib/designer/controllers/recording-trend-windows.svelte";
+  import { createDesignerShortcutsController } from "./lib/designer/controllers/designer-shortcuts.svelte";
   import SlotReadStatus from "./lib/designer/SlotReadStatus.svelte";
   import AlarmSettings from "./lib/designer/AlarmSettings.svelte";
   import { initialImageFrame } from "./lib/image-frame";
@@ -105,9 +103,6 @@
     Menu,
     MenuGroup,
     MenuItem,
-    createShortcutDispatcher,
-    matchShortcut,
-    type CommandSpec,
   } from "@banto/ui";
   import { notify, type NotificationKind } from "@banto/admin-core";
   import {
@@ -785,278 +780,6 @@
         error instanceof Error ? error.message : "選択範囲を表示できません。",
       );
     }
-  }
-  // Banto #435 の操作定義と dispatcher（createShortcutDispatcher）でキーを処理する。
-  // 上流の保護（IME・defaultPrevented・押し続け・入力欄・モーダル・メニュー）を
-  // そのまま使うが、F 以外はコンテキストメニューを開いたままの Ctrl+A などで選択を
-  // 変え、メニューを閉じる（selection-context の約束）ので、blockOnMenu: false で
-  // メニューでは止めない（tyaro/banto#669）。モーダルでは上流が止める。
-  // enabled／run は event を受け取らないので、処理中の keydown の対象を控える。
-  let shortcutTarget: EventTarget | null = null;
-  function filePromptsReady() {
-    return !busy && !drafts.pending && !replacement && !helpOpen;
-  }
-  function functionKeysReady() {
-    return (
-      !busy &&
-      !clipboard.busy &&
-      !drafts.pending &&
-      !replacement &&
-      !helpOpen &&
-      !inspectorController?.isTagPickerOpen() &&
-      !equipmentLibrary?.isTagPickerOpen()
-    );
-  }
-  // 従来どおり Ctrl と Cmd（Meta）のどちらでも効かせる（tyaro/banto#669）。
-  // メニューに出すキーの記号は OS に合わせたまま。
-  const shortcutDispatcher = createShortcutDispatcher({ mod: "either" });
-  const menuScoped = { blockOnMenu: false } as const;
-  // メニュー・toolbar と共有する操作（designer-actions の CommandSpec）にキーを付ける。
-  // 名前・実行・使える条件は共有側が決め、キーは自分だけの保護（when: 入力元・
-  // キャンバス上の対象・ヘルプやタグ選択の表示中など）を足すだけ。
-  type KeyOptions = Pick<
-    CommandSpec,
-    | "allowInEditable"
-    | "allowRepeat"
-    | "preventDefaultWhenDisabled"
-    | "blockOnMenu"
-  > & {
-    keyId?: string;
-    shortcut?: string;
-    when?: () => boolean;
-    run?: () => void;
-  };
-  // キーは既定で共有側の shortcut（メニューに出すキー）。別のキーは shortcut で渡す。
-  function keyCommand(
-    id: DesignerCommandId,
-    { keyId, shortcut, when, run, ...flags }: KeyOptions = {},
-  ): CommandSpec {
-    const shared = designerActions.command(id);
-    return {
-      ...flags,
-      id: keyId ?? id,
-      title: shared.title,
-      shortcut: shortcut ?? shared.shortcut,
-      visible: shared.visible,
-      enabled: () => (when?.() ?? true) && (shared.enabled?.() ?? true),
-      run: run ?? shared.run,
-    };
-  }
-  // designerActions の生成より後で呼ぶ（下の register）。
-  function designerShortcuts(): CommandSpec[] {
-    // F1／F2・Ctrl+N／O は入力欄の中でも効き、ブラウザのヘルプ等は常に止める。
-    const fileKey = {
-      allowInEditable: true,
-      preventDefaultWhenDisabled: true,
-      ...menuScoped,
-    } as const;
-    return [
-      keyCommand("selection.show", {
-        when: () => !helpOpen && clipboardScope(shortcutTarget),
-      }),
-      keyCommand("help.open", { ...fileKey, when: functionKeysReady }),
-      {
-        id: "object.rename",
-        title: "名前を変更",
-        shortcut: "F2",
-        ...fileKey,
-        enabled: functionKeysReady,
-        run: () => {
-          if (canvasActive && !placement.positionPlacement)
-            renameFocused(shortcutTarget);
-        },
-      },
-      keyCommand("selection.remove", {
-        ...menuScoped,
-        when: () =>
-          !clipboard.busy &&
-          !placement.positionPlacement &&
-          clipboardScope(shortcutTarget),
-        run: () => {
-          if (!hiddenCanvasMutation(shortcutTarget)) removeSelection();
-        },
-      }),
-      keyCommand("project.new", {
-        ...fileKey,
-        when: filePromptsReady,
-      }),
-      keyCommand("project.open", {
-        ...fileKey,
-        when: filePromptsReady,
-      }),
-      // 入力欄では標準の編集・Undo を優先する。押し続けの繰り返しは元に戻す・やり直しだけ。
-      keyCommand("history.undo", { allowRepeat: true, ...menuScoped }),
-      keyCommand("history.redo", {
-        keyId: "history.redoShift",
-        shortcut: "Mod+Shift+Z",
-        allowRepeat: true,
-        ...menuScoped,
-      }),
-      keyCommand("history.redo", {
-        allowRepeat: true,
-        ...menuScoped,
-      }),
-      // W4: Ctrl+A／G／D はキャンバスの表示中だけ（共有側の canvasBlocked）。
-      // Ctrl+G はブラウザの「次を検索」を出さないよう、使えないときも既定を止める。
-      keyCommand("selection.all", menuScoped),
-      keyCommand("selection.group", {
-        preventDefaultWhenDisabled: true,
-        ...menuScoped,
-      }),
-      keyCommand("selection.ungroup", {
-        preventDefaultWhenDisabled: true,
-        ...menuScoped,
-      }),
-      keyCommand("selection.duplicate", menuScoped),
-    ];
-  }
-  // Ctrl+S・Shift+Ctrl+S は dispatcher に載せず、層（モーダル・メニュー）では止めない。
-  // 「Project を置き換えますか」の表示中に書き出してから破棄する流れがあり、また
-  // メニューとモーダルが同時に残ると（メニュー→F1）上流の判定では互いに「上」になり、
-  // ownerLayer ではどの層も選べないため。IME・先に止められたキー・押し続けでは書き出さず、
-  // 入力欄の中でも効き、ブラウザの既定（ページ保存）は常に止める（従来と同じ）。
-  const saveShortcuts: CommandSpec[] = [
-    {
-      id: "project.save",
-      title: "保存",
-      shortcut: "Mod+S",
-      enabled: () => !busy,
-      run: () => projectFiles.save(),
-    },
-    {
-      id: "project.saveAs",
-      title: "名前を付けて保存",
-      shortcut: "Mod+Shift+S",
-      enabled: () => !busy,
-      run: () => projectFiles.saveAs(),
-    },
-  ];
-  function handleSaveShortcut(event: KeyboardEvent) {
-    const command = saveShortcuts.find((command) =>
-      matchShortcut(event, command.shortcut!, "other", "either"),
-    );
-    if (!command || event.isComposing || event.keyCode === 229) return false;
-    const consumed = event.defaultPrevented;
-    event.preventDefault();
-    if (!consumed && !event.repeat && command.enabled?.() !== false)
-      void command.run();
-    return true;
-  }
-  // 保護で断ったときもブラウザの既定（ヘルプ・新規ウィンドウ・ページ保存など）は止める。
-  function reservedBrowserKey(event: KeyboardEvent) {
-    if (event.altKey) return false;
-    const plain = !event.ctrlKey && !event.metaKey && !event.shiftKey;
-    if (plain && (event.key === "F1" || event.key === "F2")) return true;
-    if (!(event.ctrlKey || event.metaKey) || event.isComposing) return false;
-    const key = event.key.toLowerCase();
-    return key === "s" || (!event.shiftKey && (key === "n" || key === "o"));
-  }
-  function shortcut(event: KeyboardEvent) {
-    if (
-      runtimeWindows.operatorStart !== null ||
-      recordingTrend.historyOpen ||
-      runtimeWindows.alarmListOpen ||
-      runtimeWindows.alarmSettingsOpen ||
-      recordingManagementOpen ||
-      recordingOperationsOpen ||
-      recordingTrend.trendRequest ||
-      recordingTrend.recordingRequest
-    )
-      return;
-    // F・F1・F2 は下のダイアログ・配置・フォルダの扱いより先に決める（従来の順）。
-    const functionKey =
-      !event.ctrlKey &&
-      !event.metaKey &&
-      !event.altKey &&
-      !event.shiftKey &&
-      (event.key.toLowerCase() === "f" ||
-        event.key === "F1" ||
-        event.key === "F2");
-    if (!functionKey && routeBeforeCommands(event)) return;
-    if (handleSaveShortcut(event)) return;
-    shortcutTarget = event.target;
-    try {
-      if (shortcutDispatcher.handle(event)) return;
-    } finally {
-      shortcutTarget = null;
-    }
-    if (reservedBrowserKey(event)) event.preventDefault();
-  }
-  // ダイアログ・タグ選択・配置・レイヤーのフォルダが先にキーを取る。取ったら true。
-  function routeBeforeCommands(event: KeyboardEvent) {
-    if (
-      screenViewRequest !== null ||
-      bindingTableOpen ||
-      arrayCopy.request !== null ||
-      folderRequest !== null ||
-      deleteConfirm !== null ||
-      inspectorController?.isTagPickerOpen() ||
-      equipmentLibrary?.isTagPickerOpen() ||
-      (event.target instanceof Element &&
-        event.target.closest('[role="dialog"][aria-label="タグを選択"]'))
-    ) {
-      const key = event.key.toLowerCase();
-      const localInput =
-        event.target instanceof Element &&
-        event.target.closest(
-          '[role="dialog"] input:not([type="checkbox"]),[role="dialog"] textarea,[role="dialog"] [contenteditable]',
-        );
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        (key === "s" ||
-          (!event.shiftKey && ["n", "o"].includes(key)) ||
-          (!localInput && ["z", "y"].includes(key)))
-      )
-        event.preventDefault();
-      return true;
-    }
-    if (
-      event.key === "Escape" &&
-      !event.isComposing &&
-      placement.positionPlacement &&
-      !drafts.pending &&
-      !replacement &&
-      !(
-        event.target instanceof Element &&
-        event.target.closest(
-          'input,textarea,select,[contenteditable],[role="menu"],[role="dialog"]',
-        )
-      )
-    ) {
-      event.preventDefault();
-      stopPlacement(true);
-      return true;
-    }
-    const focusedFolder =
-      event.target instanceof Element
-        ? event.target.closest<HTMLElement>("[data-layer-folder]")
-        : null;
-    if (focusedFolder && !event.isComposing) {
-      if (
-        event.key === "Delete" &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.altKey &&
-        !event.shiftKey
-      ) {
-        event.preventDefault();
-        if (!event.repeat)
-          layerTreeBindings.openFolderRequest(
-            "remove",
-            focusedFolder.dataset.layerFolder,
-            focusedFolder,
-          );
-        return true;
-      }
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        ["d", "x", "c"].includes(event.key.toLowerCase())
-      ) {
-        event.preventDefault();
-        return true;
-      }
-    }
-    return false;
   }
   let mode = $state<"edit" | "preview">(
     untrack(() => startup?.view) === "edit" ? "edit" : "preview",
@@ -3216,7 +2939,64 @@
       },
     },
   });
-  shortcutDispatcher.register("designer", designerShortcuts());
+  // キー操作（R7f）。dispatcher への登録は designerActions の生成より後（register）。
+  const designerShortcuts = createDesignerShortcutsController({
+    get busy() {
+      return busy;
+    },
+    get clipboardBusy() {
+      return clipboard.busy;
+    },
+    get draftPending() {
+      return !!drafts.pending;
+    },
+    get replacement() {
+      return !!replacement;
+    },
+    get helpOpen() {
+      return helpOpen;
+    },
+    get canvasActive() {
+      return canvasActive;
+    },
+    get positionPlacement() {
+      return placement.positionPlacement;
+    },
+    get runtimeWindowOpen() {
+      return (
+        runtimeWindows.operatorStart !== null ||
+        recordingTrend.historyOpen ||
+        runtimeWindows.alarmListOpen ||
+        runtimeWindows.alarmSettingsOpen ||
+        !!recordingManagementOpen ||
+        !!recordingOperationsOpen ||
+        !!recordingTrend.trendRequest ||
+        !!recordingTrend.recordingRequest
+      );
+    },
+    get dialogOpen() {
+      return (
+        screenViewRequest !== null ||
+        bindingTableOpen ||
+        arrayCopy.request !== null ||
+        folderRequest !== null ||
+        deleteConfirm !== null
+      );
+    },
+    isTagPickerOpen: () =>
+      !!inspectorController?.isTagPickerOpen() ||
+      !!equipmentLibrary?.isTagPickerOpen(),
+    clipboardScope,
+    hiddenCanvasMutation,
+    renameFocused,
+    removeSelection,
+    save: () => projectFiles.save(),
+    saveAs: () => projectFiles.saveAs(),
+    stopPlacement,
+    removeFolder: (folderId, origin) =>
+      layerTreeBindings.openFolderRequest("remove", folderId, origin),
+  });
+  designerShortcuts.register(designerActions);
   const folderContextItems = $derived(designerActions.folderContext());
   const editToolbarGroups = $derived(designerActions.editGroups());
   const clipboardItems = $derived(designerActions.clipboardItems());
@@ -3234,7 +3014,7 @@
   oncopy={nativeClipboard}
   oncut={nativeClipboard}
   onpaste={nativeClipboard}
-  onkeydown={shortcut}
+  onkeydown={designerShortcuts.handle}
   onbeforeunload={beforeLeave}
 />
 
