@@ -212,6 +212,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R4 App機能分離  | 完了               | R4a〜R4e実装・全体CI成功（`faf7c75`）。全ブラウザ509件を確認                             |
 | R5 編集コマンド | 完了               | R5a〜R5f実装・ローカル全体検証・最終CI成功                                               |
 | R6 性能         | 計測・限定改善済み | [計測条件・結果と採否理由](../performance/editor-performance.md)。候補コピーの重複を削減 |
+| R7 第2巡（App） | 棚卸し済み・未着手 | [§10](#r7-second-round)。#331 の dock 載せ替えの前提                                     |
 
 各小区切りの記録は、次の項目だけを残せば再開できる。
 
@@ -538,3 +539,71 @@ Inspectorで検証した同一DOM・capture／Esc／blur／resize取消・上位
 R6の後続性能評価として、現在形式の混在図面を再計測した。[I5f／I5gの記録](../performance/mixed-editor-quality.md#history-asset-index)に従い、画像Map候補は戻し、App専用・現在保持する履歴だけの資産hash索引を追加した。Project検証・JSON snapshot・Undo単位・原本Storeとpin／leaseを維持する。大域cacheや汎用frameworkへの置換、読込・全操作の性能改善完了ではない。安全性のAstra読取レビューは必須修正なし、全体CI成功。
 
 実装`01d5df0`は[全体CI39589758815](https://github.com/tyaro/temp-scada/actions/runs/39589758815)でFrontend・Rust・ブラウザ4分割・集約checkがすべて成功した。
+
+<a id="r7-second-round"></a>
+
+## 10. 第2巡（R7）：dock 載せ替え（#331）の前の App 整理
+
+棚卸し: 2026-11-20（日本時間）、基準 `work` = `f8d33083`。コードは変えていない。
+
+### 10.1 なぜ第2巡か
+
+R4・R5 の完了後、警報・操作・Runtime mode・作業タブ・図形の中の文字などを足すたびに App へ処理が戻った。レビュー時（R0 前）は約 5,400 行・119 関数だったが、棚卸し時点で **6,095 行・127 関数**、`$state` 73・`$derived` 56・`$effect` 16 になった。10 月 25 日以降に App を変えたコミットは 91 件ある。
+
+Issue #331（Designer のパネルを `@banto/dock-svelte` の `ThreePaneDock` へ載せ替える）は、この整理の後に着手すると決めている。D2 で `<main>` の内側を `ThreePaneDock` に替え、左3タブを別パネルに分けるので、パネルの**中身**が App の snippet と状態に埋まったままだと差分が大きくなる。
+
+### 10.2 App の今の区分け（行は棚卸し時点の目安）
+
+| 区分                                                 | 行（約）               | 主な処理                                                                            | 第2巡での扱い                                          |
+| ---------------------------------------------------- | ---------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| import・props・状態                                  | 1〜190                 | 136 の import、Project・選択・draft の状態                                          | 抽出に合わせて減らす                                   |
+| メニュー・テーマ・記録の入口・draft の表示           | 190〜375               | `toggleMenubar`・`chooseTheme`・`revealDraftForm`                                   | 必要に応じて R7f と一緒に                              |
+| **パネルの寸法・表示・浮動**                         | 376〜670               | `beginPanelResize`・`restorePanelLayout`・`setAuxPanelVisibility`                   | **触らない**。#331 の D3・D4 で消える                  |
+| 部品の配置・パレット・お気に入り                     | 670〜920               | `armPart`・`placeArmed`・`dropPalettePart`                                          | R7d                                                    |
+| Undo／Redo の画面遷移・選択の表示                    | 920〜1000              | `transition`・`travel`・`showSelection`                                             | R7g と一緒に                                           |
+| キー操作                                             | 1000〜1275             | `designerShortcuts`・`handleSaveShortcut`・`routeBeforeCommands`                    | R7f                                                    |
+| 選択の編集操作                                       | 1276〜1600、2145〜2400 | 選択・グループ・複製・削除・移動・回転・反転・数値の確定・`edit`                    | 共通 edit 境界なので App に残す。必要なら最後に検討    |
+| 運転表示・警報一覧・端末設定・警報 host              | 1597〜1685、2066〜2145 | `openOperatorView`・`openAlarmList`                                                 | R7e                                                    |
+| 作業タブ・定義の編集・表示位置の復元                 | 1686〜2065             | `workTabChanging`・`rememberEditView`・`openDefinition`・Symbol の使用先            | R7g                                                    |
+| 名前の変更・機器                                     | 2400〜2590             | `renameProject`・`renamePlacement`・`newEquipment`                                  | 必要に応じて                                           |
+| 記録計画・トレンド                                   | 2588〜2820             | `openRecordingPlan`・`openTrendHistory`・`saveTrend`                                | R7e                                                    |
+| 画面の追加・削除・表示                               | 2819〜2990             | `openScreen`・`addScreen`・`screenContextItems`                                     | R7b と一緒に                                           |
+| **フォームの振分け・検証・確定**                     | 2992〜3435             | `formCommand`（`editorForm` の 44 分岐、約 360 行）・`validateDrafts`・`submitForm` | **R7a**                                                |
+| モード切替・機器を開く・表示／ロック・レイヤーの文脈 | 3437〜3720             | `changeMode`・`openSelectedEquipment`・`toggleObjectVisibility`                     | 必要に応じて                                           |
+| 使える条件の導出・`designerActions` の配線           | 3722〜4012             | `menuBlocked`・`createDesignerActions` への約 250 行の受け渡し                      | R7f の後に見直す                                       |
+| markup                                               | 4012〜5455             | header（約 150）・左 aside（約 210）・中央 section（約 370）・Inspector・Modal 群   | R7b・R7c                                               |
+| CSS                                                  | 5455〜6095             | `main > aside`／`main > section` に直結する枠の CSS を含む                          | 中身に属する CSS だけ移す。枠の CSS は D2 で書き換える |
+
+### 10.3 工程（1 PR に 1 区切り）
+
+R7a から順に進める。#331 との関係は §10.5 に分けて書く。R7d〜R7g は衝突を減らすための整理で、順番は入れ替えてよい。
+
+| 区切り | 抽出先（案）                                                                                | 移すもの                                                                                                               | App に残すもの                                                      |
+| ------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| R7a    | `lib/designer/form-commands.ts`                                                             | `formCommand` の `editorForm` ごとの振分けを登録表にし、未登録の form を型と単体で検出する。各 adapter（R3）は変えない | `submitForm`・draft の検証と確定の順序、履歴への入口                |
+| R7b    | 左3タブの中身のコンポーネント（`ProjectPanel`・`LayersPanel`・`PartsPanel` の各 `.svelte`） | `DesignerSidebar` に渡している `projectPanel`／`layersPanel`／`partsPanel` の snippet、画面ツリーの行と ⋮              | `DesignerSidebar` と `<aside>` の枠、選択と編集コマンドの入口       |
+| R7c    | 中央の部品（定義編集の帯・状態の行・参照パネル）                                            | `definition-banner`、`status-row`、参照パネルの markup と所有 CSS                                                      | キャンバスの寸法の測定と `canvas-stack` の枠（D2 で中央の中へ移す） |
+| R7d    | `controllers/part-placement.svelte.ts`                                                      | 連続配置・お気に入り・パレットからの DnD・配置の可否                                                                   | キャンバスのイベントの受付                                          |
+| R7e    | `controllers/runtime-windows.svelte.ts`                                                     | 運転表示・警報一覧・記録計画・トレンド履歴／定義の窓の開閉と所有者                                                     | Modal の描画、Project 採用時の一括の閉じ                            |
+| R7f    | `controllers/designer-shortcuts.svelte.ts`                                                  | キーの登録・保存キー・ブラウザ予約キーの扱い                                                                           | `svelte:window` の受付                                              |
+| R7g    | `work-tabs.svelte.ts` の拡張か `controllers/edit-view.svelte.ts`                            | 表示位置の記憶と復元、定義の編集への出入り、Undo／Redo の画面遷移                                                      | 共通 edit／draft／history の境界                                    |
+
+### 10.4 守る条件と完了の見方
+
+- §4 の I1〜I10 と、R4 の「共通 edit／draft／history の境界は App に残す」をそのまま守る。保存 JSON・Undo の単位・フォームごとの履歴を変えない。
+- パネルの寸法・浮動・表示の処理（`panel-widths.ts`・`floating-*`・`inspector-layout.ts` を使う部分）は #331 で消えるので、第2巡では動かさない。
+- パネルのセレクタ（`#designer-project-panel`・`data-panel-placement` など）は第2巡では変えない。D2 で直す。
+- 各区切りで型チェック・単体・関連 E2E（§7 の表と、移した機能の spec）を通す。markup を移した区切り（R7b・R7c）は両テーマ・1920×1080・1536×864 で見え方を確かめる。
+- 完了の判断は行数ではなく、#331 の D2 で左3タブと中央の中身を `ThreePaneDock` の各パネルへ置くときに、App の状態の書換えなしで済むかで見る。
+
+### 10.5 R7 の完了と #331 に着手できる時点
+
+R7 の完了（R7a〜R7g がすべて済む）と、#331 の各段に着手できる時点は別に扱う。
+
+| #331 の段       | 着手の条件                                                   | 理由                                                                                                                                       |
+| --------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| D1 実証         | R7a〜R7c の完了                                              | D1 は実フォームで DOM・確定前の値・IME が保たれるかを見る。フォームの確定経路（R7a）と、パネルの中身の境界（R7b・R7c）が固まった状態で試す |
+| D2 枠の載せ替え | R7b・R7c の完了と **D1 の合格**                              | D1 で満たせなければ #331 は止め、現行の自前パネルを維持する                                                                                |
+| D3・D4          | D2 の完了。D4 の前に R7d（部品パレットからの DnD）を済ませる | D4 の受入に作図ジェスチャとの排他・パレットからの DnD が入る                                                                               |
+
+R7e〜R7g は #331 のどの段の前提でもない。#331 と並べて進めてよいが、同じ時期に App を触る PR は 1 本ずつにする。D1 を R7 の途中へ前倒しするかはここでは決めない。
