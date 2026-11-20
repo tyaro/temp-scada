@@ -23,6 +23,9 @@ importers:
       '@banto/admin-core':
         specifier: github:tyaro/banto#v7.9.0&path:packages/admin-core
         version: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/admin-core
+      '@banto/dock-svelte':
+        specifier: github:tyaro/banto#v7.9.0&path:packages/dock-svelte
+        version: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/dock-svelte
       '@banto/image-assets':
         specifier: github:tyaro/banto#v7.9.0&path:packages/image-assets
         version: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/image-assets
@@ -65,6 +68,10 @@ packages:
 
   '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/admin-core':
     resolution: {path: packages/admin-core, tarball: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716}
+    version: 7.9.0
+
+  '@banto/dock-svelte@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/dock-svelte':
+    resolution: {path: packages/dock-svelte, tarball: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716}
     version: 7.9.0
 
   '@banto/image-assets@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/image-assets':
@@ -626,6 +633,8 @@ packages:
 snapshots:
 
   '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/admin-core': {}
+
+  '@banto/dock-svelte@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/dock-svelte': {}
 
   '@banto/image-assets@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/image-assets': {}
 
