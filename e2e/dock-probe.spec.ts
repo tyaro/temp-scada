@@ -265,7 +265,7 @@ test("IME 変換中の組み替えは変換の確定まで待ち、変換中の�
 // 既知の不具合（D1 で見つけた）: 据え置きのパネルを組み替えると、Svelte が古い受け皿を消すときに
 // 中のフォーカス中の欄が一度文書から外れ、blur が出る（dock はその後にフォーカスを戻す）。
 // SCADA の数値の欄は blur で確定するので、確定前の文字列が submit される。
-// Banto の persistent が Element.moveBefore で移すようになれば合格する（予期しない合格で知らせる）。
+// Banto の persistent が Element.moveBefore で移すようになれば合格する（予期しない合格で知らせる。tyaro/banto#763）。
 test("数値の欄にフォーカスがあるまま浮かせても確定しない", async ({ page }) => {
   test.fail();
   await open(page);

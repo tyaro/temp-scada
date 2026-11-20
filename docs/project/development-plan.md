@@ -189,7 +189,7 @@ Runtime 窓は対象外（並べ替えるパネルが無い）。警報・トレ
 
 判断の材料:
 
-- 原因は上流の `persistent` の移し方（`appendChild` で、古い受け皿が先に消える）。Chromium 133 以降の `Element.moveBefore` は、フォーカスを保ったまま blur を出さずに移せる（この端末の Playwright の Chromium 156・WebView2 157 で確認）。上流で受け皿が消える前に `moveBefore` で預かりへ移せば直る見込み。
+- 原因は上流の `persistent` の移し方（`appendChild` で、古い受け皿が先に消える）。Chromium 133 以降の `Element.moveBefore` は、フォーカスを保ったまま blur を出さずに移せる（この端末の Playwright の Chromium 156・WebView2 157 で確認）。上流で受け皿が消える前に `moveBefore` で預かりへ移せば直る見込み。2026-11-21 に [Banto #763](https://github.com/tyaro/banto/issues/763) へ起票した。
 - SCADA 側で避けるなら、組み替えの間だけ数値の欄の blur の確定を止める必要がある（`blur` で確定する欄はフォームごとにあり、D2 の前に共通の口が要る）。
 - 実 OS の IME（Windows の日本語入力）と Tauri の WebView2 では試していない（オーナー確認）。スクロール位置の保持も試していない。
 
