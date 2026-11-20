@@ -6,7 +6,8 @@
 
 - PR は ready for review で作る（draft にしない）。マージは PR ごとにユーザーの承認を得てから、merge commit で行う。自動マージは使わず、CI の完了を待って手でマージする。
 - 積んだ PR は、土台のブランチを消す前に向き先を変える。
-- **マージ → `gh pr view --json state` で `MERGED` を確かめる → ブランチを消す**、の順に分ける。`gh` が TLS handshake timeout を起こす環境では、マージが通らないままブランチを消して PR が閉じたことがある（#233）。
+- ブランチの削除は、マージとは別に、明示的に許可された場合だけ行う。マージの承認は削除の承認を含まない。
+- 削除を許可されたときも、**マージ → `gh pr view --json state` で `MERGED` を確かめる → ブランチを消す**、の順に分ける。`MERGED` は削除の前提で、承認の代わりではない。`gh` が TLS handshake timeout を起こす環境では、マージが通らないままブランチを消して PR が閉じたことがある（#233）。
 - マージの前に、オーナーのレビュー結果（PR の会話欄の issue comment。再レビューを含む全件）と Codex の要約を読む。Auto-fix が Codex の「問題なし」だけを知らせてきたときも、会話欄のオーナーのコメントを必ず読む（#307 で見落とした）。
 - 設計 PR は自動レビューが 1 件ずつ指摘して収束しにくい。Fable の通しレビューでまとめて洗う。境界の規則は最初から全入力に当てて考える。
 
@@ -32,8 +33,8 @@
 - ヘッドレス Chromium はスクロールバーを隠す。スクロールバーの出入りによる循環は e2e では起きないので、原因を検査する。
 - 反転の中の入れ子の `<svg>` に `getBoundingClientRect` を使うと Chrome で約 80px ずれる。中心は `getScreenCTM` から計算する（#340）。
 - 時間に頼る試験は、CI の遅さで境界をまたがないよう、判定の前に十分なゆとりを取る。vitest（node）では `$effect` が動かないので、scope の失効は e2e で確かめる。
-- webServer は `reuseExistingServer`。別フォルダの vite が 5173 にいるとそのコードで試験が走る。使い回しの dev server が、rebase の途中で一時的に消えたファイルの import 失敗を覚えたままになることもある。そのときは別のポートで vite を起こし、`PLAYWRIGHT_BASE_URL` で走らせる。
-- Playwright が vite を毎回起こすと、最初の `goto` が 30 秒で時間切れになることがある。`pnpm dev` を先に起こして使い回す。
+- ローカルの webServer は `reuseExistingServer`（CI では再利用しない）。別フォルダの vite が 5173 にいるとそのコードで試験が走る。使い回しの dev server が、rebase の途中で一時的に消えたファイルの import 失敗を覚えたままになることもある。そのときは別のポートで vite を起こし、`PLAYWRIGHT_BASE_URL` で走らせる。
+- Playwright が vite を毎回起こすと、最初の `goto` が 30 秒で時間切れになることがある。`pnpm dev` を先に起こして使い回す（ローカルだけ）。
 
 ## 不安定な試験と CI
 
