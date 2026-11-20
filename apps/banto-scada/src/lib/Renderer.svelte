@@ -13,6 +13,7 @@
     dragPolygonVertex,
     polygonLayout,
     previewPolygonVertex,
+    reframedPolygonVertex,
   } from "./polygon-frame";
   import {
     getBounds,
@@ -404,6 +405,28 @@
     };
   }
 
+  /**
+   * 接続の解決へ渡す候補。頂点をドラッグ中の多角形は確定（`move-vertex`）と同じく枠を
+   * 作り直した形にし、途中と確定で anchor と端点を一致させる。作り直しが拒否される形は
+   * 例外にして、下の catch で確定済みの形を表示する。
+   */
+  function connectionCandidate(object: ScreenObject): ScreenObject {
+    if (
+      "width" in object &&
+      object.shape.type === "polygon" &&
+      vertexDrag?.id === object.id
+    ) {
+      const frame = reframedPolygonVertex(
+        { ...object, shape: object.shape },
+        vertexDrag.index,
+        vertexDrag.current,
+      );
+      if (!frame.ok) throw new Error(frame.reason);
+      return frame.object;
+    }
+    return rawPreviewObject(object);
+  }
+
   const connectionPreviews = $derived.by(() => {
     if (
       !editable ||
@@ -412,13 +435,13 @@
       )
     )
       return null;
-    const candidates = screen.objects.map((object) => {
-      const visual = rawPreviewObject(object);
-      return drag?.ids.includes(object.id)
-        ? { ...visual, x: visual.x + drag.dx, y: visual.y + drag.dy }
-        : visual;
-    });
     try {
+      const candidates = screen.objects.map((object) => {
+        const visual = connectionCandidate(object);
+        return drag?.ids.includes(object.id)
+          ? { ...visual, x: visual.x + drag.dx, y: visual.y + drag.dy }
+          : visual;
+      });
       return new Map(
         resolveConnectionObjects(candidates).map((object) => [
           object.id,

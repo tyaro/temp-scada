@@ -389,15 +389,15 @@ Project0.34.0のSymbol定義はImageを許可する。`editor/paste-handler.ts`�
 
 ## 接続・配管追従の幾何（I8a）
 
-`lib/connection-geometry.ts`はSymbol配置枠のanchorをworld座標へ投影し、Polylineの両端を同時に変更して暗黙pivotの差を補正する。中間点と自由端点のworld座標を保つ。ID解決・lock／group・保存・UIは所有せず、`connection-geometry.test.ts`で幾何だけを確認する。公開Projectへの接続は[I8b以降](../design/editor/connection-follow-design.md)。
+`lib/connection-geometry.ts`は接続先の4種（Symbol配置・矩形・楕円・多角形、`isConnectionTarget`）のanchorを`connectionAnchorPoint`でworld座標へ投影し（多角形の辺は`polygonAnchorRatio`で割合の空間の中心線と外周の交点、Rustの`polygon_anchor_ratio`と同じ式。Issue #306 E1）、Polylineの両端を同時に変更して暗黙pivotの差を補正する。中間点と自由端点のworld座標を保つ。ID解決・lock／group・保存・UIは所有せず、`connection-geometry.test.ts`で幾何だけを確認する。公開Projectへの接続は[I8b以降](../design/editor/connection-follow-design.md)。
 
 ## 接続の保存・全編集・コピー（I8b）
 
-Project0.35.0の`Polyline.shape.connections`は同一画面のSymbol配置IDを参照する。`connections.ts`のvalidate／resolve／remapを保存読込・finish・Renderer一時操作・各複製とclipboardへ接続する。画面の依存取込はrenewOwnerIds、root貼付はplacementIdsで別々に対応付ける。Rustは`scada-model/src/connections.rs`、共通ケースは`examples/connection-cases.json`、native sampleは`connection.project.json`。serde_jsonの`float_roundtrip`とTS同順の角度演算も保存精度の契約。`connections.test.ts`、`connection-contract.test.ts`、`e2e/connections.spec.ts`が受入入口。接続設定UIはI8c。
+Project0.35.0の`Polyline.shape.connections`は同一画面の接続先4種の配置IDを参照する（図形はIssue #306 E1、保存版は変えない）。`connections.ts`のvalidate／resolve／remapを保存読込・finish・Renderer一時操作・各複製とclipboardへ接続する。画面の依存取込はrenewOwnerIds、root貼付はplacementIdsで別々に対応付ける。Rustは`scada-model/src/connections.rs`、共通ケースは`examples/connection-cases.json`、native sampleは`connection.project.json`。serde_jsonの`float_roundtrip`とTS同順の角度演算も保存精度の契約。頂点のドラッグ中のRendererの接続候補は`polygon-frame.ts`の`reframedPolygonVertex`（`move-vertex`の確定と共用）を通す。`connections.test.ts`、`connections-area.test.ts`（図形の接続先）、`connection-contract.test.ts`、`e2e/connections.spec.ts`が受入入口。接続設定UIはI8c。
 
 ## 接続・解除の設定UI（I8c）
 
-`designer/ConnectionSettings.svelte`は端点ごとの明示フォーム・配置順付き候補・適用済み状態・lock／group／候補なしの表示を担当する。`designer/forms/line-connection.ts`はAppのcommand構築と一括draft事前検証から共用し、generation／owner／対象・候補・anchorとIME状態を検査する。InspectorのSymbol側は`connectionUsages`を投影するだけで、別の参照台帳を持たない。`line-connection-form.test.ts`と`e2e/connection-settings.spec.ts`でUndo・保存往復・両テーマ・同名候補・複数draftの部分適用防止を確認する。
+`designer/ConnectionSettings.svelte`は端点ごとの明示フォーム・配置順付き候補・適用済み状態・lock／group／候補なしの表示を担当する。`designer/forms/line-connection.ts`はAppのcommand構築と一括draft事前検証から共用し、generation／owner／対象・候補・anchorとIME状態を検査する。候補は接続先4種で種類を併記し、候補が無くても既存の接続は解除できる。Inspectorの接続先側（4種）は`connectionUsages`を投影するだけで、別の参照台帳を持たない。`line-connection-form.test.ts`と`e2e/connection-settings.spec.ts`でUndo・保存往復・両テーマ・同名候補・複数draftの部分適用防止を確認する。
 
 ## 保持中履歴の資産索引（I5g）
 

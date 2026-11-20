@@ -1,14 +1,28 @@
 import type { Project, Screen, ScreenObject, PolylineObject } from "./project";
 import {
-  symbolAnchorPoint,
+  connectionAnchorPoint,
+  isConnectionTarget,
   followPolylineEndpoints,
   sameConnectionPoint,
 } from "./connection-geometry";
 import { objectToWorld } from "./rotation";
 export {
   CONNECTION_ANCHORS,
+  CONNECTION_TARGET_TYPES,
+  isConnectionTarget,
   type ConnectionAnchor,
+  type ConnectionTargetType,
 } from "./connection-geometry";
+const targetKinds: Record<
+  import("./connection-geometry").ConnectionTargetType,
+  string
+> = { symbol: "Symbol", rectangle: "矩形", ellipse: "楕円", polygon: "多角形" };
+/** 接続先の候補・使用先に併記する種類の名前。接続先でない配置は undefined。 */
+export function connectionTargetKind(object: ScreenObject): string | undefined {
+  return isConnectionTarget(object)
+    ? targetKinds[object.shape.type]
+    : undefined;
+}
 export type ConnectionEnd = "start" | "end";
 export interface EndpointConnection {
   targetObjectId: string;
@@ -41,11 +55,11 @@ function targets(
     const connection = object.shape.connections?.[end];
     if (!connection) continue;
     const target = byId.get(connection.targetObjectId);
-    if (!target || !("width" in target) || target.shape.type !== "symbol")
+    if (!target || !isConnectionTarget(target))
       throw new Error(
-        `接続先のSymbol配置が見つかりません（配管: ${object.name ?? object.id}）。先に接続を解除するか、参照中の線も一緒に削除してください。`,
+        `接続先（Symbol配置・矩形・楕円・多角形）が見つかりません（配管: ${object.name ?? object.id}）。先に接続を解除するか、参照中の線も一緒に削除してください。`,
       );
-    result[end] = symbolAnchorPoint(target, connection.anchor);
+    result[end] = connectionAnchorPoint(target, connection.anchor);
   }
   return result;
 }

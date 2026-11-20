@@ -212,6 +212,33 @@ export function previewPolygonVertex<T extends PolygonFrame>(
   };
 }
 
+/**
+ * 1 つの頂点を動かした確定後の配置（`move-vertex` の確定と同じ `reframePolygon`）。
+ * Renderer はドラッグ中の接続の解決へこの形を渡し、途中と確定で端点を一致させる。
+ * 作り直しが拒否される形では理由を返す（Renderer は確定済みの形を表示する）。
+ */
+export function reframedPolygonVertex<T extends PolygonFrame>(
+  object: T,
+  index: number,
+  point: Point,
+): { ok: true; object: T } | { ok: false; reason: string } {
+  if (!Number.isInteger(index) || !object.shape.points[index])
+    return { ok: false, reason: "頂点が見つかりません" };
+  const frame = reframePolygon(object, polygonVertexMove(object, index, point));
+  if (!frame.ok) return frame;
+  return {
+    ok: true,
+    object: {
+      ...object,
+      x: frame.x,
+      y: frame.y,
+      width: frame.width,
+      height: frame.height,
+      shape: { ...object.shape, points: frame.points },
+    },
+  };
+}
+
 /** 幾何の関数へ渡す枠だけの配置（割合の点を渡さないため、shape を外す）。 */
 export function polygonLayout(object: PolygonFrame) {
   return {

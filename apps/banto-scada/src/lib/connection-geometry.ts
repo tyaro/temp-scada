@@ -1,4 +1,10 @@
-import type { LayoutObject, Point, PolylineObject } from "./project";
+import {
+  validatePolygonPoints,
+  type LayoutObject,
+  type Point,
+  type PolylineObject,
+  type ScreenObject,
+} from "./project";
 import {
   objectToWorld,
   worldToObject,
@@ -28,13 +34,70 @@ export function sameConnectionPoint(left: Point, right: Point): boolean {
     Math.abs(left.y - right.y) <= CONNECTION_EPSILON
   );
 }
-/** Placement-frame anchors, independent of Symbol artwork, contain padding or Equipment. */
-export function symbolAnchorPoint(
+/** 接続先にできる配置の種類（Symbol と面の図形）。Rust の `connections.rs` と同じ集合。 */
+export const CONNECTION_TARGET_TYPES = [
+  "symbol",
+  "rectangle",
+  "ellipse",
+  "polygon",
+] as const;
+export type ConnectionTargetType = (typeof CONNECTION_TARGET_TYPES)[number];
+/** 接続先にできる配置かどうかの唯一の判定。 */
+export function isConnectionTarget(
+  object: ScreenObject,
+): object is LayoutObject & { shape: { type: ConnectionTargetType } } {
+  return (
+    "width" in object &&
+    (CONNECTION_TARGET_TYPES as readonly string[]).includes(object.shape.type)
+  );
+}
+
+/**
+ * 多角形の辺の anchor（割合の空間）。枠の中央を通る中心線（`top`・`bottom` は `u = 0.5`、
+ * `left`・`right` は `v = 0.5`）と外周の交点のうち、その辺に最も近い点。閉区間を厳密に比べ、
+ * 許容誤差は使わない。辺が中心線に重なるときは両端を交点に数える。Rust の
+ * `polygon_anchor_ratio` と同じ順序・同じ式。前提を満たさない頂点は例外を投げる。
+ */
+export function polygonAnchorRatio(
+  points: readonly Point[],
+  anchor: Exclude<ConnectionAnchor, "center">,
+): Point {
+  validatePolygonPoints(points);
+  const vertical = anchor === "top" || anchor === "bottom";
+  // 縦の中心線では a = u・b = v、横の中心線では入れ替える。
+  const along = (p: Point) => (vertical ? p.x : p.y);
+  const across = (p: Point) => (vertical ? p.y : p.x);
+  const hits: number[] = [];
+  for (let i = 0; i < points.length; i++) {
+    const a = points[i],
+      b = points[(i + 1) % points.length];
+    const aa = along(a),
+      ba = along(b);
+    if (!(Math.min(aa, ba) <= 0.5 && 0.5 <= Math.max(aa, ba))) continue;
+    if (aa === ba) hits.push(across(a), across(b));
+    else {
+      const t = (0.5 - aa) / (ba - aa);
+      hits.push(across(a) + t * (across(b) - across(a)));
+    }
+  }
+  if (!hits.length) throw new Error("多角形の中心線が外周と交わりません");
+  const pick = anchor === "top" || anchor === "left" ? Math.min : Math.max;
+  const value = pick(...hits);
+  return vertical ? { x: 0.5, y: value } : { x: value, y: 0.5 };
+}
+
+/**
+ * 接続先の anchor の world 座標。Symbol・矩形・楕円は枠の辺の中央・中心、多角形の辺は
+ * `polygonAnchorRatio`。Symbol の絵柄・contain の余白・枠線の幅・文字からは求めない。
+ */
+export function connectionAnchorPoint(
   object: LayoutObject,
   anchor: ConnectionAnchor,
 ): Point {
-  if (object.shape.type !== "symbol")
-    throw new Error("接続先はSymbol配置を指定してください");
+  if (!isConnectionTarget(object))
+    throw new Error(
+      "接続先はSymbol配置・矩形・楕円・多角形のいずれかを指定してください",
+    );
   finitePoint(object);
   if (
     ![object.width, object.height, object.rotation].every(Number.isFinite) ||
@@ -44,25 +107,35 @@ export function symbolAnchorPoint(
     throw new Error("接続先の幅・高さ・角度が不正です");
   const { width, height } = object;
   let local: Point;
-  switch (anchor) {
-    case "top":
-      local = { x: width / 2, y: 0 };
-      break;
-    case "right":
-      local = { x: width, y: height / 2 };
-      break;
-    case "bottom":
-      local = { x: width / 2, y: height };
-      break;
-    case "left":
-      local = { x: 0, y: height / 2 };
-      break;
-    case "center":
-      local = { x: width / 2, y: height / 2 };
-      break;
-    default:
-      throw new Error("接続位置が不正です");
-  }
+  if (
+    object.shape.type === "polygon" &&
+    (anchor === "top" ||
+      anchor === "right" ||
+      anchor === "bottom" ||
+      anchor === "left")
+  ) {
+    const ratio = polygonAnchorRatio(object.shape.points, anchor);
+    local = { x: ratio.x * width, y: ratio.y * height };
+  } else
+    switch (anchor) {
+      case "top":
+        local = { x: width / 2, y: 0 };
+        break;
+      case "right":
+        local = { x: width, y: height / 2 };
+        break;
+      case "bottom":
+        local = { x: width / 2, y: height };
+        break;
+      case "left":
+        local = { x: 0, y: height / 2 };
+        break;
+      case "center":
+        local = { x: width / 2, y: height / 2 };
+        break;
+      default:
+        throw new Error("接続位置が不正です");
+    }
   const result = objectToWorld(object, local);
   finitePoint(result);
   return result;

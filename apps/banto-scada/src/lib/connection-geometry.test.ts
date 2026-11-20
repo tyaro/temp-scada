@@ -4,7 +4,8 @@ import { objectToWorld } from "./rotation";
 import {
   CONNECTION_ANCHORS,
   CONNECTION_EPSILON,
-  symbolAnchorPoint,
+  connectionAnchorPoint,
+  polygonAnchorRatio,
   followPolylineEndpoints,
   sameConnectionPoint,
 } from "./connection-geometry";
@@ -47,17 +48,17 @@ function near(actual: Point, expected: Point) {
 const world = (object: PolylineObject) =>
   object.shape.points.map((p) => objectToWorld(object, p));
 it("uses frame edge midpoints and center, with exact cardinal rotation around the placement center", () => {
-  expect(CONNECTION_ANCHORS.map((a) => symbolAnchorPoint(symbol(), a))).toEqual(
-    [
-      { x: 140, y: 200 },
-      { x: 180, y: 220 },
-      { x: 140, y: 240 },
-      { x: 100, y: 220 },
-      { x: 140, y: 220 },
-    ],
-  );
   expect(
-    CONNECTION_ANCHORS.map((a) => symbolAnchorPoint(symbol(90), a)),
+    CONNECTION_ANCHORS.map((a) => connectionAnchorPoint(symbol(), a)),
+  ).toEqual([
+    { x: 140, y: 200 },
+    { x: 180, y: 220 },
+    { x: 140, y: 240 },
+    { x: 100, y: 220 },
+    { x: 140, y: 220 },
+  ]);
+  expect(
+    CONNECTION_ANCHORS.map((a) => connectionAnchorPoint(symbol(90), a)),
   ).toEqual([
     { x: 160, y: 220 },
     { x: 140, y: 260 },
@@ -77,11 +78,11 @@ it("tracks translation, non-square frame resize and general rotation independent
     visible: false,
   };
   const before = structuredClone(target);
-  near(symbolAnchorPoint(target, "right"), {
+  near(connectionAnchorPoint(target, "right"), {
     x: 113.8670567945424,
     y: 29.46390350150271,
   });
-  expect(symbolAnchorPoint(target, "center")).toEqual({ x: 30, y: -25 });
+  expect(connectionAnchorPoint(target, "center")).toEqual({ x: 30, y: -25 });
   expect(target).toEqual(before);
 });
 for (const rotation of [0, 90, 180, 270, 33, 359.99]) {
@@ -139,7 +140,7 @@ it("preserves free vertices in the supplied transformed line before resolving co
   const transformed = line(61),
     positions = world(transformed);
   const result = followPolylineEndpoints(transformed, {
-    start: symbolAnchorPoint(symbol(15), "bottom"),
+    start: connectionAnchorPoint(symbol(15), "bottom"),
   });
   world(result)
     .slice(1)
@@ -177,16 +178,16 @@ it("supports coincident connected ends when bends remain, and rejects an entirel
   expect(two.shape.points).toEqual(original.shape.points.slice(0, 2));
 });
 it("rejects invalid anchors, non-Symbol targets, nonfinite geometry and invalid point arrays without mutation", () => {
-  expect(() => symbolAnchorPoint(symbol(), "unknown" as any)).toThrow();
+  expect(() => connectionAnchorPoint(symbol(), "unknown" as any)).toThrow();
   expect(() =>
-    symbolAnchorPoint(
+    connectionAnchorPoint(
       { ...symbol(), shape: { type: "image", assetId: "a", fit: "contain" } },
       "left",
     ),
   ).toThrow(/Symbol/);
   for (const bad of [NaN, Infinity, -Infinity]) {
     expect(() =>
-      symbolAnchorPoint({ ...symbol(), width: bad }, "right"),
+      connectionAnchorPoint({ ...symbol(), width: bad }, "right"),
     ).toThrow();
     expect(() =>
       followPolylineEndpoints(line(), { start: { x: bad, y: 0 } }),
@@ -199,7 +200,7 @@ it("rejects invalid anchors, non-Symbol targets, nonfinite geometry and invalid 
     ).toThrow();
   }
   expect(() =>
-    symbolAnchorPoint({ ...symbol(), height: 0 }, "center"),
+    connectionAnchorPoint({ ...symbol(), height: 0 }, "center"),
   ).toThrow();
   for (const points of [
     [],
@@ -239,4 +240,199 @@ it("keeps representable large-coordinate updates without imposing a new coordina
     end = { x: 1e12 - 120, y: 1e12 + 250 };
   const after = world(followPolylineEndpoints(original, { start, end }));
   expect(after).toEqual([start, before[1], before[2], end]);
+});
+
+const paint = {
+  fill: {
+    enabled: true,
+    paint: { type: "solid", color: "#83bfcd", alpha: 1 },
+  },
+  stroke: null,
+} as const;
+const area = (
+  shape: LayoutObject["shape"],
+  extra: Partial<LayoutObject> = {},
+): LayoutObject =>
+  ({ ...symbol(), id: "area", ...extra, shape }) as LayoutObject;
+const polygon = (points: [number, number][], extra?: Partial<LayoutObject>) =>
+  area(
+    {
+      type: "polygon",
+      points: points.map(([x, y]) => ({ x, y })),
+      paint,
+    } as LayoutObject["shape"],
+    extra,
+  );
+it("uses the frame edge midpoints and center for rectangles and ellipses, with rotation and flips", () => {
+  const frame = CONNECTION_ANCHORS.map((a) =>
+    connectionAnchorPoint(symbol(), a),
+  );
+  for (const type of ["rectangle", "ellipse"] as const) {
+    const target = area({ type, paint } as LayoutObject["shape"]);
+    expect(
+      CONNECTION_ANCHORS.map((a) => connectionAnchorPoint(target, a)),
+    ).toEqual(frame);
+    expect(connectionAnchorPoint({ ...target, rotation: 90 }, "top")).toEqual({
+      x: 160,
+      y: 220,
+    });
+    near(connectionAnchorPoint({ ...target, flipX: true }, "left"), {
+      x: 180,
+      y: 220,
+    });
+  }
+});
+it("matches hand values for polygons whose frame edge midpoints lie on the outline", () => {
+  const frame = CONNECTION_ANCHORS.map((a) =>
+    connectionAnchorPoint(symbol(), a),
+  );
+  const square = polygon([
+    [0, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+  ]);
+  const diamond = polygon([
+    [0.5, 0],
+    [1, 0.5],
+    [0.5, 1],
+    [0, 0.5],
+  ]);
+  for (const target of [square, diamond])
+    expect(
+      CONNECTION_ANCHORS.map((a) => connectionAnchorPoint(target, a)),
+    ).toEqual(frame);
+  // center stays the frame center even when it lies outside a concave outline.
+  const u = polygon([
+    [0, 0],
+    [0.25, 0],
+    [0.25, 0.75],
+    [0.75, 0.75],
+    [0.75, 0],
+    [1, 0],
+    [1, 1],
+    [0, 1],
+  ]);
+  expect(connectionAnchorPoint(u, "center")).toEqual({ x: 140, y: 220 });
+});
+it("intersects the polygon outline with the frame center lines in ratio space", () => {
+  const cases: [
+    [number, number][],
+    "top" | "right" | "bottom" | "left",
+    Point,
+  ][] = [
+    // centre line through a vertex (touching counts as an intersection)
+    [
+      [
+        [0, 0],
+        [1, 0],
+        [0.5, 1],
+      ],
+      "bottom",
+      { x: 0.5, y: 1 },
+    ],
+    // an edge lying on the centre line contributes both of its ends
+    [
+      [
+        [0, 0],
+        [1, 0],
+        [1, 0.4],
+        [0.5, 0.4],
+        [0.5, 1],
+        [0, 1],
+      ],
+      "bottom",
+      { x: 0.5, y: 1 },
+    ],
+    // concave outline whose frame center lies outside: nearest to the top edge
+    [
+      [
+        [0, 0],
+        [0.25, 0],
+        [0.25, 0.75],
+        [0.75, 0.75],
+        [0.75, 0],
+        [1, 0],
+        [1, 1],
+        [0, 1],
+      ],
+      "top",
+      { x: 0.5, y: 0.75 },
+    ],
+    // self-intersecting bow tie: the crossing point
+    [
+      [
+        [0, 0],
+        [1, 1],
+        [1, 0],
+        [0, 1],
+      ],
+      "top",
+      { x: 0.5, y: 0.5 },
+    ],
+  ];
+  for (const [points, anchor, ratio] of cases) {
+    expect(
+      polygonAnchorRatio(
+        points.map(([x, y]) => ({ x, y })),
+        anchor,
+      ),
+    ).toEqual(ratio);
+    expect(connectionAnchorPoint(polygon(points), anchor)).toEqual({
+      x: 100 + ratio.x * 80,
+      y: 200 + ratio.y * 40,
+    });
+  }
+});
+it("puts the regular pentagon's left anchor on the slanted edge at half height, not on the vertex", () => {
+  const pentagon: [number, number][] = [
+    [0.5, 0],
+    [1, 0.381966],
+    [0.809017, 1],
+    [0.190983, 1],
+    [0, 0.381966],
+  ];
+  const ratio = polygonAnchorRatio(
+    pentagon.map(([x, y]) => ({ x, y })),
+    "left",
+  );
+  const t = (0.5 - 1) / (0.381966 - 1);
+  expect(ratio).toEqual({ x: 0.190983 + t * (0 - 0.190983), y: 0.5 });
+  expect(ratio.x).toBeGreaterThan(0);
+  expect(
+    polygonAnchorRatio(
+      pentagon.map(([x, y]) => ({ x, y })),
+      "top",
+    ),
+  ).toEqual({ x: 0.5, y: 0 });
+});
+it("throws for polygons that break the outline preconditions and for non-area targets", () => {
+  for (const points of [
+    [
+      [0, 0],
+      [1, 1],
+    ],
+    [
+      [0, 0],
+      [0.5, 0],
+      [0.5, 1],
+    ],
+    [
+      [0, 0],
+      [1, 0],
+      [1, 0],
+      [0, 1],
+    ],
+  ] as [number, number][][])
+    expect(() => connectionAnchorPoint(polygon(points), "left")).toThrow();
+  expect(() =>
+    connectionAnchorPoint(
+      area({
+        type: "text",
+        text: "x",
+        style: { fontSize: 16, fontWeight: "normal", align: "left" },
+      } as LayoutObject["shape"]),
+      "left",
+    ),
+  ).toThrow(/矩形・楕円・多角形/);
 });

@@ -43,6 +43,69 @@ fn world(object: &Value, point: Point, pivot: Point) -> Point {
 fn finite(point: Point) -> bool {
     point.0.is_finite() && point.1.is_finite()
 }
+/// 接続先にできる配置の種類（TS の `CONNECTION_TARGET_TYPES` と同じ集合）。
+const TARGET_TYPES: [&str; 4] = ["symbol", "rectangle", "ellipse", "polygon"];
+fn is_target(object: &Value) -> bool {
+    object["shape"]["type"]
+        .as_str()
+        .is_some_and(|kind| TARGET_TYPES.contains(&kind))
+}
+/// 多角形の辺の anchor（割合の空間）。TS の `polygonAnchorRatio` と同じ順序・同じ式で、
+/// 閉区間を厳密に比べ、許容誤差は使わない。頂点は読込の多角形の検査を通った後に呼ぶ。
+fn polygon_anchor_ratio(points: &[Value], anchor: &str) -> Result<Point, String> {
+    let vertical = anchor == "top" || anchor == "bottom";
+    // 縦の中心線では a = u・b = v、横の中心線では入れ替える。
+    let split = |p: &Value| {
+        let (u, v) = (number(p, "x"), number(p, "y"));
+        if vertical {
+            (u, v)
+        } else {
+            (v, u)
+        }
+    };
+    let mut hits = Vec::new();
+    for i in 0..points.len() {
+        let (aa, ab) = split(&points[i]);
+        let (ba, bb) = split(&points[(i + 1) % points.len()]);
+        if !(aa.min(ba) <= 0.5 && 0.5 <= aa.max(ba)) {
+            continue;
+        }
+        if aa == ba {
+            hits.push(ab);
+            hits.push(bb);
+        } else {
+            let t = (0.5 - aa) / (ba - aa);
+            hits.push(ab + t * (bb - ab));
+        }
+    }
+    let Some(&first) = hits.first() else {
+        return Err("多角形の中心線が外周と交わりません".into());
+    };
+    let value = if anchor == "top" || anchor == "left" {
+        hits.iter().copied().fold(first, f64::min)
+    } else {
+        hits.iter().copied().fold(first, f64::max)
+    };
+    Ok(if vertical { (0.5, value) } else { (value, 0.5) })
+}
+/// 接続先の anchor の world 座標（TS の `connectionAnchorPoint`）。
+fn anchor_point(target: &Value, anchor: &str) -> Result<Point, String> {
+    let (width, height) = (number(target, "width"), number(target, "height"));
+    let local = if target["shape"]["type"] == "polygon" && anchor != "center" {
+        let ratio = polygon_anchor_ratio(target["shape"]["points"].as_array().unwrap(), anchor)?;
+        (ratio.0 * width, ratio.1 * height)
+    } else {
+        match anchor {
+            "top" => (width / 2.0, 0.0),
+            "right" => (width, height / 2.0),
+            "bottom" => (width / 2.0, height),
+            "left" => (0.0, height / 2.0),
+            "center" => (width / 2.0, height / 2.0),
+            _ => unreachable!("schema validated anchor"),
+        }
+    };
+    Ok(world(target, local, (width / 2.0, height / 2.0)))
+}
 pub fn validate(project: &Value) -> Result<(), String> {
     for definition in project["symbols"].as_array().unwrap() {
         if definition["objects"]
@@ -104,18 +167,9 @@ pub fn validate(project: &Value) -> Result<(), String> {
                 };
                 let target = by_id
                     .get(connection["targetObjectId"].as_str().unwrap())
-                    .filter(|o| o["shape"]["type"] == "symbol")
-                    .ok_or("同一画面の接続先Symbol配置が見つかりません")?;
-                let (width, height) = (number(target, "width"), number(target, "height"));
-                let anchor = match connection["anchor"].as_str().unwrap() {
-                    "top" => (width / 2.0, 0.0),
-                    "right" => (width, height / 2.0),
-                    "bottom" => (width / 2.0, height),
-                    "left" => (0.0, height / 2.0),
-                    "center" => (width / 2.0, height / 2.0),
-                    _ => unreachable!("schema validated anchor"),
-                };
-                let expected = world(target, anchor, (width / 2.0, height / 2.0));
+                    .filter(|o| is_target(o))
+                    .ok_or("同一画面の接続先（Symbol配置・矩形・楕円・多角形）が見つかりません")?;
+                let expected = anchor_point(target, connection["anchor"].as_str().unwrap())?;
                 let actual = world(
                     object,
                     (number(&points[index], "x"), number(&points[index], "y")),
@@ -142,10 +196,6 @@ mod tests {
         let cases: Value =
             serde_json::from_str(include_str!("../../../examples/flip-cases.json")).unwrap();
         let target = &cases["target"];
-        let (width, height) = (
-            super::number(target, "width"),
-            super::number(target, "height"),
-        );
         for case in cases["anchors"].as_array().unwrap() {
             let mut object = target.clone();
             object["rotation"] = case["rotation"].clone();
@@ -154,14 +204,7 @@ mod tests {
                     object[key] = flag.clone();
                 }
             }
-            let local = match case["anchor"].as_str().unwrap() {
-                "top" => (width / 2.0, 0.0),
-                "right" => (width, height / 2.0),
-                "bottom" => (width / 2.0, height),
-                "left" => (0.0, height / 2.0),
-                _ => (width / 2.0, height / 2.0),
-            };
-            let world = super::world(&object, local, (width / 2.0, height / 2.0));
+            let world = super::anchor_point(&object, case["anchor"].as_str().unwrap()).unwrap();
             let expected = (
                 super::number(&case["world"], "x"),
                 super::number(&case["world"], "y"),

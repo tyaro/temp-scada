@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import sample from "../examples/connection.project.json" with { type: "json" };
+import cases from "../examples/connection-cases.json" with { type: "json" };
 import { chooseTheme, mainCanvas, selectPanel } from "./helpers/designer";
 import {
   openProject,
@@ -46,12 +47,16 @@ for (const theme of ["light", "dark"])
       .getByLabel("始点の接続先", { exact: true })
       .selectOption(pump1);
     await button(p, "始点の接続を適用").click();
-    await expect(form(p, "始点")).toContainText("接続中：ポンプ1 · 配置1／右");
+    await expect(form(p, "始点")).toContainText(
+      "接続中：ポンプ1（Symbol） · 配置1／右",
+    );
     await form(p, "終点")
       .getByLabel("終点の接続先", { exact: true })
       .selectOption(pump2);
     await button(p, "終点の接続を適用").click();
-    await expect(form(p, "終点")).toContainText("接続中：ポンプ2 · 配置2／左");
+    await expect(form(p, "終点")).toContainText(
+      "接続中：ポンプ2（Symbol） · 配置2／左",
+    );
     await button(p, "始点の接続を適用").click(); // unchanged: no extra Undo
     await button(p, "元に戻す").click();
     await expect(
@@ -142,25 +147,37 @@ test("connection draft survives cancelled navigation and composing Enter or subm
     anchor = form(p, "始点").getByLabel("始点の接続位置", { exact: true });
   await target.selectOption(pump2);
   await anchor.selectOption("top");
-  await expect(form(p, "始点")).toContainText("接続中：ポンプ1 · 配置1／右");
+  await expect(form(p, "始点")).toContainText(
+    "接続中：ポンプ1（Symbol） · 配置1／右",
+  );
   await anchor.dispatchEvent("compositionstart");
   await anchor.dispatchEvent("keydown", { key: "Enter", isComposing: true });
   await button(p, "始点の接続を適用").click();
   await expect(button(p, "元に戻す")).toBeDisabled();
-  await expect(form(p, "始点")).toContainText("接続中：ポンプ1 · 配置1／右");
+  await expect(form(p, "始点")).toContainText(
+    "接続中：ポンプ1（Symbol） · 配置1／右",
+  );
   await anchor.dispatchEvent("compositionend");
   await button(p, "始点の接続を適用").click();
-  await expect(form(p, "始点")).toContainText("接続中：ポンプ2 · 配置2／上");
+  await expect(form(p, "始点")).toContainText(
+    "接続中：ポンプ2（Symbol） · 配置2／上",
+  );
   await button(p, "元に戻す").click();
-  await expect(form(p, "始点")).toContainText("接続中：ポンプ1 · 配置1／右");
+  await expect(form(p, "始点")).toContainText(
+    "接続中：ポンプ1（Symbol） · 配置1／右",
+  );
   // 離れたら確定: 未適用の接続は確認なしで適用されてからプレビューへ移る
   await target.selectOption(pump2);
   await anchor.selectOption("top");
   await button(p, "表示プレビュー").click();
   await button(p, "編集").click();
-  await expect(form(p, "始点")).toContainText("接続中：ポンプ2 · 配置2／上");
+  await expect(form(p, "始点")).toContainText(
+    "接続中：ポンプ2（Symbol） · 配置2／上",
+  );
   await button(p, "元に戻す").click();
-  await expect(form(p, "始点")).toContainText("接続中：ポンプ1 · 配置1／右");
+  await expect(form(p, "始点")).toContainText(
+    "接続中：ポンプ1（Symbol） · 配置1／右",
+  );
 });
 test("Symbol properties expose referring endpoints and locked pipes disable connection changes", async ({
   page: p,
@@ -174,7 +191,7 @@ test("Symbol properties expose referring endpoints and locked pipes disable conn
   await expect(button(p, "始点の接続を適用")).toBeDisabled();
   await select(p, pump1);
   await expect(
-    p.getByRole("region", { name: "このSymbolに接続中の配管", exact: true }),
+    p.getByRole("region", { name: "この配置に接続中の配管", exact: true }),
   ).toContainText("ポンプ間配管 · 始点（右）");
   await p.keyboard.press("Delete");
   await expect(p.getByTestId("project-status")).toContainText("ポンプ間配管");
@@ -189,7 +206,9 @@ test("a line without any Symbol candidates shows a clear reason and cannot apply
   await start(p, data);
   await expect(
     p.getByRole("region", { name: "配管の接続設定", exact: true }),
-  ).toContainText("この画面に接続先のSymbolがありません。");
+  ).toContainText(
+    "この画面に接続先（Symbol配置・矩形・楕円・多角形）がありません。",
+  );
   await expect(button(p, "始点の接続を適用")).toBeDisabled();
   await expect(button(p, "終点の接続を適用")).toBeDisabled();
 });
@@ -209,7 +228,9 @@ test("Apply-and-continue rejects all dirty forms before mutation while a connect
   await expect(button(p, "元に戻す")).toBeDisabled();
   await expect(name).toHaveValue("未適用の配管名");
   await expect(target).toHaveValue(pump2);
-  await expect(form(p, "始点")).toContainText("接続中：ポンプ1 · 配置1／右");
+  await expect(form(p, "始点")).toContainText(
+    "接続中：ポンプ1（Symbol） · 配置1／右",
+  );
   await expect(p.locator(`[data-layer-id="${pipe}"]`)).toContainText(
     "ポンプ間配管",
   );
@@ -232,14 +253,74 @@ test("same-name Symbol placements have distinct visible candidate and committed 
   const target = form(p, "始点").getByLabel("始点の接続先", { exact: true });
   await expect(target.locator("option")).toHaveText([
     "接続なし（解除）",
-    "同名ポンプ · 配置1",
-    "同名ポンプ · 配置2",
+    "同名ポンプ（Symbol） · 配置1",
+    "同名ポンプ（Symbol） · 配置2",
   ]);
   await target.selectOption(pump2);
   await button(p, "始点の接続を適用").click();
-  await expect(form(p, "始点")).toContainText("接続中：同名ポンプ · 配置2／右");
+  await expect(form(p, "始点")).toContainText(
+    "接続中：同名ポンプ（Symbol） · 配置2／右",
+  );
   expect(
     (await saved(p)).screens[0].objects[2].shape.connections.start
       .targetObjectId,
   ).toBe(pump2);
+});
+
+test("an area-shape connection without any Symbol shows its target, disconnects, and round-trips without the connection", async ({
+  page: p,
+  browser,
+}) => {
+  // Issue #306 E1: 契約ケースの菱形の多角形（top へ始点）。終点側の Symbol を外し、
+  // 画面に Symbol 配置が 1 つも無い状態にする。
+  const diamond = cases.find(
+    (c) => c.name === "polygon-diamond-matches-frame-midpoint",
+  )!;
+  const data: any = structuredClone(sample);
+  for (const patch of diamond.patches) {
+    const keys = patch.path.slice(1).split("/");
+    let parent: any = data;
+    for (const key of keys.slice(0, -1)) parent = parent[key];
+    parent[keys.at(-1)!] = structuredClone(patch.value);
+  }
+  delete data.screens[0].objects[2].shape.connections.end;
+  data.screens[0].objects.splice(1, 1);
+  data.screens[0].objects[1].order = 1;
+  await start(p, data);
+  await expect(form(p, "始点")).toContainText(
+    "接続中：箱1（多角形） · 配置1／上",
+  );
+  await expect(
+    form(p, "始点").getByLabel("始点の接続先", { exact: true }),
+  ).toHaveValue(pump1);
+  await select(p, pump1);
+  await expect(
+    p.getByRole("region", { name: "この配置に接続中の配管", exact: true }),
+  ).toContainText("ポンプ間配管 · 始点（上）");
+  await select(p, pipe);
+  await form(p, "始点")
+    .getByLabel("始点の接続先", { exact: true })
+    .selectOption("");
+  await button(p, "始点の接続を適用").click();
+  await expect(form(p, "始点")).toContainText("接続なし");
+  const project = await saved(p);
+  expect(project.screens[0].objects[1].shape).not.toHaveProperty("connections");
+  expect(project.screens[0].objects[1].shape.points).toEqual(
+    data.screens[0].objects[1].shape.points,
+  );
+  expect(project.screens[0].objects[0]).toEqual(data.screens[0].objects[0]);
+  const context = await browser.newContext({
+      viewport: { width: 1920, height: 1080 },
+    }),
+    other = await context.newPage();
+  await start(other, project);
+  await expect(form(other, "始点")).toContainText("接続なし");
+  await expect(
+    form(other, "始点").getByLabel("始点の接続先", { exact: true }),
+  ).toHaveValue("");
+  await select(other, pump1);
+  await expect(
+    other.getByRole("region", { name: "この配置に接続中の配管", exact: true }),
+  ).toHaveCount(0);
+  await context.close();
 });

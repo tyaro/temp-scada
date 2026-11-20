@@ -9,7 +9,7 @@ import {
 } from "../project";
 import { normalizeRotation, replaceRotatedVertex } from "../rotation";
 import { setFlip } from "../flip";
-import { polygonVertexMove, reframePolygon } from "../polygon-frame";
+import { reframedPolygonVertex, reframePolygon } from "../polygon-frame";
 import { setLineStyle } from "../line-style";
 import { parseLineArrow } from "../line-arrow";
 import { validateLevelShape } from "../level";
@@ -82,22 +82,17 @@ export function applySingleObjectCommand(
     const shape = screen.objects[index].shape;
     const target = screen.objects[index];
     if ("width" in target && target.shape.type === "polygon") {
-      const polygon = { ...target, shape: target.shape };
-      if (
-        !Number.isInteger(command.index) ||
-        !target.shape.points[command.index]
-      )
-        throw new Error("頂点が見つかりません");
-      const frame = reframePolygon(
-        polygon,
-        polygonVertexMove(polygon, command.index, command.point),
+      const frame = reframedPolygonVertex(
+        { ...target, shape: target.shape },
+        command.index,
+        command.point,
       );
       if (!frame.ok) throw new Error(frame.reason);
-      target.x = frame.x;
-      target.y = frame.y;
-      target.width = frame.width;
-      target.height = frame.height;
-      target.shape.points = frame.points;
+      target.x = frame.object.x;
+      target.y = frame.object.y;
+      target.width = frame.object.width;
+      target.height = frame.object.height;
+      target.shape.points = frame.object.shape.points;
       return "finish";
     }
     if (shape.type !== "polyline")

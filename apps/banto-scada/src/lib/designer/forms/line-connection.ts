@@ -1,6 +1,10 @@
 import type { EditCommand } from "../../editor";
 import type { ScreenObject } from "../../project";
-import { CONNECTION_ANCHORS, type ConnectionAnchor } from "../../connections";
+import {
+  CONNECTION_ANCHORS,
+  isConnectionTarget,
+  type ConnectionAnchor,
+} from "../../connections";
 export function lineConnectionCommand(
   input: {
     connected: boolean;
@@ -40,8 +44,8 @@ export function lineConnectionCommand(
   } as const;
   if (!targetId) return { ...base, connection: null };
   const target = context.objects.find((o) => o.id === targetId);
-  if (target?.shape.type !== "symbol")
-    throw new Error("接続先のSymbol配置が変わりました。選び直してください。");
+  if (!target || !isConnectionTarget(target))
+    throw new Error("接続先の配置が変わりました。選び直してください。");
   const anchor = input.data.get("connectionAnchor");
   if (!CONNECTION_ANCHORS.includes(anchor as ConnectionAnchor))
     throw new Error("接続位置を選んでください");

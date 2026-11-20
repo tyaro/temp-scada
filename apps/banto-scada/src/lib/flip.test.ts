@@ -23,7 +23,7 @@ import {
   rotationTransform,
   worldToObject,
 } from "./rotation";
-import { symbolAnchorPoint } from "./connection-geometry";
+import { connectionAnchorPoint } from "./connection-geometry";
 
 const samples: Record<string, unknown> = {
   "shape-paint": shapePaint,
@@ -59,8 +59,8 @@ describe("flip contract shared with Rust", () => {
         ...("flipY" in entry ? { flipY: entry.flipY } : {}),
         fill: "#000000",
         shape: { type: "symbol", symbolId: "x", colorMode: "definition" },
-      } as unknown as Parameters<typeof symbolAnchorPoint>[0];
-      const world = symbolAnchorPoint(object, entry.anchor as "left");
+      } as unknown as Parameters<typeof connectionAnchorPoint>[0];
+      const world = connectionAnchorPoint(object, entry.anchor as "left");
       expect(world.x).toBeCloseTo(entry.world.x, 9);
       expect(world.y).toBeCloseTo(entry.world.y, 9);
     });
@@ -327,7 +327,7 @@ describe("flip command", () => {
     };
     const pipe = next.screens[0].objects[2] as PolylineObject;
     const start = objectToWorld(pipe, pipe.shape.points[0]);
-    const anchor = symbolAnchorPoint(symbol as never, "right");
+    const anchor = connectionAnchorPoint(symbol as never, "right");
     expect(start.x).toBeCloseTo(anchor.x, 9);
     expect(start.y).toBeCloseTo(anchor.y, 9);
     expect(anchor.x).toBeCloseTo(target.x, 9);
