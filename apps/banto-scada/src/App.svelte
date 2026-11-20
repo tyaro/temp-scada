@@ -92,6 +92,7 @@
   } from "./lib/designer/controllers/designer-actions";
   import { createClipboardController } from "./lib/designer/controllers/clipboard.svelte";
   import { createImageImportController } from "./lib/designer/controllers/image-import.svelte";
+  import { createRuntimeWindowsController } from "./lib/designer/controllers/runtime-windows.svelte";
   import SlotReadStatus from "./lib/designer/SlotReadStatus.svelte";
   import AlarmSettings from "./lib/designer/AlarmSettings.svelte";
   import { initialImageFrame } from "./lib/image-frame";
@@ -156,8 +157,6 @@
     count: number;
   } | null>(null);
   let historyOpen = $state(false);
-  let alarmListOpen = $state(false);
-  let alarmSettingsOpen = $state(false);
   let recordingOperationsOpen = $state.raw<object | null>(null);
   function openRecordingOperations() {
     if (!menuBlocked) recordingOperationsOpen = Object.freeze({});
@@ -403,8 +402,6 @@
   } from "./lib/operation-simulation";
   import AlarmListWindow from "./lib/alarm-list/AlarmListWindow.svelte";
   import AlarmSettingsWindow from "./lib/alarm-list/AlarmSettingsWindow.svelte";
-  import { alarmSettingsEntryReason } from "./lib/alarm-settings";
-  import { operatorStartScreen } from "./lib/operator/operator-layout";
   import ArrayCopyDialog from "./lib/designer/ArrayCopyDialog.svelte";
   import { createArrayCopyController } from "./lib/designer/controllers/array-copy.svelte";
   import ScreenViewDialog from "./lib/designer/ScreenViewDialog.svelte";
@@ -960,10 +957,10 @@
   }
   function shortcut(event: KeyboardEvent) {
     if (
-      operatorStart !== null ||
+      runtimeWindows.operatorStart !== null ||
       historyOpen ||
-      alarmListOpen ||
-      alarmSettingsOpen ||
+      runtimeWindows.alarmListOpen ||
+      runtimeWindows.alarmSettingsOpen ||
       recordingManagementOpen ||
       recordingOperationsOpen ||
       trendRequest ||
@@ -1239,7 +1236,7 @@
     );
   }
   function nativeClipboard(event: ClipboardEvent) {
-    if (operatorStart === null && clipboardScope(event.target))
+    if (runtimeWindows.operatorStart === null && clipboardScope(event.target))
       clipboard.action(event.type as "copy" | "cut" | "paste", event);
   }
   function nudgeSelection(direction: Point, large: boolean) {
@@ -1391,53 +1388,38 @@
 
   let editorRegion = $state<HTMLElement>();
   let previewFullscreenActive = $state(false);
-  // 運転表示（プレビューの入口から開く）。開いている間は開始画面の id を持つ。
-  let operatorStart = $state<string | null>(null);
-  let operatorEntryButton = $state<HTMLButtonElement>();
-  let operatorGeneration = 0;
-  function openOperatorView() {
-    const start = operatorStartScreen(
-      project.operatorFrame,
-      project.screens,
-      screen.id,
-    );
-    if (!start) {
-      report(
-        "error",
-        "運転表示を開けません。ヘッダー・フッター以外の画面を追加してください。",
-      );
-      return;
-    }
-    operatorGeneration = workspaceGeneration;
-    operatorStart = start;
-  }
+  // 運転表示・警報一覧・端末設定の窓の開閉と、閉じたときのフォーカスの戻り先（R7e1）。
+  const runtimeWindows = createRuntimeWindowsController({
+    get mode() {
+      return mode;
+    },
+    get workspaceGeneration() {
+      return workspaceGeneration;
+    },
+    get operatorFrame() {
+      return project.operatorFrame;
+    },
+    get screens() {
+      return project.screens;
+    },
+    get screenId() {
+      return screen.id;
+    },
+    get alarmFeed() {
+      return alarmFeed;
+    },
+    report,
+  });
+  const openOperatorView = runtimeWindows.openOperatorView;
+  const openAlarmList = runtimeWindows.openAlarmList;
+  const openAlarmSettings = runtimeWindows.openAlarmSettings;
   // 起動時の表示が運転表示なら、最初の描画の後に一度だけ開く。
   onMount(() => {
     if (startup?.view === "operator") openOperatorView();
   });
-  // Alarm list (alarm design §7): opened from the preview and the operator view.
-  let alarmListOpener: Element | null = null;
-  function openAlarmList() {
-    if (mode !== "preview" || alarmListOpen) return;
-    alarmListOpener = document.activeElement;
-    alarmListOpen = true;
-  }
-  $effect(() => {
-    if (alarmListOpen && mode !== "preview") alarmListOpen = false;
-  });
-  function closeOperatorView() {
-    if (operatorStart === null) return;
-    operatorStart = null;
-    void tick().then(() => operatorEntryButton?.focus());
-  }
+  $effect(() => runtimeWindows.closeAlarmListOutsidePreview());
   // 表示確認を離れたとき・Project を差し替えたときは閉じる。
-  $effect(() => {
-    if (
-      operatorStart !== null &&
-      (mode !== "preview" || workspaceGeneration !== operatorGeneration)
-    )
-      operatorStart = null;
-  });
+  $effect(() => runtimeWindows.closeStaleOperatorView());
   let previewPopups = $state<{
     showPicker: (origin: HTMLElement, kind?: "screen" | "equipment") => void;
     showEquipment: (
@@ -1909,15 +1891,6 @@
   const refreshAlarm = alarms.refresh;
   const silenceBuzzer = alarms.silenceBuzzer;
   const alarmFeed = $derived(alarmFeedProp ?? projectFileService?.alarmFeed);
-  // Terminal settings (terminal settings design §7): the File menu and the
-  // alarm list window. Not a Project setting; the browser has no host.
-  let alarmSettingsOpener: Element | null = null;
-  const alarmSettingsReason = $derived(alarmSettingsEntryReason(alarmFeed));
-  function openAlarmSettings() {
-    if (alarmSettingsOpen || alarmSettingsReason) return;
-    alarmSettingsOpener = document.activeElement;
-    alarmSettingsOpen = true;
-  }
   $effect(() => setAlarmViewProject(project));
   function adopt(
     next: Project,
@@ -1929,7 +1902,7 @@
     previousStore.dispose();
     project = next;
     historyOpen = false;
-    alarmListOpen = false;
+    runtimeWindows.closeAlarmList();
     recordingManagementOpen = null;
     recordingOperationsOpen = null;
     recordingRequest = null;
@@ -3184,8 +3157,8 @@
       !!replacement ||
       floatingPanels.gesturing ||
       historyOpen ||
-      alarmListOpen ||
-      alarmSettingsOpen ||
+      runtimeWindows.alarmListOpen ||
+      runtimeWindows.alarmSettingsOpen ||
       !!recordingManagementOpen ||
       !!recordingOperationsOpen ||
       !!trendRequest ||
@@ -3364,7 +3337,7 @@
       openRecordingPlan,
       openAlarmSettings,
       get alarmSettingsReason() {
-        return alarmSettingsReason;
+        return runtimeWindows.alarmSettingsReason;
       },
       add,
     },
@@ -3814,7 +3787,7 @@
           >機器の読取詳細</button
         >
         <button
-          bind:this={operatorEntryButton}
+          bind:this={runtimeWindows.operatorEntryButton}
           disabled={menuBlocked}
           title="ヘッダー・フッターの枠と主画面だけを出し、画面切替ボタンで画面を移ります。Escで戻ります。"
           onclick={openOperatorView}>運転表示</button
@@ -3842,7 +3815,7 @@
   {/snippet}
   {#snippet controls()}
     <PreviewFullscreen
-      scope={mode === "preview" && operatorStart === null
+      scope={mode === "preview" && runtimeWindows.operatorStart === null
         ? String(workspaceGeneration)
         : null}
       onactive={(active) => (previewFullscreenActive = active)}
@@ -4544,18 +4517,17 @@
 {#snippet overlays()}
   {@render historyWorkspace()}
   <AlarmListWindow
-    open={alarmListOpen}
+    open={runtimeWindows.alarmListOpen}
     snapshot={alarmSnapshot}
     feed={alarmFeed}
     readError={alarms.readError}
     projectId={project.manifest.projectId}
     projectRevision={project.manifest.projectRevision}
-    onclose={() => (alarmListOpen = false)}
+    onclose={runtimeWindows.closeAlarmList}
     onrefresh={refreshAlarm}
     onopensettings={openAlarmSettings}
     focusFallback={() => {
-      const opener = alarmListOpener;
-      alarmListOpener = null;
+      const opener = runtimeWindows.takeAlarmListOpener();
       if (
         opener instanceof SVGElement &&
         opener.isConnected &&
@@ -4569,14 +4541,13 @@
     }}
   />
   <AlarmSettingsWindow
-    open={alarmSettingsOpen}
+    open={runtimeWindows.alarmSettingsOpen}
     feed={alarmFeed}
     snapshot={alarmSnapshot}
-    onclose={() => (alarmSettingsOpen = false)}
+    onclose={runtimeWindows.closeAlarmSettings}
     onrefresh={refreshAlarm}
     focusFallback={() => {
-      const opener = alarmSettingsOpener;
-      alarmSettingsOpener = null;
+      const opener = runtimeWindows.takeAlarmSettingsOpener();
       if (
         opener instanceof HTMLElement &&
         opener.isConnected &&
@@ -4588,7 +4559,7 @@
     }}
   />
 {/snippet}
-{#if operatorStart === null}{@render overlays()}{/if}
+{#if runtimeWindows.operatorStart === null}{@render overlays()}{/if}
 <Modal
   open={helpOpen}
   title="操作ガイド・アプリ情報"
@@ -4719,14 +4690,14 @@
     >
   </div>
 </Modal>
-{#if operatorStart !== null}
+{#if runtimeWindows.operatorStart !== null}
   <OperatorView
     {project}
-    startScreenId={operatorStart}
+    startScreenId={runtimeWindows.operatorStart}
     images={assetImages}
     readings={readContext.readings}
     equipmentContext={readContext.equipmentContext}
-    onclose={closeOperatorView}
+    onclose={runtimeWindows.closeOperatorView}
     onmessage={(message) => report("error", message)}
     operations={simulatedOperations}
     onopentrend={openTrendHistory}

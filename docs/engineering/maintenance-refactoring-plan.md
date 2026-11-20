@@ -202,17 +202,17 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 
 ## 9. 進捗・引継ぎの記録
 
-| 工程            | 状態               | 完了コミット／検証                                                                       |
-| --------------- | ------------------ | ---------------------------------------------------------------------------------------- |
-| 本書作成        | 文書化済み         | コードのリファクタは未着手                                                               |
-| R0 基準確認     | 基準確認済み       | `e04e44c`、0.21.0、開始時clean。下記参照                                                 |
-| R1 文書整理     | 完了               | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理                         |
-| R2 テスト補助   | 完了               | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功                         |
-| R3 フォーム契約 | 完了               | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功                  |
-| R4 App機能分離  | 完了               | R4a〜R4e実装・全体CI成功（`faf7c75`）。全ブラウザ509件を確認                             |
-| R5 編集コマンド | 完了               | R5a〜R5f実装・ローカル全体検証・最終CI成功                                               |
-| R6 性能         | 計測・限定改善済み | [計測条件・結果と採否理由](../performance/editor-performance.md)。候補コピーの重複を削減 |
-| R7 第2巡（App） | R7a〜R7d 完了      | [§10](#r7-second-round)。#331 の dock 載せ替えの前提。R7e から                           |
+| 工程            | 状態                | 完了コミット／検証                                                                       |
+| --------------- | ------------------- | ---------------------------------------------------------------------------------------- |
+| 本書作成        | 文書化済み          | コードのリファクタは未着手                                                               |
+| R0 基準確認     | 基準確認済み        | `e04e44c`、0.21.0、開始時clean。下記参照                                                 |
+| R1 文書整理     | 完了                | 状況・履歴・利用者ガイド・コード対応表、旧リンクと文書状態を整理                         |
+| R2 テスト補助   | 完了                | 画像3specの準備を共通化。型・TS630件・関連ブラウザ33件・整形成功                         |
+| R3 フォーム契約 | 完了                | 各adapterへ解析・固有確定を移行。型・TS636件・関連56件・build／整形成功                  |
+| R4 App機能分離  | 完了                | R4a〜R4e実装・全体CI成功（`faf7c75`）。全ブラウザ509件を確認                             |
+| R5 編集コマンド | 完了                | R5a〜R5f実装・ローカル全体検証・最終CI成功                                               |
+| R6 性能         | 計測・限定改善済み  | [計測条件・結果と採否理由](../performance/editor-performance.md)。候補コピーの重複を削減 |
+| R7 第2巡（App） | R7a〜R7d・R7e1 完了 | [§10](#r7-second-round)。#331 の dock 載せ替えの前提。R7e2 から                          |
 
 各小区切りの記録は、次の項目だけを残せば再開できる。
 
@@ -578,15 +578,15 @@ Issue #331（Designer のパネルを `@banto/dock-svelte` の `ThreePaneDock` �
 
 R7a から順に進める。#331 との関係は §10.5 に分けて書く。R7d〜R7g は衝突を減らすための整理で、順番は入れ替えてよい。
 
-| 区切り | 抽出先（案）                                                                                | 移すもの                                                                                                               | App に残すもの                                                      |
-| ------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| R7a    | `lib/designer/form-commands.ts`                                                             | `formCommand` の `editorForm` ごとの振分けを登録表にし、未登録の form を型と単体で検出する。各 adapter（R3）は変えない | `submitForm`・draft の検証と確定の順序、履歴への入口                |
-| R7b    | 左3タブの中身のコンポーネント（`ProjectPanel`・`LayersPanel`・`PartsPanel` の各 `.svelte`） | `DesignerSidebar` に渡している `projectPanel`／`layersPanel`／`partsPanel` の snippet、画面ツリーの行と ⋮              | `DesignerSidebar` と `<aside>` の枠、選択と編集コマンドの入口       |
-| R7c    | 中央の部品（定義編集の帯・状態の行・参照パネル）                                            | `definition-banner`、`status-row`、参照パネルの markup と所有 CSS                                                      | キャンバスの寸法の測定と `canvas-stack` の枠（D2 で中央の中へ移す） |
-| R7d    | `controllers/part-placement.svelte.ts`                                                      | 連続配置・お気に入り・パレットからの DnD・配置の可否                                                                   | キャンバスのイベントの受付                                          |
-| R7e    | `controllers/runtime-windows.svelte.ts`                                                     | 運転表示・警報一覧・記録計画・トレンド履歴／定義の窓の開閉と所有者                                                     | Modal の描画、Project 採用時の一括の閉じ                            |
-| R7f    | `controllers/designer-shortcuts.svelte.ts`                                                  | キーの登録・保存キー・ブラウザ予約キーの扱い                                                                           | `svelte:window` の受付                                              |
-| R7g    | `work-tabs.svelte.ts` の拡張か `controllers/edit-view.svelte.ts`                            | 表示位置の記憶と復元、定義の編集への出入り、Undo／Redo の画面遷移                                                      | 共通 edit／draft／history の境界                                    |
+| 区切り | 抽出先（案）                                                                                | 移すもの                                                                                                                                                                                                                                      | App に残すもの                                                      |
+| ------ | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| R7a    | `lib/designer/form-commands.ts`                                                             | `formCommand` の `editorForm` ごとの振分けを登録表にし、未登録の form を型と単体で検出する。各 adapter（R3）は変えない                                                                                                                        | `submitForm`・draft の検証と確定の順序、履歴への入口                |
+| R7b    | 左3タブの中身のコンポーネント（`ProjectPanel`・`LayersPanel`・`PartsPanel` の各 `.svelte`） | `DesignerSidebar` に渡している `projectPanel`／`layersPanel`／`partsPanel` の snippet、画面ツリーの行と ⋮                                                                                                                                     | `DesignerSidebar` と `<aside>` の枠、選択と編集コマンドの入口       |
+| R7c    | 中央の部品（定義編集の帯・状態の行・参照パネル）                                            | `definition-banner`、`status-row`、参照パネルの markup と所有 CSS                                                                                                                                                                             | キャンバスの寸法の測定と `canvas-stack` の枠（D2 で中央の中へ移す） |
+| R7d    | `controllers/part-placement.svelte.ts`                                                      | 連続配置・お気に入り・パレットからの DnD・配置の可否                                                                                                                                                                                          | キャンバスのイベントの受付                                          |
+| R7e    | `controllers/runtime-windows.svelte.ts`                                                     | 運転表示・警報一覧・記録計画・トレンド履歴／定義の窓の開閉と所有者。前半 R7e1（運転表示・警報一覧・端末設定）と後半 R7e2（記録計画・トレンド履歴／定義の窓、`controllers/runtime-windows.svelte.ts` へ足すか別の controller）の 2 PR に分ける | Modal の描画、Project 採用時の一括の閉じ                            |
+| R7f    | `controllers/designer-shortcuts.svelte.ts`                                                  | キーの登録・保存キー・ブラウザ予約キーの扱い                                                                                                                                                                                                  | `svelte:window` の受付                                              |
+| R7g    | `work-tabs.svelte.ts` の拡張か `controllers/edit-view.svelte.ts`                            | 表示位置の記憶と復元、定義の編集への出入り、Undo／Redo の画面遷移                                                                                                                                                                             | 共通 edit／draft／history の境界                                    |
 
 ### 10.4 守る条件と完了の見方
 
@@ -656,3 +656,15 @@ R7e〜R7g は #331 のどの段の前提でもない。#331 と並べて進め�
 | 守った条件 | I1〜I10 と §10.4：共通の`edit`／draft／history の境界は App のまま。`dropPalettePart`は drag を消費してから`transition`へ渡し、保留中も drag の世代・対象・点を閉包に持つ（draft の確認の後に対象が変われば配置せず知らせる）。判定の順と文言、`favorites.ts`・`setup.ts`は不変                                                                                                                                                             |
 | チェック   | 型チェック エラー0（既存の警告6件は別ファイル）。単体 全11,472件成功（新規`part-placement.svelte.test.ts` 3件：お気に入りの上限と既定値、arm／stop、確認待ちの drop）。関連 E2E 18 spec・129件を 2 並列で全件成功                                                                                                                                                                                                                           |
 | 残り・次   | 全 E2E と CI は未実行。次は R7e〜R7g（順番は入れ替えてよい）。#331 の D4 は D2・D3 の後                                                                                                                                                                                                                                                                                                                                                     |
+
+### R7e1：運転表示・警報の窓
+
+基準は`82bac3d`、開始時clean。運転表示・警報一覧・端末設定の窓の開閉と、閉じたときのフォーカスの戻り先を`lib/designer/controllers/runtime-windows.svelte.ts`の`createRuntimeWindowsController`へ移した。App は 5,210 行から 5,181 行になった。記録計画・トレンド履歴／定義の窓と記録の運用・管理の入口は R7e2 で扱う。
+
+| 項目       | 内容                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 移動先     | `operatorStart`・`operatorEntryButton`・`alarmListOpen`・`alarmSettingsOpen`の`$state`、`operatorGeneration`・`alarmListOpener`・`alarmSettingsOpener`、`alarmSettingsReason`の`$derived`と、`openOperatorView`・`closeOperatorView`・`closeStaleOperatorView`・`openAlarmList`・`closeAlarmList`・`closeAlarmListOutsidePreview`・`takeAlarmListOpener`・`openAlarmSettings`・`closeAlarmSettings`・`takeAlarmSettingsOpener`。状態は getter で公開し、`bind:this`は`runtimeWindows.operatorEntryButton`の getter／setter へ向けた |
+| App に残す | host の getter（mode・`workspaceGeneration`・`project.operatorFrame`／`screens`・`screen.id`・`alarmFeed`）と`report`。起動時に開く`onMount`、preview を離れたとき・Project を差し替えたときに閉じる 2 つの`$effect`（元の順で controller のメソッドを呼ぶ）、`adopt`の警報一覧の閉じ（`closeAlarmList`）。`focusFallback`の判定（SVG の opener へのフォーカス・`[data-permanent-menu]`への代替）は markup のまま。store・context は作っていない                                                                                    |
+| 守った条件 | I1〜I10 と §10.4：閉じる条件と順番、`adopt`で閉じる窓（警報一覧だけ）、DOM・aria・フォーカスの戻り先は不変。`open`と`onclose`の組は元のまま                                                                                                                                                                                                                                                                                                                                                                                         |
+| チェック   | 型チェック エラー0（既存の警告6件は別ファイル）。単体 全11,476件成功（新規`runtime-windows.svelte.test.ts` 4件：開始画面なしの報告、開いて preview を離れたら閉じる、preview 以外の警報一覧、端末設定の理由）。関連 E2E 12 spec・92件を 2 並列で全件成功                                                                                                                                                                                                                                                                            |
+| 残り・次   | 全 E2E と CI は未実行。次は R7e2（記録計画・トレンド履歴／定義の窓）                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
