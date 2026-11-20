@@ -1,10 +1,6 @@
 /** Pure asynchronous admission JSON. No transport, lease issuer, registry or service. */
-import Ajv2020 from "ajv/dist/2020.js";
-import schema from "../../../../crates/scada-model/schema/recording-admission.schema.json";
-import operationsSchema from "../../../../crates/scada-model/schema/recording-operations.schema.json";
-import managementSchema from "../../../../crates/scada-model/schema/recording-management.schema.json";
-import planSchema from "../../../../crates/scada-model/schema/recording-plan.schema.json";
-import historySchema from "../../../../crates/scada-historian/schema/history-contract.schema.json";
+import type { ValidateFunction } from "ajv";
+import { validateRecordingAdmission as generatedValidate } from "./generated/validators/recording.js";
 import { ownHistoryJson, freezeHistory } from "./history/owned-json";
 import { sameOwnedJson } from "./json-equality";
 import { checkDocument } from "./recording-admission/semantic";
@@ -21,12 +17,8 @@ export type * from "./recording-admission/types";
 export const MAX_RECORDING_ADMISSION_JSON_BYTES = 512 * 1024;
 export const MAX_RECORDING_ADMISSION_JSON_NODES = 16384;
 export const MAX_RECORDING_ADMISSION_JSON_DEPTH = 48;
-const validateSchema = new Ajv2020({ strictNumbers: true })
-  .addSchema(historySchema)
-  .addSchema(planSchema)
-  .addSchema(managementSchema)
-  .addSchema(operationsSchema)
-  .compile<RecordingAdmissionDocument>(schema);
+const validateSchema =
+  generatedValidate as ValidateFunction<RecordingAdmissionDocument>;
 export function parseRecordingAdmissionDocument(
   input: unknown,
 ): RecordingAdmissionDocument {

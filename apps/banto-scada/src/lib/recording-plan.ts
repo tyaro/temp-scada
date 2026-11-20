@@ -1,7 +1,6 @@
 /** Desired settings shared by standalone inputs and Project validation; no resolution or apply. */
-import Ajv2020 from "ajv/dist/2020.js";
-import schema from "../../../../crates/scada-model/schema/recording-plan.schema.json";
-import historySchema from "../../../../crates/scada-historian/schema/history-contract.schema.json";
+import type { ValidateFunction } from "ajv";
+import { validateRecordingPlan as generatedValidate } from "./generated/validators/recording.js";
 import { ownHistoryJson, freezeHistory } from "./history/owned-json";
 import { blankJsonText, scalarJson } from "./json-text";
 
@@ -26,9 +25,8 @@ export interface DesiredRecordingPlan {
 export const MAX_RECORDING_PLAN_JSON_BYTES = 64 * 1024;
 export const MAX_RECORDING_PLAN_JSON_NODES = 4096;
 // Register the canonical H1 ID resource locally; never resolve remote schemas.
-const validateSchema = new Ajv2020({ strictNumbers: true })
-  .addSchema(historySchema)
-  .compile<DesiredRecordingPlan>(schema);
+const validateSchema =
+  generatedValidate as ValidateFunction<DesiredRecordingPlan>;
 function check(input: unknown): DesiredRecordingPlan {
   const value = ownHistoryJson(
     input,

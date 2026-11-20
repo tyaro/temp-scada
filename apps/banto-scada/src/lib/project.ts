@@ -27,12 +27,12 @@ import type { ImageMetadata } from "./image-assets";
 import { rotatedBounds, rotationPivot } from "./rotation";
 import { arrowHeadPoints, arrowSize } from "./line-arrow";
 import { polygonLocalPoints, polygonStrokeBounds } from "./polygon";
-import Ajv2020 from "ajv/dist/2020.js";
+import type { ValidateFunction } from "ajv";
 import schema from "../../../../crates/scada-model/schema/project.schema.json";
-import legacySchema from "../../../../crates/scada-model/schema/legacy.project.schema.json";
-import trendSchema from "../../../../crates/scada-model/schema/trend-definition.schema.json";
-import historySchema from "../../../../crates/scada-historian/schema/history-contract.schema.json";
-import recordingSchema from "../../../../crates/scada-model/schema/recording-plan.schema.json";
+import {
+  validateLegacyProject as legacy,
+  validateProject as generatedValidate,
+} from "./generated/validators/project.js";
 import {
   validateRecordingPlan,
   type DesiredRecordingPlan,
@@ -465,16 +465,7 @@ export interface Project {
   screens: Screen[];
   symbols: SymbolDefinition[];
 }
-const ajv = new Ajv2020({
-  allErrors: true,
-  strictNumbers: true,
-  allowUnionTypes: true,
-})
-  .addSchema(historySchema)
-  .addSchema(recordingSchema)
-  .addSchema(trendSchema);
-const validate = ajv.compile<Project>(schema);
-const legacy = ajv.compile(legacySchema);
+const validate = generatedValidate as ValidateFunction<Project>;
 export function parseProject(json: string): Project {
   let value: unknown = JSON.parse(json);
   let migratedLegacy = false;

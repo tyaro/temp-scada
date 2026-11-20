@@ -1,5 +1,5 @@
-import Ajv2020 from "ajv/dist/2020.js";
-import schema from "../../../../crates/scada-runtime/schema/catalog-view.schema.json";
+import type { ValidateFunction } from "ajv";
+import { validateCatalogView as generatedValidate } from "./generated/validators/catalog-view.js";
 import { parseProject, type Project } from "./project";
 import { sampleCatalog, type TagCatalog } from "./designer/tag-catalog";
 
@@ -39,9 +39,7 @@ const empty: TagCatalog = Object.freeze({
   groups: Object.freeze([]),
   tags: Object.freeze([]),
 });
-const validate = new Ajv2020({ strictNumbers: true }).compile<CatalogView>(
-  schema,
-);
+const validate = generatedValidate as ValidateFunction<CatalogView>;
 
 function projectCatalog(view: CatalogView): TagCatalog {
   const groups = new Map<

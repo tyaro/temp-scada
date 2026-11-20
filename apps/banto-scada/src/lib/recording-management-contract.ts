@@ -1,8 +1,6 @@
 /** Pure read-only contract; no service, native projection, auth or writer control. */
-import Ajv2020 from "ajv/dist/2020.js";
-import schema from "../../../../crates/scada-model/schema/recording-management.schema.json";
-import historySchema from "../../../../crates/scada-historian/schema/history-contract.schema.json";
-import planSchema from "../../../../crates/scada-model/schema/recording-plan.schema.json";
+import type { ValidateFunction } from "ajv";
+import { validateRecordingManagement as generatedValidate } from "./generated/validators/recording.js";
 import { ownHistoryJson, freezeHistory } from "./history/owned-json";
 import { blankJsonText, scalarJson } from "./json-text";
 import { parseRecordingPlan } from "./recording-plan";
@@ -21,10 +19,8 @@ export const MAX_RECORDING_MANAGEMENT_JSON_BYTES = 128 * 1024;
 export const MAX_RECORDING_MANAGEMENT_JSON_NODES = 4096;
 export const MAX_RECORDING_INSPECTION_RESPONSE_JSON_BYTES = 1024 * 1024;
 export const MAX_RECORDING_INSPECTION_RESPONSE_JSON_NODES = 16384;
-const validateSchema = new Ajv2020({ strictNumbers: true })
-  .addSchema(historySchema)
-  .addSchema(planSchema)
-  .compile<RecordingManagementDocument>(schema);
+const validateSchema =
+  generatedValidate as ValidateFunction<RecordingManagementDocument>;
 function small(value: unknown): void {
   ownHistoryJson(
     value,

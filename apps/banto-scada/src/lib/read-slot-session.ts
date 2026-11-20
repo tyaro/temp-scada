@@ -1,5 +1,5 @@
-import Ajv2020 from "ajv/dist/2020.js";
-import schema from "../../../../crates/scada-runtime/schema/read-slot-view.schema.json";
+import type { ValidateFunction } from "ajv";
+import { validateReadSlotView as generatedValidate } from "./generated/validators/read-slot-view.js";
 import { parseProject, type Project } from "./project";
 import type { EquipmentContext } from "./symbol-slots";
 import { slotReadType } from "./equipment";
@@ -48,10 +48,7 @@ export interface ReadSlotView {
   metadataReady: boolean;
   slots: ReadSlotRow[];
 }
-const validate = new Ajv2020({
-  allErrors: true,
-  strictNumbers: true,
-}).compile<ReadSlotView>(schema);
+const validate = generatedValidate as ValidateFunction<ReadSlotView>;
 /** Opaque, non-persistent handles. The wire never chooses a local generation. */
 export type ReadSlotGeneration = Readonly<{
   readonly kind: "read-slot-generation";

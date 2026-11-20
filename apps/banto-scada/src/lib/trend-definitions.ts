@@ -1,8 +1,7 @@
 /** H4c1 display definitions only. No Project, recording plan or service binding. */
 import { blankJsonText as blank, scalarJson } from "./json-text";
-import Ajv2020 from "ajv/dist/2020.js";
-import schema from "../../../../crates/scada-model/schema/trend-definition.schema.json";
-import historySchema from "../../../../crates/scada-historian/schema/history-contract.schema.json";
+import type { ValidateFunction } from "ajv";
+import { validateTrendDefinitions as generatedValidate } from "./generated/validators/trend-definitions.js";
 import { ownHistoryJson, freezeHistory } from "./history/owned-json";
 
 export interface TrendPen {
@@ -26,13 +25,8 @@ export interface TrendDefinitions {
   readonly definitions: readonly TrendDefinition[];
 }
 export const MAX_TREND_JSON_BYTES = 1024 * 1024;
-// The external ID definition is bundled locally. No asynchronous/network loader.
-const validateSchema = new Ajv2020({
-  strictNumbers: true,
-  allowUnionTypes: true,
-})
-  .addSchema(historySchema)
-  .compile<TrendDefinitions>(schema);
+// Pre-generated with the history ID definition bundled. No runtime compile or loader.
+const validateSchema = generatedValidate as ValidateFunction<TrendDefinitions>;
 
 function check(input: unknown): TrendDefinitions {
   // ownHistoryJson uses JSON.stringify numeric spelling. All accepted numeric

@@ -1,11 +1,7 @@
 /** Pure wire JSON only. No registry, lease issuance, authentication or I/O. */
-import Ajv2020 from "ajv/dist/2020.js";
+import type { ValidateFunction } from "ajv";
 import schema from "../../../../crates/scada-model/schema/recording-wire.schema.json";
-import admission from "../../../../crates/scada-model/schema/recording-admission.schema.json";
-import operations from "../../../../crates/scada-model/schema/recording-operations.schema.json";
-import management from "../../../../crates/scada-model/schema/recording-management.schema.json";
-import plan from "../../../../crates/scada-model/schema/recording-plan.schema.json";
-import history from "../../../../crates/scada-historian/schema/history-contract.schema.json";
+import { validateRecordingWire as generatedValidate } from "./generated/validators/recording.js";
 import { freezeHistory } from "./history/owned-json";
 import { sameOwnedJson } from "./json-equality";
 import { wireProfile, measureWire } from "./recording-wire/budget";
@@ -17,13 +13,8 @@ import type {
 } from "./recording-wire/types";
 export type * from "./recording-wire/types";
 export { WIRE_LIMITS } from "./recording-wire/budget";
-const validateSchema = new Ajv2020({ strictNumbers: true })
-  .addSchema(history)
-  .addSchema(plan)
-  .addSchema(management)
-  .addSchema(operations)
-  .addSchema(admission)
-  .compile<RecordingWireDocument>(schema);
+const validateSchema =
+  generatedValidate as ValidateFunction<RecordingWireDocument>;
 const kinds = new Set(
   schema.oneOf.map((r) => {
     const def = r.$ref.split("/").at(-1)!;

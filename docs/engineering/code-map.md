@@ -39,6 +39,8 @@
 
 `lib/`は`apps/banto-scada/src/lib/`を指す。現在の依存方向は「UI → 編集／履歴 → Project検証」。純粋計算・モデルからDOMやAppをimportしない。
 
+JSON Schemaの検査は実行時にAjvでcompileしない（release版のCSPに`unsafe-eval`が無く、`new Function`が`EvalError`になる）。`apps/banto-scada/scripts/generate-validators.mjs`（`pnpm --filter banto-scada generate:validators`）が各モジュールのAjvのオプションと参照schemaの組でstandaloneの検査関数を`lib/generated/validators/`へ生成し（コミットする。prettierの対象外）、製品コードはそこからimportする。schemaか組を変えたら再生成する。History contextのschemaは`lib/history/history-context.schema.json`。`lib/generated-validators.test.ts`が生成物の食い違いと製品コードの`new Ajv`を、`e2e/release-csp.spec.ts`がbuildの出力を`tauri.conf.json`のCSP付きで配ってEditor・Runtimeが組み立てられることを確かめる。
+
 ## 機能を変更するときの対応表
 
 変更対象の行を入口に、対応する契約・実装・関連検証を読む。
