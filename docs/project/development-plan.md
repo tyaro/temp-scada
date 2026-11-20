@@ -198,9 +198,12 @@ D2 に進むかは、上の不合格を上流で直すか SCADA 側で避ける�
 
 ### D1 の再判定（Banto v7.10.0・2026-11-21・日本時間）
 
-Banto v7.10.0 で #763 が直った（`persistent` の pane を組み替える直前に、フォーカスのある中身を `Element.moveBefore` で host の中の待避場所へ移し、新しい受け皿へも `moveBefore` で移す）。依存を v7.10.0 へ上げ、`e2e/dock-probe.spec.ts` の 4 件目を「数値の欄にフォーカスがあるまま、浮かせる・戻す・左とタブにまとめる・既定に戻すを通しても submit の発火が 0 回で、フォーカスは数値の欄に残る」に改めた。Playwright の Chromium で 4 件すべて合格した。**D1 は `moveBefore` のある環境で合格とする。**
+Banto v7.10.0 で #763 が直った（`persistent` の pane を組み替える直前に、フォーカスのある中身を `Element.moveBefore` で host の中の待避場所へ移し、新しい受け皿へも `moveBefore` で移す）。依存を v7.10.0 へ上げ、`e2e/dock-probe.spec.ts` の 4 件目を「数値の欄にフォーカスがあるまま、浮かせる・戻す・左とタブにまとめる・既定に戻すを通しても submit の発火が 0 回で、フォーカスは数値の欄に残る」に改めた。Playwright の Chromium で 4 件すべて合格した。**D1 は `moveBefore` のある環境（Playwright の Chromium と実機の WebView2 157）で合格とする。**
 
-- 判定は現行の Chromium（Playwright）での設計実証まで。実機の WebView2（157、`moveBefore` あり）は v7.10.0 で再試験しておらず、Windows の受入として別に残す（同じ実機で、数値の欄の blur と実際の日本語入力を確かめ直す）。上流の判定の条件（Chromium 133 以降）には入る。
+- 実機の WebView2 でも確かめ直した（2026-11-21）。前回と同じ手順で、Tauri の開発ビルド（WebView2 157、`Element.moveBefore` あり）を `--remote-debugging-port` で起動して実証ページへ移し、v7.10.0 の dock が読み込まれていること（`.persistent-transit` がある）を確かめてから試した。
+  - 数値の欄に `12.` を入れてフォーカスを置いたまま、浮かせる・戻す・左とタブにまとめる・既定に戻すを順に行った。どれも `applied` で、同じ form・dirty 1・submit の発火 0 回・フォーカスは数値の欄のまま、`blur` も `focus` も出なかった。その後に Tab で離れると、今までどおり `blur` で submit が 1 回発火した。
+  - Windows の日本語入力（computer use でローマ字を 1 キーずつ送る。IME のオンは `WM_IME_CONTROL` で外から切り替えた）で「ポンプ」の後に「てんけん」を変換中に浮かせる依頼を出すと、変換中は配置も文字も変わらず（submit 0 回）、変換して確定（「点検」）した後に `applied` になった。同じ form・dirty 1・submit 0 回・フォーカスは文言の欄、値は「ポンプ点検」。v7.9.0 で確定の後に出ていた文言の欄の `blur` → `focus` は出なかった。
+  - 使った日本語入力の種類（Microsoft IME か ATOK か）は前回と同じく確かめていない。スクロール位置の保持は試していない。
 - `moveBefore` の無い環境（古い WebView2）では、今までどおり blur が出てからフォーカスが戻る。上流はその blur を見分ける `isDockRearranging(node)` を公開した（組み替えの直前からフォーカスを戻し終えるまで `true`）。D2 で製品のフォームを載せるときは、blur で確定する欄の確定の前にこれを見る共通の口を作る（どちらの環境でも害は無い）。実証のページは製品のフォームをそのまま使うので、ここでは入れていない。古い WebView2 を支える場合、守る対象は `ShapeLabel` と通常の Inspector の両方で、組み替えでは確定せず、Tab で離れたときは今までどおり 1 回確定することも確かめる。
 - D2 の条件（D1 合格）はこれで満たす。D2 の着手はユーザーが選ぶ。
 
