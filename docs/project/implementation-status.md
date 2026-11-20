@@ -12,7 +12,7 @@ GitHub Pages のデモ（2026-11-18）: ブラウザだけで動くデモの土�
 
 I7は[Symbol内画像の段階設計](../design/images/symbol-image-design.md)に従い、I7aは全体CI成功。I7bのProject0.34.0の保存・読込・共通表示・Symbol配置の原本付きコピーも全体CI成功。I7cとして定義内への画像取込・貼付・差替え・crop／fitを完了・CI成功。
 
-Runtime mode（2026-11-19、[設計](../design/runtime/runtime-mode-design.md) §9）: O0a（host の mode・窓・capability・`runtime_*`・単一起動）と O0b-1（webview の入口）を実装した。`--runtime <Project>` の窓は `runtime.html` で、起動時の Project の運転表示と上端（Hub の状態・ログイン・警報の定義の適用状態・2 つ目の起動の知らせ）だけを出し、Editor の画面・キー操作の経路を持たない。読めない Project はファイル名と理由だけを出す。IPC を模した `e2e/runtime-mode.spec.ts` で確認した。Tauri の実窓での受入は未確認。O0b-2a（2026-11-19）: 上端に警報の状態の入口（アラーム一覧の窓を開く）と「履歴トレンド」の入口を足し、運転表示のアラーム一覧・ブザー停止・トレンド部品からも同じ窓を開く。警報の購読は Editor と共通の controller、端末設定の窓は音の取り込みを出さず（`alarm_sound_import`・`alarm_apply` を呼ばない）、履歴は `runtime_history_context` を使う。O0b-2b（2026-11-19）: 上端に記録の状態（`runtime_recording_context` と `recording_status` の照会だけ。クリックで再照会。開始・再開・停止・計画の変更は Editor 専用の案 A のままで、記録していないときは「Runtime の運転中は記録されません。記録は Editor で開始します」）を出し、未ログインでは「記録: ログインが必要」とする。認証が有効で管理者がいない端末では、ログインの画面の代わりに「最初の管理者を作成」（`auth_setup`）を出す。認証無効モードの端末では host が `auth_setup` を断るので、最初の管理者は従来どおり Editor の運用への移行で作る。これで O0b（O0b-1・2a・2b）を終えた。O0 の残りは設計 §9 の実機の受入（Tauri の実窓での確認）。
+Runtime mode（2026-11-19、[設計](../design/runtime/runtime-mode-design.md) §9）: O0a（host の mode・窓・capability・`runtime_*`・単一起動）と O0b-1（webview の入口）を実装した。`--runtime <Project>` の窓は `runtime.html` で、起動時の Project の運転表示と上端（Hub の状態・ログイン・警報の定義の適用状態・2 つ目の起動の知らせ）だけを出し、Editor の画面・キー操作の経路を持たない。読めない Project はファイル名と理由だけを出す。IPC を模した `e2e/runtime-mode.spec.ts` で確認した（O0b-1 の実装時点では Tauri の実窓での受入は未確認）。O0b-2a（2026-11-19）: 上端に警報の状態の入口（アラーム一覧の窓を開く）と「履歴トレンド」の入口を足し、運転表示のアラーム一覧・ブザー停止・トレンド部品からも同じ窓を開く。警報の購読は Editor と共通の controller、端末設定の窓は音の取り込みを出さず（`alarm_sound_import`・`alarm_apply` を呼ばない）、履歴は `runtime_history_context` を使う。O0b-2b（2026-11-19）: 上端に記録の状態（`runtime_recording_context` と `recording_status` の照会だけ。クリックで再照会。開始・再開・停止・計画の変更は Editor 専用の案 A のままで、記録していないときは「Runtime の運転中は記録されません。記録は Editor で開始します」）を出し、未ログインでは「記録: ログインが必要」とする。認証が有効で管理者がいない端末では、ログインの画面の代わりに「最初の管理者を作成」（`auth_setup`）を出す。認証無効モードの端末では host が `auth_setup` を断るので、最初の管理者は従来どおり Editor の運用への移行で作る。これで O0b（O0b-1・2a・2b）を終えた。設計 §9 の実機の受入は 2026-11-20 に release ビルドで終えた（[記録](real-hub-o0-runtime-acceptance.md)、#346〜#349。`auth_setup` は認証の再開時に同記録§6.2で行う）。
 
 段階3の操作 O1a（2026-11-19、[設計](../design/runtime/operation-stage3-design.md) §3）: 機器種別の slot に任意の `write`（見出し、1〜4 個のボタン、number slot だけの数値の入力の範囲）を足した。値の型は slot の型で決まり（bool は真偽値、number は数、state は 0〜2147483647 の整数）、上下限の順とボタンの値の重複は Rust・TS の意味検証で断る（共通ケース `examples/operation-cases.json`）。機器種別の保存は `write` を残し、slot の型の変更で外す。O1b（2026-11-19）: 機器種別の各 slot に「操作を定義する」（見出し、ボタンの見出しと書く値、number slot の数値の入力の範囲）を足し、問題はその場と保存時に場所つきで出す。割付の一覧表に「書込みタグの一覧」（操作を定義した slot に割り付けた外部名。コピーと CSV、未割付の件数）を足し、Hub 登録用 CSV の `writable` を操作を定義した slot の名前で `true` にした。書込みの経路（host）は O2 以降で、まだ書けない。
 
@@ -33,6 +33,22 @@ O2c-3b-1（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) �
 O2c-3b-2（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) §7）: Runtime の窓に書き用キーの command を足した（状態の照会・登録・削除・書込みの再開）。変える 3 つは開発・初期設定ではログイン不要、運用では Admin だけ。書込み・照会は要求のたびに keyring からキーを読むので、契約のある Hub にキーを登録すれば製品から送るようになる。画面（O2c-4）は未実装で、Tauri 実機・実 Hub・Windows の資格情報マネージャーでの確認は未実施。
 
 O4d（2026-11-20）: 実 Hub の安全番地での書込みの受入の手順書（[real-hub-o4-write-acceptance.md](real-hub-o4-write-acceptance.md)）と受入用 Project（`examples/real-hub-write.project.json`）を用意した。2026-11-20に実機で受け入れ、書込み・読み戻し・元値への復帰・拒否の経路・任意の3.8は合格、2-3の「送信中」の表示は未観測（同文書§6）。同日、O0の実機の受入を行い、項目はすべて合格（Editor の窓の正の向きの確認、警報の発報・ブザー・ACK・復帰を含む）。`auth_setup` はユーザー判断で O0 の受入から外し、認証の作業の再開時へ移した（[real-hub-o0-runtime-acceptance.md](real-hub-o0-runtime-acceptance.md)）。
+
+## 未確認・残課題（2026-11-20）
+
+機能ごとの実装と検証の記録は下の各節にある。ここには、実装後に残っている未確認の点と見送りを集める。
+
+- 実機・実Hub: O0・O4 の受入（[O0](real-hub-o0-runtime-acceptance.md)・[O4](real-hub-o4-write-acceptance.md)）で、release 実機の Runtime mode・実Hubへの書込み・警報の発報とブザーと ACK を確かめた。それ以外は Banto v7.0.0（#163）以降ほぼ未確認（運転表示・トレンド履歴の窓・CSV 取込み・A6・多角形）。Banto v7.6.0／v7.7.0 の認証 DB の migration（0012・0013）は実機の DB で未適用。実ベンダーの CSV（Shift_JIS は単体試験のみ）、実Hub への A7 の CSV 取込みも未確認。
+- 操作（段階3）: 実機のディスク障害、重なった小窓での確認の小窓の前後、実Hub購読中の Editor の動作（vitest のみ）、編集キャンバスへの模擬値の重なり。O4 の 2-3「送信中」は未観測。
+- 警報: 端末設定のダイアログ・取り込んだ音の再生・Admin での拒否は実機で未確認。3-C3a の、未記録件数が 1 件以上で失敗中の停止 → 次回起動の `unknownPeriod` は単体試験のみ。実 runtime での削除の間隔（5 秒・1 時間）と 1 万件削除の所要時間・評価の遅れは未測定。現況が読めないときと監視中でないときが同じ null になる。BUSY のときは書込みごとに評価が最大 5 秒止まる。3-D1 の Symbol 定義の中の小札（設計§8）は未対応。#221 の P3 のうち、`alarmUnavailableReason` が保存・明示適用以外で消えない件は見送った（snapshot に認証フェーズが無い）。明示適用と保存に伴う自動適用の排他は対象外。
+- 図形の中の文字（#305）: 状態色が効いたときに文字色が変わらないこと・`SymbolThumbnail` の文字色はコードの上だけ。表示プレビュー・運転表示・小窓・埋め込み・ミニマップの実画面、挿入メニューからの手入力の箱、ロック中・Symbol 定義の中・楕円と多角形での Inspector 操作は未確認。サンプルを開いたときの通知は、どのサンプルでも「工程図サンプルを開きました」。
+- 段階1: 1-E の、切る区間が矢印に届く場合・曲がり角の近く・ドラッグ中・極端な交差数での速度。表のセルを状態色の配色元にする・slot の候補選択は未対応。表のセルを bit タグに結合した e2e は無い。
+- 段階2: 埋込依存画面のボタンの貼付け。全画面中は運転表示を閉じるのに Esc が 2 回要る。工程図サンプル単体では戻る・進むを試せない。
+- 多角形: 回転・反転した配置や Symbol 定義の中での編集・ドラッグ、タッチ、初期形のドラッグ配置の e2e は未確認。
+- ショートカット: メニューを開いたまま F1 でヘルプを開くと、メニューが裏に残る。`shortcutAllowed` は上流の `shouldHandleShortcut` と同等ではない。macOS・実 IME・shadow DOM は実機で未確認。
+- Issue #223 の対象外の残り: L-6 の記録系 Modal・割付の一覧表、F-5 の Inspector 側、P1-14。
+- A3b の文書のスクリーンショットは旧 3 色のフォームのまま（`scripts/capture-state-text-color.mjs` で撮り直しが要る）。
+- 見送り（ユーザー判断）: PR #138 の Codex の指摘 P1・P2。Banto 側の Issue（rusqlite `=0.39.0`）は起票しない。banto#631（3 ペイン部品）は今は `ThreePaneLayout` へ置き換えない、とコメント済み。
 
 ## 実Hub・S7接続の着手方針（2026-11-05）
 

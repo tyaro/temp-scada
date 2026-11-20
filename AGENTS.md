@@ -4,7 +4,7 @@
 
 最初に README.md、docs/project/implementation-status.md、docs/project/development-plan.md を読み、現在の実装と上流設計の構想を区別してください。日付付き記録は docs/history/implementation-history.md に分離しています。docs/upstream/industrial は出典付きの参照スナップショットです。ここを編集せず、差分は docs/project/development-plan.md に記録します。
 
-コードと検証の入口は docs/engineering/code-map.md に集約しています。機能の責務を移したときは同じ区切りで更新してください。
+コードと検証の入口は docs/engineering/code-map.md に集約しています。機能の責務を移したときは同じ区切りで更新してください。PR・マージの手順、整形の範囲、e2e と不安定な試験の注意、クラウドでの検査の準備は docs/engineering/dev-workflow.md にあります。作業を始める前に読んでください。
 
 保守性・AIコーディング向けの構造整理には [リファクタリング実行計画](docs/engineering/maintenance-refactoring-plan.md) を使います。開始時の実装状況を確認し、R0から順に、責務・不変条件・関連テスト・完了条件を各区切りで記録してください。文書の作成はリファクタ完了を意味しません。
 
