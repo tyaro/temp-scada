@@ -212,7 +212,7 @@ UIを移した区切りでは、両テーマ・1920×1080・1536×864の表示�
 | R4 App機能分離  | 完了               | R4a〜R4e実装・全体CI成功（`faf7c75`）。全ブラウザ509件を確認                             |
 | R5 編集コマンド | 完了               | R5a〜R5f実装・ローカル全体検証・最終CI成功                                               |
 | R6 性能         | 計測・限定改善済み | [計測条件・結果と採否理由](../performance/editor-performance.md)。候補コピーの重複を削減 |
-| R7 第2巡（App） | 棚卸し済み・未着手 | [§10](#r7-second-round)。#331 の dock 載せ替えの前提                                     |
+| R7 第2巡（App） | R7a 完了           | [§10](#r7-second-round)。#331 の dock 載せ替えの前提。R7b から                           |
 
 各小区切りの記録は、次の項目だけを残せば再開できる。
 
@@ -607,3 +607,15 @@ R7 の完了（R7a〜R7g がすべて済む）と、#331 の各段に着手で�
 | D3・D4          | D2 の完了。D4 の前に R7d（部品パレットからの DnD）を済ませる | D4 の受入に作図ジェスチャとの排他・パレットからの DnD が入る                                                                               |
 
 R7e〜R7g は #331 のどの段の前提でもない。#331 と並べて進めてよいが、同じ時期に App を触る PR は 1 本ずつにする。D1 を R7 の途中へ前倒しするかはここでは決めない。
+
+### R7a：フォームの振分けの登録表
+
+基準は`43306e4`、開始時clean。`App.svelte`の`formCommand`（`editorForm`の分岐と`objectFormCommand`へのフォールバック）と`acknowledgeForm`の種類ごとの固有確定を、`lib/designer/form-commands.ts`の登録表へ移した。App は 6,095 行から 5,656 行になった。
+
+| 項目       | 内容                                                                                                                                                                                                                                                                                                                  |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 移動先     | 種類の一覧`COMMAND_FORM_KINDS`（30）＋`DRAFT_ONLY_FORM_KINDS`（`binding-replacement`）→`EditorFormKind`。コマンド生成は`Record<CommandFormKind, FormCommandHandler>`、固有確定は`Partial<Record<CommandFormKind, FormAcknowledgeHandler>>`。App の現在値は呼ぶたびに`FormCommandContext`として渡し、状態は App に残す |
+| 守った条件 | I2・I4：`submitForm`→`edit`、`validateDrafts`の検査と確定の順序、`drafts.submitted`は App に残した。各 adapter（R3）の中身と引数は不変。未指定・未登録の form は例外にせず`unregisteredFormCommand`で従来どおり通常配置のフォームとして解析する                                                                       |
+| 判断       | `binding-replacement`は自前の submit で確定し、一括確定では`validateDrafts`が先に拒否するので登録表に入れない（種類の一覧には入れる）。`validateDrafts`・`revealDraftForm`の種類の比較は`isEditorForm`で型検査するだけにした                                                                                          |
+| チェック   | 型チェック エラー0（既存の警告6件は別ファイル）。handler を省くと型エラーになることを一時的な種類で確認。単体 全11,469件成功（追加`form-commands.test.ts`4件：`.svelte`／`.ts`の`data-editor-form`の全種類の登録、代表3種類とフォールバックの振分け）。関連 E2E 32 spec・197件成功（2並列）                           |
+| 残り・次   | 全 E2E と CI は未実行。次は R7b（左3タブの中身のコンポーネント）                                                                                                                                                                                                                                                      |
