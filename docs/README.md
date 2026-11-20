@@ -91,6 +91,7 @@ docs/
 - [運転表示の枠（operatorFrame）](design/graphics/operator-frame.md)
 - [時計（clock 図形）](design/graphics/clock.md)
 - [警報の小札（alarmBadge）](design/graphics/alarm-badge.md)
+- [数値の文字色を警報の状態で変える（alarmColor、設計）](design/graphics/alarm-value-color.md)
 - [最新の警報の帯（alarmBanner）](design/graphics/alarm-banner.md)
 - [単色と枠線のα](design/graphics/color-alpha-design.md)
 - [実線・破線・点線](design/graphics/line-style-design.md)
