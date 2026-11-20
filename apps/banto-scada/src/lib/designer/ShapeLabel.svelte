@@ -126,8 +126,13 @@
           name="labelColor"
           aria-label="図形の文字色"
           type="color"
+          oninput={(event) => {
+            const auto =
+              event.currentTarget.form?.elements.namedItem("labelColorAuto");
+            if (auto instanceof HTMLInputElement) auto.value = "";
+          }}
         /></label
-      >
+      ><input type="hidden" name="labelColorAuto" />
     </div>
     <p id="shape-label-help">
       Enter で改行、Ctrl／⌘＋Enter

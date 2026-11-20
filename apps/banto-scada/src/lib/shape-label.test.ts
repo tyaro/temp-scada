@@ -4,6 +4,7 @@ import stateColorSample from "../../../../examples/state-color.project.json";
 import minimal from "../../../../examples/minimal.project.json";
 import { applyCommand } from "./editor";
 import {
+  isAreaShape,
   parseProject,
   serializeProject,
   type Project,
@@ -271,6 +272,7 @@ describe("文字のフォーム（#305 L2）", () => {
     screenId: project.screens[0].id,
     definition: false,
     selected,
+    background: "#ffffff",
   });
   const data = (values: Record<string, string>) => ({
     get: (name: string) => values[name] ?? null,
@@ -304,6 +306,32 @@ describe("文字のフォーム（#305 L2）", () => {
         },
       },
     });
+  });
+  it("新しい label で色を触っていなければ、確定時の塗りで既定の色を選び直す（塗りと一括適用）", () => {
+    const project = fresh(),
+      target = firstRectangle(project);
+    if (!isAreaShape(target.shape)) throw new Error("rectangle expected");
+    target.shape.paint = solid("#ffffff");
+    const shown = shapeLabelFormValues(target, "#ffffff");
+    expect(shown.labelColor).toBe(SHAPE_LABEL_DARK);
+    expect(shown.labelColorAuto).toBe("1");
+    // 同じ一括適用で塗りが先に黒へ変わった後に、文字のフォームが送られる。
+    target.shape.paint = solid("#000000");
+    const input = (values: Record<string, string>) => ({
+      data: data({ ...shown, labelText: "工程", ...values }),
+      objectId: target.id,
+      targetKey: `1:${project.screens[0].id}:false`,
+    });
+    expect(
+      shapeLabelCommand(input({}), context(target, project)),
+    ).toMatchObject({ patch: { label: { color: SHAPE_LABEL_LIGHT } } });
+    // 色の欄を触った（labelColorAuto が空）なら、指定の色のまま。
+    expect(
+      shapeLabelCommand(
+        input({ labelColorAuto: "", labelColor: SHAPE_LABEL_DARK }),
+        context(target, project),
+      ),
+    ).toMatchObject({ patch: { label: { color: SHAPE_LABEL_DARK } } });
   });
   it("文言を空にすると null、適用先が変わっていれば拒否", () => {
     const project = fresh(),

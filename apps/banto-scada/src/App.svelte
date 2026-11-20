@@ -147,6 +147,7 @@
   import { moveFormCommand } from "./lib/designer/forms/move-form";
   import { shapePaintCommand } from "./lib/designer/forms/shape-paint";
   import { shapeLabelCommand } from "./lib/designer/forms/shape-label";
+  import { labelCanvasBackground } from "./lib/shape-label";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
   import { createProjectFilesController } from "./lib/designer/controllers/project-files.svelte";
@@ -3120,6 +3121,7 @@
           screenId: screen.id,
           definition: !!activeDefinition,
           selected,
+          background: labelCanvasBackground(screen),
         },
       );
     if (form.dataset.editorForm === "state-color") {

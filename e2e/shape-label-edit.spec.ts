@@ -131,6 +131,22 @@ test("the text field accepts 1000 supplementary characters", async ({
   ).toHaveCount(1);
 });
 
+test("a new label applied together with the fill picks its default color from the new fill", async ({
+  page,
+}) => {
+  await start(page);
+  const paint = page.getByRole("form", { name: "塗りと枠線", exact: true });
+  // 濃い塗りの既定は白。色の欄は触らない。
+  await expect(field(page, "図形の文字色")).toHaveValue("#ffffff");
+  await paint.getByLabel("塗りの色", { exact: true }).fill("#ffffff");
+  await text(page).fill("工程");
+  // 離れたら両方の draft を一括で適用する。文字色は新しい白い塗りに合わせて濃色になる。
+  await row(page, ellipse.id).click();
+  await expect(row(page, ellipse.id)).toHaveAttribute("aria-pressed", "true");
+  await expect(lines(page)).toHaveText("工程");
+  await expect(lines(page)).toHaveAttribute("fill", "#0f172a");
+});
+
 test("unapplied shape label drafts are prevalidated and applied on leaving", async ({
   page,
 }) => {

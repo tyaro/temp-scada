@@ -18,6 +18,8 @@ export interface ShapeLabelContext {
   screenId: string;
   definition: boolean;
   selected: ScreenObject | undefined;
+  /** キャンバスの背景（`labelCanvasBackground`）。未指定の既定の文字色を確定時の塗りで決める。 */
+  background: string;
 }
 
 /** フォームの基準値。label が無い間は新しく作るときの既定値を出す（#305 L2）。 */
@@ -40,6 +42,8 @@ export function shapeLabelFormValues(
         ? SHAPE_LABEL_DEFAULT_STYLE.wrap
         : (label.style.wrap ?? "none"),
     labelColor: label.color.toLowerCase(),
+    // label が無い間、色の欄を触っていなければ "1"。確定時の塗り・不透明度で既定の色を決め直す。
+    labelColorAuto: label.text === undefined ? "1" : "",
   };
 }
 
@@ -87,11 +91,15 @@ export function shapeLabelCommand(
           ? {}
           : { wrap }),
       },
-      // 色の欄は小文字で返すので、大文字の hex で保存された同じ色は保存のまま保つ。
-      color: ((color) =>
-        saved && saved.color.toLowerCase() === color.toLowerCase()
-          ? saved.color
-          : color)(String(data.get("labelColor") ?? "")),
+      // 新しく作る label で色の欄を触っていなければ、確定時の塗りで既定の色を選ぶ（塗りと一括適用したとき、
+      // 旧い塗り向けの色を残さない）。色の欄は小文字で返すので、大文字の hex で保存された同じ色は保存のまま保つ。
+      color:
+        !saved && data.get("labelColorAuto") === "1"
+          ? defaultShapeLabel(selected, context.background).color
+          : ((color) =>
+              saved && saved.color.toLowerCase() === color.toLowerCase()
+                ? saved.color
+                : color)(String(data.get("labelColor") ?? "")),
     }),
   );
 }
