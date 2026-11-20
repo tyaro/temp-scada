@@ -35,7 +35,7 @@ label?: {
 ```
 
 - schema は `$defs/shapeLabel` を 1 つ作り、矩形・楕円・多角形の 3 つの枝から参照する。`text`・`style`・`color` はすべて必須、`additionalProperties: false`（`label` の中・`style` の中とも未知の項目は拒否）。`label: null` は拒否する（省くことで「無し」を表す）。
-- **改行の正規化**: 読込時の `normalizeProjectText`（TypeScript の `project.ts`、Rust の `scada-model`）を `shape.label.text` にも広げ、Text と同じく CR・CRLF・U+2028・U+2029 を LF に直してから schema にかける。schema の `not pattern`（`[\r  ]`）は Text と同じく正規化の後の検査として置く。文字数の上限 1000 と空の判定も正規化の後に行う。文字数の数え方は Text の `maxLength` と同じ（JSON Schema の数え方。Rust と TypeScript で揃うことをサロゲートペアの契約ケースで確かめる）。
+- **改行の正規化**: 読込時の `normalizeProjectText`（TypeScript の `project.ts`、Rust の `scada-model`）を `shape.label.text` にも広げ、Text と同じく CR・CRLF・U+2028・U+2029 を LF に直してから schema にかける。schema の `not pattern`（`[\r\u2028\u2029]`）は Text と同じく正規化の後の検査として置く。文字数の上限 1000 と空の判定も正規化の後に行う。文字数の数え方は Text の `maxLength` と同じ（JSON Schema の数え方。Rust と TypeScript で揃うことをサロゲートペアの契約ケースで確かめる）。
 - **空の判定**: 正規化の後で厳密に `""` のときだけ拒否する（`minLength: 1`）。空白だけ・改行だけの文言は、Text と同じく trim せずに残す。空の `label` という状態は作らない。Inspector で文言を空にして確定したら `label` ごと消す。
 - `style` は schema の `$defs/textStyle` を参照する。`wrap` を省いたときは Text と同じく `none`。
 - `color` に α は持たない。配置の `opacity` は文字にも効く。
