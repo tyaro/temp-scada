@@ -69,9 +69,11 @@
   import { createAlarmFeedController } from "./lib/alarm-list/alarm-feed-controller.svelte";
   import { createHistoryAssetCollector } from "./lib/history-assets";
   import {
-    selectionPaintAlphaCommand,
-    acknowledgeSelectionPaintAlpha,
-  } from "./lib/designer/forms/selection-paint-alpha";
+    acknowledgeFormKind,
+    formCommand as formCommandOf,
+    isEditorForm,
+    type FormCommandContext,
+  } from "./lib/designer/form-commands";
   import {
     groupsOf,
     groupFor,
@@ -85,70 +87,13 @@
   import type { BindingTableChange } from "./lib/equipment-binding-table";
   import SymbolSlots from "./lib/designer/SymbolSlots.svelte";
   import {
-    symbolSlotFormCommand,
-    acknowledgeSymbolSlotForm,
-  } from "./lib/designer/forms/symbol-slot";
-  import { equipmentTypeFormCommand } from "./lib/designer/forms/equipment-type";
-  import { equipmentFormCommand } from "./lib/designer/forms/equipment";
-  import { groupNameFormCommand } from "./lib/designer/forms/group-name";
-  import {
     createDesignerActions,
     type DesignerCommandId,
   } from "./lib/designer/controllers/designer-actions";
   import { createClipboardController } from "./lib/designer/controllers/clipboard.svelte";
   import { createImageImportController } from "./lib/designer/controllers/image-import.svelte";
-  import { lineConnectionCommand } from "./lib/designer/forms/line-connection";
-  import { imageFitCommand } from "./lib/designer/forms/image-fit";
-  import { imageCropCommand } from "./lib/designer/forms/image-crop";
-  import {
-    selectionOutlineCommand,
-    acknowledgeSelectionOutline,
-  } from "./lib/designer/forms/selection-outline";
-  import {
-    selectionLineCommand,
-    acknowledgeSelectionLine,
-  } from "./lib/designer/forms/selection-line";
-  import {
-    selectionTextStyleCommand,
-    acknowledgeSelectionTextStyle,
-  } from "./lib/designer/forms/selection-text-style";
-  import {
-    selectionSizeCommand,
-    acknowledgeSelectionSize,
-  } from "./lib/designer/forms/selection-size";
-  import {
-    selectionOpacityCommand,
-    acknowledgeSelectionOpacity,
-  } from "./lib/designer/forms/selection-opacity";
-  import {
-    selectionColorCommand,
-    acknowledgeSelectionColor,
-  } from "./lib/designer/forms/selection-color";
-  import { stateColorCommand } from "./lib/designer/forms/state-color";
   import SlotReadStatus from "./lib/designer/SlotReadStatus.svelte";
-  import { stateTextColorCommand } from "./lib/designer/forms/state-text-color";
-  import { numericFormatCommand } from "./lib/designer/forms/numeric-format";
-  import { boolDisplayCommand } from "./lib/designer/forms/bool-display";
-  import { alarmColorCommand } from "./lib/designer/forms/alarm-color";
-  import { symbolColorModeCommand } from "./lib/designer/forms/symbol-color-mode";
-  import { backgroundCropCommand } from "./lib/designer/forms/background-crop";
-  import { backgroundImageCommand } from "./lib/designer/forms/background-image";
-  import {
-    objectFormCommand,
-    acknowledgeObjectForm,
-  } from "./lib/designer/forms/object-form";
-  import { screenFormCommand } from "./lib/designer/forms/screen-form";
-  import { operatorFrameFormCommand } from "./lib/designer/forms/operator-frame-form";
-  import { alarmDefinitionFormCommand } from "./lib/designer/forms/alarm-definition-form";
   import AlarmSettings from "./lib/designer/AlarmSettings.svelte";
-  import {
-    projectFormCommand,
-    acknowledgeProjectForm,
-  } from "./lib/designer/forms/project-form";
-  import { moveFormCommand } from "./lib/designer/forms/move-form";
-  import { shapePaintCommand } from "./lib/designer/forms/shape-paint";
-  import { shapeLabelCommand } from "./lib/designer/forms/shape-label";
-  import { labelCanvasBackground } from "./lib/shape-label";
   import { initialImageFrame } from "./lib/image-frame";
   import { AssetStore } from "./lib/image-assets";
   import { createProjectFilesController } from "./lib/designer/controllers/project-files.svelte";
@@ -335,7 +280,7 @@
       return;
     }
     showCanvas();
-    if (form.dataset.editorForm === "binding-replacement") {
+    if (isEditorForm(form, "binding-replacement")) {
       setAuxPanelVisibility({ references: true });
       referencesExpanded = true;
       return;
@@ -2229,45 +2174,7 @@
     }
   }
   function acknowledgeForm(form: HTMLFormElement) {
-    if (form.dataset.editorForm === "symbol-slot")
-      acknowledgeSymbolSlotForm(form);
-    if (
-      ["equipment", "equipment-type"].includes(form.dataset.editorForm ?? "")
-    ) {
-      for (const name of ["code", "name"]) {
-        const input = form.querySelector<HTMLInputElement>(
-          `input[name="${name}"]`,
-        );
-        if (input) input.value = input.value.trim();
-      }
-    }
-    if (form.dataset.editorForm === "group-name") {
-      const input = form.querySelector<HTMLInputElement>('input[name="name"]');
-      if (input) input.value = activeGroup?.name ?? "";
-    }
-    if (form.dataset.editorForm === "selection-outline")
-      acknowledgeSelectionOutline(form);
-
-    if (form.dataset.editorForm === "selection-line")
-      acknowledgeSelectionLine(form);
-    if (form.dataset.editorForm === "selection-color")
-      acknowledgeSelectionColor(form);
-    if (form.dataset.editorForm === "selection-opacity")
-      acknowledgeSelectionOpacity(form);
-    if (form.dataset.editorForm === "selection-paint-alpha")
-      acknowledgeSelectionPaintAlpha(form);
-    if (form.dataset.editorForm === "selection-size")
-      acknowledgeSelectionSize(form);
-    if (form.dataset.editorForm === "selection-text-style")
-      acknowledgeSelectionTextStyle(form);
-    if (form.dataset.editorForm === "project")
-      acknowledgeProjectForm(form, project.manifest.name);
-    if (form.dataset.editorForm === "object")
-      acknowledgeObjectForm(
-        form,
-        selected?.name ?? "",
-        selected?.shape.type === "text" ? selected.shape.text : undefined,
-      );
+    acknowledgeFormKind(form, formCommandContext());
     drafts.submitted(form);
   }
   function edit(
@@ -2989,376 +2896,30 @@
   function add(kind: AddKind) {
     edit({ type: "add", screenId: screen.id, kind });
   }
-  function formCommand(form: HTMLFormElement): EditCommand {
-    const data = new FormData(form);
-    if (form.dataset.editorForm === "symbol-slot")
-      return symbolSlotFormCommand(
-        {
-          connected: form.isConnected,
-          targetKey: form.dataset.targetKey,
-          symbolId: form.dataset.symbolId,
-          slotName: form.dataset.slotName,
-          action: form.dataset.slotAction,
-          data,
-        },
-        {
-          project,
-          generation: workspaceGeneration,
-          definitionId: activeDefinition?.id,
-        },
-      );
-    if (form.dataset.editorForm === "equipment-type")
-      return equipmentTypeFormCommand(
-        {
-          connected: form.isConnected,
-          targetKey: form.dataset.targetKey,
-          typeId: form.dataset.typeId,
-          data,
-        },
-        project,
-        workspaceGeneration,
-      );
-    if (form.dataset.editorForm === "equipment")
-      return equipmentFormCommand(form, project, workspaceGeneration);
-    if (form.dataset.editorForm === "background-crop")
-      return backgroundCropCommand(
-        {
-          data,
-          connected: form.isConnected,
-          targetKey: form.dataset.targetKey,
-          assetId: form.dataset.assetId,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          image: backgroundScreen?.backgroundImage,
-          asset: project.assets.find(
-            (asset) => asset.id === backgroundScreen?.backgroundImage?.assetId,
-          ),
-        },
-      );
-    if (form.dataset.editorForm === "background-image")
-      return backgroundImageCommand(
-        { data, targetKey: form.dataset.targetKey },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          image: backgroundScreen?.backgroundImage,
-        },
-      );
-    if (form.dataset.editorForm === "line-connection")
-      return lineConnectionCommand(
-        {
-          connected: form.isConnected,
-          composing: form.dataset.composing === "true",
-          objectId: form.dataset.objectId,
-          targetKey: form.dataset.targetKey,
-          endpoint: form.dataset.endpoint,
-          data,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selected,
-          objects: screen.objects,
-        },
-      );
-    if (form.dataset.editorForm === "image-fit")
-      return imageFitCommand(
-        {
-          data,
-          connected: form.isConnected,
-          objectId: form.dataset.objectId,
-          targetKey: form.dataset.targetKey,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selected,
-        },
-      );
-    if (form.dataset.editorForm === "image-crop")
-      return imageCropCommand(
-        {
-          data,
-          objectId: form.dataset.objectId,
-          targetKey: form.dataset.targetKey,
-          assetId: form.dataset.assetId,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selected,
-          assets: project.assets,
-        },
-      );
-    if (form.dataset.editorForm === "shape-paint")
-      return shapePaintCommand(
-        {
-          data,
-          objectId: form.dataset.objectId,
-          targetKey: form.dataset.targetKey,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selected,
-        },
-      );
-    if (form.dataset.editorForm === "shape-label")
-      return shapeLabelCommand(
-        {
-          data,
-          objectId: form.dataset.objectId,
-          targetKey: form.dataset.targetKey,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selected,
-          background: labelCanvasBackground(screen),
-        },
-      );
-    if (form.dataset.editorForm === "state-color") {
-      return stateColorCommand(
-        {
-          data,
-          objectId: form.dataset.objectId,
-          targetKey: form.dataset.targetKey,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selected,
-          owner: screen as Screen | SymbolDefinition,
-        },
-      );
-    }
-    if (form.dataset.editorForm === "numeric-format")
-      return numericFormatCommand(
-        {
-          data,
-          objectId: form.dataset.objectId,
-          targetKey: form.dataset.targetKey,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selected,
-        },
-      );
-    if (form.dataset.editorForm === "alarm-color")
-      return alarmColorCommand(
-        {
-          data,
-          objectId: form.dataset.objectId,
-          targetKey: form.dataset.targetKey,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selected,
-        },
-      );
-    if (form.dataset.editorForm === "bool-display")
-      return boolDisplayCommand(
-        {
-          data,
-          objectId: form.dataset.objectId,
-          targetKey: form.dataset.targetKey,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selected,
-        },
-      );
-    if (form.dataset.editorForm === "state-text-color")
-      return stateTextColorCommand(
-        {
-          data,
-          objectId: form.dataset.objectId,
-          targetKey: form.dataset.targetKey,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selected,
-          readSlots: ("readSlots" in screen ? screen.readSlots : []) ?? [],
-        },
-      );
-    if (form.dataset.editorForm === "symbol-color-mode")
-      return symbolColorModeCommand(
-        {
-          data,
-          objectId: form.dataset.objectId,
-          targetKey: form.dataset.targetKey,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selected,
-        },
-      );
-    if (form.dataset.editorForm === "selection-outline")
-      return selectionOutlineCommand(
-        {
-          data,
-          targetKey: form.dataset.targetKey,
-          objectIds: form.dataset.objectIds,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selectedIds,
-        },
-      );
-    if (form.dataset.editorForm === "selection-line")
-      return selectionLineCommand(
-        {
-          data,
-          targetKey: form.dataset.targetKey,
-          objectIds: form.dataset.objectIds,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selectedIds,
-        },
-      );
-    if (form.dataset.editorForm === "selection-text-style")
-      return selectionTextStyleCommand(
-        {
-          data,
-          targetKey: form.dataset.targetKey,
-          objectIds: form.dataset.objectIds,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selectedIds,
-        },
-      );
-    if (form.dataset.editorForm === "selection-size")
-      return selectionSizeCommand(
-        {
-          data,
-          targetKey: form.dataset.targetKey,
-          objectIds: form.dataset.objectIds,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selectedIds,
-        },
-      );
-    if (form.dataset.editorForm === "selection-opacity")
-      return selectionOpacityCommand(
-        {
-          data,
-          targetKey: form.dataset.targetKey,
-          objectIds: form.dataset.objectIds,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selectedIds,
-        },
-      );
-    if (form.dataset.editorForm === "selection-paint-alpha")
-      return selectionPaintAlphaCommand(
-        {
-          data,
-          targetKey: form.dataset.targetKey,
-          objectIds: form.dataset.objectIds,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selectedIds,
-        },
-      );
-    if (form.dataset.editorForm === "selection-color")
-      return selectionColorCommand(
-        {
-          data,
-          targetKey: form.dataset.targetKey,
-          objectIds: form.dataset.objectIds,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          definition: !!activeDefinition,
-          selectedIds,
-        },
-      );
-    if (form.dataset.editorForm === "project") return projectFormCommand(data);
-    if (form.dataset.editorForm === "operator-frame")
-      return operatorFrameFormCommand(data);
-    if (form.dataset.editorForm === "alarm-definition") {
-      const base = project.alarms?.definitions.find(
-        (row) => row.id === form.dataset.alarmId,
-      );
-      if (!base) throw new Error("警報の定義が見つかりません");
-      return alarmDefinitionFormCommand(
-        data,
-        base,
-        catalogSelection.available ? catalogSelection.catalog.tags : undefined,
-      );
-    }
-    if (form.dataset.editorForm === "screen")
-      return screenFormCommand(data, {
-        screenId: screen.id,
-        definitionId: activeDefinition?.id,
-      });
-    if (form.dataset.editorForm === "group-name")
-      return groupNameFormCommand(
-        {
-          data,
-          targetKey: form.dataset.targetKey,
-          groupId: form.dataset.groupId,
-        },
-        {
-          generation: workspaceGeneration,
-          screenId: screen.id,
-          groupId: activeGroup?.id,
-        },
-      );
-    if (form.dataset.editorForm === "move")
-      return moveFormCommand(data, { screenId: screen.id, selectedIds });
-    return objectFormCommand(data, {
-      readSlots: ("readSlots" in screen ? screen.readSlots : []) ?? [],
-      screenId: screen.id,
-      definition: !!activeDefinition,
+  // R7a: 種類ごとの振分けは lib/designer/form-commands.ts の登録表が持つ。
+  // App は呼ぶたびに現在値を渡すだけで、状態はここに残す。
+  function formCommandContext(): FormCommandContext {
+    return {
+      project,
+      screen,
+      activeDefinition,
+      workspaceGeneration,
+      selectedIds,
       selected,
-    });
+      backgroundScreen,
+      activeGroup,
+      catalogSelection,
+    };
+  }
+  function formCommand(form: HTMLFormElement): EditCommand {
+    return formCommandOf(form, formCommandContext());
   }
 
   function validateDrafts(forms: HTMLFormElement[]): boolean {
     let validatingForm: HTMLFormElement | undefined;
     try {
       validatingForm = forms.find(
-        (form) =>
-          form.isConnected && form.dataset.editorForm === "binding-replacement",
+        (form) => form.isConnected && isEditorForm(form, "binding-replacement"),
       );
       if (validatingForm)
         throw new Error(
@@ -3367,11 +2928,10 @@
       // Applying a slot change can remove the color form before the next submit.
       // Reject both dirty forms together before creating any history entry.
       const colorDraft = forms.find(
-        (form) =>
-          form.isConnected && form.dataset.editorForm === "state-text-color",
+        (form) => form.isConnected && isEditorForm(form, "state-text-color"),
       );
       const objectDraft = forms.find(
-        (form) => form.isConnected && form.dataset.editorForm === "object",
+        (form) => form.isConnected && isEditorForm(form, "object"),
       );
       if (colorDraft && objectDraft) {
         const slotName = new FormData(objectDraft).get("slotName");
@@ -3399,7 +2959,8 @@
       return true;
     } catch (e) {
       if (validatingForm) revealDraftForm(validatingForm);
-      if (validatingForm?.dataset.editorForm === "project") focusProjectName();
+      if (validatingForm && isEditorForm(validatingForm, "project"))
+        focusProjectName();
       report(
         "error",
         `編集エラー: ${e instanceof Error ? e.message : String(e)}`,
