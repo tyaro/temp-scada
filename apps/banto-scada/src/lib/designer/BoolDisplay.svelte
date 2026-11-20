@@ -6,6 +6,7 @@
   let {
     display,
     hasFormat,
+    hasAlarmColor = false,
     objectId,
     targetKey,
     locked,
@@ -15,6 +16,8 @@
     display?: TextBoolDisplay;
     /** A Text with a numeric format cannot show a bool. */
     hasFormat: boolean;
+    /** A Text with an alarm color cannot show a bool. */
+    hasAlarmColor?: boolean;
     objectId: string;
     targetKey: string;
     locked: boolean;
@@ -24,7 +27,15 @@
   const shown = $derived(display ?? DEFAULT_BOOL_DISPLAY);
 </script>
 
-{#if hasFormat}
+{#if hasAlarmColor}
+  <section aria-label="bool の表示" class="unavailable">
+    <h3>bool の表示</h3>
+    <p>
+      警報の色を持つTextでは使えません。bool
+      の表示を使うには、先に警報の色を「使わない」にして解除してください。
+    </p>
+  </section>
+{:else if hasFormat}
   <section aria-label="bool の表示" class="unavailable">
     <h3>bool の表示</h3>
     <p>
