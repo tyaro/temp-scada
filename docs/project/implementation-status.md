@@ -586,7 +586,7 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 ## 数値の警報の色
 
-2026-11-20 の #304 V1a で、画面直下のタグを結合した Text に任意の`alarmColor: { alarmId }`を足した（保存形式・TS／Rust の検査・共通の契約ケース・編集コマンド・使用中の定義の削除の拒否・clipboard と貼り付け）。指す定義があることだけを確かめ、種類・限界・`enabled`・タグの一致は問わない。schemaVersion は 0.37.0 のまま。状態の合成の純関数、描画・Inspector（V2）は未実装なので、手で書いた`alarmColor`は定義の削除を止めるが画面には出ない。[仕様](../design/graphics/alarm-value-color.md)。`alarm-references.test.ts`・`examples/alarm-value-color-cases.json`（Rust・TS 共通）で確認。
+2026-11-20 の #304 V1a で、画面直下のタグを結合した Text に任意の`alarmColor: { alarmId }`を足した（保存形式・TS／Rust の検査・共通の契約ケース・編集コマンド・使用中の定義の削除の拒否・clipboard と貼り付け）。指す定義があることだけを確かめ、種類・限界・`enabled`・タグの一致は問わない。schemaVersion は 0.37.0 のまま。同日の V1b で状態の合成の純関数`alarm-value-color.ts`を足した。描画・Inspector（V2）は未実装なので、手で書いた`alarmColor`は定義の削除を止めるが画面には出ない。[仕様](../design/graphics/alarm-value-color.md)。`alarm-references.test.ts`・`examples/alarm-value-color-cases.json`（Rust・TS 共通）で確認。
 
 ## 最新の警報の帯
 
