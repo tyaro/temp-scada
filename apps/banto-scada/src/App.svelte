@@ -827,6 +827,9 @@
       if (committed) onplaced?.();
     });
   }
+  import DefinitionBanner from "./lib/designer/DefinitionBanner.svelte";
+  import PlacementBar from "./lib/designer/PlacementBar.svelte";
+  import StatusRow from "./lib/designer/StatusRow.svelte";
   import ProjectPanel from "./lib/designer/ProjectPanel.svelte";
   import {
     parseProject,
@@ -1720,6 +1723,31 @@
           }),
         ),
       ),
+    );
+  }
+
+  // 中央の「画面へ戻る」（Symbol 定義の編集から戻る）。
+  function returnFromDefinition() {
+    transition(() => {
+      const definitionId = editingSymbolId ?? undefined;
+      const returning = definitionReturn === screenId;
+      editingSymbolId = null;
+      definitionReturn = null;
+      if (returning) restoreEditView(definitionId);
+      else selectedIds = [];
+    });
+  }
+
+  // 状態行のタグ参照ボタン: パネルの高さの基準を測り直してから開閉する。
+  function toggleReferences() {
+    canvasWorkspace?.preparePanelResize();
+    referencesExpanded = !referencesExpanded;
+  }
+
+  // タグ参照パネルの「閉じる」。
+  function closeReferences() {
+    transition(() =>
+      setAuxPanelVisibility({ references: false }, "references"),
     );
   }
 
@@ -4128,33 +4156,11 @@
   </aside>
   <section aria-label="画面プレビュー" bind:this={editorRegion}>
     {#if activeDefinition}
-      <div class="definition-banner" role="note">
-        <div class="definition-banner-row">
-          <strong
-            >Symbol 定義を編集中 · {symbolUsage(project, activeDefinition.id)} 配置で共有</strong
-          >
-          <details class="definition-banner-help">
-            <summary>説明</summary>
-            <p>
-              確定した形状は全画面の参照配置へ反映されます。図形ごとの配色は「共有定義の色」の配置へ反映し、「配置の単色」は配置色を維持します。slotの状態の色に従うTextは両方の配置で状態の色を優先します。別の形にする場合は定義を複製してください。
-            </p>
-          </details>
-          <button
-            onclick={() =>
-              transition(() => {
-                const definitionId = editingSymbolId ?? undefined;
-                const returning = definitionReturn === screenId;
-                editingSymbolId = null;
-                definitionReturn = null;
-                if (returning) restoreEditView(definitionId);
-                else selectedIds = [];
-              })}>画面へ戻る</button
-          >
-        </div>
-        {#if symbolStrokeOverflow > 0}<p role="status">
-            枠線が表示領域外へ出ている図形が{symbolStrokeOverflow}件あります。配置では領域外が切れます。図形の位置・寸法または定義の表示領域を変更してください。
-          </p>{/if}
-      </div>
+      <DefinitionBanner
+        usageCount={symbolUsage(project, activeDefinition.id)}
+        strokeOverflow={symbolStrokeOverflow}
+        onreturn={returnFromDefinition}
+      />
     {/if}
     {#if mode === "preview"}
       {#key `${workspaceGeneration}:${screen.id}`}
@@ -4399,49 +4405,28 @@
         {/if}
       </div>
       {#if mode === "edit" && positionPlacement}
-        <div class="placement-bar" role="status" aria-label="連続配置の状態">
-          <span
-            >{armedPart
-              ? `${armedLabel}を連続配置 · キャンバスをクリック／Enterで中央へ配置`
-              : "連続配置 · 部品を選んでください"}</span
-          >
-          <button onclick={() => stopPlacement(true)}
-            >配置を終了 <kbd>Esc</kbd></button
-          >
-        </div>
+        <PlacementBar
+          armedLabel={armedPart ? armedLabel : null}
+          onstop={() => stopPlacement(true)}
+        />
       {/if}
-      <div class="status-row">
-        <p role="status" data-testid="project-status">{message}</p>
-        {#if mode === "edit"}
-          <!-- 編集中は読取状態を図面の上に置かず、ステータス行へまとめる（UX精査 P1-3）。 -->
-          {#key `${workspaceGeneration}:${screen.id}`}
-            <SlotReadStatus
-              {screen}
-              screens={project.screens}
-              symbols={project.symbols}
-              equipmentContext={readContext.equipmentContext}
-              alert={false}
-              inline
-            />
-          {/key}
-        {/if}
-        {#if mode === "edit" && showReferences && references.length && !workScreenShown}
-          <button
-            class="references-toggle"
-            aria-expanded={referencesExpanded}
-            aria-controls="designer-references-panel"
-            aria-label={`Project のタグ参照 · ${references.length} タグ / ${referenceUsageCount} 配置`}
-            title={`Project のタグ参照 · ${references.length} タグ / ${referenceUsageCount} 配置`}
-            onclick={() => {
-              canvasWorkspace?.preparePanelResize();
-              referencesExpanded = !referencesExpanded;
-            }}
-            >タグ参照 {references.length}
-            <span aria-hidden="true">{referencesExpanded ? "▾" : "▴"}</span
-            ></button
-          >
-        {/if}
-      </div>
+      <StatusRow
+        {message}
+        editing={mode === "edit"}
+        readStatusKey={`${workspaceGeneration}:${screen.id}`}
+        {screen}
+        screens={project.screens}
+        symbols={project.symbols}
+        equipmentContext={readContext.equipmentContext}
+        showReferencesToggle={mode === "edit" &&
+          showReferences &&
+          references.length > 0 &&
+          !workScreenShown}
+        referenceCount={references.length}
+        {referenceUsageCount}
+        {referencesExpanded}
+        ontogglereferences={toggleReferences}
+      />
       {#if mode === "edit"}
         <div
           hidden={!showReferences || workScreenShown}
@@ -4484,10 +4469,7 @@
               sized={canSizeReferences && referencesExpanded}
               {references}
               onopen={openBinding}
-              onclose={() =>
-                transition(() =>
-                  setAuxPanelVisibility({ references: false }, "references"),
-                )}
+              onclose={closeReferences}
             />
           {/key}
         </div>
@@ -4957,40 +4939,6 @@
     background: color-mix(in srgb, var(--banto-surface) 92%, transparent);
     box-shadow: 0 3px 12px #316e8414;
   }
-  .status-row {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-  }
-  .status-row > [role="status"] {
-    flex: 1;
-    min-width: 0;
-  }
-  .references-toggle {
-    flex: none;
-    width: auto;
-    white-space: nowrap;
-    margin-right: 8px;
-    padding: 1px 8px;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    background: transparent;
-    color: var(--banto-text-muted);
-    font: inherit;
-    font-size: 11px;
-    cursor: pointer;
-  }
-  .references-toggle:hover,
-  .references-toggle[aria-expanded="true"] {
-    border-color: var(--banto-border);
-    color: var(--banto-text);
-  }
-  .references-toggle:focus-visible {
-    outline: none;
-    box-shadow: var(--banto-focus-ring);
-  }
   .canvas-navigation > :global(.favorites-dock) {
     margin-left: auto;
     margin-right: auto;
@@ -5018,35 +4966,6 @@
     flex-direction: column;
     padding: 0;
     overflow: hidden;
-  }
-  .placement-bar {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    padding: 4px 12px;
-    color: var(--banto-text);
-    background: var(--studio-selection);
-    font-size: 12px;
-    flex-shrink: 0;
-  }
-  .placement-bar span {
-    flex: 1;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-  .placement-bar button {
-    width: auto;
-    margin: 0;
-    padding: 3px 7px;
-    font-size: 11px;
-    background: transparent;
-    border: 0;
-  }
-  .placement-bar kbd {
-    margin-left: 4px;
-    color: var(--banto-text-muted);
   }
   .save-state {
     display: flex;
@@ -5192,46 +5111,6 @@
     height: 30px;
     font-size: 12px;
     white-space: nowrap;
-  }
-  .definition-banner {
-    border: 1px solid var(--banto-primary);
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 16px;
-    background: var(--banto-surface);
-  }
-  .definition-banner button {
-    width: auto;
-    margin-bottom: 0;
-  }
-  /* UX精査 P1-3: 図面の高さを取らないよう、見出しと「画面へ戻る」を1行にし説明は畳む。 */
-  .definition-banner-row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-  }
-  .definition-banner-row > strong {
-    flex: 1;
-    min-width: 0;
-  }
-  .definition-banner-row > button {
-    padding: 3px 12px;
-    min-height: 0;
-  }
-  .definition-banner-help > summary {
-    cursor: pointer;
-    color: var(--banto-text-muted);
-    white-space: nowrap;
-  }
-  .definition-banner-help[open] {
-    flex-basis: 100%;
-    order: 3;
-  }
-  .definition-banner-help > p,
-  .definition-banner > p {
-    margin: 6px 0 0;
   }
   button:focus-visible,
   input:focus-visible {
