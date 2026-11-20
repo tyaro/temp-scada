@@ -11,7 +11,7 @@
   import { shapeSlotNames } from "./shape-bindings";
   import type { ScreenObject, SymbolDefinition } from "./project";
   import type { TagReadings } from "./tag-presentation";
-  import { objectTransform, readableChild } from "./rotation";
+  import { labelMirror, objectTransform, readableChild } from "./rotation";
   import { compositedOpacity } from "./opacity";
   import ImagePainting from "./ImagePainting.svelte";
   import Primitive from "./Primitive.svelte";
@@ -110,6 +110,7 @@
                 )}
           <Primitive
             object={child}
+            labelFlip={labelMirror(child, object)}
             equipmentPropertyDisplay={child.shape.type === "text" &&
             child.shape.equipmentProperty
               ? resolveEquipmentProperty(

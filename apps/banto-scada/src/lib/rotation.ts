@@ -100,6 +100,20 @@ export function readableChild<T extends Flip & { shape: { type: string } }>(
     flipY: (child.flipY === true) !== (parent.flipY === true),
   };
 }
+/**
+ * 面の図形の文字（`label`）を読める向きに戻す軸（#305）。軸ごとに「自身の反転 XOR 親の反転」で、
+ * 真の軸だけ文字の領域の中心のまわりで鏡を打ち消す。画面の直下は `parent` 無し（自身の反転だけ）。
+ * `readableChild` と違い配置は変えず、文字の `<g>` にだけ当てる。
+ */
+export function labelMirror(
+  object: Flip,
+  parent?: Flip,
+): { flipX: boolean; flipY: boolean } {
+  return {
+    flipX: (object.flipX === true) !== (parent?.flipX === true),
+    flipY: (object.flipY === true) !== (parent?.flipY === true),
+  };
+}
 export function rotationPivot(object: Layout | Line): Point {
   if ("width" in object) return { x: object.width / 2, y: object.height / 2 };
   const xs = object.shape.points.map((p) => p.x),

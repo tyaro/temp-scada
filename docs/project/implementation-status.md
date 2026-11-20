@@ -532,7 +532,9 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 ## 図形の中の文字
 
-2026-11-20の#305 L1aで、面の図形（矩形・楕円・多角形）の任意の`label`（`text`・`style`・`color`、すべて必須）の保存形式と検証をschema（`$defs/shapeLabel`）・TS（`ShapeLabel`型）・Rustに追加した。`text`は正規化の後で1〜1000文字（JSON Schemaの数え方。サロゲートペアの扱いをTS・Rustで揃える）、`style`はTextと同じ`textStyle`、`color`は`$defs/color`（αなし）。読込時の改行の正規化（CR・CRLF・U+2028・U+2029をLFへ）を`shape.label.text`にも広げた（Symbol定義の中を含む）。rootの`fill`・`colorAlpha`は`label`があっても面の図形では禁止のまま、面の図形以外への`label`（画面切替ボタンの文字列の`label`は別の型）は拒否する。共通の契約ケースは`examples/shape-label-cases.json`。描画・Inspector・コマンド・サンプルProjectはまだない（L1b以降）。schemaVersionは0.37.0のまま。[設計](../design/graphics/shape-label.md)。
+2026-11-20の#305 L1aで、面の図形（矩形・楕円・多角形）の任意の`label`（`text`・`style`・`color`、すべて必須）の保存形式と検証をschema（`$defs/shapeLabel`）・TS（`ShapeLabel`型）・Rustに追加した。`text`は正規化の後で1〜1000文字（JSON Schemaの数え方。サロゲートペアの扱いをTS・Rustで揃える）、`style`はTextと同じ`textStyle`、`color`は`$defs/color`（αなし）。読込時の改行の正規化（CR・CRLF・U+2028・U+2029をLFへ）を`shape.label.text`にも広げた（Symbol定義の中を含む）。rootの`fill`・`colorAlpha`は`label`があっても面の図形では禁止のまま、面の図形以外への`label`（画面切替ボタンの文字列の`label`は別の型）は拒否する。共通の契約ケースは`examples/shape-label-cases.json`。Inspector・コマンドはまだない（L2以降）。schemaVersionは0.37.0のまま。[設計](../design/graphics/shape-label.md)。
+
+2026-11-20の#305 L1bで、面の図形の`label`を描くようにした。文字の領域は矩形・多角形は枠、楕円は内接矩形（幅・高さ÷√2）で、Textの複数行の経路（`MultilineTextPrimitive`。1行・折返し無しも同じ部品）を領域の中央に置き、塗りと枠線の上に描く。文字は`pointer-events: none`で、選択・当たり判定は形のまま。回転は形と一緒に回り、反転は`labelMirror`（軸ごとに自身の反転XOR親の反転）で文字の領域の中心のまわりに打ち消して読める向きにする（親flipX×子rotation 30は画面上で−30°、鏡にならない）。文字色は常に`label.color`で、Symbolの単色モード・状態色・Symbolの縮小図でも変えない。省略の全文は画面の直下の配置の`<title>`で出す（Symbolの子には出さない）。サンプル`examples/shape-label.project.json`（矩形・楕円・ひし形、flipX・flipY・両方、単色と定義の色の反転Symbol、子の回転30を親flipXで置いたSymbol、省略の出る小さな箱、改行を含む文言）を足し、`e2e/shape-label.spec.ts`で両テーマの描画を確かめる。Inspector（L2）はまだない。
 
 ## 表
 

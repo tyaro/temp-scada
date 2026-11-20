@@ -17,6 +17,7 @@
   import ClockPrimitive from "./ClockPrimitive.svelte";
   import type { TableSlotResolver } from "./table-cell-slot";
   import { isAreaShape, type ScreenObject } from "./project";
+  import { labelMirror } from "./rotation";
   import {
     POLYGON_MITER_LIMIT,
     polygonLocalPoints,
@@ -38,6 +39,7 @@
     stateColor,
     onsummary,
     hopPath,
+    labelFlip,
   }: {
     object: ScreenObject;
     color?: string;
@@ -56,6 +58,11 @@
     onsummary?: (description: string) => void;
     /** 交差のまたぎを含む Polyline のパス（ローカル座標）。あれば polyline の代わりに描く。 */
     hopPath?: string;
+    /**
+     * 面の図形の文字（`label`）で鏡を打ち消す軸（`labelMirror`）。Symbol の子は親の反転を
+     * 合わせて渡す。省略時は自身の反転だけ（画面の直下・Symbol の縮小図）。
+     */
+    labelFlip?: { flipX: boolean; flipY: boolean };
   } = $props();
   const gradientId = $props.id();
   const fill = $derived(
@@ -150,6 +157,29 @@
   );
   const lineColor = $derived(stateColor ?? color ?? object.fill!);
   const shape = $derived("width" in object ? null : object.shape);
+  /**
+   * 面の図形の文字（#305）。文字の領域は矩形・多角形は枠、楕円は内接矩形。中心は枠の中心。
+   * 色は常に `label.color`（単色モード・状態色でも変えない）。
+   */
+  const labelLayout = $derived.by(() => {
+    if (!("width" in object) || !isAreaShape(object.shape)) return undefined;
+    const label = object.shape.label;
+    if (!label) return undefined;
+    const ellipse = object.shape.type === "ellipse";
+    const width = ellipse ? object.width / Math.SQRT2 : object.width;
+    const height = ellipse ? object.height / Math.SQRT2 : object.height;
+    const mirror = labelFlip ?? labelMirror(object);
+    const sx = mirror.flipX ? -1 : 1;
+    const sy = mirror.flipY ? -1 : 1;
+    const ex = object.width / 2;
+    const ey = object.height / 2;
+    return {
+      label,
+      width,
+      height,
+      transform: `${sx === 1 && sy === 1 ? "" : `matrix(${sx} 0 0 ${sy} ${(1 - sx) * ex} ${(1 - sy) * ey}) `}translate(${(object.width - width) / 2} ${(object.height - height) / 2})`,
+    };
+  });
 </script>
 
 {#if gradient && endpoints}
@@ -401,6 +431,19 @@
           />{/if}
       {/if}
     </g>{/if}
+  {#if labelLayout}<g
+      data-shape-label
+      transform={labelLayout.transform}
+      style="pointer-events:none"
+      ><MultilineTextPrimitive
+        text={labelLayout.label.text}
+        width={labelLayout.width}
+        height={labelLayout.height}
+        style={labelLayout.label.style}
+        color={labelLayout.label.color}
+        {onsummary}
+      /></g
+    >{/if}
 {:else if shape && hopPath}
   <!-- 交差のまたぎ（line-hop.ts）。保存の points は変えず、描画だけ直線＋半円の弧にする。 -->
   <path
