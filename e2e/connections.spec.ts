@@ -154,3 +154,35 @@ test("target-only delete and cut are rejected before clipboard write; grouped se
     sample.screens[0].objects,
   );
 });
+
+test("an unconnected polygon keeps its in-progress vertex preview on a screen with other connections", async ({
+  page: p,
+}) => {
+  // Issue #306 E1（オーナーのレビュー P3）: 作り直しは線から参照される多角形だけに当てる。
+  // 無関係な接続線がある画面でも、独立した多角形は従来どおり途中の形を見せ、離したときに検査する。
+  await start(p);
+  await selectPanel(p, "部品");
+  await button(p, "多角形を追加").click();
+  const polygon = mainCanvas(p).locator(
+    '[data-selected="true"] > [data-object-rotation] polygon',
+  );
+  await expect(polygon).toHaveAttribute("points", "80,0 160,100 0,100");
+  const handle = mainCanvas(p).locator('[data-vertex-index="0"]');
+  const box = (await handle.boundingBox())!;
+  const scale = await handle.evaluate(
+    (element) => (element as SVGGraphicsElement).getScreenCTM()!.a,
+  );
+  const from = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await p.mouse.move(from.x, from.y);
+  await p.mouse.down();
+  await p.keyboard.down("Alt");
+  await p.mouse.move(from.x, from.y + 50 * scale);
+  await p.mouse.move(from.x, from.y + 100 * scale);
+  // 下の辺に重ねた途中の形（確定すれば一直線で拒否される）がそのまま見える。
+  await expect(polygon).not.toHaveAttribute("points", "80,0 160,100 0,100");
+  await expect(polygon).toHaveAttribute("points", /^80,100 /);
+  await p.mouse.up();
+  await p.keyboard.up("Alt");
+  await expect(p.getByTestId("project-status")).toContainText("1以上");
+  await expect(polygon).toHaveAttribute("points", "80,0 160,100 0,100");
+});
