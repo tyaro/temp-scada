@@ -606,227 +606,76 @@
     );
   }
   import FavoritesDock from "./lib/designer/FavoritesDock.svelte";
-  import {
-    availableFavorites,
-    favoriteKey,
-    FAVORITES_LIMIT,
-    DEFAULT_FAVORITES,
-  } from "./lib/designer/favorites";
+  import { availableFavorites, favoriteKey } from "./lib/designer/favorites";
   import { getFavorites, setFavorites } from "./lib/banto/setup";
-  let favoriteKeys = $state(getFavorites());
-  function isFavorite(part: PalettePart) {
-    return favoriteKeys.includes(favoriteKey(part, project.manifest.projectId));
-  }
-  function toggleFavorite(part: PalettePart) {
-    const key = favoriteKey(part, project.manifest.projectId);
-    if (favoriteKeys.includes(key))
-      favoriteKeys = favoriteKeys.filter((item) => item !== key);
-    else {
-      if (favoriteKeys.length >= FAVORITES_LIMIT) {
-        report(
-          "warning",
-          "お気に入りは64件までです。使わない部品を外してから登録してください。",
-        );
-        return;
-      }
-      favoriteKeys = [...favoriteKeys, key];
-    }
-    void setFavorites(favoriteKeys);
-  }
-  function resetFavorites() {
-    favoriteKeys = [...DEFAULT_FAVORITES];
-    void setFavorites(favoriteKeys);
-  }
-  let positionPlacement = $state(false);
-  let armedPart = $state<PalettePart | null>(null);
-  let placementTicket = 0;
-  function stopPlacement(focus = false) {
-    positionPlacement = false;
-    armedPart = null;
-    placementTicket++;
-    if (focus)
+  import { createPartPlacementController } from "./lib/designer/controllers/part-placement.svelte";
+  const placement = createPartPlacementController({
+    get projectId() {
+      return project.manifest.projectId;
+    },
+    get symbols() {
+      return project.symbols;
+    },
+    get screenId() {
+      return screen.id;
+    },
+    get generation() {
+      return workspaceGeneration;
+    },
+    get mode() {
+      return mode;
+    },
+    get definition() {
+      return !!activeDefinition;
+    },
+    get busy() {
+      return busy;
+    },
+    get draftPending() {
+      return !!drafts.pending;
+    },
+    get replacing() {
+      return !!replacement;
+    },
+    transition,
+    edit,
+    visibleCenter: () => canvasWorkspace?.visibleCenter(),
+    setHand: (value) => canvasWorkspace?.setHand(value),
+    focusCanvas: () =>
       editorRegion
         ?.querySelector<HTMLElement>('[aria-label="キャンバス操作領域"]')
-        ?.focus({ preventScroll: true });
-  }
-  function togglePlacement() {
-    if (positionPlacement) stopPlacement();
-    else {
-      positionPlacement = true;
-      canvasWorkspace?.setHand(false);
-    }
-  }
-  function armPart(part: PalettePart) {
-    if (
-      mode !== "edit" ||
-      busy ||
-      drafts.pending ||
-      replacement ||
-      (activeDefinition && part.type !== "basic")
-    )
-      return;
-    if (
-      part.type === "symbol" &&
-      !project.symbols.some((definition) => definition.id === part.symbolId)
-    )
-      return;
-    placementTicket++;
-    positionPlacement = true;
-    armedPart = part;
-    canvasWorkspace?.setHand(false);
-    const ticket = placementTicket;
-    void tick().then(() => {
-      if (!(
-        document.activeElement instanceof Element &&
-        document.activeElement.closest(
-          "input,textarea,select,[contenteditable]",
-        )
-      ))
-        focusPlacement(ticket);
-    });
-  }
-  function focusPlacement(ticket: number) {
-    if (
-      mode === "edit" &&
-      positionPlacement &&
-      ticket === placementTicket &&
-      !busy &&
-      !drafts.pending &&
-      !replacement
-    )
-      editorRegion
-        ?.querySelector<HTMLElement>('[aria-label="キャンバス操作領域"]')
-        ?.focus({ preventScroll: true });
-  }
-  function isArmed(part: PalettePart) {
-    return (
-      !!armedPart &&
-      favoriteKey(part, project.manifest.projectId) ===
-        favoriteKey(armedPart, project.manifest.projectId)
-    );
-  }
-  function choosePart(part: PalettePart) {
-    if (positionPlacement) armPart(part);
-    else placeFavorite(part);
-  }
-  function placeArmed(center: Point) {
-    if (!positionPlacement || !armedPart) return;
-    const ticket = placementTicket;
-    const token = startPaletteDrag(armedPart);
-    if (token)
-      dropPalettePart(
-        token,
-        center,
-        () => positionPlacement && ticket === placementTicket,
-        () => focusPlacement(ticket),
-      );
-  }
-  function beginPartDrag(part: PalettePart) {
-    stopPlacement();
-    return startPaletteDrag(part);
-  }
-  function placeFavorite(part: PalettePart) {
-    const center = canvasWorkspace?.visibleCenter();
-    const token = center && startPaletteDrag(part);
-    if (token && center) dropPalettePart(token, center);
-  }
-  function browseParts() {
-    setAuxPanelVisibility({ sidebar: true }, "sidebar");
-    activePanel = "parts";
-  }
+        ?.focus({ preventScroll: true }),
+    showPartsPanel: () => {
+      setAuxPanelVisibility({ sidebar: true }, "sidebar");
+      activePanel = "parts";
+    },
+    loadFavorites: getFavorites,
+    saveFavorites: setFavorites,
+    report,
+  });
+  const {
+    isFavorite,
+    toggleFavorite,
+    resetFavorites,
+    stopPlacement,
+    togglePlacement,
+    armPart,
+    isArmed,
+    choosePart,
+    placeArmed,
+    placeFavorite,
+    browseParts,
+    beginPartDrag,
+    canDropPart,
+    dropPalettePart,
+  } = placement;
   import PartsPanel from "./lib/designer/PartsPanel.svelte";
-  import type { PalettePart } from "./lib/designer/palette-drag";
-  let paletteDrag: {
-    token: string;
-    part: PalettePart;
-    generation: number;
-    target: string;
-  } | null = null;
-  function startPaletteDrag(part: PalettePart): string | null {
-    if (
-      mode !== "edit" ||
-      busy ||
-      drafts.pending ||
-      replacement ||
-      (activeDefinition && part.type !== "basic")
-    )
-      return null;
-    const token = crypto.randomUUID();
-    paletteDrag = {
-      token,
-      part,
-      generation: workspaceGeneration,
-      target: screen.id,
-    };
-    return token;
-  }
-  function canDropPart(): boolean {
-    return (
-      mode === "edit" &&
-      !busy &&
-      !drafts.pending &&
-      !replacement &&
-      !!paletteDrag &&
-      paletteDrag.generation === workspaceGeneration &&
-      paletteDrag.target === screen.id
-    );
-  }
   $effect(() => {
     mode;
     screen.id;
     workspaceGeneration;
-    paletteDrag = null;
+    placement.endPaletteDrag();
   });
-  function dropPalettePart(
-    token: string,
-    center: Point,
-    valid: () => boolean = () => true,
-    onplaced?: () => void,
-  ) {
-    const drag = paletteDrag;
-    if (!drag || drag.token !== token || !canDropPart()) return;
-    paletteDrag = null;
-    // Capture the target and point before the draft prompt; never retarget a deferred drop.
-    transition(() => {
-      if (!valid()) return;
-      if (
-        mode !== "edit" ||
-        drag.generation !== workspaceGeneration ||
-        drag.target !== screen.id
-      ) {
-        report(
-          "error",
-          "配置先が変わったため、部品をもう一度配置してください。",
-        );
-        return;
-      }
-      const part = drag.part;
-      if (activeDefinition && part.type !== "basic") return;
-      let committed: boolean;
-      if (part.type === "basic")
-        committed = edit({
-          type: "add",
-          screenId: screen.id,
-          kind: part.kind,
-          center,
-        });
-      else if (part.type === "builtin")
-        committed = edit({
-          type: "add-symbol",
-          screenId: screen.id,
-          template: part.template,
-          center,
-        });
-      else
-        committed = edit({
-          type: "place-symbol",
-          screenId: screen.id,
-          symbolId: part.symbolId,
-          center,
-        });
-      if (committed) onplaced?.();
-    });
-  }
   import DefinitionBanner from "./lib/designer/DefinitionBanner.svelte";
   import PlacementBar from "./lib/designer/PlacementBar.svelte";
   import StatusRow from "./lib/designer/StatusRow.svelte";
@@ -1020,14 +869,15 @@
         ...fileKey,
         enabled: functionKeysReady,
         run: () => {
-          if (canvasActive && !positionPlacement) renameFocused(shortcutTarget);
+          if (canvasActive && !placement.positionPlacement)
+            renameFocused(shortcutTarget);
         },
       },
       keyCommand("selection.remove", {
         ...menuScoped,
         when: () =>
           !clipboard.busy &&
-          !positionPlacement &&
+          !placement.positionPlacement &&
           clipboardScope(shortcutTarget),
         run: () => {
           if (!hiddenCanvasMutation(shortcutTarget)) removeSelection();
@@ -1170,7 +1020,7 @@
     if (
       event.key === "Escape" &&
       !event.isComposing &&
-      positionPlacement &&
+      placement.positionPlacement &&
       !drafts.pending &&
       !replacement &&
       !(
@@ -1401,7 +1251,7 @@
         busy ||
         replacement ||
         mode !== "edit" ||
-        positionPlacement ||
+        placement.positionPlacement ||
         canvasView.hand ||
         target !== screen.id ||
         generation !== workspaceGeneration ||
@@ -1775,16 +1625,16 @@
   );
   const favoriteItems = $derived(
     availableFavorites(
-      favoriteKeys,
+      placement.favoriteKeys,
       project.manifest.projectId,
       project.symbols,
       !activeDefinition,
     ),
   );
   const armedLabel = $derived(
-    armedPart
+    placement.armedPart
       ? (availableFavorites(
-          [favoriteKey(armedPart, project.manifest.projectId)],
+          [favoriteKey(placement.armedPart, project.manifest.projectId)],
           project.manifest.projectId,
           project.symbols,
           !activeDefinition,
@@ -1799,11 +1649,11 @@
     untrack(() => stopPlacement());
   });
   $effect(() => {
+    const armedPart = placement.armedPart;
     if (
       armedPart?.type === "symbol" &&
       !project.symbols.some(
-        (definition) =>
-          armedPart?.type === "symbol" && definition.id === armedPart.symbolId,
+        (definition) => definition.id === armedPart.symbolId,
       )
     )
       stopPlacement();
@@ -3351,7 +3201,7 @@
         ? "画面タブを選ぶと使えます"
         : menuBlocked || clipboard.busy
           ? "確認中の操作を完了してください"
-          : positionPlacement
+          : placement.positionPlacement
             ? "連続配置を終了してください"
             : selectionViewTarget.reason,
   );
@@ -4015,7 +3865,7 @@
         bind:showGrid
         bind:snapEnabled
         bind:gridSize
-        placing={positionPlacement}
+        placing={placement.positionPlacement}
         onplacing={togglePlacement}
         onhand={(value) => {
           stopPlacement();
@@ -4124,7 +3974,7 @@
           allowSymbols={!activeDefinition}
           hasAlarmDefinitions={!!project.alarms?.definitions.length}
           contextKey={paletteContextKey}
-          {positionPlacement}
+          positionPlacement={placement.positionPlacement}
           {isFavorite}
           {isArmed}
           onarm={armPart}
@@ -4134,7 +3984,7 @@
           onduplicate={(id) => edit({ type: "duplicate-symbol", symbolId: id })}
           onadd={(kind) => choosePart({ type: "basic", kind })}
           onstartdrag={beginPartDrag}
-          onenddrag={() => (paletteDrag = null)}
+          onenddrag={placement.endPaletteDrag}
           onbuiltin={(template) => choosePart({ type: "builtin", template })}
           onplace={(id) => choosePart({ type: "symbol", symbolId: id })}
         />
@@ -4317,8 +4167,8 @@
             {showRulers}
             {snapEnabled}
             {gridSize}
-            placing={positionPlacement}
-            placeReady={!!armedPart}
+            placing={placement.positionPlacement}
+            placeReady={!!placement.armedPart}
             onplacepoint={placeArmed}
             oncancelplacement={() => stopPlacement(true)}
             {canDropPart}
@@ -4374,16 +4224,16 @@
             <FavoritesDock
               images={assetImages}
               items={favoriteItems}
-              {positionPlacement}
+              positionPlacement={placement.positionPlacement}
               {isArmed}
               onarm={armPart}
               onimmediate={placeFavorite}
-              contextKey={`${contextScope}:${favoriteKeys.join(",")}`}
+              contextKey={`${contextScope}:${placement.favoriteKeys.join(",")}`}
               onplace={choosePart}
               onremove={toggleFavorite}
               onbrowse={browseParts}
               onstartdrag={beginPartDrag}
-              onenddrag={() => (paletteDrag = null)}
+              onenddrag={placement.endPaletteDrag}
             />
             {#if showMinimap}
               {#key `${workspaceGeneration}:${screen.id}`}
@@ -4404,9 +4254,9 @@
           </div>
         {/if}
       </div>
-      {#if mode === "edit" && positionPlacement}
+      {#if mode === "edit" && placement.positionPlacement}
         <PlacementBar
-          armedLabel={armedPart ? armedLabel : null}
+          armedLabel={placement.armedPart ? armedLabel : null}
           onstop={() => stopPlacement(true)}
         />
       {/if}
