@@ -31,6 +31,8 @@
   import BoolDisplay from "./BoolDisplay.svelte";
   import TableCellStates from "./TableCellStates.svelte";
   import NumericFormat from "./NumericFormat.svelte";
+  import AlarmValueColor from "./AlarmValueColor.svelte";
+  import { showsAlarmColorForm } from "./forms/alarm-color";
   import SymbolColorMode from "./SymbolColorMode.svelte";
   import TagPicker from "./TagPicker.svelte";
   import { sampleSelection, type CatalogSelection } from "../catalog-session";
@@ -813,6 +815,7 @@
           <BoolDisplay
             display={selected.shape.boolDisplay}
             hasFormat={!!selected.shape.format}
+            hasAlarmColor={!!selected.shape.alarmColor}
             objectId={selected.id}
             targetKey={`${generation}:${screen.id}:${activeDefinition}`}
             locked={selectionLocked}
@@ -829,6 +832,18 @@
               : catalogSelection.catalog.tags.find(
                   (tag) => tag.externalName === externalName,
                 )?.unit}
+            objectId={selected.id}
+            targetKey={`${generation}:${screen.id}:${activeDefinition}`}
+            locked={selectionLocked}
+            {drafts}
+            onsubmit={properties}
+          />
+        {/if}
+        {#if showsAlarmColorForm(selected.shape, !!activeDefinition) && selected.shape.type === "text"}
+          <AlarmValueColor
+            alarmId={selected.shape.alarmColor?.alarmId}
+            definitions={project.alarms?.definitions ?? []}
+            externalName={selected.shape.binding?.externalName}
             objectId={selected.id}
             targetKey={`${generation}:${screen.id}:${activeDefinition}`}
             locked={selectionLocked}
