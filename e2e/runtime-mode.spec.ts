@@ -55,11 +55,14 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
           },
           minIntervalMs: 1000,
           retention: { days: 365, count: 100_000 },
-          record: {
-            rowCount: 2,
-            oldestRequestedAtMs: Date.UTC(2026, 0, 2) as null | number,
-          },
         },
+        /** What `operation_record_size` answers (O4a). */
+        recordSize: {
+          rowCount: 2,
+          oldestRequestedAtMs: Date.UTC(2026, 0, 2) as null | number,
+        },
+        /** How many times `operation_record_size` was asked. */
+        recordSizeCalls: 0,
         /** Secrets `operation_key_register` received. */
         keySecrets: [] as string[],
         /** When set, the three key changes reject with this reason. */
@@ -220,6 +223,9 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                   );
                 return answer;
               }
+              case "operation_record_size":
+                host.recordSizeCalls++;
+                return structuredClone(host.recordSize);
               case "operation_key_register":
               case "operation_key_delete":
               case "operation_write_resume":
@@ -1448,6 +1454,11 @@ test.describe("the write terminal settings (operation stage 3, O2c-4a)", () => {
   }) => {
     await mockRuntimeHost(page);
     await page.goto("/runtime.html");
+    // The header's status does not count the record; the window does.
+    await expect(page.locator(entry)).toBeVisible();
+    expect(
+      await page.evaluate(() => (window as any).__runtimeHost.recordSizeCalls),
+    ).toBe(0);
     await page.locator(entry).click();
     const dialog = page.getByRole("dialog", { name: "書込みの端末設定" });
     const form = dialog.locator("[data-operation-retention]");
@@ -1473,9 +1484,19 @@ test.describe("the write terminal settings (operation stage 3, O2c-4a)", () => {
 
     await days.fill("30");
     await count.fill("20000");
+    await page.evaluate(() => {
+      (window as any).__runtimeHost.recordSize = {
+        rowCount: 1,
+        oldestRequestedAtMs: null,
+      };
+    });
     await save.click();
     await expect(dialog.locator("[data-operation-settings-done]")).toHaveText(
       "記録の保持を 30 日・20000 件にしました。古い記録はどちらかを超えたものから消します。",
+    );
+    // The size is read again after the save.
+    await expect(form.locator("[data-operation-record-size]")).toHaveText(
+      "今の記録: 1 件",
     );
     // Opened again, the window shows the saved retention.
     await page.keyboard.press("Escape");

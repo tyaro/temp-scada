@@ -21,6 +21,7 @@
     "allow-operation-write-resume",
     "allow-operation-min-interval-set",
     "allow-operation-retention-set",
+    "allow-operation-record-size",
     "allow-app-mode",
     "allow-app-close-reply",
     "allow-hub-disconnect",

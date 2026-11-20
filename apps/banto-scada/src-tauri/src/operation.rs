@@ -330,28 +330,15 @@ pub struct OperationKeyStatus {
     /// The record's retention (§9, §11-7; O4a): `days` and `count`, both
     /// applied. Saved with `operation_retention_set`.
     pub retention: OperationRetention,
-    /// The record's row count and oldest request time; `null` when it could
-    /// not be read (logged).
-    pub record: Option<RetentionStatus>,
 }
 
 async fn key_status(log: &OperationLog, host: &NativeHost) -> OperationKeyStatus {
-    let record = match log.retention_status().await {
-        Ok(record) => Some(record),
-        Err(error) => {
-            eprintln!(
-                "[banto-scada] operation settings: the record size could not be read: {error:?}"
-            );
-            None
-        }
-    };
     OperationKeyStatus {
         key_endpoint: log.key_endpoint(),
         hub_endpoint: read_endpoint(host),
         write: log.write_status(),
         min_interval_ms: u64::try_from(log.min_interval().as_millis()).unwrap_or(u64::MAX),
         retention: log.retention(),
-        record,
     }
 }
 
@@ -414,6 +401,24 @@ pub async fn operation_key_status(
     mode.require_runtime()?;
     let log = open_log(&operations)?;
     Ok(key_status(&log, &host).await)
+}
+
+/// `operation_record_size`: the record's row count and oldest request time
+/// (O4a). Runtime only; no permission. Counting reads the whole request
+/// index, so it is asked for when the settings window opens or saves the
+/// retention, never with the status the Runtime header polls.
+/// `record_failed` when the record is not open or could not be read.
+#[tauri::command]
+pub async fn operation_record_size(
+    mode: State<'_, AppMode>,
+    operations: State<'_, OperationState>,
+) -> Result<RetentionStatus, String> {
+    mode.require_runtime()?;
+    let log = open_log(&operations)?;
+    log.retention_status().await.map_err(|error| {
+        eprintln!("[banto-scada] operation settings: the record size could not be read: {error:?}");
+        reason::RECORD_FAILED.to_owned()
+    })
 }
 
 /// `operation_key_register`: register `secret` as the write key for the

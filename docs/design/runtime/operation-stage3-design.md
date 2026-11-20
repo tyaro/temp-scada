@@ -377,5 +377,6 @@ O4a で決めたこと（2026-11-20）: 実行記録の保持（§9、§11-7）�
 - 件数は `pending` の行も含めた表の行数で数える（画面に出す行数と同じ）。`pending` の行は消さない。消すのは `pending` でない行の古い端から（`requested_at_ms`・`seq` の順。形式 6 で索引 `operation_requested` を足した）で、上限の内の最初の行で止める。
 - 1 回の削除は 10,000 行まで（警報の `PRUNE_BATCH` と同じ）。上限に達したら 5 秒後、そうでなければ 1 時間後に次を回す。Runtime mode で `operations.db` を開いたときに 1 回回し、`operation_retention_set` で設定を変えたらすぐ回す。失敗はログに出し、次の回で再試行する。終了時は記録を閉じる前に止める。
 - 保存先は `operations.db` の表 `terminal_settings` の列 `retention_days`・`retention_count`（NULL は既定。表の CHECK も範囲と整数）。形式を 6 に上げ、形式 5 の file は開くときに列を足す。保持を保存しても最小間隔は変えない（行が無ければ最小間隔は既定で書く）。
-- command は `operation_retention_set(retentionDays, retentionCount)`（Runtime だけ、Admin。範囲の外は `invalid_retention`。ほかの誤りは最小間隔と同じ）。答えの `operation_key_status` の形に、`retention`（`days`・`count`）と `record`（`rowCount`・`oldestRequestedAtMs`。読めなければ null）を足した。
+- command は `operation_retention_set(retentionDays, retentionCount)`（Runtime だけ、Admin。範囲の外は `invalid_retention`。ほかの誤りは最小間隔と同じ）。答えの `operation_key_status` の形に、`retention`（`days`・`count`）を足した。
+- 今の行数と最古の時刻は別の command `operation_record_size`（Runtime だけ、権限の検査はしない。答えは `rowCount`・`oldestRequestedAtMs`、読めなければ `record_failed`）で読む。数えるのに索引を全部読み、書込みの記録と同じ 1 接続を使うので、上端の札が 5 秒おきに読む `operation_key_status` には含めない。窓を開いたときと保持を保存した後だけ読む（#333 のレビュー）。
 - 画面は「書込みの端末設定」の窓に「記録の保持」の欄（日数・件数と「保存」）と今の行数・最古の時刻を置き、範囲を host と同じ規則で先に確かめる。

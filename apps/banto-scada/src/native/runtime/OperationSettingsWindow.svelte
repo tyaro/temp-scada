@@ -14,6 +14,7 @@
     settingsErrorCode,
     writeStateText,
     type OperationKeyStatus,
+    type OperationRecordSize,
     type OperationSettingsHost,
   } from "./operation-settings";
 
@@ -41,6 +42,19 @@
   } = $props();
 
   let status = $state.raw<OperationKeyStatus | null>(null);
+  /** 記録の行数（O4a）。数えるのが重いので、開いたときと保持の保存の後だけ読む。 */
+  let recordSize = $state.raw<OperationRecordSize | null>(null);
+  let sizeGeneration = 0;
+  async function loadRecordSize() {
+    const issued = ++sizeGeneration;
+    try {
+      const next = await host.recordSize();
+      if (open && issued === sizeGeneration) recordSize = next;
+    } catch {
+      // 読めなければ件数を出さない（host が記録に残す）。
+      if (open && issued === sizeGeneration) recordSize = null;
+    }
+  }
   let loadIssue = $state<string | null>(null);
   let secret = $state("");
   let busy = $state(false);
@@ -86,9 +100,11 @@
     if (!open) return;
     untrack(() => {
       status = null;
+      recordSize = null;
       loadIssue = issue = done = null;
       confirmingDelete = false;
       void load();
+      void loadRecordSize();
     });
     return () => {
       // 窓を閉じたら入力した秘密を残さない。
@@ -109,6 +125,7 @@
       show(next);
       done = changeDoneText(kind, next);
       if (kind === "register") secret = "";
+      if (kind === "retention") void loadRecordSize();
       onchanged({ status: next });
     } catch (error) {
       const code = settingsErrorCode(error);
@@ -334,8 +351,8 @@
             >1〜3650 日、10000〜10000000
             件。どちらかを超えた古い記録から消します（結果を待つ記録は消しません）。</small
           >
-          {#if status.record}<p class="hint" data-operation-record-size>
-              {recordSizeText(status.record)}
+          {#if recordSize}<p class="hint" data-operation-record-size>
+              {recordSizeText(recordSize)}
             </p>{/if}
         </form>
       </section>

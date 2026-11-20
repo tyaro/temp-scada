@@ -18,8 +18,16 @@ export interface OperationKeyStatus {
   minIntervalMs: number;
   /** 記録の保持（O4a）。日数と件数の両方を当て、早く消える方が効く。 */
   retention: { days: number; count: number };
-  /** 記録の行数と最古の依頼時刻。読めなければ null。 */
-  record: { rowCount: number; oldestRequestedAtMs: number | null } | null;
+}
+
+/**
+ * `operation_record_size` の答え。記録の行数と最古の依頼時刻。数えるのに
+ * 索引を全部読むので、上端の札が定期に読む状態には含めず、窓を開いた・
+ * 保持を保存したときだけ読む。
+ */
+export interface OperationRecordSize {
+  rowCount: number;
+  oldestRequestedAtMs: number | null;
 }
 
 /** 最小間隔の範囲（host の `operation_db::valid_min_interval` と同じ）。 */
@@ -35,10 +43,11 @@ export type Invoke = <T>(
   args?: Record<string, unknown>,
 ) => Promise<T>;
 
-/** 端末設定の 4 つの command を包む。誤りは host の理由の文字のまま投げる。 */
+/** 端末設定の command を包む。誤りは host の理由の文字のまま投げる。 */
 export function createOperationSettingsHost(invoke: Invoke) {
   return {
     status: () => invoke<OperationKeyStatus>("operation_key_status"),
+    recordSize: () => invoke<OperationRecordSize>("operation_record_size"),
     register: (secret: string) =>
       invoke<OperationKeyStatus>("operation_key_register", { secret }),
     remove: () => invoke<OperationKeyStatus>("operation_key_delete"),
@@ -257,7 +266,7 @@ function parseWhole(input: string): number | null {
 }
 
 /** 記録の大きさの表示。読めなければ空。 */
-export function recordSizeText(record: OperationKeyStatus["record"]): string {
+export function recordSizeText(record: OperationRecordSize | null): string {
   if (record === null) return "";
   if (record.oldestRequestedAtMs === null)
     return `今の記録: ${record.rowCount} 件`;

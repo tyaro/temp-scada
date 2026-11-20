@@ -323,8 +323,12 @@ fn the_write_key_commands_work_login_free_before_operation() {
         json!({"keyEndpoint": null, "hubEndpoint": null,
             "write": {"state": "ready", "changedAtMs": null},
             "minIntervalMs": 1_000,
-            "retention": {"days": 365, "count": 100_000},
-            "record": {"rowCount": 0, "oldestRequestedAtMs": null}})
+            "retention": {"days": 365, "count": 100_000}})
+    );
+    // The record size is its own command, not part of the polled status.
+    assert_eq!(
+        invoke(&webview, "operation_record_size", json!({})).unwrap(),
+        json!({"rowCount": 0, "oldestRequestedAtMs": null})
     );
     assert_eq!(
         invoke(
@@ -446,6 +450,7 @@ fn the_write_key_commands_need_an_admin_in_operation() {
         );
     }
     assert!(invoke(&webview, "operation_key_status", json!({})).is_ok());
+    assert!(invoke(&webview, "operation_record_size", json!({})).is_ok());
 }
 
 /// The record could not be opened: the settings answer `record_failed`.
@@ -458,6 +463,7 @@ fn the_write_key_commands_without_the_record_are_record_failed() {
     tauri::async_runtime::block_on(app.state::<OperationState>().close());
     for (command, args) in [
         ("operation_key_status", json!({})),
+        ("operation_record_size", json!({})),
         ("operation_key_register", json!({"secret": "write-key"})),
         ("operation_key_delete", json!({})),
         ("operation_write_resume", json!({})),

@@ -28,7 +28,6 @@ function status(
     write: { state, changedAtMs: null },
     minIntervalMs: 1000,
     retention: { days: 365, count: 100_000 },
-    record: { rowCount: 0, oldestRequestedAtMs: null },
   };
 }
 

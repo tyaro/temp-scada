@@ -97,8 +97,9 @@ fn the_command_list_is_generate_handler_without_gaps_or_duplicates() {
     // `operation_write` and `operation_view`, and the 4 of the write key
     // (`operation_key_*`, `operation_write_resume`) and the minimum interval
     // (`operation_min_interval_set`) and the retention
-    // (`operation_retention_set`).
-    assert_eq!(listed.len(), 71);
+    // (`operation_retention_set`) and the record size
+    // (`operation_record_size`).
+    assert_eq!(listed.len(), 72);
 }
 
 #[test]
@@ -533,6 +534,7 @@ fn runtime_only_calls() -> Vec<(&'static str, Value)> {
             "operation_retention_set",
             json!({"retentionDays": 30, "retentionCount": 20_000}),
         ),
+        ("operation_record_size", json!({})),
     ];
     let named: BTreeSet<&str> = calls.iter().map(|(name, _)| *name).collect();
     assert_eq!(named, RUNTIME_ONLY.iter().copied().collect());
