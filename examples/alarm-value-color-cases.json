@@ -1,0 +1,555 @@
+[
+  {
+    "name": "text points at a threshold definition",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c901",
+      "order": 1100,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Tank01.Temperature"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000101"
+        }
+      }
+    }
+  },
+  {
+    "name": "text points at a bit definition",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c902",
+      "order": 1101,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Pump01.Running"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000102"
+        }
+      }
+    }
+  },
+  {
+    "name": "text points at a disabled definition",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "alarms": {
+      "definitions": [
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000101",
+          "name": "T-01 温度",
+          "enabled": true,
+          "source": {
+            "kind": "threshold",
+            "tag": "Demo.Water.Tank01.Temperature",
+            "limits": {
+              "hh": {
+                "value": 80,
+                "severity": "high",
+                "message": "温度 異常高"
+              },
+              "h": {
+                "value": 70,
+                "severity": "medium"
+              },
+              "l": {
+                "value": 5,
+                "severity": "low"
+              }
+            },
+            "deadband": 1
+          },
+          "onDelayMs": 1000
+        },
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000102",
+          "name": "P-01 停止",
+          "enabled": true,
+          "source": {
+            "kind": "bit",
+            "tag": "Demo.Water.Pump01.Running",
+            "activeWhen": false
+          },
+          "severity": "medium",
+          "message": "ポンプ 停止"
+        },
+        {
+          "id": "0199f6a1-0000-7000-8000-000000000103",
+          "name": "T-02 温度",
+          "enabled": false,
+          "source": {
+            "kind": "threshold",
+            "tag": "Demo.Water.Tank02.Temperature",
+            "limits": {
+              "h": {
+                "value": 70,
+                "severity": "medium"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c903",
+      "order": 1102,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Tank01.Temperature"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000103"
+        }
+      }
+    }
+  },
+  {
+    "name": "text bound to a different tag than the definition",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c904",
+      "order": 1103,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Tank01.Temperature"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000102"
+        }
+      }
+    }
+  },
+  {
+    "name": "text with a numeric format",
+    "target": "/screens/0/objects",
+    "valid": true,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c905",
+      "order": 1104,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Tank01.Temperature"
+        },
+        "format": {
+          "decimals": 1,
+          "unit": "℃"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000101"
+        }
+      }
+    }
+  },
+  {
+    "name": "unknown alarm definition",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "error": "数値の警報の色が指す警報の定義が見つかりません",
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c906",
+      "order": 1105,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Tank01.Temperature"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-0000000001ff"
+        }
+      }
+    }
+  },
+  {
+    "name": "no alarm definitions",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "alarms": {
+      "definitions": []
+    },
+    "error": "数値の警報の色が指す警報の定義が見つかりません",
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c907",
+      "order": 1106,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Tank01.Temperature"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000101"
+        }
+      }
+    }
+  },
+  {
+    "name": "null alarm color",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c908",
+      "order": 1107,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Tank01.Temperature"
+        },
+        "alarmColor": null
+      }
+    }
+  },
+  {
+    "name": "alarm color without an alarm id",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c909",
+      "order": 1108,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Tank01.Temperature"
+        },
+        "alarmColor": {}
+      }
+    }
+  },
+  {
+    "name": "alarm color with an unknown field",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c910",
+      "order": 1109,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Tank01.Temperature"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000101",
+          "limit": "hh"
+        }
+      }
+    }
+  },
+  {
+    "name": "static text",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c911",
+      "order": 1110,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000101"
+        }
+      }
+    }
+  },
+  {
+    "name": "equipment property text",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c912",
+      "order": 1111,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "equipmentProperty": {
+          "field": "name"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000101"
+        }
+      }
+    }
+  },
+  {
+    "name": "slot-bound text",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c913",
+      "order": 1112,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "slotBinding": {
+          "slotName": "value"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000101"
+        }
+      }
+    }
+  },
+  {
+    "name": "text with a bool display",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c914",
+      "order": 1113,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Pump01.Running"
+        },
+        "boolDisplay": {
+          "true": {
+            "text": "運転",
+            "color": "#16a34a"
+          },
+          "false": {
+            "text": "停止",
+            "color": "#64748b"
+          },
+          "unknownColor": "#d97706"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000102"
+        }
+      }
+    }
+  },
+  {
+    "name": "text inside a Symbol definition",
+    "target": "/symbols/0/objects",
+    "valid": false,
+    "error": "Symbol 定義内の直接タグ割り当てには対応していません",
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c915",
+      "order": 1114,
+      "x": 10,
+      "y": 10,
+      "width": 120,
+      "height": 24,
+      "rotation": 0,
+      "fill": "#1f2937",
+      "shape": {
+        "type": "text",
+        "text": "0.0",
+        "style": {
+          "fontSize": 16,
+          "fontWeight": "normal",
+          "align": "right"
+        },
+        "binding": {
+          "externalName": "Demo.Water.Tank01.Temperature"
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000101"
+        }
+      }
+    }
+  },
+  {
+    "name": "alarm color on a rectangle",
+    "target": "/screens/0/objects",
+    "valid": false,
+    "object": {
+      "id": "0199f6aa-0000-7000-8000-00000000c999",
+      "order": 1199,
+      "x": 10,
+      "y": 10,
+      "width": 40,
+      "height": 20,
+      "rotation": 0,
+      "shape": {
+        "type": "rectangle",
+        "paint": {
+          "stroke": null,
+          "fill": {
+            "enabled": true,
+            "paint": {
+              "type": "solid",
+              "color": "#507482",
+              "alpha": 1
+            }
+          }
+        },
+        "alarmColor": {
+          "alarmId": "0199f6a1-0000-7000-8000-000000000101"
+        }
+      }
+    }
+  }
+]

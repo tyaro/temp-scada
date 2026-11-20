@@ -1,6 +1,7 @@
 import { remapConnections } from "./connections";
 import { completeGroupSelection, groupsOf } from "./geometric-groups";
 import { clipboardDependencies } from "./clipboard-dependencies";
+import { referencedAlarmIds } from "./alarm-references";
 import {
   parseProject,
   serializeProject,
@@ -78,14 +79,10 @@ export function parseClipboard(text: string): ObjectClipboard {
     throw new Error(
       "トレンドを含む貼り付けは未対応です。配置の複製または画面の複製を使ってください。",
     );
-  // 警報の定義は小札が指すものだけを、照合のために添える。
+  // 警報の定義は小札・数値の文字（alarmColor）が指すものだけを、照合のために添える。
   if (project.alarms) {
-    const badgeAlarmIds = new Set(
-      project.screens.flatMap((s) =>
-        s.objects.flatMap((o) =>
-          o.shape.type === "alarmBadge" ? [o.shape.alarmId] : [],
-        ),
-      ),
+    const badgeAlarmIds = referencedAlarmIds(
+      project.screens.flatMap((s) => s.objects),
     );
     if (
       project.alarms.blinkUnacked !== undefined ||
@@ -256,12 +253,12 @@ export function copyObjectSnapshot(
     throw new Error(
       "トレンドを含むコピー・切り取りは未対応です。配置の複製または画面の複製を使ってください。",
     );
-  // 小札が指す警報の定義だけを clipboard に添える（貼付け先へは取り込まない）。
-  const badgeAlarmIds = new Set(
-    [...objects, ...dependencyScreens.flatMap((s) => s.objects)].flatMap((o) =>
-      o.shape.type === "alarmBadge" ? [o.shape.alarmId] : [],
-    ),
-  );
+  // 小札・数値の文字（alarmColor）が指す警報の定義だけを clipboard に添える
+  // （貼付け先へは取り込まない。同じ定義は 1 件）。
+  const badgeAlarmIds = referencedAlarmIds([
+    ...objects,
+    ...dependencyScreens.flatMap((s) => s.objects),
+  ]);
   if (
     [...objects, ...dependencyScreens.flatMap((screen) => screen.objects)].some(
       (object) => object.shape.type === "symbol" && object.shape.equipmentId,
