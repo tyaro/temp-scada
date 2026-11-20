@@ -1,6 +1,7 @@
 import { leadingChars, normalizeAlarms, uniqueAlarmName } from "../alarms";
 import type { Project } from "../project";
 import { validateAlarmBadgeTarget } from "../alarm-badge";
+import { alarmReferences, validateAlarmColorTarget } from "../alarm-references";
 import type { ProjectCommand } from "./commands";
 
 type AlarmCommand = Extract<
@@ -54,20 +55,41 @@ export function applyAlarmCommand(next: Project, command: AlarmCommand): void {
   const normalized = normalizeAlarms(alarms);
   if (normalized) next.alarms = normalized;
   else delete next.alarms;
-  // 小札が指す定義・限界を消す変更は、parseProject の検査より先に使用中の小札を示して止める。
+  // 小札・数値の文字が指す定義（小札は限界も）を消す変更は、parseProject の検査より先に
+  // 使用中の配置を示して止める。数値の文字は定義の id だけを見るので、種類・限界の変更では
+  // 壊れない。数値の文字が壊れるとき（定義の削除）は小札と 1 つの一覧で示す。
+  // 仕様: docs/design/graphics/alarm-value-color.md「参照の保護と clipboard」
+  const current = next.alarms?.definitions ?? [];
   const broken = next.screens.flatMap((screen) =>
-    screen.objects.flatMap((object) => {
-      if (object.shape.type !== "alarmBadge") return [];
+    alarmReferences(screen.objects).flatMap((reference) => {
       try {
-        validateAlarmBadgeTarget(object.shape, next.alarms?.definitions ?? []);
+        if (reference.kind === "badge")
+          validateAlarmBadgeTarget(reference.object.shape, current);
+        else validateAlarmColorTarget({ alarmId: reference.alarmId }, current);
         return [];
       } catch {
-        return [`${screen.name}／${object.name ?? "警報の小札"}`];
+        const fallback =
+          reference.kind === "badge" ? "警報の小札" : "数値の文字";
+        return [
+          {
+            kind: reference.kind,
+            label: `${screen.name}／${reference.object.name ?? fallback}`,
+          },
+        ];
       }
     }),
   );
+  const list = (rows: typeof broken) =>
+    `${rows
+      .slice(0, 5)
+      .map((row) => row.label)
+      .join("、")}${rows.length > 5 ? " ほか" : ""}`;
+  if (broken.some((row) => row.kind === "valueColor"))
+    throw new Error(
+      `この警報は使用中です：${list(broken)}。先に小札・数値の文字から外すか、指す警報を変えてください。`,
+    );
   if (broken.length)
     throw new Error(
-      `この警報は警報の小札で使用中です：${broken.slice(0, 5).join("、")}${broken.length > 5 ? " ほか" : ""}。先に小札を削除するか、小札が指す警報を変えてください。`,
+      `この警報は警報の小札で使用中です：${list(broken)}。先に小札を削除するか、小札が指す警報を変えてください。`,
     );
 }

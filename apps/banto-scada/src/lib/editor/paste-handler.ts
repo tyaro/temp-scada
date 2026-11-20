@@ -9,6 +9,7 @@ import {
 } from "../project";
 import { parseClipboard } from "../clipboard";
 import { assertAlarmBadgePasteTarget } from "../alarm-badge";
+import { assertAlarmColorPasteTarget } from "../alarm-references";
 import { shapeTagBindings } from "../shape-bindings";
 import type { PasteCommand } from "./commands";
 import {
@@ -79,11 +80,18 @@ export function applyPasteCommand(
     ...objects,
     ...importedScreens.flatMap((source) => source.objects),
   ];
-  // 警報の定義は取り込まない。小札は貼付け先の同じ id の定義と限界を指す。
+  // 警報の定義は取り込まない。小札は貼付け先の同じ id の定義と限界を、数値の文字
+  // （alarmColor）は同じ id の定義を指す。
   for (const object of importedObjects)
     if (object.shape.type === "alarmBadge")
       assertAlarmBadgePasteTarget(
         object.shape,
+        fragment.project.alarms?.definitions ?? [],
+        next.alarms?.definitions ?? [],
+      );
+    else if (object.shape.type === "text" && object.shape.alarmColor)
+      assertAlarmColorPasteTarget(
+        object.shape.alarmColor,
         fragment.project.alarms?.definitions ?? [],
         next.alarms?.definitions ?? [],
       );

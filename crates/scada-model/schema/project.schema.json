@@ -383,6 +383,16 @@
                 "boolDisplay": {
                   "$ref": "#/$defs/textBoolDisplay"
                 },
+                "alarmColor": {
+                  "type": "object",
+                  "properties": {
+                    "alarmId": {
+                      "$ref": "#/$defs/id"
+                    }
+                  },
+                  "required": ["alarmId"],
+                  "additionalProperties": false
+                },
                 "equipmentProperty": {
                   "type": "object",
                   "properties": {
@@ -421,12 +431,16 @@
                   },
                   {
                     "required": ["boolDisplay", "equipmentProperty"]
+                  },
+                  {
+                    "required": ["alarmColor", "boolDisplay"]
                   }
                 ]
               },
               "dependentRequired": {
                 "stateColors": ["slotBinding"],
-                "boolDisplay": ["binding"]
+                "boolDisplay": ["binding"],
+                "alarmColor": ["binding"]
               },
               "if": {
                 "required": ["format"]

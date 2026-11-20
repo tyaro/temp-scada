@@ -584,6 +584,10 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 2026-11-17の段階3 3-D1で、画面の直下に置く警報の小札`alarmBadge`（`alarmId`・しきい値の`limit`・`text`・`style`のfontSize・fontWeight）を追加した。指す定義と限界が Project にあることを TS・Rust の両方で検査し、使用中の定義・限界は警報の設定で削除・変更できない。状態（不明・正常・発生中・未確認・復帰・未確認・評価不能、発生中に評価不能が重なると「?」）は純関数`alarm-view.ts`で snapshot から導き、モジュールの$stateで編集・プレビュー・運転表示に同じ状態を配る。色は部品で固定し、`aria-label`に状態の文字を入れる。`blinkUnacked`のときだけ未確認を点滅し、「動きを減らす」では止める。ブラウザ版のe2eはDEVだけで差し込むモックの警報feedで状態を変える。schemaVersionは0.37.0のまま。[仕様](../design/graphics/alarm-badge.md)。`alarm-view.test.ts`・`alarm-badge.test.ts`・`examples/alarm-badge-cases.json`（Rust・TS共通）・`e2e/alarm-badge.spec.ts`で確認。Symbol定義内の小札は未実装、Tauri実機は未確認。
 
+## 数値の警報の色
+
+2026-11-20 の #304 V1a で、画面直下のタグを結合した Text に任意の`alarmColor: { alarmId }`を足した（保存形式・TS／Rust の検査・共通の契約ケース・編集コマンド・使用中の定義の削除の拒否・clipboard と貼り付け）。指す定義があることだけを確かめ、種類・限界・`enabled`・タグの一致は問わない。schemaVersion は 0.37.0 のまま。状態の合成の純関数、描画・Inspector（V2）は未実装なので、手で書いた`alarmColor`は定義の削除を止めるが画面には出ない。[仕様](../design/graphics/alarm-value-color.md)。`alarm-references.test.ts`・`examples/alarm-value-color-cases.json`（Rust・TS 共通）で確認。
+
 ## 最新の警報の帯
 
 2026-11-17の段階3 3-D2で、画面の直下に置く最新の警報の帯`alarmBanner`（`style`のfontSize・fontWeightだけを持ち、指す定義は無い）を追加した。純関数`alarm-banner.ts`で snapshot から、停止中（status の理由）・監視できていない（Engine単位の評価不能、選んだ1件は出さない）・別Project・警報なしを出し、監視中は未確認を先に→severityの高い順→同じ定義で上位の限界がある下位を落とす→新しい順（orderKey・時刻・id）で1件を選んで「時刻・名前・メッセージ」と件数を出す。condition単位の評価不能があれば件数と主な理由を常に添える。色は小札と同じ配色で部品に固定し、停止中などは小札の「不明」と同じ斜線、主の文字は幅に収まらなければ「…」で省略し、`aria-label`に全文を入れる。`blinkUnacked`のときだけ未確認を点滅し、「動きを減らす」では止める。schemaVersionは0.37.0のまま。[仕様](../design/graphics/alarm-banner.md)。`alarm-banner.test.ts`・`examples/alarm-banner-cases.json`（Rust・TS共通）・`e2e/alarm-banner.spec.ts`で確認。Tauri実機は未確認。
