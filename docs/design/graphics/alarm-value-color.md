@@ -54,14 +54,15 @@ alarmColor?: { alarmId: string }; // alarms.definitions[].id
 
 ### 見る condition
 
-- しきい値の定義: 編集中の定義にある限界と、snapshot の `engine.conditions` にある `${alarmId}:hh`・`:h`・`:l`・`:ll` の**和集合**。編集で限界を外して未適用のあいだも、Engine で発生中の限界を見落とさない。
-- bit の定義: `alarmId`。
+- 編集中の定義から出る condition（しきい値なら定義にある限界ごとの `${alarmId}:${limit}`、bit なら `alarmId`）と、snapshot の `engine.conditions` にある `alarmId`・`${alarmId}:hh`・`:h`・`:l`・`:ll` の**和集合**。snapshot 側は編集中の定義の種類に関係なく 5 つとも見る。
+  - 編集で限界を外して未適用のあいだも、Engine で発生中の限界を見落とさない。
+  - 種類を変えて未適用のあいだ（しきい値 → bit、bit → しきい値）も、host は前に適用した定義のまま評価しているので、その condition の状態を出す。編集中の定義から出る新しい condition は未適用なので不明になり、発生中が無ければ灰色、あれば発生中の色になる（上の規則のとおり）。
 - 指す定義が編集中の Project に無いことは保存の検査で起きない。
 
 ### severity と優先
 
 - severity は小札と同じく適用中の表示情報（`applied.displays[condition id].severity`）から取り、無ければ **high** とする（小札の地の色と揃える。同じ condition を指す小札と文字の色がずれない）。
-- 優先の順: severity（high → medium → low）、同じなら限界の外側（`hh` → `ll` → `h` → `l`）。
+- 優先の順: severity（high → medium → low）、同じなら限界の外側（`hh` → `ll` → `h` → `l`）、限界の無い bit の condition（`alarmId`）は同じ severity の限界の後。
 
 ### 規則
 
@@ -73,18 +74,21 @@ alarmColor?: { alarmId: string }; // alarms.definitions[].id
 
 規則から出る組合せの例（単体試験で固定する）:
 
-| condition の状態                                     | 文字色         | 下線                               |
-| ---------------------------------------------------- | -------------- | ---------------------------------- |
-| すべて正常                                           | `fill`         | なし                               |
-| H 発生中・確認済み、HH 発生中・未確認                | HH の severity | HH の severity                     |
-| H 発生中・確認済み、HH 復帰・未確認                  | H の severity  | HH の severity                     |
-| HH 復帰・未確認、ほかは正常                          | `fill`         | HH の severity                     |
-| HH 復帰・未確認、追加した L が未適用（不明）         | 不明の灰色     | HH の severity                     |
-| 編集で外した HH が Engine で発生中、H は正常         | HH の severity | HH が未確認なら                    |
-| 追加した LL だけが未適用、ほかは正常                 | 不明の灰色     | なし                               |
-| H 発生中で condition 単位の評価不能が重なる          | H の severity  | 未確認ならあり                     |
-| snapshot が無い・Engine が止まっている・別の Project | 不明の灰色     | なし                               |
-| `ackMode: none` の H が発生中                        | H の severity  | なし（確認不要は未確認にならない） |
+| condition の状態                                               | 文字色                     | 下線                               |
+| -------------------------------------------------------------- | -------------------------- | ---------------------------------- |
+| すべて正常                                                     | `fill`                     | なし                               |
+| H 発生中・確認済み、HH 発生中・未確認                          | HH の severity             | HH の severity                     |
+| H 発生中・確認済み、HH 復帰・未確認                            | H の severity              | HH の severity                     |
+| HH 復帰・未確認、ほかは正常                                    | `fill`                     | HH の severity                     |
+| HH 復帰・未確認、追加した L が未適用（不明）                   | 不明の灰色                 | HH の severity                     |
+| 編集で外した HH が Engine で発生中、H は正常                   | HH の severity             | HH が未確認なら                    |
+| しきい値 → bit へ変えて未適用、Engine の HH が発生中・未確認   | HH の severity             | HH の severity                     |
+| bit → しきい値へ変えて未適用、Engine の bit が発生中・確認済み | bit の severity            | なし                               |
+| しきい値 → bit へ変えて未適用、Engine の限界はすべて正常       | 不明の灰色（bit が未適用） | なし                               |
+| 追加した LL だけが未適用、ほかは正常                           | 不明の灰色                 | なし                               |
+| H 発生中で condition 単位の評価不能が重なる                    | H の severity              | 未確認ならあり                     |
+| snapshot が無い・Engine が止まっている・別の Project           | 不明の灰色                 | なし                               |
+| `ackMode: none` の H が発生中                                  | H の severity              | なし（確認不要は未確認にならない） |
 
 - 発生中に評価不能が重なっても発生中の色のままにする（発生中を隠さない）。小札の「?」の印に当たるものは数値には付けず、`<title>` の文字だけで示す（既知の制約）。
 - 不明の灰色は、Engine が無い・動いていない・Engine 単位の評価不能・別の Project・未適用のどれでも同じ。無効（`enabled: false`）の定義は host が condition を作らないので、いつも未適用で灰色になる（`<title>` は「この警報は適用されていません」）。ブラウザ版の Designer とデモ（Engine が無い）では、`alarmColor` を持つ数値はいつもこの灰色になる。
@@ -130,7 +134,7 @@ V1 だけが入った状態では、手で書いた `alarmColor` が定義の削
 ## 受入
 
 - 画面直下の数値の Text が、指した警報の定義の状態で文字色を変える。正常・発生中（未確認・確認済み）・復帰・未確認が、同じ condition を指す小札と矛盾しない（severity が表示情報に無いときも含めて、並べた e2e）（V2）。
-- 合成の単体試験（V1）: 上の組合せの例の表の全行、bit の定義（condition id は `alarmId`）、severity が表示情報に無い（high）、H と HH の severity が逆転した定義（severity が先）、無効の定義（灰色）。
+- 合成の単体試験（V1）: 上の組合せの例の表の全行（種類の変更の両方向を含む）、bit の定義（condition id は `alarmId`）、severity が表示情報に無い（high）、H と HH の severity が逆転した定義（severity が先）、無効の定義（灰色）。
 - 警報の状態が不明・評価不能のとき、数値を正常の色や直前の色で出さず、不明の灰色で出す。発生中に評価不能が重なったら発生中の色のまま（V1・V2）。
 - `blinkUnacked` のときだけ未確認で点滅し、「動きを減らす」では止まって下線だけになる（V2）。
 - 描画（V2）: 明るい背景・暗い背景、背景の違う埋込画面で組が切り替わる。プレビュー・運転表示・ミニマップでも同じ組。`###` のときの下線、回転した Text の下線。
