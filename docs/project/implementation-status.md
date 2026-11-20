@@ -32,7 +32,7 @@ O2c-3b-1（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) �
 
 O2c-3b-2（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) §7）: Runtime の窓に書き用キーの command を足した（状態の照会・登録・削除・書込みの再開）。変える 3 つは開発・初期設定ではログイン不要、運用では Admin だけ。書込み・照会は要求のたびに keyring からキーを読むので、契約のある Hub にキーを登録すれば製品から送るようになる。画面（O2c-4）は未実装で、Tauri 実機・実 Hub・Windows の資格情報マネージャーでの確認は未実施。
 
-O4d（2026-11-20）: 実 Hub の安全番地での書込みの受入の手順書（[real-hub-o4-write-acceptance.md](real-hub-o4-write-acceptance.md)）と受入用 Project（`examples/real-hub-write.project.json`）を用意した。実機の受入は未実施。
+O4d（2026-11-20）: 実 Hub の安全番地での書込みの受入の手順書（[real-hub-o4-write-acceptance.md](real-hub-o4-write-acceptance.md)）と受入用 Project（`examples/real-hub-write.project.json`）を用意した。2026-11-20に実機で受け入れ、必須項目と任意の3.8は合格（同文書§6）。同日、O0の実機の受入も行った（[real-hub-o0-runtime-acceptance.md](real-hub-o0-runtime-acceptance.md)）。
 
 ## 実Hub・S7接続の着手方針（2026-11-05）
 

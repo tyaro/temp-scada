@@ -1,0 +1,41 @@
+# Runtime mode の実機受入記録（段階3の操作 O0）
+
+状態: **2026-11-20に実施。`auth_setup` と警報の発報を除き合格**。[Runtime mode 設計](../design/runtime/runtime-mode-design.md)§9 の「実機の受入（ネイティブ）」を、Windows 実機の release ビルドで確かめた記録である。書込みの受入（O4）は[O4受入手順と記録](real-hub-o4-write-acceptance.md)にある。
+
+## 1. 条件
+
+- commit: `claude/ajv-standalone`（PR #346、`4022b896`）。`work` の `1dbbeb0e` では release ビルドの画面が出なかったため（§3）、その修正を足した版で受け入れた。
+- ビルド: `pnpm build` の後、`apps/banto-scada/src-tauri` で `cargo build --release --locked --features tauri/custom-protocol`（tauri CLI を使わない。`custom-protocol` を付けないと devUrl を読む）。通常の端末から起動した。
+- Hub: `127.0.0.1:8722`、0.3.0-alpha.4（ユーザー申告）。
+- 認証: 認証無効（初期設定中）。
+- 退避: 初回起動の前に、認証DB・`auth-phase.json`・`alarm-terminal.json`・`alarms` を `%LOCALAPPDATA%\temp-scada-backup-20261120-o0o4` へ写した。
+
+## 2. 確かめ方
+
+- 窓の有無と文言: Win32 の `EnumWindows`／`EnumChildWindows` で、起動したプロセスの窓のクラス名と文言を読んだ（メッセージの窓は `#32770`）。
+- 画面と command: 環境変数 `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222` で起動し、Playwright の `connectOverCDP` から、画面の文字を読み、`window.__TAURI_INTERNALS__.invoke` で command を呼んだ。設計の想定（debug ビルドの devtools）より強く、release ビルドの ACL そのものを確かめている。
+- devtools: remote debugging を付けずに起動し、窓を前に出して F12・Ctrl+Shift+I・Ctrl+Shift+J を送り、窓が増えないことを見た。同じ送り方の F1 で Editor のヘルプが開くことを対照にした。
+
+## 3. 見つかった不具合（PR #346 で修正）
+
+`work` の `1dbbeb0e` の release ビルドは、Editor・Runtime とも画面が真っ白だった。Ajv がモジュールの読込み時に `new Function` で検査コードを生成し、`tauri.conf.json` の CSP（`script-src` に `unsafe-eval` なし）が `EvalError` で拒否していた。CSP は 2026-11-05 から入っていたが、C5 までの実機確認は開発起動（devUrl）だったため出ていなかった。PR #346 で検査コードを事前生成し、CSP の下で画面が組み立てられる e2e を足した。
+
+## 4. 結果
+
+| 項目                                   | 結果                                                                                                                                                                                                                                           |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 引数の誤り                             | 合格。`--runtime` だけ → メッセージの窓「--runtime には Project のファイルを指定してください。」と使い方。`--bogus` → 「知らない引数です: --bogus」。どちらもアプリの窓は出ない                                                                |
+| Project を読めない                     | 合格。存在しないファイル → 窓に「Project を開けません／ファイル such.json／理由 ファイルを読めません」。運転表示は出ない                                                                                                                       |
+| ACL の拒否（release）                  | 合格。Runtime の窓から `history_context`・`alarm_apply`・`recording_initial_setup` は `Command … not allowed by ACL`。`app_mode`（`"runtime"`）・`auth_status` は通る。`runtime_alarm_status` は Project を読めない起動で `projectUnavailable` |
+| 2つ目の起動                            | 合格。同じ Project の Runtime → 2つ目は終わり、案内なし。別の Project の Runtime・引数なしの Editor → 2つ目は終わり、1つ目の窓に「すでに起動しています。別の Project・別の mode で使うときは、いまの窓を閉じてから起動してください」           |
+| devtools（release）                    | 合格。Runtime・Editor とも F12・Ctrl+Shift+I・Ctrl+Shift+J で窓が増えない。対照の F1 は届いた                                                                                                                                                  |
+| Runtime の画面                         | 合格。`examples/real-hub-write.project.json` で、保存済みの接続先へ接続（106件、のちに108件）、メニューバー・作業タブなし。上端に警報・操作履歴・記録・書込みの札・履歴トレンド・認証                                                          |
+| 警報の一覧・履歴トレンド・操作履歴の窓 | 合格（開く・照会まで）。警報は「この端末の警報は、別の Project の定義で動いています」。履歴トレンドは「履歴サービスは未接続です」（Runtime 運転中は記録しない、案 A）                                                                          |
+| 書き用キー（実 keyring）               | 合格。O4 の 1-3・8-2 で登録・登録し直し（O4 記録）                                                                                                                                                                                             |
+| `auth_setup`（最初の管理者の作成）     | 未実施。管理者とパスワードを作るのでユーザーの操作が要る                                                                                                                                                                                       |
+| 警報の発報・ACK・ブザー                | 未実施。この端末の警報は別の Project の定義で動いている                                                                                                                                                                                        |
+| Editor で同じ command が通ること       | 未実施（release の Editor の窓での `invoke`）。ACL の差は Rust の試験で確かめている                                                                                                                                                            |
+
+## 5. 後続
+
+- `auth_setup` と、Editor で警報を適用したうえでの発報・ACK は、ユーザーの手元で行う。
