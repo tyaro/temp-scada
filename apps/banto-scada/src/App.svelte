@@ -21,8 +21,6 @@
   import HistoryWorkspace from "./lib/history/HistoryWorkspace.svelte";
   import TrendDefinitionsDialog from "./lib/designer/TrendDefinitionsDialog.svelte";
   import RecordingPlanDialog from "./lib/designer/RecordingPlanDialog.svelte";
-  import type { DesiredRecordingPlan } from "./lib/recording-plan";
-  import type { TrendDefinition } from "./lib/trend-definitions";
   import type { HistoryService } from "./lib/history/workspace-model";
   let {
     readSource,
@@ -93,6 +91,7 @@
   import { createClipboardController } from "./lib/designer/controllers/clipboard.svelte";
   import { createImageImportController } from "./lib/designer/controllers/image-import.svelte";
   import { createRuntimeWindowsController } from "./lib/designer/controllers/runtime-windows.svelte";
+  import { createRecordingTrendWindowsController } from "./lib/designer/controllers/recording-trend-windows.svelte";
   import SlotReadStatus from "./lib/designer/SlotReadStatus.svelte";
   import AlarmSettings from "./lib/designer/AlarmSettings.svelte";
   import { initialImageFrame } from "./lib/image-frame";
@@ -156,7 +155,6 @@
     name: string;
     count: number;
   } | null>(null);
-  let historyOpen = $state(false);
   let recordingOperationsOpen = $state.raw<object | null>(null);
   function openRecordingOperations() {
     if (!menuBlocked) recordingOperationsOpen = Object.freeze({});
@@ -189,7 +187,6 @@
           }
       : undefined,
   );
-  let historySvgOpener: SVGElement | null = null;
   function toggleMenubar() {
     showMenubar = !showMenubar;
     void setMenubarVisible(showMenubar);
@@ -207,7 +204,6 @@
   }
   import { untrack, tick, flushSync, onDestroy, onMount } from "svelte";
   import { createHistoryController } from "./lib/history/presentation";
-  import { trendObjectDefinitionId } from "./lib/history/workspace-model";
   import { selectionNudge } from "./lib/keyboard-move";
   import { normalizeRotation } from "./lib/rotation";
   import { parseNumericProperty } from "./lib/designer/numeric-properties";
@@ -958,13 +954,13 @@
   function shortcut(event: KeyboardEvent) {
     if (
       runtimeWindows.operatorStart !== null ||
-      historyOpen ||
+      recordingTrend.historyOpen ||
       runtimeWindows.alarmListOpen ||
       runtimeWindows.alarmSettingsOpen ||
       recordingManagementOpen ||
       recordingOperationsOpen ||
-      trendRequest ||
-      recordingRequest
+      recordingTrend.trendRequest ||
+      recordingTrend.recordingRequest
     )
       return;
     // F・F1・F2 は下のダイアログ・配置・フォルダの扱いより先に決める（従来の順）。
@@ -1901,12 +1897,11 @@
     assetStore = store;
     previousStore.dispose();
     project = next;
-    historyOpen = false;
+    recordingTrend.closeHistory();
     runtimeWindows.closeAlarmList();
     recordingManagementOpen = null;
     recordingOperationsOpen = null;
-    recordingRequest = null;
-    recordingView = null;
+    recordingTrend.resetRecordingPlan();
     projectFiles.adopted(next, source);
     history = emptyHistory();
     referencesExpanded = false;
@@ -2337,255 +2332,49 @@
     generation: number;
     ownerId: string;
   } | null>(null);
-  let trendRequest = $state.raw<{
-    project: Project;
-    generation: number;
-    screenId: string;
-    definitionId?: string;
-  } | null>(null);
-  let trendError = $state("");
-  type RecordingEditRequest = {
-    project: Project;
-    generation: number;
-    screenId: string;
-    /** Preview opens the plan for reading only (UX review F-7). */
-    readonly: boolean;
-  };
-  let recordingRequest = $state.raw<RecordingEditRequest | null>(null);
-  // Keep one closed view for Banto's open -> closed focus transition. A new
-  // request keys a fresh draft; adopting another Project drops the old view.
-  let recordingView = $state.raw<RecordingEditRequest | null>(null);
-  let recordingError = $state("");
-  function openRecordingPlan() {
-    if (menuBlocked || activeDefinition) return;
-    const generation = workspaceGeneration,
-      id = screen.id,
-      readonly = mode !== "edit";
-    withScreen(id, () => {
-      if (
-        generation !== workspaceGeneration ||
-        (mode !== "edit") !== readonly ||
-        activeDefinition
-      )
-        return;
-      stopPlacement();
-      recordingError = "";
-      recordingRequest = { project, generation, screenId: id, readonly };
-      recordingView = recordingRequest;
-    });
-  }
-  const currentRecordingRequest = $derived(
-    recordingRequest &&
-      recordingRequest.project === project &&
-      recordingRequest.generation === workspaceGeneration &&
-      recordingRequest.screenId === screen.id &&
-      recordingRequest.readonly === (mode !== "edit") &&
-      !activeDefinition
-      ? recordingRequest
-      : null,
-  );
-  function saveRecordingPlan(
-    request: RecordingEditRequest,
-    plan: DesiredRecordingPlan,
-  ) {
-    if (currentRecordingRequest !== request || busy || replacement) return;
-    recordingError = "";
-    if (
-      edit(
-        {
-          type: "save-recording-plan",
-          plan,
-          expected: request.project.recordingPlan ?? null,
-        },
-        undefined,
-        (message) => (recordingError = message),
-      )
-    )
-      recordingRequest = null;
-  }
-  function removeRecordingPlan(request: RecordingEditRequest) {
-    if (
-      currentRecordingRequest !== request ||
-      !request.project.recordingPlan ||
-      busy ||
-      replacement
-    )
-      return;
-    recordingError = "";
-    if (
-      edit(
-        {
-          type: "remove-recording-plan",
-          expected: request.project.recordingPlan,
-        },
-        undefined,
-        (message) => (recordingError = message),
-      )
-    )
-      recordingRequest = null;
-  }
+  // 記録計画・トレンド定義・トレンド履歴の窓（R7e2）。要求と照合は controller が持つ。
+  const recordingTrend = createRecordingTrendWindowsController({
+    get project() {
+      return project;
+    },
+    get workspaceGeneration() {
+      return workspaceGeneration;
+    },
+    get screenId() {
+      return screen.id;
+    },
+    get mode() {
+      return mode;
+    },
+    get activeDefinition() {
+      return activeDefinition;
+    },
+    get menuBlocked() {
+      return menuBlocked;
+    },
+    get busy() {
+      return busy;
+    },
+    get replacement() {
+      return replacement;
+    },
+    withScreen,
+    stopPlacement,
+    edit: (command, onerror) => edit(command, undefined, onerror),
+    trendFrame: () =>
+      initialImageFrame({ width: 320, height: 120 }, screen, canvasView.bounds),
+  });
   $effect(() => {
-    if (recordingRequest && !currentRecordingRequest) recordingRequest = null;
+    recordingTrend.dropStaleRecordingRequest();
   });
   // 履歴の窓は運転表示の出入りで描き直すので、読取の枠（直列化）を持つ controller は App が持つ。
   const historyController = createHistoryController();
   onDestroy(() => historyController.dispose());
-  // Each explicit open is a new owner, even for the same saved definition.
-  let historyPreset = $state.raw<
-    | {
-        project: Project;
-        generation: number;
-        definitionId: string;
-        token: object;
-        screenId: string;
-        sourceScreenId: string;
-        objectId: string;
-        mode: string;
-        popupToken?: object;
-      }
-    | undefined
-  >();
-  const currentHistoryPreset = $derived(
-    historyPreset &&
-      historyPreset.project === project &&
-      historyPreset.generation === workspaceGeneration &&
-      historyPreset.screenId === screen.id &&
-      historyPreset.mode === mode &&
-      !activeDefinition
-      ? historyPreset
-      : undefined,
-  );
   $effect(() => {
-    if (historyPreset && !currentHistoryPreset) {
-      historyOpen = false;
-      historyPreset = undefined;
-    }
+    recordingTrend.closeStaleHistory();
   });
-  function openTrendHistory(
-    sourceScreenId: string,
-    objectId: string,
-    popupToken?: object,
-  ) {
-    if (busy || replacement || trendRequest || activeDefinition) return;
-    const originId = screen.id,
-      generation = workspaceGeneration,
-      sourceMode = mode;
-    withScreen(originId, () => {
-      if (
-        generation !== workspaceGeneration ||
-        screen.id !== originId ||
-        mode !== sourceMode ||
-        activeDefinition
-      )
-        return;
-      // Resolve against the current Project after any pending form was applied.
-      const definitionId = trendObjectDefinitionId(
-        project,
-        sourceScreenId,
-        objectId,
-      );
-      if (!definitionId) return;
-      stopPlacement();
-      historySvgOpener =
-        document.activeElement instanceof SVGElement
-          ? document.activeElement
-          : null;
-      historyPreset = {
-        project,
-        generation,
-        definitionId,
-        token: {},
-        screenId: originId,
-        sourceScreenId,
-        objectId,
-        mode: sourceMode,
-        popupToken,
-      };
-      historyOpen = true;
-    });
-  }
-  function retirePopupTrend(token: object) {
-    if (historyPreset?.popupToken === token) {
-      historyOpen = false;
-      historyPreset = undefined;
-    }
-  }
-  function openTrendDefinitions(definitionId?: string) {
-    if (
-      mode !== "edit" ||
-      activeDefinition ||
-      busy ||
-      replacement ||
-      historyOpen
-    )
-      return;
-    const id = screen.id,
-      generation = workspaceGeneration;
-    withScreen(id, () => {
-      if (
-        generation !== workspaceGeneration ||
-        activeDefinition ||
-        mode !== "edit"
-      )
-        return;
-      stopPlacement();
-      trendError = "";
-      trendRequest = { project, generation, screenId: id, definitionId };
-    });
-  }
-  const currentTrendRequest = $derived(
-    trendRequest &&
-      trendRequest.project === project &&
-      trendRequest.generation === workspaceGeneration &&
-      trendRequest.screenId === screen.id &&
-      mode === "edit" &&
-      !activeDefinition
-      ? trendRequest
-      : null,
-  );
-  function saveTrend(
-    definition: TrendDefinition,
-    create: boolean,
-    place: boolean,
-  ) {
-    const request = currentTrendRequest;
-    if (!request) return;
-    trendError = "";
-    const frame = initialImageFrame(
-      { width: 320, height: 120 },
-      screen,
-      canvasView.bounds,
-    );
-    if (
-      edit(
-        {
-          type: "save-trend",
-          definition,
-          create,
-          ...(place
-            ? { placement: { screenId: request.screenId, frame } }
-            : {}),
-        },
-        undefined,
-        (message) => (trendError = message),
-      )
-    )
-      trendRequest = null;
-  }
-  function removeTrend(trendId: string) {
-    if (!currentTrendRequest) return;
-    trendError = "";
-    if (
-      edit(
-        { type: "remove-trend", trendId },
-        undefined,
-        (message) => (trendError = message),
-      )
-    )
-      trendRequest = null;
-  }
   $effect(() => {
-    if (trendRequest && !currentTrendRequest) trendRequest = null;
+    recordingTrend.dropStaleTrendRequest();
   });
   function openScreenViewDialog() {
     if (mode !== "edit" || activeDefinition || busy || replacement) return;
@@ -3156,14 +2945,14 @@
       !!drafts.pending ||
       !!replacement ||
       floatingPanels.gesturing ||
-      historyOpen ||
+      recordingTrend.historyOpen ||
       runtimeWindows.alarmListOpen ||
       runtimeWindows.alarmSettingsOpen ||
       !!recordingManagementOpen ||
       !!recordingOperationsOpen ||
-      !!trendRequest ||
+      !!recordingTrend.trendRequest ||
       bindingTableOpen ||
-      !!recordingRequest,
+      !!recordingTrend.recordingRequest,
   );
   const editBlocked = $derived(menuBlocked || mode !== "edit");
   const selectionViewTarget = $derived(selectionTarget(screen, selectedIds));
@@ -3333,8 +3122,8 @@
           "sample",
         ),
       openScreenViewDialog,
-      openTrendDefinitions,
-      openRecordingPlan,
+      openTrendDefinitions: recordingTrend.openTrendDefinitions,
+      openRecordingPlan: recordingTrend.openRecordingPlan,
       openAlarmSettings,
       get alarmSettingsReason() {
         return runtimeWindows.alarmSettingsReason;
@@ -3423,11 +3212,7 @@
       openRecordingManagement,
       openRecordingOperations,
       openHistory: () => {
-        if (!menuBlocked) {
-          historySvgOpener = null;
-          historyPreset = undefined;
-          historyOpen = true;
-        }
+        if (!menuBlocked) recordingTrend.openHistory();
       },
     },
   });
@@ -3927,7 +3712,7 @@
           onsymbolCommand={symbolLibraryCommand}
           onnewEquipment={newEquipment}
           onopenwork={(kind) => workTabs.open(kind)}
-          onopenRecordingPlan={openRecordingPlan}
+          onopenRecordingPlan={recordingTrend.openRecordingPlan}
         />
       {/snippet}
       {#snippet layersPanel()}
@@ -4102,7 +3887,8 @@
               <button
                 class="open-recording-plan"
                 disabled={editBlocked}
-                onclick={openRecordingPlan}>記録希望設定を開く</button
+                onclick={recordingTrend.openRecordingPlan}
+                >記録希望設定を開く</button
               >
             </div>
           {/if}
@@ -4111,7 +3897,8 @@
       <div class="canvas-area" class:covered={workScreenShown}>
         {#key workspaceGeneration}
           <CanvasWorkspace
-            onopentrend={(objectId) => openTrendHistory(screen.id, objectId)}
+            onopentrend={(objectId) =>
+              recordingTrend.openTrendHistory(screen.id, objectId)}
             onopenequipment={mode === "preview" && !menuBlocked
               ? (id, origin, placement) =>
                   previewPopups?.showEquipment(id, origin, placement)
@@ -4179,8 +3966,8 @@
         {#if mode === "preview"}
           {#key `${workspaceGeneration}:${screen.id}:${mode}`}
             <PreviewPopups
-              onopentrend={openTrendHistory}
-              onretiretrend={retirePopupTrend}
+              onopentrend={recordingTrend.openTrendHistory}
+              onretiretrend={recordingTrend.retirePopupTrend}
               bind:this={previewPopups}
               equipmentContext={readContext.equipmentContext}
               readings={readContext.readings}
@@ -4326,8 +4113,9 @@
       onselectsource={(id) => selectObjects(id)}
       onopenequipment={openSelectedEquipment}
       onopenequipmentsettings={(id) => openSelectedEquipment(id, "settings")}
-      onmanagetrend={openTrendDefinitions}
-      onopentrend={(objectId) => openTrendHistory(screen.id, objectId)}
+      onmanagetrend={recordingTrend.openTrendDefinitions}
+      onopentrend={(objectId) =>
+        recordingTrend.openTrendHistory(screen.id, objectId)}
       {openScreen}
       images={assetImages}
       onreplaceimage={imageImport.openReplacement}
@@ -4414,19 +4202,17 @@
   {/key}
 {/if}
 <DraftPrompt guard={drafts} />
-{#if recordingView}
-  {@const request = recordingView}
+{#if recordingTrend.recordingView}
+  {@const request = recordingTrend.recordingView}
   {#key request}
     <RecordingPlanDialog
-      open={currentRecordingRequest === request}
+      open={recordingTrend.currentRecordingRequest === request}
       project={request.project}
       readonly={request.readonly}
-      error={recordingError}
-      onsave={(plan) => saveRecordingPlan(request, plan)}
-      onremove={() => removeRecordingPlan(request)}
-      onclose={() => {
-        if (recordingRequest === request) recordingRequest = null;
-      }}
+      error={recordingTrend.recordingError}
+      onsave={(plan) => recordingTrend.saveRecordingPlan(request, plan)}
+      onremove={() => recordingTrend.removeRecordingPlan(request)}
+      onclose={() => recordingTrend.closeRecordingPlan(request)}
     />
   {/key}
 {/if}
@@ -4440,14 +4226,14 @@
     onclose={() => (bindingTableOpen = false)}
   />
 {/key}
-{#if currentTrendRequest}
+{#if recordingTrend.currentTrendRequest}
   <TrendDefinitionsDialog
     {project}
-    initialId={currentTrendRequest.definitionId}
-    error={trendError}
-    onsave={saveTrend}
-    onremove={removeTrend}
-    onclose={() => (trendRequest = null)}
+    initialId={recordingTrend.currentTrendRequest.definitionId}
+    error={recordingTrend.trendError}
+    onsave={recordingTrend.saveTrend}
+    onremove={recordingTrend.removeTrend}
+    onclose={recordingTrend.closeTrendDefinitions}
   />
 {/if}
 <RecordingOperationsEntry
@@ -4474,7 +4260,7 @@
   onclose={() => (recordingManagementOpen = null)}
   onopenplan={() => {
     recordingManagementOpen = null;
-    openRecordingPlan();
+    recordingTrend.openRecordingPlan();
   }}
   onsummary={({ summary, inspectedAt, expected }) => {
     if (recordingManagementService)
@@ -4489,18 +4275,18 @@
 <!-- 履歴トレンドの窓。運転表示の間はその中に描く（裏の UI は inert で、重なりも運転表示が上）。 -->
 {#snippet historyWorkspace()}
   <HistoryWorkspace
-    open={historyOpen && (!historyPreset || !!currentHistoryPreset)}
-    preset={currentHistoryPreset}
-    onrelease={() => (historyPreset = undefined)}
+    open={recordingTrend.historyOpen &&
+      (!recordingTrend.historyPreset || !!recordingTrend.currentHistoryPreset)}
+    preset={recordingTrend.currentHistoryPreset}
+    onrelease={recordingTrend.releaseHistoryPreset}
     {project}
     generation={workspaceGeneration}
     service={historyService}
     controller={historyController}
-    onclose={() => (historyOpen = false)}
+    onclose={recordingTrend.closeHistory}
     focusFallback={() => {
       // Banto captures HTML openers. Its public fallback may restore SVG focus.
-      const opener = historySvgOpener;
-      historySvgOpener = null;
+      const opener = recordingTrend.takeHistorySvgOpener();
       if (
         opener?.isConnected &&
         !opener.closest("[inert]") &&
@@ -4700,8 +4486,8 @@
     onclose={runtimeWindows.closeOperatorView}
     onmessage={(message) => report("error", message)}
     operations={simulatedOperations}
-    onopentrend={openTrendHistory}
-    onretiretrend={retirePopupTrend}
+    onopentrend={recordingTrend.openTrendHistory}
+    onretiretrend={recordingTrend.retirePopupTrend}
     onopenalarms={openAlarmList}
     onsilencebuzzer={alarmFeed?.silenceBuzzer ? silenceBuzzer : undefined}
     overlay={overlays}
