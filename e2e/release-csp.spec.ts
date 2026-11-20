@@ -22,7 +22,7 @@ const TYPES: Record<string, string> = {
 };
 const EVAL = /EvalError|unsafe-eval|Content Security Policy/i;
 
-let server: Server;
+let server: Server | undefined;
 let origin: string;
 
 test.beforeAll(async ({}, testInfo) => {
@@ -31,8 +31,9 @@ test.beforeAll(async ({}, testInfo) => {
   execSync(`pnpm exec vite build --outDir "${dist}" --emptyOutDir`, {
     cwd: APP,
     stdio: "pipe",
+    timeout: 150_000,
   });
-  server = createServer(async (request, response) => {
+  const listening = createServer(async (request, response) => {
     const path = new URL(request.url ?? "/", "http://localhost").pathname;
     const file = normalize(join(dist, path === "/" ? "index.html" : path));
     if (!file.startsWith(dist)) return response.writeHead(403).end();
@@ -47,12 +48,16 @@ test.beforeAll(async ({}, testInfo) => {
       response.writeHead(404, { "Content-Security-Policy": CSP }).end();
     }
   });
-  await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
-  origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  await new Promise<void>((done) => listening.listen(0, "127.0.0.1", done));
+  server = listening;
+  origin = `http://127.0.0.1:${(listening.address() as AddressInfo).port}`;
 });
 
 test.afterAll(async () => {
-  await new Promise((done) => server?.close(done));
+  // build に失敗したときは server が無い。done を待たずに抜け、本来のエラーを残す。
+  const running = server;
+  if (!running) return;
+  await new Promise((done) => running.close(done));
 });
 
 function collectErrors(page: Page) {
