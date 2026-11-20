@@ -9,6 +9,7 @@ import { validateLevelShape } from "./level";
 import { validateTableShape } from "./table";
 import { validateClockShape } from "./clock-format";
 import { validateAlarmBadges } from "./alarm-badge";
+import { validateAlarmColors } from "./alarm-references";
 import type { AlarmLimitKey } from "./alarms";
 import {
   validateEquipment,
@@ -291,6 +292,12 @@ export interface LayoutObject extends BaseObject {
         stateColors?: StateTextColors;
         format?: NumericFormat;
         boolDisplay?: TextBoolDisplay;
+        /**
+         * 指す警報の定義の状態で数値の文字色を変える（画面直下のタグを結合した Text だけ。
+         * `binding` が要り、`boolDisplay` とは一緒に持てない）。
+         * 仕様: docs/design/graphics/alarm-value-color.md
+         */
+        alarmColor?: { alarmId: string };
       }
     | {
         type: "symbol";
@@ -571,6 +578,7 @@ export function parseProject(json: string): Project {
   validateOperatorFrame(project.operatorFrame, project);
   validateAlarms(project.alarms);
   validateAlarmBadges(project);
+  validateAlarmColors(project);
   const ids = new Set([project.manifest.projectId]);
   const symbolIds = new Set(project.symbols.map((s) => s.id));
   const hashes = new Set<string>(),

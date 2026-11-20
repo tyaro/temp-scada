@@ -144,6 +144,7 @@ export function applySingleObjectCommand(
       stateColors,
       format,
       boolDisplay,
+      alarmColor,
       level,
       table,
       clock,
@@ -301,6 +302,8 @@ export function applySingleObjectCommand(
       if (stateColors === null) delete object.shape.stateColors;
       else object.shape.stateColors = structuredClone(stateColors);
     }
+    if (binding === null && alarmColor)
+      throw new Error("タグの割り当ての解除と警報の色の設定は同時に行えません");
     if (binding !== undefined) {
       if (
         definitionId ||
@@ -388,6 +391,32 @@ export function applySingleObjectCommand(
         throw new Error("bool の表示は画面直下のTextにだけ設定できます");
       if (boolDisplay === null) delete object.shape.boolDisplay;
       else object.shape.boolDisplay = structuredClone(boolDisplay);
+    }
+    if (alarmColor !== undefined) {
+      if (object.shape.type !== "text" || definitionId)
+        throw new Error("警報の色は画面直下のTextにだけ設定できます");
+      if (alarmColor === null) delete object.shape.alarmColor;
+      else {
+        if (object.shape.boolDisplay)
+          throw new Error(
+            "bool の表示を持つ Text には警報の色を設定できません。先に bool の表示を外してください。",
+          );
+        object.shape.alarmColor = { alarmId: alarmColor.alarmId };
+      }
+    }
+    if (boolDisplay && object.shape.type === "text" && object.shape.alarmColor)
+      throw new Error(
+        "警報の色を持つ Text には bool の表示を設定できません。先に警報の色を外してください。",
+      );
+    // A Text that no longer reads a tag has no alarm color (same Undo as the unbind).
+    if (
+      object.shape.type === "text" &&
+      object.shape.alarmColor &&
+      !object.shape.binding
+    ) {
+      if (alarmColor)
+        throw new Error("警報の色はタグを表示するTextだけに設定できます");
+      delete object.shape.alarmColor;
     }
     // A Text that no longer reads a tag has no bool to show.
     if (

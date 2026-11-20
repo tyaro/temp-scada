@@ -74,6 +74,11 @@ export interface ObjectPatch {
   format?: NumericFormat | null;
   /** Screen-level bool display of a tag-bound Text; null removes it. */
   boolDisplay?: TextBoolDisplay | null;
+  /**
+   * 画面直下のタグを結合した Text の警報の色（指す警報の定義）。null は削除。
+   * 仕様: docs/design/graphics/alarm-value-color.md
+   */
+  alarmColor?: { alarmId: string } | null;
   /** Limits, direction and background of a level; no background clears it. */
   level?: Pick<LevelShape, "direction" | "min" | "max" | "background">;
   /** Whole content of a table; a missing border or background clears it. */

@@ -38,6 +38,9 @@ pub(crate) fn validate(project: &Value) -> Result<(), String> {
 /// 警報の小札が指す定義と限界が Project にあること。しきい値の定義なら限界が必須で、
 /// その限界が定義にあること。bit の定義なら限界を持たない。小札は画面の直下にだけ置ける
 /// （Symbol 定義の中は schema が拒む）。仕様: docs/design/graphics/alarm-badge.md
+///
+/// 同じループで、数値の Text の `alarmColor` が指す定義が Project にあることも確かめる。
+/// 定義の種類・限界・`enabled`・タグの一致は問わない。仕様: docs/design/graphics/alarm-value-color.md
 fn validate_badges(project: &Value) -> Result<(), String> {
     let empty = Vec::new();
     let definitions = project["alarms"]["definitions"]
@@ -46,6 +49,17 @@ fn validate_badges(project: &Value) -> Result<(), String> {
     for screen in project["screens"].as_array().unwrap() {
         for object in screen["objects"].as_array().unwrap() {
             let shape = &object["shape"];
+            if shape["type"] == "text" {
+                if let Some(alarm_id) = shape.get("alarmColor").map(|color| &color["alarmId"]) {
+                    if !definitions
+                        .iter()
+                        .any(|definition| &definition["id"] == alarm_id)
+                    {
+                        return Err("数値の警報の色が指す警報の定義が見つかりません".into());
+                    }
+                }
+                continue;
+            }
             if shape["type"] != "alarmBadge" {
                 continue;
             }
@@ -119,6 +133,48 @@ mod tests {
             serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
         let cases: Vec<Value> =
             serde_json::from_str(include_str!("../../../examples/alarm-badge-cases.json")).unwrap();
+        for case in cases {
+            let mut input = base.clone();
+            if let Some(alarms) = case.get("alarms") {
+                input["alarms"] = alarms.clone();
+            }
+            input
+                .pointer_mut(case["target"].as_str().unwrap())
+                .unwrap()
+                .as_array_mut()
+                .unwrap()
+                .push(case["object"].clone());
+            let parsed = Project::from_json(&input.to_string());
+            assert_eq!(
+                parsed.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{} {:?}",
+                case["name"],
+                parsed.as_ref().err()
+            );
+            if let (Err(message), Some(error)) = (&parsed, case["error"].as_str()) {
+                assert!(message.contains(error), "{} {message}", case["name"]);
+            }
+            if let Ok(project) = parsed {
+                assert_eq!(
+                    Project::from_json(&project.to_json()).unwrap().0,
+                    project.0,
+                    "{}",
+                    case["name"]
+                );
+            }
+        }
+    }
+
+    /// 数値の Text の警報の色。仕様: docs/design/graphics/alarm-value-color.md
+    #[test]
+    fn shared_alarm_value_color_contract() {
+        let base: Value =
+            serde_json::from_str(include_str!("../../../examples/process.project.json")).unwrap();
+        let cases: Vec<Value> = serde_json::from_str(include_str!(
+            "../../../examples/alarm-value-color-cases.json"
+        ))
+        .unwrap();
         for case in cases {
             let mut input = base.clone();
             if let Some(alarms) = case.get("alarms") {
