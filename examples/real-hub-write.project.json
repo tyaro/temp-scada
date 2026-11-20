@@ -1,0 +1,201 @@
+{
+  "manifest": {
+    "product": "banto-scada",
+    "schemaVersion": "0.37.0",
+    "projectId": "0199f800-0000-7000-8000-000000000001",
+    "projectRevision": 1,
+    "minRuntimeVersion": "0.37.0",
+    "name": "実Hub 書込み受入（O4d）"
+  },
+  "screens": [
+    {
+      "id": "0199f800-0000-7000-8000-000000000002",
+      "name": "書込み受入",
+      "width": 960,
+      "height": 540,
+      "objects": [
+        {
+          "id": "0199f800-0000-7000-8000-000000000020",
+          "order": 0,
+          "x": 30,
+          "y": 20,
+          "width": 900,
+          "height": 40,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "O4d 書込み受入: SCADA_O4_D4010（i16、0〜100）／SCADA_O4_M1510（bit）",
+            "style": {
+              "fontSize": 22.0,
+              "fontWeight": "bold",
+              "align": "left"
+            }
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f800-0000-7000-8000-000000000021",
+          "name": "O4d 受入機器",
+          "order": 1,
+          "x": 30,
+          "y": 90,
+          "width": 280,
+          "height": 180,
+          "rotation": 0,
+          "fill": "#0f766e",
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199f800-0000-7000-8000-000000000010",
+            "colorMode": "definition",
+            "equipmentId": "0199f800-0000-7000-8000-000000000032"
+          }
+        },
+        {
+          "id": "0199f800-0000-7000-8000-000000000022",
+          "order": 2,
+          "x": 330,
+          "y": 90,
+          "width": 300,
+          "height": 40,
+          "fill": "#e2e8f0",
+          "shape": {
+            "type": "text",
+            "text": "D4010 現在値",
+            "binding": {
+              "externalName": "plc_slmp.group1.SCADA_O4_D4010"
+            },
+            "style": {
+              "fontSize": 28.0,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          },
+          "rotation": 0
+        },
+        {
+          "id": "0199f800-0000-7000-8000-000000000023",
+          "order": 3,
+          "x": 330,
+          "y": 150,
+          "width": 160,
+          "height": 40,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "operationList"
+            },
+            "label": "操作履歴",
+            "fontSize": 18,
+            "fill": "#1e293b",
+            "textColor": "#e2e8f0"
+          },
+          "rotation": 0
+        }
+      ],
+      "background": "#0b1220",
+      "folders": [],
+      "groups": []
+    }
+  ],
+  "symbols": [
+    {
+      "id": "0199f800-0000-7000-8000-000000000010",
+      "name": "O4d 受入機器の枠",
+      "width": 280,
+      "height": 180,
+      "objects": [
+        {
+          "id": "0199f800-0000-7000-8000-000000000011",
+          "order": 0,
+          "x": 0,
+          "y": 0,
+          "width": 280,
+          "height": 180,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "stroke": null,
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              }
+            }
+          },
+          "rotation": 0
+        }
+      ],
+      "folders": []
+    }
+  ],
+  "assets": [],
+  "equipmentTypes": [
+    {
+      "id": "0199f800-0000-7000-8000-000000000030",
+      "name": "O4d 書込み受入",
+      "slots": [
+        {
+          "name": "setpoint",
+          "type": "number",
+          "direction": "read",
+          "write": {
+            "label": "D4010 設定（0〜100）",
+            "input": {
+              "min": 0,
+              "max": 100
+            }
+          }
+        },
+        {
+          "name": "command",
+          "type": "bool",
+          "direction": "read",
+          "boolDisplay": {
+            "true": {
+              "text": "運転",
+              "color": "#16a34a"
+            },
+            "false": {
+              "text": "停止",
+              "color": "#64748b"
+            }
+          },
+          "write": {
+            "label": "M1510 運転指令",
+            "buttons": [
+              {
+                "label": "運転",
+                "value": true
+              },
+              {
+                "label": "停止",
+                "value": false
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "equipment": [
+    {
+      "id": "0199f800-0000-7000-8000-000000000032",
+      "typeId": "0199f800-0000-7000-8000-000000000030",
+      "code": "O4D-1",
+      "name": "書込み受入タグ",
+      "bindings": [
+        {
+          "slotName": "setpoint",
+          "externalName": "plc_slmp.group1.SCADA_O4_D4010"
+        },
+        {
+          "slotName": "command",
+          "externalName": "plc_slmp.group1.SCADA_O4_M1510"
+        }
+      ]
+    }
+  ]
+}

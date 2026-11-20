@@ -85,3 +85,20 @@ fn c5_6_acceptance_project_carries_an_enabled_plan() {
     assert_eq!(value["recordingPlan"]["enabled"], true);
     check(&value, true, &json!("real-hub-recording"));
 }
+
+#[test]
+fn o4d_write_acceptance_project_is_valid_and_has_two_writable_slots() {
+    let value: Value = serde_json::from_str(include_str!(
+        "../../../examples/real-hub-write.project.json"
+    ))
+    .unwrap();
+    let slots = value["equipmentTypes"][0]["slots"].as_array().unwrap();
+    assert!(slots.iter().all(|slot| slot.get("write").is_some()));
+    assert_eq!(slots.len(), 2);
+    // The history window's button (O4c, #335): §3.6 6-3 of the procedure.
+    let objects = value["screens"][0]["objects"].as_array().unwrap();
+    assert!(objects
+        .iter()
+        .any(|object| object["shape"]["target"]["kind"] == "operationList"));
+    check(&value, true, &json!("real-hub-write"));
+}
