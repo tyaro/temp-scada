@@ -71,6 +71,25 @@
             }
           },
           "rotation": 0
+        },
+        {
+          "id": "0199f800-0000-7000-8000-000000000023",
+          "order": 3,
+          "x": 330,
+          "y": 150,
+          "width": 160,
+          "height": 40,
+          "shape": {
+            "type": "navButton",
+            "target": {
+              "kind": "operationList"
+            },
+            "label": "操作履歴",
+            "fontSize": 18,
+            "fill": "#1e293b",
+            "textColor": "#e2e8f0"
+          },
+          "rotation": 0
         }
       ],
       "background": "#0b1220",
