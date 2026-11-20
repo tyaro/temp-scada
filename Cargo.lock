@@ -98,8 +98,8 @@ dependencies = [
 
 [[package]]
 name = "banto-admin-services"
-version = "7.9.0"
-source = "git+https://github.com/tyaro/banto.git?rev=c017882a654754dfed87bf558a319c96ba136716#c017882a654754dfed87bf558a319c96ba136716"
+version = "7.10.0"
+source = "git+https://github.com/tyaro/banto.git?rev=9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#9caa238c7ac10f2fac64cce860cbdb1ec1dc5060"
 dependencies = [
  "argon2",
  "banto-core",
@@ -114,8 +114,8 @@ dependencies = [
 
 [[package]]
 name = "banto-core"
-version = "7.9.0"
-source = "git+https://github.com/tyaro/banto.git?rev=c017882a654754dfed87bf558a319c96ba136716#c017882a654754dfed87bf558a319c96ba136716"
+version = "7.10.0"
+source = "git+https://github.com/tyaro/banto.git?rev=9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#9caa238c7ac10f2fac64cce860cbdb1ec1dc5060"
 dependencies = [
  "chrono",
  "serde",
@@ -138,8 +138,8 @@ dependencies = [
 
 [[package]]
 name = "banto-storage"
-version = "7.9.0"
-source = "git+https://github.com/tyaro/banto.git?rev=c017882a654754dfed87bf558a319c96ba136716#c017882a654754dfed87bf558a319c96ba136716"
+version = "7.10.0"
+source = "git+https://github.com/tyaro/banto.git?rev=9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#9caa238c7ac10f2fac64cce860cbdb1ec1dc5060"
 dependencies = [
  "banto-core",
  "serde_json",
@@ -1469,7 +1469,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1772,7 +1772,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2055,7 +2055,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c3d1e2c7f27f8d4cb10542a02c49005dbd6e93095799d6f3be745fae9f8fedd4"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -2741,7 +2741,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
