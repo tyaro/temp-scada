@@ -1,0 +1,617 @@
+{
+  "manifest": {
+    "product": "banto-scada",
+    "schemaVersion": "0.37.0",
+    "projectId": "0199f304-0000-7000-8000-000000000001",
+    "projectRevision": 1,
+    "minRuntimeVersion": "0.37.0",
+    "name": "数値の警報の色のサンプル"
+  },
+  "screens": [
+    {
+      "id": "0199f304-0000-7000-8000-000000000201",
+      "name": "明るい背景",
+      "width": 960,
+      "height": 540,
+      "background": "#ffffff",
+      "folders": [],
+      "groups": [],
+      "objects": [
+        {
+          "id": "0199f304-0000-7000-8000-000000001001",
+          "order": 1,
+          "x": 40,
+          "y": 40,
+          "width": 400,
+          "height": 28,
+          "rotation": 0,
+          "fill": "#374151",
+          "shape": {
+            "type": "text",
+            "text": "T-01 温度（しきい値 HH・H・L）",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000001002",
+          "order": 2,
+          "x": 40,
+          "y": 72,
+          "width": 160,
+          "height": 36,
+          "rotation": 0,
+          "fill": "#111827",
+          "name": "T-01 温度の値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Tank01.Temperature"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "℃"
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000101"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000001003",
+          "order": 3,
+          "x": 216,
+          "y": 76,
+          "width": 48,
+          "height": 28,
+          "rotation": 0,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199f304-0000-7000-8000-000000000101",
+            "limit": "hh",
+            "text": "HH",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000001004",
+          "order": 4,
+          "x": 272,
+          "y": 76,
+          "width": 48,
+          "height": 28,
+          "rotation": 0,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199f304-0000-7000-8000-000000000101",
+            "limit": "h",
+            "text": "H",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000001005",
+          "order": 5,
+          "x": 40,
+          "y": 128,
+          "width": 400,
+          "height": 28,
+          "rotation": 0,
+          "fill": "#374151",
+          "shape": {
+            "type": "text",
+            "text": "P-01 流量（ポンプ停止の bit を指す）",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000001006",
+          "order": 6,
+          "x": 40,
+          "y": 160,
+          "width": 160,
+          "height": 36,
+          "rotation": 0,
+          "fill": "#111827",
+          "name": "P-01 流量の値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Pump01.Flow"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "m3/h"
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000102"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000001007",
+          "order": 7,
+          "x": 216,
+          "y": 164,
+          "width": 48,
+          "height": 28,
+          "rotation": 0,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199f304-0000-7000-8000-000000000102",
+            "text": "停止",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000001008",
+          "order": 8,
+          "x": 40,
+          "y": 216,
+          "width": 400,
+          "height": 28,
+          "rotation": 0,
+          "fill": "#374151",
+          "shape": {
+            "type": "text",
+            "text": "小さい文字・はみ出し（###）・回転",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000001009",
+          "order": 9,
+          "x": 40,
+          "y": 248,
+          "width": 64,
+          "height": 16,
+          "rotation": 0,
+          "fill": "#111827",
+          "name": "T-01 温度の小さい値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "normal",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Tank01.Temperature"
+            },
+            "format": {
+              "decimals": 1
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000101"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-00000000100a",
+          "order": 10,
+          "x": 120,
+          "y": 248,
+          "width": 52,
+          "height": 36,
+          "rotation": 0,
+          "fill": "#111827",
+          "name": "T-01 温度のはみ出す値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Tank01.Temperature"
+            },
+            "format": {
+              "decimals": 3,
+              "unit": "℃"
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000101"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-00000000100b",
+          "order": 11,
+          "x": 200,
+          "y": 260,
+          "width": 140,
+          "height": 36,
+          "rotation": 345,
+          "fill": "#111827",
+          "name": "T-01 温度の回転した値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Tank01.Temperature"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "℃"
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000101"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000001100",
+          "order": 20,
+          "x": 480,
+          "y": 40,
+          "width": 440,
+          "height": 300,
+          "rotation": 0,
+          "name": "暗い背景の画面の埋込",
+          "shape": {
+            "type": "screenView",
+            "screenId": "0199f304-0000-7000-8000-000000000202",
+            "fit": "contain"
+          }
+        }
+      ]
+    },
+    {
+      "id": "0199f304-0000-7000-8000-000000000202",
+      "name": "暗い背景",
+      "width": 480,
+      "height": 320,
+      "background": "#0b1220",
+      "folders": [],
+      "groups": [],
+      "objects": [
+        {
+          "id": "0199f304-0000-7000-8000-000000002001",
+          "order": 1,
+          "x": 40,
+          "y": 40,
+          "width": 400,
+          "height": 28,
+          "rotation": 0,
+          "fill": "#cbd5e1",
+          "shape": {
+            "type": "text",
+            "text": "T-01 温度（しきい値 HH・H・L）",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000002002",
+          "order": 2,
+          "x": 40,
+          "y": 72,
+          "width": 160,
+          "height": 36,
+          "rotation": 0,
+          "fill": "#e5e7eb",
+          "name": "T-01 温度の値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Tank01.Temperature"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "℃"
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000101"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000002003",
+          "order": 3,
+          "x": 216,
+          "y": 76,
+          "width": 48,
+          "height": 28,
+          "rotation": 0,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199f304-0000-7000-8000-000000000101",
+            "limit": "hh",
+            "text": "HH",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000002004",
+          "order": 4,
+          "x": 272,
+          "y": 76,
+          "width": 48,
+          "height": 28,
+          "rotation": 0,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199f304-0000-7000-8000-000000000101",
+            "limit": "h",
+            "text": "H",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000002005",
+          "order": 5,
+          "x": 40,
+          "y": 128,
+          "width": 400,
+          "height": 28,
+          "rotation": 0,
+          "fill": "#cbd5e1",
+          "shape": {
+            "type": "text",
+            "text": "P-01 流量（ポンプ停止の bit を指す）",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000002006",
+          "order": 6,
+          "x": 40,
+          "y": 160,
+          "width": 160,
+          "height": 36,
+          "rotation": 0,
+          "fill": "#e5e7eb",
+          "name": "P-01 流量の値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Pump01.Flow"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "m3/h"
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000102"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000002007",
+          "order": 7,
+          "x": 216,
+          "y": 164,
+          "width": 48,
+          "height": 28,
+          "rotation": 0,
+          "shape": {
+            "type": "alarmBadge",
+            "alarmId": "0199f304-0000-7000-8000-000000000102",
+            "text": "停止",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "bold"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000002008",
+          "order": 8,
+          "x": 40,
+          "y": 216,
+          "width": 400,
+          "height": 28,
+          "rotation": 0,
+          "fill": "#cbd5e1",
+          "shape": {
+            "type": "text",
+            "text": "小さい文字・はみ出し（###）・回転",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "normal",
+              "align": "left"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-000000002009",
+          "order": 9,
+          "x": 40,
+          "y": 248,
+          "width": 64,
+          "height": 16,
+          "rotation": 0,
+          "fill": "#e5e7eb",
+          "name": "T-01 温度の小さい値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 12,
+              "fontWeight": "normal",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Tank01.Temperature"
+            },
+            "format": {
+              "decimals": 1
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000101"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-00000000200a",
+          "order": 10,
+          "x": 120,
+          "y": 248,
+          "width": 52,
+          "height": 36,
+          "rotation": 0,
+          "fill": "#e5e7eb",
+          "name": "T-01 温度のはみ出す値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Tank01.Temperature"
+            },
+            "format": {
+              "decimals": 3,
+              "unit": "℃"
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000101"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-00000000200b",
+          "order": 11,
+          "x": 200,
+          "y": 260,
+          "width": 140,
+          "height": 36,
+          "rotation": 345,
+          "fill": "#e5e7eb",
+          "name": "T-01 温度の回転した値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 24,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Tank01.Temperature"
+            },
+            "format": {
+              "decimals": 1,
+              "unit": "℃"
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000101"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "symbols": [],
+  "assets": [],
+  "alarms": {
+    "definitions": [
+      {
+        "id": "0199f304-0000-7000-8000-000000000101",
+        "name": "T-01 温度",
+        "enabled": true,
+        "source": {
+          "kind": "threshold",
+          "tag": "Demo.Water.Tank01.Temperature",
+          "limits": {
+            "hh": {
+              "value": 80,
+              "severity": "high",
+              "message": "温度 異常高"
+            },
+            "h": {
+              "value": 70,
+              "severity": "medium"
+            },
+            "l": {
+              "value": 5,
+              "severity": "low"
+            }
+          },
+          "deadband": 1
+        },
+        "onDelayMs": 1000
+      },
+      {
+        "id": "0199f304-0000-7000-8000-000000000102",
+        "name": "P-01 停止",
+        "enabled": true,
+        "source": {
+          "kind": "bit",
+          "tag": "Demo.Water.Pump01.Running",
+          "activeWhen": false
+        },
+        "severity": "medium",
+        "message": "ポンプ 停止"
+      }
+    ]
+  }
+}

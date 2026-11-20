@@ -83,6 +83,7 @@
             {object}
             hopPath={hops.get(object.id)}
             screenObjects={screen.objects}
+            background={screen.background}
             {symbols}
             {images}
             {readings}
