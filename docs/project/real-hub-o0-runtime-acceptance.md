@@ -1,6 +1,6 @@
 # Runtime mode の実機受入記録（段階3の操作 O0）
 
-状態: **2026-11-20に実施。`auth_setup` と警報の発報を除き合格**。[Runtime mode 設計](../design/runtime/runtime-mode-design.md)§9 の「実機の受入（ネイティブ）」を、Windows 実機の release ビルドで確かめた記録である。書込みの受入（O4）は[O4受入手順と記録](real-hub-o4-write-acceptance.md)にある。
+状態: **2026-11-20に一部を実施。実施した項目は合格だが、受入全体は未完了**（`auth_setup`、警報の発報・ACK、release の Editor の窓で Editor 専用の command が通ることの3つが未実施）。[Runtime mode 設計](../design/runtime/runtime-mode-design.md)§9 の「実機の受入（ネイティブ）」を、Windows 実機の release ビルドで確かめた記録である。書込みの受入（O4）は[O4受入手順と記録](real-hub-o4-write-acceptance.md)にある。
 
 ## 1. 条件
 
@@ -22,19 +22,19 @@
 
 ## 4. 結果
 
-| 項目                                   | 結果                                                                                                                                                                                                                                           |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 引数の誤り                             | 合格。`--runtime` だけ → メッセージの窓「--runtime には Project のファイルを指定してください。」と使い方。`--bogus` → 「知らない引数です: --bogus」。どちらもアプリの窓は出ない                                                                |
-| Project を読めない                     | 合格。存在しないファイル → 窓に「Project を開けません／ファイル such.json／理由 ファイルを読めません」。運転表示は出ない                                                                                                                       |
-| ACL の拒否（release）                  | 合格。Runtime の窓から `history_context`・`alarm_apply`・`recording_initial_setup` は `Command … not allowed by ACL`。`app_mode`（`"runtime"`）・`auth_status` は通る。`runtime_alarm_status` は Project を読めない起動で `projectUnavailable` |
-| 2つ目の起動                            | 合格。同じ Project の Runtime → 2つ目は終わり、案内なし。別の Project の Runtime・引数なしの Editor → 2つ目は終わり、1つ目の窓に「すでに起動しています。別の Project・別の mode で使うときは、いまの窓を閉じてから起動してください」           |
-| devtools（release）                    | 合格。Runtime・Editor とも F12・Ctrl+Shift+I・Ctrl+Shift+J で窓が増えない。対照の F1 は届いた                                                                                                                                                  |
-| Runtime の画面                         | 合格。`examples/real-hub-write.project.json` で、保存済みの接続先へ接続（106件、のちに108件）、メニューバー・作業タブなし。上端に警報・操作履歴・記録・書込みの札・履歴トレンド・認証                                                          |
-| 警報の一覧・履歴トレンド・操作履歴の窓 | 合格（開く・照会まで）。警報は「この端末の警報は、別の Project の定義で動いています」。履歴トレンドは「履歴サービスは未接続です」（Runtime 運転中は記録しない、案 A）                                                                          |
-| 書き用キー（実 keyring）               | 合格。O4 の 1-3・8-2 で登録・登録し直し（O4 記録）                                                                                                                                                                                             |
-| `auth_setup`（最初の管理者の作成）     | 未実施。管理者とパスワードを作るのでユーザーの操作が要る                                                                                                                                                                                       |
-| 警報の発報・ACK・ブザー                | 未実施。この端末の警報は別の Project の定義で動いている                                                                                                                                                                                        |
-| Editor で同じ command が通ること       | 未実施（release の Editor の窓での `invoke`）。ACL の差は Rust の試験で確かめている                                                                                                                                                            |
+| 項目                                   | 結果                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 引数の誤り                             | 合格。`--runtime` だけ → メッセージの窓「--runtime には Project のファイルを指定してください。」と使い方。`--bogus` → 「知らない引数です: --bogus」。どちらもアプリの窓は出ない                                                                                                                                           |
+| Project を読めない                     | 合格。存在しないファイル → 窓に「Project を開けません／ファイル such.json／理由 ファイルを読めません」。運転表示は出ない                                                                                                                                                                                                  |
+| ACL の拒否（release）                  | 合格。Runtime の窓から `history_context`・`alarm_apply`・`recording_initial_setup` は `Command … not allowed by ACL`。`app_mode`（`"runtime"`）・`auth_status` は通る。`runtime_alarm_status` は Project を読めない起動で `projectUnavailable`。Runtime の窓の拒否だけの確認で、Editor の窓で通ること（正の向き）は下の行 |
+| 2つ目の起動                            | 合格。同じ Project の Runtime → 2つ目は終わり、案内なし。別の Project の Runtime・引数なしの Editor → 2つ目は終わり、1つ目の窓に「すでに起動しています。別の Project・別の mode で使うときは、いまの窓を閉じてから起動してください」                                                                                      |
+| devtools（release）                    | 合格。Runtime・Editor とも F12・Ctrl+Shift+I・Ctrl+Shift+J で窓が増えない。対照の F1 は届いた                                                                                                                                                                                                                             |
+| Runtime の画面                         | 合格。`examples/real-hub-write.project.json` で、保存済みの接続先へ接続（106件、のちに108件）、メニューバー・作業タブなし。上端に警報・操作履歴・記録・書込みの札・履歴トレンド・認証                                                                                                                                     |
+| 警報の一覧・履歴トレンド・操作履歴の窓 | 合格（開く・照会まで）。警報は「この端末の警報は、別の Project の定義で動いています」。履歴トレンドは「履歴サービスは未接続です」（Runtime 運転中は記録しない、案 A）                                                                                                                                                     |
+| 書き用キー（実 keyring）               | 合格。O4 の 1-3・8-2 で登録・登録し直し（O4 記録）                                                                                                                                                                                                                                                                        |
+| `auth_setup`（最初の管理者の作成）     | 未実施。管理者とパスワードを作るのでユーザーの操作が要る                                                                                                                                                                                                                                                                  |
+| 警報の発報・ACK・ブザー                | 未実施。この端末の警報は別の Project の定義で動いている                                                                                                                                                                                                                                                                   |
+| Editor で同じ command が通ること       | 未実施（release の Editor の窓での `invoke`）。Rust の試験は実機の確認の代わりにしない（設計§9）                                                                                                                                                                                                                          |
 
 ## 5. 後続
 
