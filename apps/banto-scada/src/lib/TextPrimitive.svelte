@@ -10,6 +10,7 @@
   import {
     ALARM_OUTLINE_COLOR,
     alarmOutlineWidth,
+    alarmReservedMetrics,
     alarmUnderlineBox,
     type AlarmTextPaint,
   } from "./alarm-value-paint";
@@ -52,6 +53,9 @@
   let probe = $state<SVGTextElement>();
   let fontRevision = $state(0);
   let layout = $state<(TextLayout & { key: string }) | null>(null);
+  // 警報の色を持つ Text は、黒の縁と下線の分を計測の箱に含めて収まりと揃えを決める。
+  const reserved = $derived(!!alarm);
+  const bleed = $derived(reserved ? alarmOutlineWidth(style.fontSize) / 2 : 0);
   const key = $derived(
     JSON.stringify([
       text,
@@ -61,6 +65,7 @@
       style.fontWeight,
       style.align,
       numeric,
+      reserved,
     ]),
   );
   const current = $derived(layout?.key === key ? layout : null);
@@ -89,6 +94,7 @@
           style.fontSize,
           height,
           alarm.underline.outline ? outline : 0,
+          bleed,
         )
       : undefined,
   );
@@ -136,7 +142,7 @@
             const box = element.getBBox();
             if (value.trim() && box.width === 0 && box.height === 0)
               throw new Error("Text is not measurable while hidden");
-            return box;
+            return reserved ? alarmReservedMetrics(box, style.fontSize) : box;
           },
         );
         element.textContent = "";

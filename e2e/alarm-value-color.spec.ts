@@ -411,6 +411,9 @@ for (const theme of ["light", "dark"] as const) {
       "T-01 温度の小さい値",
       "T-01 温度のはみ出す値",
       "T-01 温度の回転した値",
+      // 大きい文字の左・右揃え（縁の半分が揃えの余白 2 を超える）。#355 のレビュー。
+      "T-01 温度の大きい左揃えの値",
+      "T-01 温度の大きい右揃えの値",
     ]) {
       const value = direct(canvas, name);
       await expectValue(value, "high", "#f87171", "high");
@@ -424,6 +427,7 @@ for (const theme of ["light", "dark"] as const) {
         const line = mark.getBBox();
         const stroke = Number(text.getAttribute("stroke-width"));
         return {
+          baseline: Number(text.getAttribute("y")),
           width: Number(svg.getAttribute("width")),
           height: Number(svg.getAttribute("height")),
           ink: { x: ink.x, y: ink.y, w: ink.width, h: ink.height },
@@ -439,6 +443,18 @@ for (const theme of ["light", "dark"] as const) {
         box.height + 0.01,
       );
       expect(box.line.y).toBeGreaterThan(box.ink.y);
+      // 下線は枠に押されて文字の上へ寄らない（baseline より下）。
+      expect(box.line.y - half).toBeGreaterThanOrEqual(box.baseline - 0.01);
+      // 下線の縁も横に切られない。
+      expect(box.line.x - half).toBeGreaterThanOrEqual(-0.01);
+      expect(box.line.x + box.line.w + half).toBeLessThanOrEqual(
+        box.width + 0.01,
+      );
+      // 文字の縁が縦に切られない。
+      expect(box.ink.y - half).toBeGreaterThanOrEqual(-0.01);
+      expect(box.ink.y + box.ink.h + half).toBeLessThanOrEqual(
+        box.height + 0.01,
+      );
       // 文字の縁（文字の箱 + 縁の半分）が横に切られない。
       expect(box.ink.x - half).toBeGreaterThanOrEqual(-0.01);
       expect(box.ink.x + box.ink.w + half).toBeLessThanOrEqual(

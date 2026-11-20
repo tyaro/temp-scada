@@ -6,6 +6,7 @@ import {
   ALARM_VALUE_COLORS,
   alarmColorOn,
   alarmOutlineWidth,
+  alarmReservedMetrics,
   alarmTextPaint,
   alarmUnderlineBox,
   type AlarmPaintKey,
@@ -170,6 +171,33 @@ describe("outline and underline geometry", () => {
     expect(tight.y + tight.height + 1.2).toBeCloseTo(22, 10);
     // 太さは 1 を下回らない。
     expect(alarmUnderlineBox(layout, 0, 8, 40, 0).height).toBe(1);
+  });
+
+  it("reserves the outline and the underline in the measured box", () => {
+    // 64px: 縁は外側に 3.84、下線の下端は baseline から 64 × 0.15 + 2.56 = 12.16。
+    const box = { x: 1, y: -60, width: 100, height: 80 };
+    const reserved = alarmReservedMetrics(box, 64);
+    expect(reserved.x).toBeCloseTo(1 - 3.84, 10);
+    expect(reserved.y).toBeCloseTo(-60 - 3.84, 10);
+    expect(reserved.width).toBeCloseTo(100 + 7.68, 10);
+    expect(reserved.height).toBeCloseTo(80 + 7.68, 10);
+    // 文字の箱が下線より上で終わるときは、下線の下端まで広げる。
+    const short = alarmReservedMetrics(
+      { x: 0, y: -50, width: 10, height: 50 },
+      64,
+    );
+    expect(short.y + short.height).toBeCloseTo(12.16 + 3.84, 10);
+    // 広げた分（bleed）を戻すと、下線は文字の墨の幅に戻る。
+    const line = alarmUnderlineBox(
+      { baseline: 70, left: reserved.x, inkWidth: reserved.width },
+      2,
+      64,
+      200,
+      7.68,
+      3.84,
+    );
+    expect(line.x).toBeCloseTo(2 + 1, 10);
+    expect(line.width).toBeCloseTo(100, 10);
   });
 });
 

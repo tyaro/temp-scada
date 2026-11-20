@@ -280,6 +280,64 @@
           }
         },
         {
+          "id": "0199f304-0000-7000-8000-00000000100c",
+          "order": 12,
+          "x": 40,
+          "y": 380,
+          "width": 300,
+          "height": 100,
+          "rotation": 0,
+          "fill": "#111827",
+          "name": "T-01 温度の大きい左揃えの値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 72,
+              "fontWeight": "bold",
+              "align": "left"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Tank01.Temperature"
+            },
+            "format": {
+              "decimals": 1
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000101"
+            }
+          }
+        },
+        {
+          "id": "0199f304-0000-7000-8000-00000000100d",
+          "order": 13,
+          "x": 400,
+          "y": 380,
+          "width": 300,
+          "height": 100,
+          "rotation": 0,
+          "fill": "#111827",
+          "name": "T-01 温度の大きい右揃えの値",
+          "shape": {
+            "type": "text",
+            "text": "0.0",
+            "style": {
+              "fontSize": 72,
+              "fontWeight": "bold",
+              "align": "right"
+            },
+            "binding": {
+              "externalName": "Demo.Water.Tank01.Temperature"
+            },
+            "format": {
+              "decimals": 1
+            },
+            "alarmColor": {
+              "alarmId": "0199f304-0000-7000-8000-000000000101"
+            }
+          }
+        },
+        {
           "id": "0199f304-0000-7000-8000-000000001100",
           "order": 20,
           "x": 480,

@@ -90,8 +90,30 @@ export function alarmTextPaint(
 }
 
 /**
+ * 警報の色を持つ Text の計測の箱を、黒の縁（外側に `alarmOutlineWidth / 2`）と下線（縁を含む）の分だけ
+ * 広げる。状態に関係なく広げるので、警報の状態が変わっても文字の配置・省略は変わらない。
+ * `fitText` はこの箱で収まりを判定し、揃えの余白（2）も縁の外側から取る。
+ * 計測は baseline を y=0 とした座標（`TextPrimitive` の probe）。
+ */
+export function alarmReservedMetrics(
+  box: { x: number; y: number; width: number; height: number },
+  fontSize: number,
+): { x: number; y: number; width: number; height: number } {
+  const bleed = alarmOutlineWidth(fontSize) / 2;
+  const thickness = Math.max(1, fontSize * 0.08);
+  const bottom = Math.max(box.y + box.height, fontSize * 0.15 + thickness / 2);
+  return {
+    x: box.x - bleed,
+    y: box.y - bleed,
+    width: box.width + bleed * 2,
+    height: bottom - box.y + bleed * 2,
+  };
+}
+
+/**
  * 下線の位置と太さ（Text の座標）。計測の `baseline` から `fontSize × 0.15` 下、太さは
- * `max(1, fontSize × 0.08)`、縁取りを含めて Text の枠の内側に収める。
+ * `max(1, fontSize × 0.08)`、縁取りを含めて Text の枠の内側に収める。`bleed` は
+ * `alarmReservedMetrics` で広げた分で、幅と左端は文字の墨の範囲に戻す。
  */
 export function alarmUnderlineBox(
   layout: { baseline: number; left: number; inkWidth: number },
@@ -99,6 +121,7 @@ export function alarmUnderlineBox(
   fontSize: number,
   height: number,
   outline: number,
+  bleed = 0,
 ): { x: number; y: number; width: number; height: number } {
   const thickness = Math.max(1, fontSize * 0.08);
   const center = Math.min(
@@ -106,9 +129,9 @@ export function alarmUnderlineBox(
     height - thickness / 2 - outline / 2,
   );
   return {
-    x: x + layout.left,
+    x: x + layout.left + bleed,
     y: center - thickness / 2,
-    width: layout.inkWidth,
+    width: Math.max(0, layout.inkWidth - bleed * 2),
     height: thickness,
   };
 }
