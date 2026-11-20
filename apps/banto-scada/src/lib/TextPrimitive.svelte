@@ -7,6 +7,13 @@
   import { onMount, untrack } from "svelte";
   import { fitText, TEXT_FONT, type TextLayout } from "./text-layout";
   import type { TextStyle } from "./project";
+  import {
+    ALARM_OUTLINE_COLOR,
+    alarmOutlineWidth,
+    alarmReservedMetrics,
+    alarmUnderlineBox,
+    type AlarmTextPaint,
+  } from "./alarm-value-paint";
   let {
     text,
     width,
@@ -20,6 +27,7 @@
     tagDetail,
     provenance,
     equipmentProperty,
+    alarm,
     onsummary,
   }: {
     text: string;
@@ -34,12 +42,20 @@
     tagDetail?: string;
     provenance?: SlotProvenance;
     equipmentProperty?: EquipmentPropertyPresentation;
+    /**
+     * 数値の警報の色（色ごとの選択と縁取りの結果）。仕様:
+     * docs/design/graphics/alarm-value-color.md「見た目」
+     */
+    alarm?: AlarmTextPaint;
     onsummary?: (description: string) => void;
   } = $props();
   let viewport = $state<SVGSVGElement>();
   let probe = $state<SVGTextElement>();
   let fontRevision = $state(0);
   let layout = $state<(TextLayout & { key: string }) | null>(null);
+  // 警報の色を持つ Text は、黒の縁と下線の分を計測の箱に含めて収まりと揃えを決める。
+  const reserved = $derived(!!alarm);
+  const bleed = $derived(reserved ? alarmOutlineWidth(style.fontSize) / 2 : 0);
   const key = $derived(
     JSON.stringify([
       text,
@@ -49,6 +65,7 @@
       style.fontWeight,
       style.align,
       numeric,
+      reserved,
     ]),
   );
   const current = $derived(layout?.key === key ? layout : null);
@@ -65,7 +82,21 @@
       : "",
   );
   const description = $derived(
-    `${equipmentProperty ? `${equipmentPropertyLabels[equipmentProperty.field]} · 保存した機器情報${equipmentProperty.state === "example" ? " · 定義編集中の例示" : ""} · ` : ""}${tagName ? `${tagName} · ${tagLabel}${tagDetail ? ` · ${tagDetail}` : ""}${origin} · ` : ""}${!current ? "文字の計測中 · " : current.mode === "full" ? "" : current?.mode === "ellipsis" ? "省略表示 · " : "表示枠に収まりません · "}${text}`,
+    `${equipmentProperty ? `${equipmentPropertyLabels[equipmentProperty.field]} · 保存した機器情報${equipmentProperty.state === "example" ? " · 定義編集中の例示" : ""} · ` : ""}${tagName ? `${tagName} · ${tagLabel}${tagDetail ? ` · ${tagDetail}` : ""}${origin} · ` : ""}${!current ? "文字の計測中 · " : current.mode === "full" ? "" : current?.mode === "ellipsis" ? "省略表示 · " : "表示枠に収まりません · "}${text}${alarm ? ` · ${alarm.title}` : ""}`,
+  );
+  const fill = $derived(alarm?.text?.color ?? color);
+  const outline = $derived(alarmOutlineWidth(style.fontSize));
+  const underline = $derived(
+    alarm?.underline && current?.text
+      ? alarmUnderlineBox(
+          current,
+          x,
+          style.fontSize,
+          height,
+          alarm.underline.outline ? outline : 0,
+          bleed,
+        )
+      : undefined,
   );
   onMount(() => {
     let active = true;
@@ -111,7 +142,7 @@
             const box = element.getBBox();
             if (value.trim() && box.width === 0 && box.height === 0)
               throw new Error("Text is not measurable while hidden");
-            return box;
+            return reserved ? alarmReservedMetrics(box, style.fontSize) : box;
           },
         );
         element.textContent = "";
@@ -145,6 +176,9 @@
   data-source-timestamp-ms={provenance?.sourceTimestampMs}
   data-catalog-revision={provenance?.catalogRevision}
   data-tag-run-id={provenance ? (provenance.runId ?? "none") : undefined}
+  data-alarm-tone={alarm?.tone}
+  data-alarm-underline={alarm?.underline?.severity}
+  data-alarm-outline={alarm?.text?.outline ? "true" : undefined}
   role="img"
   aria-label={description}
 >
@@ -167,8 +201,28 @@
       font-family={TEXT_FONT}
       font-size={style.fontSize}
       font-weight={style.fontWeight}
-      fill={color}>{current.text}</text
+      {fill}
+      stroke={alarm?.text?.outline ? ALARM_OUTLINE_COLOR : undefined}
+      stroke-width={alarm?.text?.outline ? outline : undefined}
+      stroke-linejoin={alarm?.text?.outline ? "round" : undefined}
+      paint-order={alarm?.text?.outline ? "stroke" : undefined}
+      >{current.text}</text
     >
+    {#if underline && alarm?.underline}
+      <!-- 未確認の下線。点滅は下線だけに当て、文字は薄くしない。 -->
+      <rect
+        data-alarm-underline-mark
+        class:blink={alarm.blink}
+        x={underline.x}
+        y={underline.y}
+        width={underline.width}
+        height={underline.height}
+        fill={alarm.underline.color}
+        stroke={alarm.underline.outline ? ALARM_OUTLINE_COLOR : undefined}
+        stroke-width={alarm.underline.outline ? outline : undefined}
+        paint-order={alarm.underline.outline ? "stroke" : undefined}
+      />
+    {/if}
   {:else if current?.mode !== "full"}
     <svg
       x={Math.max(0, (width - Math.min(width, height, 16)) / 2)}
@@ -183,3 +237,19 @@
     </svg>
   {/if}
 </svg>
+
+<style>
+  .blink {
+    animation: alarm-value-blink 1s steps(1, end) infinite;
+  }
+  @keyframes alarm-value-blink {
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .blink {
+      animation: none;
+    }
+  }
+</style>

@@ -65,6 +65,7 @@
           object={child}
           hopPath={hops.get(child.id)}
           screenObjects={source.objects}
+          background={source.background}
           {symbols}
           {images}
           {readings}

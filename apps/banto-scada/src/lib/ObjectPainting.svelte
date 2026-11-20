@@ -40,6 +40,7 @@
     preview = false,
     navHistory,
     buzzerAvailable = false,
+    background,
   }: {
     object: ScreenObject;
     symbols?: SymbolDefinition[];
@@ -64,6 +65,8 @@
     /** 運転表示の履歴。戻る・進むのボタンを、動けるときだけ濃く描く。 */
     navHistory?: NavHistoryState;
     buzzerAvailable?: boolean;
+    /** この配置を描く画面の背景色（数値の警報の色の組を選ぶ）。 */
+    background?: string;
   } = $props();
 </script>
 
@@ -213,6 +216,7 @@
 {:else}<Primitive
     {object}
     {hopPath}
+    {background}
     equipmentPropertyDisplay={ownerDefinition &&
     object.shape.type === "text" &&
     object.shape.equipmentProperty
