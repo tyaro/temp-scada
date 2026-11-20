@@ -143,13 +143,6 @@
   let showMenubar = $state(getMenubarVisible());
   let projectFileInput = $state<HTMLInputElement>();
   let helpOpen = $state(false);
-  /** 画面・Symbol 定義の削除確認（Banto の Modal）。 */
-  let deleteConfirm = $state<{
-    kind: "screen" | "symbol";
-    id: string;
-    name: string;
-    count: number;
-  } | null>(null);
   let recordingOperationsOpen = $state.raw<object | null>(null);
   function openRecordingOperations() {
     if (!menuBlocked) recordingOperationsOpen = Object.freeze({});
@@ -213,8 +206,7 @@
   import ContextActions, {
     type ContextAction,
   } from "./lib/designer/ContextActions.svelte";
-  import { isStateSlotType, type EquipmentUsage } from "./lib/equipment";
-  import type { SymbolUsage } from "./lib/symbol-usages";
+  import { isStateSlotType } from "./lib/equipment";
   import { selectionTarget } from "./lib/selection-view";
   import type { Project } from "./lib/project";
   import FolderDialog from "./lib/designer/FolderDialog.svelte";
@@ -234,9 +226,9 @@
   import {
     createWorkTabsController,
     workTabLabel,
-    type WorkTabChange,
     type WorkTabKind,
   } from "./lib/designer/controllers/work-tabs.svelte";
+  import { createEditViewController } from "./lib/designer/controllers/edit-view.svelte";
   import CanvasControls from "./lib/designer/CanvasControls.svelte";
   import { createLayerTreeController } from "./lib/designer/controllers/layer-tree.svelte";
   import LayersPanel from "./lib/designer/LayersPanel.svelte";
@@ -268,7 +260,7 @@
       workTabs.selectNow(workScreen.dataset.workScreen as WorkTabKind);
       return;
     }
-    showCanvas();
+    editView.showCanvas();
     if (isEditorForm(form, "binding-replacement")) {
       setAuxPanelVisibility({ references: true });
       referencesExpanded = true;
@@ -288,11 +280,6 @@
   } from "./lib/designer/panel-height";
   import PanelResizeHandle from "./lib/designer/PanelResizeHandle.svelte";
   import { DEFAULT_PANEL_LAYOUT } from "./lib/designer/panel-layout";
-  import {
-    rememberReturnView,
-    restoredSelection,
-    type ReturnViews,
-  } from "./lib/designer/return-view";
   import {
     DEFAULT_PANEL_WIDTHS,
     PANEL_WIDTH_LIMITS,
@@ -729,58 +716,6 @@
   let showGrid = $state(false),
     snapEnabled = $state(false),
     gridSize = $state(10);
-  function travel(direction: "undo" | "redo") {
-    if (!drafts.allow(() => travel(direction))) return;
-    try {
-      const result = travelHistory(project, history, direction, mode);
-      if (result.project === project) return;
-      // W11: 画面または Symbol が変わる Undo／Redo は画面タブへ戻す（travel は allow 済み）。
-      // 履歴はスナップショットから復元するので、配列の同一性ではなく内容で比べる。
-      if (
-        workScreenShown &&
-        (JSON.stringify(result.project.screens) !==
-          JSON.stringify(project.screens) ||
-          JSON.stringify(result.project.symbols) !==
-            JSON.stringify(project.symbols))
-      )
-        returnToCanvas();
-      project = result.project;
-      history = result.history;
-      if (!project.screens.some((s) => s.id === screenId))
-        screenId = project.screens[0].id;
-      normalizeTargets();
-      selectedIds = selectedIds.filter((id) =>
-        screen.objects.some((o) => o.id === id),
-      );
-      report(
-        "info",
-        direction === "undo" ? "元に戻しました。" : "やり直しました。",
-        { toast: false },
-      );
-    } catch (e) {
-      report(
-        "error",
-        `履歴エラー: ${e instanceof Error ? e.message : String(e)}`,
-      );
-    }
-  }
-  function showSelection() {
-    if (selectionViewReason) return;
-    try {
-      if (!canvasWorkspace?.showSelection()) return;
-      const { clippedCount, outsideCount } = selectionViewTarget;
-      if (clippedCount || outsideCount)
-        report(
-          "info",
-          `画面外の部分は表示していません。完全に画面外の配置 ${outsideCount} 件。選択は保持しています。`,
-        );
-    } catch (error) {
-      report(
-        "error",
-        error instanceof Error ? error.message : "選択範囲を表示できません。",
-      );
-    }
-  }
   let mode = $state<"edit" | "preview">(
     untrack(() => startup?.view) === "edit" ? "edit" : "preview",
   );
@@ -1161,7 +1096,7 @@
   );
   function openBinding(usage: BindingUsage) {
     transition(() => {
-      showCanvas();
+      editView.showCanvas();
       setInspectorVisibility(true);
       editingSymbolId = null;
       screenId = usage.screenId;
@@ -1185,7 +1120,7 @@
   // controller が持ち、App は表示の導出とモード・定義編集・draft の接続だけを持つ。
   const workTabs = createWorkTabsController({
     transition,
-    changing: workTabChanging,
+    changing: (change) => editView.workTabChanging(change),
   });
   /** 作業タブの並びと作業画面を出せる（編集モード、かつ Symbol 定義の編集中でない）。 */
   const workTabsShown = $derived(mode === "edit" && !activeDefinition);
@@ -1195,99 +1130,91 @@
   const canvasActive = $derived(mode === "edit" && !workScreenShown);
   /** W9: `showInspector`（配置の保存が使う）は書き換えず、表示だけを導出する。 */
   const inspectorShown = $derived(showInspector && canvasActive);
-  // 作業タブを開く前のキャンバス（W5）。画面タブへ戻ったとき同じ画面なら表示位置を戻す。
-  let canvasReturn: { generation: number; screenId: string } | null = null;
-  function workTabChanging({ previous, next, cause }: WorkTabChange) {
-    if (cause === "reset") {
-      canvasReturn = null;
-      return;
-    }
-    if (previous === null && next !== null && canvasActive) {
-      // キャンバスを隠す直前（ゲート通過後の action 内）に控える。
-      stopPlacement();
-      canvasWorkspace?.cancelInteractions();
-      rememberEditView();
-      canvasReturn = { generation: workspaceGeneration, screenId: screen.id };
-    } else if (previous !== null && next === null) {
-      // 使用先へ移動などの遷移は自分で表示位置を決めるので、画面タブを選び直す
-      // 操作（タブの選択・閉じる・画面を開く・Undo）のときだけ戻す。
-      const target = cause === "now" && !restoringCanvas ? null : canvasReturn;
-      canvasReturn = null;
-      void tick().then(() => {
-        if (
-          !target ||
-          target.generation !== workspaceGeneration ||
-          target.screenId !== screen.id ||
-          !canvasActive ||
-          activeDefinition
-        )
-          return;
-        restoreEditView();
-      });
-    }
-    if (cause === "open" && next)
-      void tick().then(() =>
-        document
-          .querySelector<HTMLElement>(`[data-work-screen="${next}"] h2`)
-          ?.focus(),
-      );
-    else if (cause === "close")
-      void tick().then(() => {
-        const selected = workTabs.selected;
-        document
-          .querySelector<HTMLElement>(
-            selected
-              ? `[data-work-tab="${selected}"]`
-              : 'nav[aria-label="画面タブ"] [aria-current="page"]',
-          )
-          ?.focus({ preventScroll: true });
-      });
-  }
-  /** W6・W10: キャンバス・Inspector・下部の帯へ向かう処理の前に画面タブを選ぶ（ゲートなし）。 */
-  function showCanvas() {
-    workTabs.selectNow(null);
-  }
-  let restoringCanvas = false;
-  /** 画面タブを選び直す（同じ画面なら、作業タブを開く前の表示位置と選択を戻す）。 */
-  function returnToCanvas() {
-    restoringCanvas = true;
-    try {
-      workTabs.selectNow(null);
-    } finally {
-      restoringCanvas = false;
-    }
-  }
-  /**
-   * W10: 画面タブを選び直し（ゲート通過済みの action の中で呼ぶ）、キャンバスが表示されて
-   * 表示位置の復元（`workTabChanging` の tick 後の `restoreEditView`、さらに tick と
-   * rAF 2回）が終わってから `action` を呼ぶ。rAF を1回多く待って復元の後に並べる。
-   */
-  function afterCanvasReturn(action: () => void) {
-    const generation = workspaceGeneration;
-    returnToCanvas();
-    void tick().then(() =>
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => {
-            if (generation !== workspaceGeneration || !canvasActive) return;
-            action();
-          }),
-        ),
-      ),
-    );
-  }
-
-  // 中央の「画面へ戻る」（Symbol 定義の編集から戻る）。
-  function returnFromDefinition() {
-    transition(() => {
-      const definitionId = editingSymbolId ?? undefined;
-      const returning = definitionReturn === screenId;
-      editingSymbolId = null;
-      definitionReturn = null;
-      if (returning) restoreEditView(definitionId);
-      else selectedIds = [];
-    });
-  }
+  // 作業タブの出入り・定義の編集への出入り・表示位置の記憶と復元・Undo／Redo の
+  // 画面遷移（R7g）。共通の edit／draft／history の境界は App に残し、callback で渡す。
+  const editView = createEditViewController({
+    get project() {
+      return project;
+    },
+    get workspaceGeneration() {
+      return workspaceGeneration;
+    },
+    get mode() {
+      return mode;
+    },
+    set mode(value) {
+      mode = value;
+    },
+    get screenId() {
+      return screenId;
+    },
+    set screenId(value) {
+      screenId = value;
+    },
+    get editingSymbolId() {
+      return editingSymbolId;
+    },
+    set editingSymbolId(value) {
+      editingSymbolId = value;
+    },
+    get selectedIds() {
+      return selectedIds;
+    },
+    set selectedIds(value) {
+      selectedIds = value;
+    },
+    get libraryId() {
+      return libraryId;
+    },
+    set libraryId(value) {
+      libraryId = value;
+    },
+    get screen() {
+      return screen;
+    },
+    get activeDefinition() {
+      return activeDefinition;
+    },
+    get canvasActive() {
+      return canvasActive;
+    },
+    get workScreenShown() {
+      return workScreenShown;
+    },
+    get selectedWorkTab() {
+      return workTabs.selected;
+    },
+    get menuBlocked() {
+      return menuBlocked;
+    },
+    get canvasZoom() {
+      return canvasView.zoom;
+    },
+    get canvasWorkspace() {
+      return canvasWorkspace;
+    },
+    get selectionViewReason() {
+      return selectionViewReason;
+    },
+    get selectionViewTarget() {
+      return selectionViewTarget;
+    },
+    transition,
+    allow: (retry) => drafts.allow(retry),
+    selectWorkTabNow: (kind) => workTabs.selectNow(kind),
+    report,
+    edit: (command) => edit(command),
+    stopPlacement,
+    showSidebar: () => setAuxPanelVisibility({ sidebar: true }),
+    scrollEditorTop: () => editorRegion?.scrollTo({ top: 0 }),
+    revealLayerObject: (id) => layerTreeBindings.revealLayerObject(id),
+    travelHistory: (direction) =>
+      travelHistory(project, history, direction, mode),
+    commitHistory(result) {
+      project = result.project;
+      history = result.history;
+    },
+  });
 
   // 状態行のタグ参照ボタン: パネルの高さの基準を測り直してから開閉する。
   function toggleReferences() {
@@ -1310,7 +1237,7 @@
         referencesExpanded = true;
         setAuxPanelVisibility({ references: true }, "references");
       };
-      if (workScreenShown) afterCanvasReturn(open);
+      if (workScreenShown) editView.afterCanvasReturn(open);
       else open();
     });
   }
@@ -1319,7 +1246,7 @@
   $effect(() => {
     screenId;
     editingSymbolId;
-    untrack(showCanvas);
+    untrack(editView.showCanvas);
   });
   const symbolStrokeOverflow = $derived(
     activeDefinition ? strokeOverflowIds(activeDefinition).length : 0,
@@ -1359,206 +1286,6 @@
     )
       stopPlacement();
   });
-  function normalizeTargets() {
-    if (
-      editingSymbolId &&
-      !project.symbols.some((s) => s.id === editingSymbolId)
-    )
-      editingSymbolId = null;
-  }
-  function withDefinition(id: string, action: () => void) {
-    const generation = workspaceGeneration;
-    const run = () => {
-      if (
-        generation !== workspaceGeneration ||
-        !project.symbols.some((s) => s.id === id)
-      )
-        return;
-      if (drafts.allow(run)) action();
-    };
-    run();
-  }
-  // F-1: 編集 → 表示プレビュー → 編集、画面 → Symbol 定義 → 画面 の往復で戻す画面ごとの状態。
-  // 選択と表示位置は Project の変更ではないので Undo 履歴に入れない。
-  let returnViews: { generation: number; views: ReturnViews } = {
-    generation: -1,
-    views: {},
-  };
-  let definitionReturn: string | null = null;
-  function rememberEditView() {
-    // W5: 隠れたキャンバスの中心で上書きしない。
-    if (!canvasActive || activeDefinition) return;
-    const zoom = canvasView.zoom;
-    returnViews = {
-      generation: workspaceGeneration,
-      views: rememberReturnView(
-        returnViews.generation === workspaceGeneration ? returnViews.views : {},
-        screen.id,
-        {
-          selectedIds,
-          zoom,
-          center:
-            zoom === null ? null : (canvasWorkspace?.visibleCenter() ?? null),
-        },
-      ),
-    };
-  }
-  function restoreEditView(definitionId?: string) {
-    const saved =
-      returnViews.generation === workspaceGeneration
-        ? returnViews.views[screen.id]
-        : undefined;
-    if (!saved || mode !== "edit" || activeDefinition) {
-      selectedIds = [];
-      return;
-    }
-    selectedIds = restoredSelection(screen, saved.selectedIds, definitionId);
-    const { zoom, center } = saved;
-    if (zoom === null || !center) return;
-    const generation = workspaceGeneration,
-      ownerId = screen.id;
-    // 図面の再描画と CanvasWorkspace のスクロール復元が落ち着いてから表示中心を戻す。
-    void tick().then(() =>
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          if (
-            generation !== workspaceGeneration ||
-            mode !== "edit" ||
-            activeDefinition ||
-            screen.id !== ownerId
-          )
-            return;
-          if (canvasView.zoom !== zoom) canvasWorkspace?.zoom(zoom);
-          canvasWorkspace?.centerOn(center);
-        }),
-      ),
-    );
-  }
-  function openDefinition(id: string) {
-    withDefinition(id, () => {
-      setAuxPanelVisibility({ sidebar: true });
-      // F-1: 左タブは切り替えない。画面から入るときは戻る先の選択と表示位置を控える。
-      if (!activeDefinition) {
-        rememberEditView();
-        definitionReturn = mode === "edit" ? screen.id : null;
-      }
-      // W8・W10: 定義の編集へは画面タブを選んでから入る（控えた表示位置は上書きしない）。
-      showCanvas();
-      editingSymbolId = id;
-      libraryId = id;
-      selectedIds = [];
-    });
-  }
-  function deleteDefinition(id: string) {
-    withDefinition(id, () => {
-      const definition = project.symbols.find((s) => s.id === id)!;
-      if (symbolUsage(project, id) === 0)
-        deleteConfirm = {
-          kind: "symbol",
-          id,
-          name: definition.name,
-          count: definition.objects.length,
-        };
-    });
-  }
-  function confirmDelete() {
-    const target = deleteConfirm;
-    deleteConfirm = null;
-    if (!target) return;
-    if (target.kind === "screen") {
-      edit({ type: "remove-screen", screenId: target.id });
-      return;
-    }
-    if (edit({ type: "remove-symbol", symbolId: target.id }))
-      void tick().then(() => {
-        const next =
-          document.querySelector<HTMLButtonElement>(
-            'nav[aria-label="共有 Symbol 一覧"] button[aria-pressed="true"]',
-          ) ??
-          document.querySelector<HTMLButtonElement>("[data-create-symbol]");
-        next?.focus({ preventScroll: true });
-      });
-  }
-  function openSymbolUsage(
-    usage: SymbolUsage & { equipmentId?: string },
-    sourceMode: "edit" | "preview" = "edit",
-  ) {
-    const generation = workspaceGeneration;
-    const matchesUsage = () => {
-      const target = project.screens
-        .find((item) => item.id === usage.screenId)
-        ?.objects.find((item) => item.id === usage.objectId);
-      return (
-        target?.shape.type === "symbol" &&
-        target.shape.symbolId === usage.symbolId &&
-        (usage.equipmentId === undefined ||
-          target.shape.equipmentId === usage.equipmentId)
-      );
-    };
-    const run = () => {
-      if (generation !== workspaceGeneration || mode !== sourceMode) return;
-      if (!drafts.allow(run)) return;
-      if (!matchesUsage()) {
-        report("info", "使用先が変更されたため移動を中止しました。");
-        return;
-      }
-      showCanvas();
-      mode = "edit";
-      editingSymbolId = null;
-      screenId = usage.screenId;
-      const targetIds = expandGroupSelection(screen, [usage.objectId]);
-      selectedIds = targetIds;
-      libraryId = usage.symbolId;
-      void tick().then(() =>
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() => {
-            if (
-              generation !== workspaceGeneration ||
-              mode !== "edit" ||
-              !matchesUsage() ||
-              screenId !== usage.screenId ||
-              editingSymbolId ||
-              selectedIds.length !== targetIds.length ||
-              targetIds.some((id) => !selectedIds.includes(id))
-            )
-              return;
-            editorRegion?.scrollTo({ top: 0 });
-            layerTreeBindings.revealLayerObject(usage.objectId);
-            canvasWorkspace?.revealObject(usage.objectId);
-          }),
-        ),
-      );
-    };
-    run();
-  }
-  function openPreviewEquipmentUsage(usage: EquipmentUsage) {
-    if (menuBlocked || mode !== "preview") return;
-    openSymbolUsage(usage, "preview");
-  }
-  function symbolLibraryCommand(command: EditCommand) {
-    if (
-      command.type === "duplicate-symbol" ||
-      command.type === "place-symbol"
-    ) {
-      withDefinition(command.symbolId, () => {
-        if (
-          command.type === "place-symbol" &&
-          (editingSymbolId || screenId !== command.screenId)
-        )
-          return;
-        // W10: 作業画面の表示中は画面タブを選び、キャンバスの表示位置が戻ってから
-        // 表示中心へ配置する（隠れたキャンバスの中心は使わない）。
-        if (command.type === "place-symbol" && workScreenShown) {
-          afterCanvasReturn(() => {
-            if (!editingSymbolId && screenId === command.screenId)
-              edit(command);
-          });
-          return;
-        }
-        edit(command);
-      });
-    } else edit(command);
-  }
   let screen = $derived(
     activeDefinition ??
       project.screens.find((s) => s.id === screenId) ??
@@ -1794,13 +1521,13 @@
       }
       project = result.project;
       history = result.history;
-      normalizeTargets();
+      editView.normalizeTargets();
       if (
         command.type === "create-symbol" ||
         command.type === "duplicate-symbol" ||
         command.type === "make-symbol-unique"
       ) {
-        openDefinition(
+        editView.openDefinition(
           project.symbols.find((s) => !oldDefinitions.has(s.id))!.id,
         );
       } else if (
@@ -1822,7 +1549,7 @@
         selectedIds = [];
       }
       // W10: 画面の追加・複製・削除で画面が変わったら画面タブを選ぶ（edit の中なのでゲートなし）。
-      if (screenId !== oldScreenId) showCanvas();
+      if (screenId !== oldScreenId) editView.showCanvas();
       if (
         command.type === "add" ||
         command.type === "add-symbol" ||
@@ -2152,8 +1879,8 @@
   function openScreen(id: string, rename = false) {
     const generation = workspaceGeneration;
     const run = () => {
-      if (screenId === id) returnToCanvas();
-      else showCanvas();
+      if (screenId === id) editView.returnToCanvas();
+      else editView.showCanvas();
       if (screenId !== id || editingSymbolId) selectedIds = [];
       screenId = id;
       editingSymbolId = null;
@@ -2187,12 +1914,12 @@
     withScreen(id, () => {
       const target = project.screens.find((s) => s.id === id)!;
       if (project.screens.length > 1)
-        deleteConfirm = {
+        editView.askDelete({
           kind: "screen",
           id,
           name: target.name,
           count: target.objects.length,
-        };
+        });
     });
   }
   /** 画面タブ・画面一覧の見出しの「＋」と⋮の「画面を追加」が共有する入口。 */
@@ -2392,13 +2119,13 @@
   function changeMode(next: "edit" | "preview") {
     transition(() => {
       const switching = mode !== next;
-      if (switching && next === "preview") rememberEditView();
+      if (switching && next === "preview") editView.rememberEditView();
       mode = next;
       if (next === "preview") editingSymbolId = null;
-      definitionReturn = null;
+      editView.clearDefinitionReturn();
       // W5・W7: 作業画面へ戻るときはキャンバスが隠れているので、画面タブを選んだ後に戻す。
       if (switching && next === "edit") {
-        if (canvasActive) restoreEditView();
+        if (canvasActive) editView.restoreEditView();
       } else selectedIds = [];
     });
   }
@@ -2453,7 +2180,7 @@
           });
         return;
       }
-      rememberEditView();
+      editView.rememberEditView();
       mode = "preview";
       selectedIds = [];
       void tick().then(() => {
@@ -2756,7 +2483,7 @@
       set selectedIds(value) {
         selectedIds = canvasSelectionIds(screen, value);
       },
-      travel,
+      travel: editView.travel,
       transition,
       edit,
       duplicateSelection,
@@ -2787,7 +2514,7 @@
       renamePlacement,
       toggleObjectVisibility,
       toggleObjectLock,
-      openDefinition,
+      openDefinition: editView.openDefinition,
       openEquipment: openSelectedEquipment,
     },
     folders: {
@@ -2922,7 +2649,7 @@
       setInspectorVisibility,
       toggleAuxPanels,
       zoomAll: () => canvasWorkspace?.zoom(null),
-      showSelection,
+      showSelection: editView.showSelection,
       toggleRulers,
       toggleMinimap,
       resetFavorites,
@@ -2980,7 +2707,7 @@
         bindingTableOpen ||
         arrayCopy.request !== null ||
         folderRequest !== null ||
-        deleteConfirm !== null
+        editView.deleteConfirm !== null
       );
     },
     isTagPickerOpen: () =>
@@ -3399,7 +3126,7 @@
         disabled={!canvasActive}
         view={canvasView}
         selectionReason={selectionViewReason}
-        onselection={showSelection}
+        onselection={editView.showSelection}
         bind:showGrid
         bind:snapEnabled
         bind:gridSize
@@ -3485,11 +3212,11 @@
           onopenscreen={(id) => openScreen(id)}
           onaddscreen={addScreen}
           onopenreferences={openReferences}
-          onopenusage={openSymbolUsage}
+          onopenusage={editView.openSymbolUsage}
           onchooseSymbol={(id) => (libraryId = id)}
-          oneditSymbol={openDefinition}
-          ondeleteSymbol={deleteDefinition}
-          onsymbolCommand={symbolLibraryCommand}
+          oneditSymbol={editView.openDefinition}
+          ondeleteSymbol={editView.deleteDefinition}
+          onsymbolCommand={editView.symbolLibraryCommand}
           onnewEquipment={newEquipment}
           onopenwork={(kind) => workTabs.open(kind)}
           onopenRecordingPlan={recordingTrend.openRecordingPlan}
@@ -3518,7 +3245,7 @@
           onarm={armPart}
           onimmediate={placeFavorite}
           ontoggleFavorite={toggleFavorite}
-          onedit={openDefinition}
+          onedit={editView.openDefinition}
           onduplicate={(id) => edit({ type: "duplicate-symbol", symbolId: id })}
           onadd={(kind) => choosePart({ type: "basic", kind })}
           onstartdrag={beginPartDrag}
@@ -3547,7 +3274,7 @@
       <DefinitionBanner
         usageCount={symbolUsage(project, activeDefinition.id)}
         strokeOverflow={symbolStrokeOverflow}
-        onreturn={returnFromDefinition}
+        onreturn={editView.returnFromDefinition}
       />
     {/if}
     {#if mode === "preview"}
@@ -3584,7 +3311,7 @@
                   {transition}
                   oncommand={edit}
                   onsubmit={submitForm}
-                  onopenusage={openSymbolUsage}
+                  onopenusage={editView.openSymbolUsage}
                   onopentable={openBindingTable}
                   tableDisabled={editBlocked && !bindingTableOpen}
                 />{/key}
@@ -3753,7 +3480,7 @@
               readings={readContext.readings}
               {project}
               images={assetImages}
-              onopenusage={openPreviewEquipmentUsage}
+              onopenusage={editView.openPreviewEquipmentUsage}
               onmessage={(message) => report("error", message)}
               operations={simulatedOperations}
             />
@@ -3889,7 +3616,7 @@
       {properties}
       {moveSelection}
       {edit}
-      {openDefinition}
+      openDefinition={editView.openDefinition}
       onselectsource={(id) => selectObjects(id)}
       onopenequipment={openSelectedEquipment}
       onopenequipmentsettings={(id) => openSelectedEquipment(id, "settings")}
@@ -4186,30 +3913,30 @@
   <button onclick={() => (helpOpen = false)}>閉じる</button>
 </Modal>
 <Modal
-  open={deleteConfirm !== null}
-  title={deleteConfirm?.kind === "symbol"
+  open={editView.deleteConfirm !== null}
+  title={editView.deleteConfirm?.kind === "symbol"
     ? "Symbol 定義を削除しますか"
     : "画面を削除しますか"}
   width="480px"
-  onclose={() => (deleteConfirm = null)}
+  onclose={editView.cancelDelete}
 >
-  {#if deleteConfirm}
+  {#if editView.deleteConfirm}
     <div data-delete-confirm>
       <p>
-        {#if deleteConfirm.kind === "screen"}
-          「{deleteConfirm.name}」と図形 {deleteConfirm.count} 個を削除します。
+        {#if editView.deleteConfirm.kind === "screen"}
+          「{editView.deleteConfirm.name}」と図形 {editView.deleteConfirm.count} 個を削除します。
         {:else}
-          Symbol 定義「{deleteConfirm.name}」（図形 {deleteConfirm.count}
+          Symbol 定義「{editView.deleteConfirm.name}」（図形 {editView
+            .deleteConfirm.count}
           個）を削除します。この定義を使う配置はありません。
         {/if}
         元に戻す（Ctrl+Z）で復元できます。
       </p>
       <div class="delete-confirm-actions">
-        <button type="button" class="danger" onclick={confirmDelete}
+        <button type="button" class="danger" onclick={editView.confirmDelete}
           >削除</button
         >
-        <button type="button" onclick={() => (deleteConfirm = null)}
-          >キャンセル</button
+        <button type="button" onclick={editView.cancelDelete}>キャンセル</button
         >
       </div>
     </div>
