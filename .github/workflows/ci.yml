@@ -25,11 +25,14 @@ jobs:
           if [[ "$EVENT_NAME" == pull_request ]]; then
             merge_base=$(git merge-base "$BASE" "$HEAD")
             git diff --no-renames --name-only -z "$merge_base" "$HEAD" > "$RUNNER_TEMP/changed-files"
-          elif [[ "$BEFORE" =~ ^0+$ ]] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
-            # A new branch, or a force push whose previous head is gone:
-            # compare with the default branch instead.
+          elif [[ "$BEFORE" =~ ^0+$ ]]; then
             merge_base=$(git merge-base "origin/$DEFAULT_BRANCH" "$GITHUB_SHA")
             git diff --no-renames --name-only -z "$merge_base" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files"
+          elif ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            # A force push whose previous head is gone: the change is
+            # unknown, so run every check.
+            unknown=true
+            : > "$RUNNER_TEMP/changed-files"
           else
             git diff --no-renames --name-only -z "$BEFORE" "$GITHUB_SHA" > "$RUNNER_TEMP/changed-files"
           fi
@@ -47,6 +50,7 @@ jobs:
             esac
           done < "$RUNNER_TEMP/changed-files"
           if (( count == 0 )); then docs_only=false; fi
+          if [[ "${unknown:-false}" == true ]]; then docs_only=false; native=true; fi
           echo "docs_only=$docs_only" >> "$GITHUB_OUTPUT"
           echo "native=$native" >> "$GITHUB_OUTPUT"
           echo "Changed files: $count; docs only: $docs_only; native: $native"
