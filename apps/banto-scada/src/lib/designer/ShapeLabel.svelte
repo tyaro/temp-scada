@@ -90,7 +90,6 @@
           aria-label="図形の文字サイズ"
           type="text"
           inputmode="decimal"
-          required
           onblur={blurSize}
         /></label
       >

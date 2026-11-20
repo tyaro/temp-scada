@@ -80,6 +80,26 @@ for (const theme of ["light", "dark"] as const)
     await expect(row(page, ellipse.id)).toHaveCount(0);
   });
 
+test("clearing both the text and the size removes the label", async ({
+  page,
+}) => {
+  await start(page);
+  await text(page).fill("工程");
+  await text(page).press("Control+Enter");
+  await expect(lines(page)).toHaveCount(1);
+  // 文言があるのに文字サイズが空なら、適用は拒否して形を変えない。
+  await field(page, "図形の文字サイズ").fill("");
+  await text(page).press("Control+Enter");
+  await expect(lines(page)).toHaveCount(1);
+  await expect(lines(page)).toHaveAttribute("font-size", "16");
+  // 文言も空にすれば、文字サイズが空でも書式を見ずに消す。
+  await text(page).fill("");
+  await form(page)
+    .getByRole("button", { name: "文字を適用", exact: true })
+    .click();
+  await expect(lines(page)).toHaveCount(0);
+});
+
 test("shape label does not commit while composing with an IME", async ({
   page,
 }) => {
