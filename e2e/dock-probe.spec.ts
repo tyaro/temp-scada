@@ -274,12 +274,12 @@ test("IME 変換中の組み替えは変換の確定まで待ち、変換中の�
   await expect(text(page)).toHaveValue("ポンプ点検");
 });
 
-// 既知の不具合（D1 で見つけた、tyaro/banto#763）: 据え置きのパネルを組み替えると、Svelte が古い受け皿を
-// 消すときに中のフォーカス中の欄が一度文書から外れ、blur が出る（dock はその後にフォーカスを戻す）。
-// SCADA の数値の欄は blur で確定するので、確定前の文字列で submit が発火する。
-// 浮動化・同じ DOM・入力・フォーカスは通常どおり確かめ、submit は今の挙動（1 回）をそのまま確かめる。
-// 上流が直って 0 回になればこの試験が落ちるので、そのときに 0 回へ直して D2 の判断に戻る。
-test("数値の欄にフォーカスがあるまま浮かせると blur で submit が 1 回発火する（#763 の再現）", async ({
+// D1 で見つけた tyaro/banto#763 の回帰: 据え置きのパネルを組み替えると、Svelte が古い受け皿を消すときに
+// 中のフォーカス中の欄が一度文書から外れ、blur が出ていた。SCADA の数値の欄は blur で確定するので、
+// 確定前の文字列で submit が発火していた。Banto v7.10.0 で `Element.moveBefore` のある環境（Chromium 133 以降）
+// では blur が出なくなった。D1 で blur が出た 4 つ（浮かせる・戻す・タブにまとめる・既定に戻す）を通しても
+// submit は発火せず（0 回）、フォーカスは数値の欄に残る。
+test("数値の欄にフォーカスがあるまま組み替えても blur で submit が発火しない（#763）", async ({
   page,
 }) => {
   await open(page);
@@ -296,5 +296,13 @@ test("数値の欄にフォーカスがあるまま浮かせると blur で subm
   expect(await placement(page, "right")).toMatchObject({
     placement: "floating",
   });
-  await expectKept(page, "図形の文字サイズ", 1);
+  await expectKept(page, "図形の文字サイズ");
+  expect(await call(page, "dockBack", "right")).toBe("applied");
+  await expectKept(page, "図形の文字サイズ");
+  expect(await call(page, "move", "right", { tabWith: "left" })).toBe(
+    "applied",
+  );
+  await expectKept(page, "図形の文字サイズ");
+  expect(await call(page, "resetLayout")).toBe("applied");
+  await expectKept(page, "図形の文字サイズ");
 });

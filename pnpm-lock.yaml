@@ -21,20 +21,20 @@ importers:
   apps/banto-scada:
     dependencies:
       '@banto/admin-core':
-        specifier: github:tyaro/banto#v7.9.0&path:packages/admin-core
-        version: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/admin-core
+        specifier: github:tyaro/banto#v7.10.0&path:packages/admin-core
+        version: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/admin-core
       '@banto/dock-svelte':
-        specifier: github:tyaro/banto#v7.9.0&path:packages/dock-svelte
-        version: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/dock-svelte
+        specifier: github:tyaro/banto#v7.10.0&path:packages/dock-svelte
+        version: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/dock-svelte
       '@banto/image-assets':
-        specifier: github:tyaro/banto#v7.9.0&path:packages/image-assets
-        version: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/image-assets
+        specifier: github:tyaro/banto#v7.10.0&path:packages/image-assets
+        version: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/image-assets
       '@banto/theme':
-        specifier: github:tyaro/banto#v7.9.0&path:packages/theme
-        version: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/theme
+        specifier: github:tyaro/banto#v7.10.0&path:packages/theme
+        version: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/theme
       '@banto/ui':
-        specifier: github:tyaro/banto#v7.9.0&path:packages/ui
-        version: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/ui
+        specifier: github:tyaro/banto#v7.10.0&path:packages/ui
+        version: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/ui
       '@tauri-apps/api':
         specifier: ^2.12.1
         version: 2.12.4
@@ -66,25 +66,25 @@ importers:
 
 packages:
 
-  '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/admin-core':
-    resolution: {path: packages/admin-core, tarball: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716}
-    version: 7.9.0
+  '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/admin-core':
+    resolution: {path: packages/admin-core, tarball: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060}
+    version: 7.10.0
 
-  '@banto/dock-svelte@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/dock-svelte':
-    resolution: {path: packages/dock-svelte, tarball: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716}
-    version: 7.9.0
+  '@banto/dock-svelte@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/dock-svelte':
+    resolution: {path: packages/dock-svelte, tarball: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060}
+    version: 7.10.0
 
-  '@banto/image-assets@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/image-assets':
-    resolution: {path: packages/image-assets, tarball: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716}
-    version: 7.9.0
+  '@banto/image-assets@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/image-assets':
+    resolution: {path: packages/image-assets, tarball: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060}
+    version: 7.10.0
 
-  '@banto/theme@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/theme':
-    resolution: {path: packages/theme, tarball: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716}
-    version: 7.9.0
+  '@banto/theme@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/theme':
+    resolution: {path: packages/theme, tarball: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060}
+    version: 7.10.0
 
-  '@banto/ui@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/ui':
-    resolution: {path: packages/ui, tarball: https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716}
-    version: 7.9.0
+  '@banto/ui@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/ui':
+    resolution: {path: packages/ui, tarball: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060}
+    version: 7.10.0
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -632,15 +632,15 @@ packages:
 
 snapshots:
 
-  '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/admin-core': {}
+  '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/admin-core': {}
 
-  '@banto/dock-svelte@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/dock-svelte': {}
+  '@banto/dock-svelte@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/dock-svelte': {}
 
-  '@banto/image-assets@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/image-assets': {}
+  '@banto/image-assets@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/image-assets': {}
 
-  '@banto/theme@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/theme': {}
+  '@banto/theme@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/theme': {}
 
-  '@banto/ui@https://codeload.github.com/tyaro/banto/tar.gz/c017882a654754dfed87bf558a319c96ba136716#path:packages/ui': {}
+  '@banto/ui@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/ui': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
