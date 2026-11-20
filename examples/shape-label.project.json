@@ -1,0 +1,440 @@
+{
+  "manifest": {
+    "product": "banto-scada",
+    "schemaVersion": "0.37.0",
+    "projectId": "0199f305-0000-7000-8000-000000000f00",
+    "projectRevision": 1,
+    "minRuntimeVersion": "0.37.0",
+    "name": "面の図形の文字（label）の描画確認"
+  },
+  "screens": [
+    {
+      "id": "0199f305-0000-7000-8000-000000000f01",
+      "name": "図形の文字",
+      "width": 800,
+      "height": 480,
+      "objects": [
+        {
+          "id": "0199f305-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "矩形の文字",
+          "x": 40,
+          "y": 40,
+          "width": 160,
+          "height": 60,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dbeafe",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "ポンプ\n運転中",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f305-0000-7000-8000-000000000002",
+          "order": 1,
+          "name": "楕円の文字",
+          "x": 240,
+          "y": 30,
+          "width": 180,
+          "height": 110,
+          "rotation": 0,
+          "shape": {
+            "type": "ellipse",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#dcfce7",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "反応槽 A 系統の撹拌機と温度計",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center",
+                "wrap": "word"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f305-0000-7000-8000-000000000003",
+          "order": 2,
+          "name": "ひし形の文字",
+          "x": 460,
+          "y": 30,
+          "width": 160,
+          "height": 100,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0.5,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.5
+              },
+              {
+                "x": 0.5,
+                "y": 1
+              },
+              {
+                "x": 0,
+                "y": 0.5
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#fef9c3",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "判定",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f305-0000-7000-8000-000000000004",
+          "order": 3,
+          "name": "省略の出る小さな箱",
+          "x": 660,
+          "y": 50,
+          "width": 90,
+          "height": 30,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#f1f5f9",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "ポンプ1\n運転中\n自動",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f305-0000-7000-8000-000000000005",
+          "order": 4,
+          "name": "左右反転",
+          "x": 40,
+          "y": 180,
+          "width": 160,
+          "height": 60,
+          "rotation": 0,
+          "flipX": true,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#e0e7ff",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "左右反転",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "left"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f305-0000-7000-8000-000000000006",
+          "order": 5,
+          "name": "上下反転",
+          "x": 240,
+          "y": 180,
+          "width": 160,
+          "height": 60,
+          "rotation": 0,
+          "flipY": true,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#e0e7ff",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "上下反転",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f305-0000-7000-8000-000000000007",
+          "order": 6,
+          "name": "両方の反転",
+          "x": 440,
+          "y": 180,
+          "width": 160,
+          "height": 60,
+          "rotation": 0,
+          "flipX": true,
+          "flipY": true,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#e0e7ff",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "両方の反転",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        },
+        {
+          "id": "0199f305-0000-7000-8000-000000000008",
+          "order": 7,
+          "name": "Symbol 単色・左右反転",
+          "x": 40,
+          "y": 300,
+          "width": 200,
+          "height": 120,
+          "rotation": 0,
+          "fill": "#dc2626",
+          "flipX": true,
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199f305-0000-7000-8000-000000000100",
+            "colorMode": "monochrome"
+          }
+        },
+        {
+          "id": "0199f305-0000-7000-8000-000000000009",
+          "order": 8,
+          "name": "Symbol 定義の色・上下反転",
+          "x": 280,
+          "y": 300,
+          "width": 200,
+          "height": 120,
+          "rotation": 0,
+          "fill": "#dc2626",
+          "flipY": true,
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199f305-0000-7000-8000-000000000100",
+            "colorMode": "definition"
+          }
+        },
+        {
+          "id": "0199f305-0000-7000-8000-00000000000a",
+          "order": 9,
+          "name": "Symbol 子の回転・左右反転",
+          "x": 520,
+          "y": 300,
+          "width": 160,
+          "height": 120,
+          "rotation": 0,
+          "fill": "#2563eb",
+          "flipX": true,
+          "shape": {
+            "type": "symbol",
+            "symbolId": "0199f305-0000-7000-8000-000000000200",
+            "colorMode": "definition"
+          }
+        }
+      ],
+      "background": "#ffffff",
+      "folders": [],
+      "groups": []
+    }
+  ],
+  "symbols": [
+    {
+      "id": "0199f305-0000-7000-8000-000000000100",
+      "name": "文字付きの箱",
+      "width": 200,
+      "height": 120,
+      "folders": [],
+      "objects": [
+        {
+          "id": "0199f305-0000-7000-8000-000000000101",
+          "order": 0,
+          "x": 20,
+          "y": 20,
+          "width": 160,
+          "height": 80,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#fef3c7",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "給水ポンプ",
+              "style": {
+                "fontSize": 16,
+                "fontWeight": "bold",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "0199f305-0000-7000-8000-000000000200",
+      "name": "回転した文字付きの箱",
+      "width": 160,
+      "height": 120,
+      "folders": [],
+      "objects": [
+        {
+          "id": "0199f305-0000-7000-8000-000000000201",
+          "order": 0,
+          "x": 30,
+          "y": 30,
+          "width": 100,
+          "height": 60,
+          "rotation": 30,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#fce7f3",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#1e293b",
+                "width": 2
+              }
+            },
+            "label": {
+              "text": "回転30",
+              "style": {
+                "fontSize": 14,
+                "fontWeight": "normal",
+                "align": "center"
+              },
+              "color": "#0f172a"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "assets": []
+}

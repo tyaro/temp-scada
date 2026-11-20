@@ -17,6 +17,7 @@
   import {
     getBounds,
     getLocalBounds,
+    isAreaShape,
     type Point,
     type Screen,
     type ScreenObject,
@@ -843,7 +844,8 @@
         : undefined}
     >
       {#if linked}<title>{`${linked.code} ${linked.name}`}</title>{/if}
-      {#if visual.shape.type === "text" && textDescriptions[object.id]}<title
+      <!-- Text と、文字（label）付きの面の図形の説明（省略の全文）。文字は pointer-events: none なので当たり判定の側に置く。 -->
+      {#if (visual.shape.type === "text" || (isAreaShape(visual.shape) && visual.shape.label)) && textDescriptions[object.id]}<title
           >{textDescriptions[object.id]}</title
         >{/if}
       <g

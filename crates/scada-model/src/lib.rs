@@ -1945,6 +1945,12 @@ mod tests {
         }
     }
     #[test]
+    fn shape_label_sample_is_valid() {
+        let source = include_str!("../../../examples/shape-label.project.json");
+        let project = Project::from_json(source).unwrap();
+        assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+    }
+    #[test]
     fn shape_label_shares_the_browser_contract() {
         let cases: Value =
             serde_json::from_str(include_str!("../../../examples/shape-label-cases.json")).unwrap();
