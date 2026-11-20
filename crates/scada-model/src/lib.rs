@@ -1951,6 +1951,12 @@ mod tests {
         assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
     }
     #[test]
+    fn alarm_value_color_sample_is_valid() {
+        let source = include_str!("../../../examples/alarm-value-color.project.json");
+        let project = Project::from_json(source).unwrap();
+        assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+    }
+    #[test]
     fn shape_label_flow_sample_is_valid() {
         let source = include_str!("../../../examples/shape-label-flow.project.json");
         let project = Project::from_json(source).unwrap();

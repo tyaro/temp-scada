@@ -11,6 +11,8 @@
   import { linearGradientEndpoints } from "./linear-gradient";
   import { lineDash, lineCap } from "./line-style";
   import TextPrimitive from "./TextPrimitive.svelte";
+  import { alarmValueColorOf } from "./alarm-view-state.svelte";
+  import { alarmTextPaint } from "./alarm-value-paint";
   import { levelFillRect, levelFromReading, levelFromSlot } from "./level";
   import MultilineTextPrimitive from "./MultilineTextPrimitive.svelte";
   import TablePrimitive from "./TablePrimitive.svelte";
@@ -40,6 +42,7 @@
     onsummary,
     hopPath,
     labelFlip,
+    background = "#0b1220",
   }: {
     object: ScreenObject;
     color?: string;
@@ -63,6 +66,8 @@
      * 合わせて渡す。省略時は自身の反転だけ（画面の直下・Symbol の縮小図）。
      */
     labelFlip?: { flipX: boolean; flipY: boolean };
+    /** この配置を描く画面の背景色。数値の警報の色（`alarmColor`）の組を選ぶ。 */
+    background?: string;
   } = $props();
   const gradientId = $props.id();
   const fill = $derived(
@@ -151,6 +156,13 @@
           shape,
           shape.binding ? readings?.get(shape.binding.externalName) : undefined,
         );
+  });
+  /** 数値の警報の色。仕様: docs/design/graphics/alarm-value-color.md */
+  const alarmPaint = $derived.by(() => {
+    if (object.shape.type !== "text" || !object.shape.alarmColor || !binding)
+      return undefined;
+    const value = alarmValueColorOf(object.shape.alarmColor.alarmId);
+    return value ? alarmTextPaint(value, background) : undefined;
   });
   const textColor = $derived(
     stateColor ?? screenBool?.color ?? color ?? object.fill!,
@@ -330,6 +342,7 @@
         height={object.height}
         style={object.shape.style}
         color={textColor}
+        alarm={alarmPaint}
         numeric={bound}
         tagName={slotBinding?.slotName ?? binding?.externalName}
         tagState={bound
