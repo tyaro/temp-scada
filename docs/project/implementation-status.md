@@ -32,7 +32,7 @@ O2c-3b-1（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) �
 
 O2c-3b-2（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) §7）: Runtime の窓に書き用キーの command を足した（状態の照会・登録・削除・書込みの再開）。変える 3 つは開発・初期設定ではログイン不要、運用では Admin だけ。書込み・照会は要求のたびに keyring からキーを読むので、契約のある Hub にキーを登録すれば製品から送るようになる。画面（O2c-4）は未実装で、Tauri 実機・実 Hub・Windows の資格情報マネージャーでの確認は未実施。
 
-O4d（2026-11-20）: 実 Hub の安全番地での書込みの受入の手順書（[real-hub-o4-write-acceptance.md](real-hub-o4-write-acceptance.md)）と受入用 Project（`examples/real-hub-write.project.json`）を用意した。2026-11-20に実機で受け入れ、書込み・読み戻し・元値への復帰・拒否の経路・任意の3.8は合格、2-3の「送信中」の表示は未観測（同文書§6）。同日、O0の実機の受入の一部を行い、実施した項目（Editor の窓の正の向きの確認を含む）は合格、警報の発報・ACK が残る。`auth_setup` はユーザー判断で O0 の受入から外し、認証の作業の再開時へ移した（[real-hub-o0-runtime-acceptance.md](real-hub-o0-runtime-acceptance.md)）。
+O4d（2026-11-20）: 実 Hub の安全番地での書込みの受入の手順書（[real-hub-o4-write-acceptance.md](real-hub-o4-write-acceptance.md)）と受入用 Project（`examples/real-hub-write.project.json`）を用意した。2026-11-20に実機で受け入れ、書込み・読み戻し・元値への復帰・拒否の経路・任意の3.8は合格、2-3の「送信中」の表示は未観測（同文書§6）。同日、O0の実機の受入を行い、項目はすべて合格（Editor の窓の正の向きの確認、警報の発報・ブザー・ACK・復帰を含む）。`auth_setup` はユーザー判断で O0 の受入から外し、認証の作業の再開時へ移した（[real-hub-o0-runtime-acceptance.md](real-hub-o0-runtime-acceptance.md)）。
 
 ## 実Hub・S7接続の着手方針（2026-11-05）
 
