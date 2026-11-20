@@ -138,6 +138,15 @@ export interface TextStyle {
   fontWeight: "normal" | "bold";
   align: "left" | "center" | "right";
 }
+/**
+ * 面の図形（矩形・楕円・多角形）の中の文字（#305）。text は改行の正規化の後で 1〜1000 文字・LF。
+ * 画面切替ボタンの `shape.label`（文字列）とは別の型。
+ */
+export interface ShapeLabel {
+  text: string;
+  style: TextStyle;
+  color: string;
+}
 export type EquipmentPropertyField = "code" | "name" | "typeName";
 /**
  * A bar filled in proportion to a number between `min` and `max`. The fill
@@ -259,8 +268,18 @@ export interface LayoutObject extends BaseObject {
   width: number;
   height: number;
   shape:
-    | { type: "rectangle"; paint: ShapePaint; stateColor?: StateColor }
-    | { type: "ellipse"; paint: ShapePaint; stateColor?: StateColor }
+    | {
+        type: "rectangle";
+        paint: ShapePaint;
+        stateColor?: StateColor;
+        label?: ShapeLabel;
+      }
+    | {
+        type: "ellipse";
+        paint: ShapePaint;
+        stateColor?: StateColor;
+        label?: ShapeLabel;
+      }
     | PolygonShape
     | {
         type: "text";
@@ -310,6 +329,7 @@ export interface PolygonShape {
   points: Point[];
   paint: ShapePaint;
   stateColor?: StateColor;
+  label?: ShapeLabel;
 }
 export type ScreenObject = LayoutObject | PolylineObject;
 /** 図形（shape）の共用体。 */

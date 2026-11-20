@@ -168,19 +168,31 @@ fn normalize_project_text(value: &mut Value) {
                 let Some(shape) = object.get_mut("shape") else {
                     continue;
                 };
-                if shape.get("type").and_then(Value::as_str) != Some("text") {
-                    continue;
-                }
-                if let Some(text) = shape.get("text").and_then(Value::as_str).filter(|text| {
-                    text.contains('\r') || text.contains('\u{2028}') || text.contains('\u{2029}')
-                }) {
-                    let normalized = text
-                        .replace("\r\n", "\n")
-                        .replace(['\r', '\u{2028}', '\u{2029}'], "\n");
-                    shape["text"] = Value::String(normalized);
+                // Text の文言と、面の図形の文字（#305）。画面切替ボタンの label は文字列で別の型なので、種類で分ける。
+                let target = if shape.get("type").and_then(Value::as_str) == Some("text") {
+                    Some(shape)
+                } else if is_area_shape(shape) {
+                    shape.get_mut("label").filter(|label| label.is_object())
+                } else {
+                    None
+                };
+                if let Some(owner) = target {
+                    normalize_text_newlines(owner);
                 }
             }
         }
+    }
+}
+
+/// `owner["text"]` の CR・CRLF・U+2028・U+2029 を LF に直す。TypeScript の `normalizeTextNewlines` と同じ。
+fn normalize_text_newlines(owner: &mut Value) {
+    if let Some(text) = owner.get("text").and_then(Value::as_str).filter(|text| {
+        text.contains('\r') || text.contains('\u{2028}') || text.contains('\u{2029}')
+    }) {
+        let normalized = text
+            .replace("\r\n", "\n")
+            .replace(['\r', '\u{2028}', '\u{2029}'], "\n");
+        owner["text"] = Value::String(normalized);
     }
 }
 
@@ -1928,6 +1940,54 @@ mod tests {
                 result.err()
             );
             if let Ok(project) = result {
+                assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+            }
+        }
+    }
+    #[test]
+    fn shape_label_shares_the_browser_contract() {
+        let cases: Value =
+            serde_json::from_str(include_str!("../../../examples/shape-label-cases.json")).unwrap();
+        for case in cases.as_array().unwrap() {
+            let mut value: Value = serde_json::from_str(match case["sample"].as_str().unwrap() {
+                "process" => include_str!("../../../examples/process.project.json"),
+                "stateColor" => include_str!("../../../examples/state-color.project.json"),
+                "demoWater" => include_str!("../../../examples/demo-water.project.json"),
+                "symbolImage" => include_str!("../../../examples/symbol-image.project.json"),
+                other => panic!("unknown sample {other}"),
+            })
+            .unwrap();
+            let target = case["target"].as_str().unwrap();
+            let object = value.pointer_mut(target).unwrap();
+            if let Some(shape) = case.get("shape") {
+                object["shape"] = shape.clone();
+            }
+            if let Some(patch) = case.get("shapePatch").and_then(Value::as_object) {
+                object["shape"]
+                    .as_object_mut()
+                    .unwrap()
+                    .extend(patch.clone());
+            }
+            if let Some(patch) = case.get("objectPatch").and_then(Value::as_object) {
+                object.as_object_mut().unwrap().extend(patch.clone());
+            }
+            let result = Project::from_json(&value.to_string());
+            assert_eq!(
+                result.is_ok(),
+                case["valid"].as_bool().unwrap(),
+                "{}: {:?}",
+                case["name"],
+                result.err()
+            );
+            if let Ok(project) = result {
+                if let Some(expected) = case.get("expectedText") {
+                    assert_eq!(
+                        &project.as_value().pointer(target).unwrap()["shape"]["label"]["text"],
+                        expected,
+                        "{}",
+                        case["name"]
+                    );
+                }
                 assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
             }
         }
