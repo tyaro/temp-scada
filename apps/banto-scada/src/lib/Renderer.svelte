@@ -830,13 +830,21 @@
   /**
    * 線の端のドラッグで吸着する anchor（#306 E3）。画面直下の線の接続していない端だけ。
    * 距離はグリッドの丸めの前のポインタの位置で測り、Alt を押す間は吸着しない。
+   * サイズ変更と同じ移動の閾値（0.5）を超えるまでは吸着しない。クリックだけ
+   * （`up` が同じ座標で `move` を呼ぶ）では接続・座標・履歴を変えない。
    */
   function snapFor(
     current: NonNullable<typeof vertexDrag>,
     delta: Point,
     noSnap: boolean,
   ): ConnectionSnap | null {
-    if (noSnap || !onvertexconnect || !("background" in screen)) return null;
+    if (
+      noSnap ||
+      !onvertexconnect ||
+      !("background" in screen) ||
+      Math.hypot(delta.x, delta.y) <= 0.5
+    )
+      return null;
     const line = screen.objects.find((object) => object.id === current.id);
     if (!line || line.shape.type !== "polyline") return null;
     const endpoint = snappableEndpoint(screen, line, current.index);

@@ -247,4 +247,64 @@ for (const theme of ["light", "dark"])
     expect(
       (await saved(p)).screens[0].objects[2].shape.connections.end,
     ).toBeUndefined();
+    // anchor の近くに置いた端をクリックしただけでは、接続も座標も履歴も変わらない
+    // （#372 のレビュー P2）。
+    const placed = await vertices(p);
+    const at = await point(p, placed.at(-1)!.x, placed.at(-1)!.y);
+    await p.mouse.move(at.x, at.y);
+    await p.mouse.down();
+    await expect(ring).toHaveCount(0);
+    await p.mouse.up();
+    await expect(ring).toHaveCount(0);
+    await expect.poll(() => vertices(p)).toEqual(placed);
+    expect(
+      (await saved(p)).screens[0].objects[2].shape.connections.end,
+    ).toBeUndefined();
+    await button(p, "元に戻す").click();
+    await expect.poll(() => vertices(p)).toEqual(before);
+    await expect(button(p, "元に戻す")).toBeDisabled();
   });
+test("grid rounding that lands a dragged end on the other end still snaps to a valid anchor", async ({
+  page: p,
+}) => {
+  // #372 のレビュー P3: 2 点の線 (360,330)→(300,330) の終点を、ポンプ2 の left
+  // (360,320) の近くの (361,326) へ寄せる。グリッド 10 の丸めでは途中の終点が始点
+  // (360,330) に重なるが、確定と同じく保存済みの線で判定するので left へ接続する。
+  const data = structuredClone(sample) as any;
+  const line = data.screens[0].objects[2];
+  delete line.shape.connections;
+  line.shape.points = [
+    { x: 360, y: 330 },
+    { x: 300, y: 330 },
+  ];
+  await start(p, data);
+  await p.getByLabel("グリッドにスナップ", { exact: true }).check();
+  await select(p, pipe);
+  const from = await point(p, 300, 330),
+    to = await point(p, 361, 326);
+  await mainCanvas(p)
+    .locator(`[data-vertex-object-id="${pipe}"][data-vertex-index="1"]`)
+    .waitFor();
+  await p.mouse.move(from.x, from.y);
+  await p.mouse.down();
+  await p.mouse.move(to.x, to.y, { steps: 5 });
+  const ring = mainCanvas(p).locator(".connection-snap");
+  await expect(ring).toHaveAttribute("data-snap-target-id", pump2);
+  await expect(ring).toHaveAttribute("data-snap-anchor", "left");
+  await expect
+    .poll(() => vertices(p))
+    .toEqual([
+      { x: 360, y: 330 },
+      { x: 360, y: 320 },
+    ]);
+  await p.mouse.up();
+  await expect
+    .poll(() => vertices(p))
+    .toEqual([
+      { x: 360, y: 330 },
+      { x: 360, y: 320 },
+    ]);
+  expect((await saved(p)).screens[0].objects[2].shape.connections).toEqual({
+    end: { targetObjectId: pump2, anchor: "left" },
+  });
+});

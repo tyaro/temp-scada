@@ -161,27 +161,33 @@ it("確定は set-line-connection 1 回で端点が anchor へ移り、Undo 1 �
   expect(lineOf(project).shape.connections).toBeUndefined();
 });
 
-it("途中の頂点がグリッドで反対の端に重なっても、保存済みの線で判定して吸着する", () => {
-  // PR #372 のレビュー: 始点 (180,220)・終点 (300,220) の 2 点の線の終点を、ポンプ1 の
-  // 右の anchor (180,220) の手前 (184,220) へ寄せる。グリッド 10 なら途中の終点は始点と
-  // 同じ点になるが、確定は保存済みの線から解決するので接続できる。
+it("判定は保存済みの線で行う。丸めで両端が重なった途中の線では有効な anchor も落ちる", () => {
+  // #372 のレビュー: 2 点の線 (360,330)→(300,330) の終点をポンプ2 の left (360,320)
+  // の近く (361,326) へ寄せると、グリッド 10 の途中の終点は始点 (360,330) に重なる。
+  // Renderer は保存済みの線を渡す（ブラウザの経路は e2e/connections.spec.ts）。
   const project: any = structuredClone(sample);
   const line = project.screens[0].objects[2];
   delete line.shape.connections;
   line.shape.points = [
-    { x: 180, y: 260 },
-    { x: 300, y: 260 },
+    { x: 360, y: 330 },
+    { x: 300, y: 330 },
   ];
   const parsed = parseProject(JSON.stringify(project));
-  const snap = findConnectionSnap(
-    screenOf(parsed).objects,
-    lineOf(parsed),
-    "end",
-    { x: 184, y: 222 },
-    12,
-  );
-  expect(snap?.connection).toEqual({
-    targetObjectId: screenOf(parsed).objects[0].id,
-    anchor: "right",
-  });
+  const objects = screenOf(parsed).objects;
+  const committed = lineOf(parsed);
+  const pointer = { x: 361, y: 326 };
+  expect(
+    findConnectionSnap(objects, committed, "end", pointer, 12)?.connection,
+  ).toEqual({ targetObjectId: pump2(parsed).id, anchor: "left" });
+  const collapsed = {
+    ...committed,
+    shape: {
+      ...committed.shape,
+      points: [
+        { x: 360, y: 330 },
+        { x: 360, y: 330 },
+      ],
+    },
+  };
+  expect(findConnectionSnap(objects, collapsed, "end", pointer, 12)).toBeNull();
 });
