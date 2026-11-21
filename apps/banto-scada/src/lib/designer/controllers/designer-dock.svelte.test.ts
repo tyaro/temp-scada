@@ -185,6 +185,25 @@ describe("createDesignerDock", () => {
     expect(state.flyout).toBe(DESIGNER_PANE_IDS.inspector);
   });
 
+  it("keeps a later Inspector drawer closed when Esc closed it during an old reveal-all (narrow)", async () => {
+    const { controller, state, visible, release, releaseOne } = setup(true);
+    void controller.setSidebar(false);
+    await release();
+    void controller.setSidebar(true);
+    await controller.revealInspector();
+    // node では effect が動かないので、引き出しの変化は effect の代わりに伝える。
+    controller.noteFlyout(state.flyout);
+    expect(state.flyout).toBe(DESIGNER_PANE_IDS.inspector);
+    // 利用者が Esc で閉じる（上流は直接閉じ、アプリには依頼が来ない）。
+    state.flyout = null;
+    controller.noteFlyout(null);
+    await releaseOne();
+    await release();
+    expect(visible[DESIGNER_PANE_IDS.layers]).toBe(true);
+    expect(visible[DESIGNER_PANE_IDS.parts]).toBe(true);
+    expect(state.flyout).toBe(null);
+  });
+
   it("closes the left drawer after a narrow reveal-all with no later choice", async () => {
     const { controller, state, release } = setup(true);
     void controller.setSidebar(false);

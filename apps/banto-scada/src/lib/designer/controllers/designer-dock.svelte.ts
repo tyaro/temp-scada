@@ -86,7 +86,23 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
    * 狭い表示でどの引き出しを開いておくかの最新の意図。`pane` は明示に開いたもの
    * （左のパネル・Inspector）、無いのは一括の処理が自分で決める（左の引き出しを閉じる）意図。
    */
-  let flyoutIntent: { id: number; pane?: PaneKey } = { id: 0 };
+  let flyoutIntent: { id: number; pane?: PaneKey; none?: boolean } = { id: 0 };
+  /** 前に見たとき開いていた引き出し（`noteFlyout`）。 */
+  let lastFlyout: string | null = null;
+
+  /**
+   * 開いている引き出しの変化を見る。意図した引き出しが閉じた（何も開いていない）のは、
+   * 利用者が Esc・外へのフォーカス・帯のタブで閉じたもの。上流はこれを直接閉じるので、
+   * ここで「どれも開かない」という最新の意図にする（古い一括の処理が開き直さない）。
+   * 上流が別の pane へ切り替えた（`revealNarrow`）のは閉じたとは数えない。
+   */
+  function noteFlyout(open: string | null) {
+    const before = lastFlyout;
+    lastFlyout = open;
+    const pane = flyoutIntent.pane;
+    if (open === null && pane && before === DESIGNER_PANE_IDS[pane])
+      flyoutIntent = { id: ++requests, none: true };
+  }
 
   /** 左で表に出すもの・開く引き出しの意図を、番号 `id` の処理のものにする。 */
   function intend(id: number, pane?: DesignerLeftPane) {
@@ -179,6 +195,11 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
   async function keepFront(target: DesignerDockView) {
     if (view !== target) return;
     if (host.narrow) {
+      // 利用者が引き出しを閉じた後なら、古い処理が開いた左の引き出しを閉じておく。
+      if (flyoutIntent.none) {
+        closeLeftFlyout();
+        return;
+      }
       const pane = flyoutIntent.pane;
       if (pane && desired(pane)) openBandFlyout(target, pane);
       return;
@@ -284,6 +305,12 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
     }
     void push(key, desired(key));
   }
+
+  // 引き出しの変化を見る（利用者が閉じたかを `noteFlyout` が判定する）。
+  $effect(() => {
+    const open = dock.flyoutPanel;
+    untrack(() => noteFlyout(open));
+  });
 
   /** 前に見たとき端の帯にあった pane と、dock が狭い表示だったか。 */
   const wasBanded = new Set<PaneKey>();
@@ -432,6 +459,8 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
             );
       });
     },
+    /** 引き出しの変化を伝える（上の effect が呼ぶ。effect の動かない単体試験からも呼ぶ）。 */
+    noteFlyout,
     /** Inspector の表示をアプリの状態に合わせ直す（`showInspector` を変えた直後に待つ）。 */
     syncInspector(): Promise<unknown> {
       return push("inspector", desired("inspector"));
