@@ -263,26 +263,28 @@
     )
       if (parent instanceof HTMLDetailsElement) parent.open = true;
   }
-  function revealDraftForm(form: HTMLFormElement) {
+  /** 未保存のフォームを見えるようにする。欄を検証・フォーカスできるようになったら終わる。 */
+  function revealDraftForm(form: HTMLFormElement): Promise<void> {
     // W6: 作業画面のフォームはその作業タブを、Inspector・画面設定・タグの置換
     // （下部の帯）へ戻すときは先に画面タブを、ゲートなしで選ぶ（ゲートを通すと
     // allow→apply→reveal が繰り返す）。
     const workScreen = form.closest<HTMLElement>("[data-work-screen]");
     if (workScreen) {
       workTabs.selectNow(workScreen.dataset.workScreen as WorkTabKind);
-      return;
+      return tick();
     }
     editView.showCanvas();
     if (isEditorForm(form, "binding-replacement")) {
       setAuxPanelVisibility({ references: true });
       referencesExpanded = true;
-      return;
+      return tick();
     }
     expandTreeAncestors(form);
     if (form.closest("#designer-inspector-panel .screen-settings"))
       revealScreenSettings = true;
-    // 狭い表示で端の帯にあるだけでは欄が見えないので、引き出しまで開く。
-    void revealInspector();
+    // 狭い表示で端の帯にあるだけでは欄が見えないので、引き出しまで開く（dock の依頼が
+    // 保留されることがあるので、開き終わるまで待たせる）。
+    return revealInspector();
   }
   import EditToolbar from "./lib/designer/EditToolbar.svelte";
   import {
@@ -2224,7 +2226,7 @@
       }
       return true;
     } catch (e) {
-      if (validatingForm) revealDraftForm(validatingForm);
+      if (validatingForm) void revealDraftForm(validatingForm);
       if (validatingForm && isEditorForm(validatingForm, "project"))
         focusProjectName();
       report(

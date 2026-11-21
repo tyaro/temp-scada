@@ -202,6 +202,28 @@ test("renaming a shape with F2 in the narrow display opens the Inspector drawer"
   await expect(name).toBeFocused();
 });
 
+// 未保存のフォームへ戻る（離れたら確定で不正な値に止まる）とき、狭い表示で端の帯にある
+// だけの Inspector は引き出しを開き、開き終わってから検証・フォーカスする。
+test("leaving an invalid Inspector draft in the narrow display opens its drawer and focuses it", async ({
+  page,
+}) => {
+  await start(page);
+  await selectPanel(page, "部品");
+  await page
+    .getByRole("button", { name: "Rectangle を追加", exact: true })
+    .click();
+  const width = page.getByLabel("幅", { exact: true });
+  await width.fill("0");
+  await page.setViewportSize({ width: 900, height: 800 });
+  await expect(page.locator('[data-dock-band-tab="right"]')).toBeVisible();
+  await expect(inspector(page)).toBeHidden();
+  await page.keyboard.press("Control+s");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(width).toBeVisible();
+  await expect(width).toHaveValue("0");
+  await expect(width).toBeFocused();
+});
+
 // moveBefore の無い環境（古い WebView2）では、組み替えでフォーカス中の欄に blur が出る。
 // Inspector の数値の欄にフォーカスを置いたまま、Inspector のタイトルバーをドラッグして
 // 左の外周へドッキングし直す（タイトルバーの pointerdown はフォーカスを動かさない）。
