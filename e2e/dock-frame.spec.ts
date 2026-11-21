@@ -144,6 +144,23 @@ test("the Inspector closed with ✕ in the narrow display stays hidden after goi
   await expect(inspector(page)).toBeVisible();
 });
 
+test("opening the parts panel from favorites in the narrow display opens its drawer", async ({
+  page,
+}) => {
+  await start(page);
+  await page.setViewportSize({ width: 900, height: 800 });
+  await expect(page.locator('[data-dock-band-tab="parts"]')).toBeVisible();
+  // 一度引き出して閉じ、部品が帯にあって見えている（dock の isVisible）状態にする。
+  await page.locator('[data-dock-band-tab="parts"]').click();
+  await expect(page.locator("#designer-parts-panel")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#designer-parts-panel")).toBeHidden();
+  await page
+    .getByRole("button", { name: "部品パネルを開く", exact: true })
+    .click();
+  await expect(page.locator("#designer-parts-panel")).toBeVisible();
+});
+
 test("renaming a screen in the narrow display opens the Inspector drawer", async ({
   page,
 }) => {
