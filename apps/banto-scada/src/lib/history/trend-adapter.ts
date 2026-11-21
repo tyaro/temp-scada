@@ -27,15 +27,20 @@ function fromBins(series: HistorySeriesResult): TrendSeries {
   const bins: { tMs: number; min: number | null; max: number | null }[] = [];
   sorted.forEach((bin, index) => {
     const previous = sorted[index - 1];
-    // segment が変わる所では、直前に 1ms の欠測の区間を挟んで線を切る（segment をまたぐ偽の連続を作らない）。
+    // segment が変わる所では、直前に欠測の区間を挟んで線を切る（segment をまたぐ偽の連続を作らない）。
+    // 欠測の区間は次の区間の 1ms 前から。区間が 1ms しか離れていないときは間の小数の時刻に置く。
     if (
       previous &&
       previous.segmentId !== null &&
       bin.segmentId !== null &&
       previous.segmentId !== bin.segmentId &&
-      bin.fromMs - 1 > previous.fromMs
+      bin.fromMs > previous.fromMs
     )
-      bins.push({ tMs: bin.fromMs - 1, min: null, max: null });
+      bins.push({
+        tMs: Math.max(bin.fromMs - 1, (previous.fromMs + bin.fromMs) / 2),
+        min: null,
+        max: null,
+      });
     const missing = bin.state === "gap" || bin.state === "mixedSegment";
     bins.push({
       tMs: bin.fromMs,

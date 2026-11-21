@@ -49,7 +49,7 @@ describe("historyResultToTrendSeries", () => {
             bin.segmentId !== null &&
             sorted[i - 1].segmentId !== null &&
             sorted[i - 1].segmentId !== bin.segmentId &&
-            bin.fromMs - 1 > sorted[i - 1].fromMs,
+            bin.fromMs > sorted[i - 1].fromMs,
         ).length;
         const count =
           input.query.mode === "raw"
@@ -230,6 +230,54 @@ describe("historyResultToTrendSeries", () => {
       { tMs: 100, min: 1, max: 2 },
       { tMs: 199, min: null, max: null },
       { tMs: 200, min: 1, max: 2 },
+    ]);
+  });
+});
+
+describe("segment breaks between 1 ms bins", () => {
+  it("still breaks the line when adjacent bins are 1 ms apart", () => {
+    const bin = (fromMs: number, segmentId: string) => ({
+      fromMs,
+      toMs: fromMs + 1,
+      min: 1,
+      max: 2,
+      validCount: 1,
+      invalidCount: 0,
+      state: "complete" as const,
+      segmentId,
+      source: "real" as const,
+    });
+    const result = {
+      version: 1,
+      kind: "result",
+      status: "ready",
+      snapshotId: null,
+      query: {
+        version: 1,
+        kind: "query",
+        requestId: "r",
+        seriesIds: ["a"],
+        fromMs: 0,
+        toMs: 2,
+        mode: "minmax",
+        maxPointsPerSeries: 2,
+      },
+      series: [
+        {
+          seriesId: "a",
+          status: "ready",
+          segments: [],
+          raw: [],
+          coverage: [],
+          watermark: null,
+          bins: [bin(0, "s1"), bin(1, "s2")],
+        },
+      ],
+    } as HistoryResult;
+    expect(historyResultToTrendSeries(result).a.bins).toEqual([
+      { tMs: 0, min: 1, max: 2 },
+      { tMs: 0.5, min: null, max: null },
+      { tMs: 1, min: 1, max: 2 },
     ]);
   });
 });
