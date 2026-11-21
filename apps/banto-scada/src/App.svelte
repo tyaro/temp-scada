@@ -1552,6 +1552,7 @@
       if (screenId !== oldScreenId) editView.showCanvas();
       if (
         command.type === "add" ||
+        command.type === "add-polyline" ||
         command.type === "add-symbol" ||
         command.type === "place-symbol" ||
         command.type === "add-image" ||

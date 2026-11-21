@@ -359,6 +359,10 @@ for (const theme of ["light", "dark"])
     await expect(objects).toHaveCount(3);
     await expect(draft).toHaveCount(0);
     const line = (await saved(p)).screens[0].objects[2];
+    // 描いた線を選択する（今の追加と同じ。#373 のレビュー）。
+    await expect(
+      mainCanvas(p).locator(`[data-vertex-object-id="${line.id}"]`).first(),
+    ).toBeAttached();
     expect(line.shape.type).toBe("polyline");
     expect(line.shape.strokeWidth).toBe(8);
     expect(line.shape.connections).toEqual({
