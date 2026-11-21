@@ -1,13 +1,23 @@
 <script lang="ts">
-  import type { HistoryPresentation } from "./presentation";
+  import { onMount } from "svelte";
   import {
-    projectHistoryTrend,
-    trendX,
-    trendY,
-    historyTime,
-    historyReason,
-  } from "./trend-model";
+    TrendChart,
+    type TrendData,
+    type TrendPen as ChartPen,
+  } from "@banto-industrial/trend";
+  import type { HistoryPresentation } from "./presentation";
+  import { historyTime } from "./trend-model";
+  import {
+    historyTrendPens,
+    nearestColorSlots,
+    type Rgb,
+  } from "./trend-adapter";
+  import RawTrendView from "./RawTrendView.svelte";
   import type { TrendPen } from "../trend-definitions";
+
+  // #359: minmax の描画は共通部品 TrendChart。全系列を 1 枚に重ね、範囲は取得した query に固定する。
+  // raw は、部品の点が区間の中央に寄り近い点を間引くので、上流の対応まで旧表示（RawTrendView）を使う
+  // （設計 historian-history-presentation.md の「共通部品への置き換え」）。
   let {
     state: presentation,
     pens = [],
@@ -15,20 +25,7 @@
     state: HistoryPresentation;
     pens?: readonly Pick<TrendPen, "seriesId" | "label" | "color">[];
   } = $props();
-  // Only identity matches receive presentation overrides; no positional mapping.
-  const pen = $derived(pens.find((pen) => pen.seriesId === series?.seriesId));
-  const color = $derived(
-    pen && /^#[0-9a-fA-F]{6}$/.test(pen.color)
-      ? pen.color
-      : "var(--banto-primary)",
-  );
-  const model = $derived(
-    presentation.result ? projectHistoryTrend(presentation.result) : undefined,
-  );
-  let selected = $state("");
-  const series = $derived(
-    model?.series.find((row) => row.seriesId === selected) ?? model?.series[0],
-  );
+
   const phaseText = $derived(
     {
       offline: "履歴は未接続です",
@@ -48,229 +45,153 @@
       disposed: "履歴表示を終了しました",
     }[presentation.phase],
   );
-  const x = (time: number) =>
-    model ? 60 + trendX(time, model.query) * 620 : 60;
-  const numberLabel = (value: number) =>
-    Number.isInteger(value) && Math.abs(value) < 1e8
-      ? String(value)
-      : value.toPrecision(4);
+
+  const result = $derived(presentation.result);
+  const ready = $derived(
+    result?.series.filter((series) => series.status === "ready") ?? [],
+  );
+  const failed = $derived(
+    result?.series.filter((series) => series.status !== "ready") ?? [],
+  );
+  // Only identity matches receive presentation overrides; no positional mapping.
+  const penFor = (seriesId: string) =>
+    pens.find((pen) => pen.seriesId === seriesId);
+  const nameOf = (seriesId: string) =>
+    penFor(seriesId)?.label ??
+    result?.series.find((series) => series.seriesId === seriesId)?.segments[0]
+      ?.externalName ??
+    seriesId;
+
+  // 部品は色の枠しか受けないので、テーマの枠の計算後の色から近い枠を選ぶ（banto-industrial#1272 までのつなぎ）。
+  let palette = $state<(Rgb | null)[]>([]);
+  function readPalette() {
+    const probe = document.createElement("span");
+    probe.style.display = "none";
+    document.body.append(probe);
+    palette = Array.from({ length: 8 }, (_, index) => {
+      probe.style.color = `var(--banto-chart-${index + 1})`;
+      const match = /^rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(
+        getComputedStyle(probe).color,
+      );
+      return match
+        ? [Number(match[1]), Number(match[2]), Number(match[3])]
+        : null;
+    });
+    probe.remove();
+  }
+  onMount(() => {
+    readPalette();
+    const observer = new MutationObserver(readPalette);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme", "class", "style"],
+    });
+    return () => observer.disconnect();
+  });
+
+  const trendPens = $derived(result ? historyTrendPens(result) : []);
+  const chartPens = $derived.by((): ChartPen[] => {
+    const slots = nearestColorSlots(
+      trendPens.map((pen) => penFor(pen.seriesId)?.color),
+      palette,
+    );
+    return trendPens.map((pen, index) => ({
+      id: pen.id,
+      label: pen.part
+        ? `${nameOf(pen.seriesId)}（${pen.part.index}/${pen.part.count}・${pen.unit ?? "単位なし"}${pen.bool ? "・bool" : ""}）`
+        : nameOf(pen.seriesId),
+      colorSlot: slots[index],
+      unit: pen.unit,
+      // 目盛りは 1 本目が左、2 本目が右。3 本目以降は凡例の範囲の独自の尺度。
+      ...(index === 1 ? { axis: "right" as const } : {}),
+      // bool は 0／1 の高さを固定した段線（欠測で線が切れ、記録された OFF と記録なしを見分けられる）。
+      ...(pen.bool ? { bit: true, yMin: 0, yMax: 1 } : {}),
+    }));
+  });
+  const scaleOf = (penId: string) => {
+    const index = chartPens.findIndex((pen) => pen.id === penId);
+    return index === 0
+      ? "左の目盛り"
+      : index === 1
+        ? "右の目盛り"
+        : "独自の尺度（目盛りなし）";
+  };
+  const seriesOf = (penId: string) =>
+    trendPens.find((pen) => pen.id === penId)?.seriesId ?? penId;
+  const range = $derived(
+    result
+      ? { startMs: result.query.fromMs, endMs: result.query.toMs }
+      : undefined,
+  );
+  const data = $derived<TrendData | null>(
+    result && range
+      ? {
+          range,
+          series: Object.fromEntries(
+            trendPens.map((pen) => [pen.id, pen.series]),
+          ),
+        }
+      : null,
+  );
+  const mixedCount = $derived(
+    ready.reduce(
+      (sum, series) =>
+        sum + series.bins.filter((bin) => bin.state === "mixedSegment").length,
+      0,
+    ),
+  );
 </script>
 
-<section
-  class="history-trend"
-  aria-label="履歴トレンド"
-  data-history-phase={presentation.phase}
-  style:--history-pen-color={color}
->
-  <header>
-    <strong>履歴トレンド</strong><span role="status">{phaseText}</span>
-  </header>
-  {#if model && series}
-    <label class="banto-field banto-field--stacked"
-      ><span class="banto-field-label">系列 </span><select
-        class="banto-field-control"
-        value={series.seriesId}
-        onchange={(event) => (selected = event.currentTarget.value)}
-        aria-label="表示する履歴系列"
-      >
-        {#each model.series as row}<option value={row.seriesId}
-            >{pens.find((pen) => pen.seriesId === row.seriesId)?.label ??
-              row.lanes[0]?.identity.externalName ??
-              row.seriesId}</option
-          >{/each}
-      </select></label
-    >
-    <p class="pen-identity">
-      <span class="pen-marker" aria-hidden="true"
-      ></span>{#if pen?.label !== undefined}別名: {pen.label} ·
-      {/if}系列ID: {series.seriesId}
-    </p>
-    <p class="range">
-      {historyTime(model.query.fromMs)} 〜 {historyTime(model.query.toMs)} · UTC・終了時刻を含まない
-    </p>
-    <p class="mode">
-      {model.query.mode === "raw"
-        ? "観測点を表示します。点の間は補間しません。"
-        : "区間ごとの最小・最大を表示します。区間内の順序は表しません。"}
-    </p>
-    {#if series.status !== "ready"}
-      <p class="notice">
-        {series.status === "unknownSeries"
-          ? "系列が見つかりません。未記録やゼロ値とは区別します。"
-          : "この系列の履歴を取得できません。"}
+{#if result?.query.mode === "raw"}
+  <RawTrendView state={presentation} {pens} />
+{:else}
+  <section
+    class="history-trend"
+    aria-label="履歴トレンド"
+    data-history-phase={presentation.phase}
+  >
+    <header>
+      <strong>履歴トレンド</strong><span role="status">{phaseText}</span>
+    </header>
+    {#if result && range}
+      <p class="range">
+        {historyTime(result.query.fromMs)} 〜 {historyTime(result.query.toMs)} · UTC・終了時刻を含まない（グラフの目盛りは端末の地方時）
       </p>
-    {:else}
-      <div class="coverage">
-        <span>記録範囲</span>
-        <svg viewBox="0 0 700 24" role="img" aria-label="記録範囲と欠測理由">
-          {#each series.coverage as range}
-            <rect
-              x={x(range.fromMs)}
-              y="2"
-              width={Math.max(0.1, x(range.toMs) - x(range.fromMs))}
-              height="18"
-              data-coverage-reason={range.reason}
-            >
-              <title
-                >{historyReason(range.reason)} · {historyTime(range.fromMs)} 〜 {historyTime(
-                  range.toMs,
-                )}</title
-              >
-            </rect>
-          {/each}
-        </svg>
-        <div class="legend">
-          {#each [...new Set(series.coverage.map((row) => row.reason))] as reason}<span
-              >{historyReason(reason)}</span
-            >{/each}
-          {#if !series.coverage.length}<span
-              >記録範囲の追加情報はありません</span
-            >{/if}
-        </div>
-      </div>
-      {#each series.lanes as lane (lane.identity.segmentId)}
-        <article data-history-segment={lane.identity.segmentId}>
-          <h3>
-            {lane.identity.externalName} · {lane.identity.unit ?? "単位なし"}
-            <small
-              >{lane.identity.segmentId} · {lane.identity.source} · {lane
-                .identity.valueType}</small
-            >
-          </h3>
-          <svg
-            viewBox="0 0 700 144"
-            role="img"
-            aria-label={`${lane.identity.externalName} ${lane.identity.segmentId} の履歴`}
-          >
-            <line class="axis" x1="60" x2="680" y1="116" y2="116" />
-            {#if lane.extent}
-              <text x="54" y="24" text-anchor="end"
-                >{lane.identity.valueType === "bool"
-                  ? "true"
-                  : numberLabel(lane.extent[1])}</text
-              >
-              <text x="54" y="116" text-anchor="end"
-                >{lane.identity.valueType === "bool"
-                  ? "false"
-                  : numberLabel(lane.extent[0])}</text
-              >
-              {#each lane.points as point}
-                {@const y = 116 - trendY(point.value, lane.extent) * 92}
-                <circle
-                  cx={x(point.time)}
-                  cy={y}
-                  r="3"
-                  data-history-point
-                  data-record-session={point.sample.recordId.sessionId}
-                  data-clock-epoch={point.sample.clockEpoch}
-                  data-value={point.value}
-                >
-                  <title
-                    >{historyTime(point.time)} · {lane.identity.valueType ===
-                    "bool"
-                      ? String(Boolean(point.value))
-                      : point.value} · source {point.sample.sourceTimeMs ===
-                    null
-                      ? "なし"
-                      : historyTime(point.sample.sourceTimeMs)} · {point.sample
-                      .quality} · {point.sample.source}</title
-                  >
-                </circle>
-              {/each}
-              {#each lane.ranges as bin}
-                {@const from = x(bin.fromMs)}
-                {@const width = Math.max(0.1, x(bin.toMs) - from)}
-                {#if lane.identity.valueType === "bool"}
-                  {#each bin.min === bin.max ? [bin.min!] : [bin.min!, bin.max!] as value}
-                    <line
-                      class="boolean-range"
-                      x1={from}
-                      x2={from + width}
-                      y1={116 - trendY(value, lane.extent) * 92}
-                      y2={116 - trendY(value, lane.extent) * 92}
-                      data-history-envelope
-                      data-bin-state={bin.state}
-                      data-value={value}
-                      ><title
-                        >{historyTime(bin.fromMs)} 〜 {historyTime(bin.toMs)} · {Boolean(
-                          value,
-                        )}を含む · {bin.state}</title
-                      ></line
-                    >
-                  {/each}
-                {:else}
-                  {@const top = 116 - trendY(bin.max!, lane.extent) * 92}
-                  {@const bottom = 116 - trendY(bin.min!, lane.extent) * 92}
-                  <rect
-                    class="envelope"
-                    x={from}
-                    y={top}
-                    {width}
-                    height={Math.max(1, bottom - top)}
-                    data-history-envelope
-                    data-bin-state={bin.state}
-                    data-min={bin.min}
-                    data-max={bin.max}
-                    ><title
-                      >{historyTime(bin.fromMs)} 〜 {historyTime(bin.toMs)} · 最小
-                      {bin.min} / 最大 {bin.max} · 有効 {bin.validCount} / 無値 {bin.invalidCount}
-                      · {bin.state}</title
-                    ></rect
-                  >
-                {/if}
-              {/each}
-            {/if}
-            {#each lane.nulls as sample}<line
-                class="missing"
-                x1={x(sample.sampleTimeMs)}
-                x2={x(sample.sampleTimeMs)}
-                y1="8"
-                y2="18"
-                data-history-null
-                data-null-reason={sample.reason}
-                ><title
-                  >{historyTime(sample.sampleTimeMs)} · {historyReason(
-                    sample.reason,
-                  )} · {sample.quality ?? "品質なし"} · {sample.source ??
-                    "由来なし"}</title
-                ></line
-              >{/each}
-            {#each lane.gaps as bin}<rect
-                class="missing-bin"
-                x={x(bin.fromMs)}
-                y="8"
-                width={Math.max(0.1, x(bin.toMs) - x(bin.fromMs))}
-                height="10"
-                data-history-gap
-                ><title
-                  >{historyTime(bin.fromMs)} 〜 {historyTime(bin.toMs)} · 数値なし
-                  · 無値 {bin.invalidCount}</title
-                ></rect
-              >{/each}
-          </svg>
-          <p class="counts">
-            観測点 {lane.points.length} · 無値 {lane.nulls.length} · 範囲 {lane
-              .ranges.length} · 数値なし区間 {lane.gaps.length}
-          </p>
-          {#if lane.nulls.length}<p class="notice">
-              {[
-                ...new Set(
-                  lane.nulls.map((sample) => historyReason(sample.reason)),
-                ),
-              ].join("・")}
-            </p>{/if}
-          {#if !lane.points.length && !lane.ranges.length}<p class="notice">
-              表示できる数値はありません
-            </p>{/if}
-        </article>
+      <p class="mode">
+        区間ごとの最小・最大を縦の線で示し、隣の区間とつなぎます。区間内の順序は表しません。boolは段線で、欠測では線が切れます。記録の区切り（segment。単位や型の変わり目など）が複数ある系列は区切りごとに別の線にします。目盛りは1本目が左、2本目が右で、3本目以降は凡例の範囲で縦の位置を決めます。
+      </p>
+      {#if chartPens.length}
+        <TrendChart
+          {range}
+          pens={chartPens}
+          {data}
+          label="履歴トレンドのグラフ"
+          legendLabel="履歴トレンドの凡例"
+          height={320}
+          emptyMessage="この期間に表示できる数値はありません"
+        >
+          {#snippet legendBadge(pen)}<small
+              class="series-id"
+              data-history-legend-series={seriesOf(pen.id)}
+              data-history-legend-scale={scaleOf(pen.id)}
+              >系列ID: {seriesOf(pen.id)} · {scaleOf(pen.id)}</small
+            >{/snippet}
+        </TrendChart>
+      {/if}
+      {#each failed as series (series.seriesId)}
+        <p class="notice" data-history-series-status={series.status}>
+          {nameOf(series.seriesId)}: {series.status === "unknownSeries"
+            ? "系列が見つかりません。未記録やゼロ値とは区別します。"
+            : "この系列の履歴を取得できません。"}
+        </p>
       {/each}
-      {#if series.mixed.length}<p class="notice" data-history-mixed>
-          記録の意味・時刻domain等が混在する区間 {series.mixed
-            .length}件。最小・最大を混ぜて表示しません。
+      {#if mixedCount}<p class="notice" data-history-mixed>
+          記録の意味・時刻domain等が混在する区間 {mixedCount}件。最小・最大を混ぜて表示しません。
         </p>{/if}
+      <p class="notice">記録範囲・品質・系列の切れ目はまだ表示しません。</p>
     {/if}
-  {/if}
-</section>
+  </section>
+{/if}
 
 <style>
   .history-trend {
@@ -290,83 +211,14 @@
   header strong {
     font-size: 16px;
   }
+  .series-id {
+    margin-left: 0.4em;
+    color: var(--banto-text-muted);
+  }
   header span,
   .range,
   .mode,
-  .notice,
-  .counts,
-  small {
+  .notice {
     color: var(--banto-text-muted);
-  }
-  select {
-    background: var(--banto-surface);
-    color: var(--banto-text);
-    border: 1px solid var(--banto-border);
-    padding: 4px;
-    max-width: 100%;
-  }
-  article {
-    border-top: 1px solid var(--banto-border);
-    margin-top: 12px;
-  }
-  h3 {
-    font-size: 13px;
-    font-weight: 500;
-    overflow-wrap: anywhere;
-  }
-  small {
-    font-weight: 400;
-  }
-  svg {
-    width: 100%;
-    display: block;
-    overflow: visible;
-  }
-  svg text {
-    fill: var(--banto-text-muted);
-    font-size: 11px;
-  }
-  .axis {
-    stroke: var(--banto-border);
-  }
-  .pen-marker {
-    display: inline-block;
-    width: 0.75rem;
-    height: 0.75rem;
-    margin-right: 0.4rem;
-    background: var(--history-pen-color);
-  }
-  circle {
-    fill: var(--history-pen-color);
-  }
-  .envelope {
-    fill: color-mix(in srgb, var(--history-pen-color) 28%, transparent);
-    stroke: var(--history-pen-color);
-  }
-  [data-bin-state="partial"] {
-    stroke-dasharray: 3 2;
-  }
-  .boolean-range {
-    stroke: var(--history-pen-color);
-    stroke-width: 3;
-  }
-  .missing {
-    stroke: var(--banto-text-muted);
-    stroke-width: 2;
-  }
-  .missing-bin,
-  .coverage rect {
-    fill: color-mix(in srgb, var(--banto-text-muted) 24%, transparent);
-    stroke: var(--banto-text-muted);
-    stroke-dasharray: 3 2;
-  }
-  .legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    color: var(--banto-text-muted);
-  }
-  .coverage > span {
-    font-weight: 500;
   }
 </style>

@@ -260,7 +260,7 @@ for (const [label, patch, message] of [
     ).toBeDisabled();
     expect(await calls(page)).toBe(0);
   });
-test("saved minmax renders independent envelopes in the pen color, not alias as segment metadata", async ({
+test("saved minmax renders the envelope lines in the pen's color slot, not alias as segment metadata", async ({
   page,
 }) => {
   const project = fixture();
@@ -272,16 +272,20 @@ test("saved minmax renders independent envelopes in the pen color, not alias as 
   await load(page, "1970-01-01T00:00:00.005Z");
   await reply(page, 0);
   await expect(plot(page)).toHaveAttribute("data-history-phase", "ready");
-  await expect(
-    plot(page).locator("[data-history-envelope]").first(),
-  ).toBeVisible();
-  expect(
-    await plot(page)
-      .locator("[data-history-envelope]")
-      .first()
-      .evaluate((el) => getComputedStyle(el).stroke),
-  ).toBe("rgb(171, 18, 239)");
+  const line = plot(page).locator("path.bi-trend__line").first();
+  await expect(line).toBeVisible();
+  expect(await line.getAttribute("stroke")).toMatch(
+    /^var\(--banto-chart-\d\)$/,
+  );
+  await expect(plot(page).locator("path.bi-trend__marker")).toHaveCount(0);
   await expect(plot(page).locator("[data-history-point]")).toHaveCount(0);
+  const legend = plot(page).getByLabel("履歴トレンドの凡例");
+  await expect(
+    legend.locator('small[data-history-legend-series="number"]'),
+  ).toContainText("· 左の目盛り");
+  await expect(
+    legend.locator('small[data-history-legend-series="bool"]'),
+  ).toContainText("· 右の目盛り");
 });
 test("Popup close/reopen and source replacement retain one physical slot and clear stale presentation", async ({
   page,

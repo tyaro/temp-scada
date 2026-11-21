@@ -63,6 +63,21 @@ plain object／array／有限number／string／boolean／nullだけを受け付�
 
 controller所有の結果をdeep freezeする等により、sourceやsubscriberの後続mutationで表示内容を変更させない。Sourceへ渡すqueryも元caller入力と分離する。loadが不正だった場合も旧論理要求を退役させ、invalidとし、古い結果を再表示しない。
 
+## 共通部品への置き換え（#359、2026-11-21・日本時間）
+
+2026-11-21 のユーザーの選択で、`TrendView.svelte` の描画を banto-industrial の共通部品 `@banto-industrial/trend`（`trend-v0.1.0` の `TrendChart`）へ置き換える。ただし raw は、オーナーのレビュー（#376）で部品の点の扱いが観測の表示に合わないと分かったので、上流の対応まで旧表示を残す。応答の配送・所有・検証（この文書の「Sourceとcontroller」〜「ownership」）と、HistoryWorkspace のフォーム（UTC の期間・mode・点数）は変えない。H1 の応答から部品の区間への写しは `lib/history/trend-adapter.ts` が持つ。
+
+- **raw は旧表示のまま**（`RawTrendView.svelte`。この文書の「rawは実sample点だけ」「coverageと診断」をそのまま満たす）。部品の点は区間の中央に置かれ（観測時刻からずれる）、前の点から 8px 以内の点を間引き（短いスパイクが消える）、カーソルは区間の中ならどこでも値を出す。上流へ [banto-industrial#1274](https://github.com/tyaro/banto-industrial/issues/1274) を起票した。
+- **minmax は全系列を 1 枚に重ねる**。系列の選択の欄は無い。保存トレンドのペンの別名を凡例に出し、無ければ segment の `externalName`、それも無ければ系列ID。凡例の添え書きに系列IDと目盛りの持ち主（1 本目が左、2 本目が右、3 本目以降は「独自の尺度（目盛りなし）」）を出す。縦の位置はペンごとの尺度で決まる（部品の決め）。
+- **segment が複数ある系列は segment ごとのペンに分ける**（「Trend projectionの境界」の「同series内もsegmentごとにlaneを分け、unit／型／sourceの違いを混ぜない」を守る）。分けたペンはほかの segment の区間を欠測にし、凡例は「名前（番号/数・単位）」。線は segment ごとの別の path なので、segment をまたいでつながらない。区間の時刻と長さは変えない（境目に欠測の区間を挟むと、部品が直前の正常な区間をそこで打ち切るため、その方法は採らない。#376 の再レビュー）。
+- **minmax は部品の包絡で描く**（「minmaxはbin内の範囲」の「bin間を一本のlineで結ばない」を置き換える）。部品は区間ごとの最小・最大の縦線を隣の区間へつなぐ記録計の描き方で、区間が描画域の 1 px ほどなら帯に見える。点数を少なくして区間が広いと、区間の間を結んだ線が見えるので、mode の説明の文で示す。gap・mixedSegment は欠測で線を切る。
+- **bool の minmax は 0／1 の高さを固定した段線**（部品の bit のペン、`yMin: 0`・`yMax: 1`。帯にしない）。部品の包絡は区間の中央の縦線を隣の近い端へつなぐので、1 区間 1 点では OFF→ON が斜めの線になる。写しで各区間を始め・中・終わりの 3 つの小区間に分け（`boolSteps`）、区間の中は水平、境目はほぼ垂直にする。両方の状態を含む区間は 0〜1 の縦線、欠測は線が切れる。帯は false と null を同じ空白にするので使わない（上流の #1274 に含めた）。座標は部品の `envelopePath` で試験する。
+- **落ちる表示（minmax）**: coverage と欠測の理由の帯、segment ごとの図と名前（由来）、`partial` の点線、件数。画面に「記録範囲・品質・系列の切れ目はまだ表示しません」と書く。上流に時刻の区間の帯と印を求めた（[banto-industrial#1273](https://github.com/tyaro/banto-industrial/issues/1273)）。対応されたら戻す。
+- **残す文の表示**: 取得の状態（phase）、UTC の範囲（終了を含まない）、mode の説明、取得できない系列（`unknownSeries`／`queryUnavailable`）の一覧、mixedSegment の区間の件数。
+- **ペンの色**: Project はペンの色を hex で持つが、部品は色の枠（1〜16 → `--banto-chart-N`）しか受けない。上流に CSS の色を渡す口を求めた（[banto-industrial#1272](https://github.com/tyaro/banto-industrial/issues/1272)）。それまでは、テーマの `--banto-chart-1`〜`8` の計算後の色から hex に最も近い枠を、ペンどうしで重ならないように選ぶ（色を決めていない系列は残りの枠を順に使う）。テーマを切り替えたら選び直す。
+- **時刻の軸**: 部品の目盛りは端末の地方時。フォームと範囲の文は UTC のまま。
+- 表示範囲は取得した query の範囲に固定し、部品の拡大・パン（`onRangeChange`）は使わない（H1 の 1 回 1 時間の上限を超える読み直しは分割が要るので別に決める）。
+
 ## Trend projectionの境界
 
 projectionは検証済みHistoryResultから有限の描画modelを作る純粋関数とする。Project、SDK、DB、source lifecycle、テーマ設定を読み取らない。rendererは投影modelと表示状態を受け取る。

@@ -235,7 +235,7 @@ banto-industrial の `@banto-industrial/trend`（`trend-v0.1.0`、Issue [#359](h
 - 時刻の軸は端末の地方時で出る（実証では 08:00〜09:00 = UTC 23:00〜00:00）。現行の履歴の入力は UTC を明示するので、置き換えるときに表示の時刻の扱いを揃える。
 - 実機の WebView2 と画面内の常時トレンド（ハイブリッド、リングバッファ + 履歴）は試していない。
 
-次の区切りの候補: (1) HistoryWorkspace の `TrendView` を部品へ置き換える（上の落ちるものの扱いを先に決める）、(2) 画面に置くトレンドの部品（`TrendPainting`）を Runtime で常時の線にする（Hub の購読 → `liveAppend`、履歴 → `hybridData`）。順はユーザーが選ぶ。
+2026-11-21 のユーザーの選択で (1) を実施した（全部を部品へ。設計は [historian-history-presentation.md の置き換えの節](../design/runtime/historian-history-presentation.md#共通部品への置き換え3592026-11-21日本時間)。上流へ [banto-industrial#1272](https://github.com/tyaro/banto-industrial/issues/1272)（ペンの色）と [#1273](https://github.com/tyaro/banto-industrial/issues/1273)（時刻の区間の帯）を起票）。次の区切りの候補: (1) HistoryWorkspace の `TrendView` を部品へ置き換える（上の落ちるものの扱いを先に決める）、(2) 画面に置くトレンドの部品（`TrendPainting`）を Runtime で常時の線にする（Hub の購読 → `liveAppend`、履歴 → `hybridData`）。順はユーザーが選ぶ。
 
 ## 戻す手順
 

@@ -81,30 +81,35 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
-test("minmax keeps extrema/bool states, mixed bins have no bounds, expired remains explicit", async ({
+test("minmax draws envelope lines, bool is a step line cut at gaps, mixed bins are reported and expired still renders", async ({
   page,
 }) => {
   await fixture(page);
   await load(page, "minmax");
   await reply(page);
-  await expect(page.locator("[data-history-envelope]").first()).toBeVisible();
-  await expect(page.locator("[data-history-point]")).toHaveCount(0);
+  await expect(page.locator(".history-trend .mode")).toContainText(
+    "区間ごとの最小・最大を縦の線で示し",
+  );
+  const chart = page.getByLabel("履歴トレンドのグラフ");
+  await expect(chart.locator("path.bi-trend__line").first()).toBeVisible();
+  await expect(chart.locator("path.bi-trend__marker")).toHaveCount(0);
+  await expect(chart.locator("rect.bi-trend__bit-bg")).toHaveCount(0);
+  // 1 本目は左、2 本目は右の目盛り。
+  const legend = page.getByLabel("履歴トレンドの凡例");
   await expect(
-    page.locator(".history-trend path,.history-trend polyline"),
-  ).toHaveCount(0);
-  await page.getByLabel("表示する履歴系列").selectOption("bool");
-  expect(
-    await page
-      .locator("[data-history-envelope]")
-      .evaluateAll((marks) =>
-        marks.every((mark) =>
-          ["0", "1"].includes(mark.getAttribute("data-value")!),
-        ),
-      ),
-  ).toBe(true);
+    legend.locator('small[data-history-legend-series="number"]'),
+  ).toContainText("· 左の目盛り");
+  await expect(
+    legend.locator('small[data-history-legend-series="bool"]'),
+  ).toContainText("· 右の目盛り");
+  // bool は段線で、欠測の区間で線が切れる（M が 2 つ以上）。OFF（0）の区間にも線がある。
+  const dAll = await chart
+    .locator("path.bi-trend__line")
+    .evaluateAll((paths) => paths.map((p) => p.getAttribute("d") ?? ""));
+  const cut = dAll.filter((d) => (d.match(/M/g) ?? []).length >= 2);
+  expect(cut.length).toBeGreaterThanOrEqual(1);
   await load(page, "mixed");
   await reply(page);
-  await page.getByLabel("表示する履歴系列").selectOption("number");
   await expect(page.locator("[data-history-mixed]")).toBeVisible();
   await load(page, "expired");
   await reply(page);
@@ -135,7 +140,7 @@ test("controller clears graphs, waits for retired reads and rejects wrong replie
     "data-history-phase",
     "invalid",
   );
-  await expect(page.locator("[data-history-point]")).toHaveCount(0);
+  await expect(page.locator(".history-trend .bi-trend__plot")).toHaveCount(0);
   await load(page);
   await page.getByRole("button", { name: "点数超過", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("点数が上限");
