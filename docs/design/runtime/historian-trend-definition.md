@@ -121,7 +121,7 @@ editorのdefault作成時に架空seriesを作らない。最初の定義は利�
 
 ## 要求の有限性と寿命
 
-配置数は既存Project／expanded placement予算に含める。配置の見える数によってqueryを増やさない。Appに一つのworkspace/controllerを保持し、常にactive Promise最大1、pending最新1、H1 query最大8系列／8000点／1時間のままとする。すべてのPopupからもこのownerへ委譲する。新しいModalや画面ごとにcontrollerを作って旧query資源を忘れない。
+配置数は既存Project／expanded placement予算に含める。配置の見える数によってqueryを増やさない。Appに一つのworkspace/controllerを保持し、常にactive Promise最大1、pending最新1、H1 query最大8系列／8000点／1時間のままとする。すべてのPopupからもこのownerへ委譲する。新しいModalや画面ごとにcontrollerを作って旧query資源を忘れない。2026-11-21の[常時トレンドの設計](historian-live-trend.md#23-問い合わせの公平さ)で、画面内の常時表示に限り、このworkspace/controllerとは別にAppに一つのscheduler（active 1、配置数によらない）を置くと改めた。App全体のhostへの未settleのqueryはworkspaceの1と常時表示の1の合計2まで（未実装）。
 
 presetを開くcommandはProject object／workspaceGeneration／definition.id／開いた回ごとのtokenを持ち、現在Projectから定義を再取得して検証する。同じdefinitionを再度開いても新しいopen tokenで前の結果と入力をclearする。保存定義だけを捕捉した旧callbackで検索しない。
 
@@ -138,7 +138,7 @@ source v1/v2、namespace、選択context、定義snapshotとquery全体の一致
 | H4c2（ローカル受入済み） | Project0.36.0、参照shape、原子的編集、SVGカード、保存／Undo／同Project複製 | 全言語parse/roundtrip、欠落参照・Symbol配置・外部clipboard拒否、未接続でも正当な保存、画像/接続線/埋込/Popup/回転/選択の既存回帰。カードは「履歴表示は準備中」と表示して検索を発行しない |
 | H4c3（ローカル受入済み） | context v2、namespace照合、定義preset→既存workspace、色と凡例、画面action  | 通常Appで保存定義からraw/minmaxを明示取得。v1手動維持、別namespace同ID拒否、部分未解決拒否、unknownSeries応答、UTC算術端、service/定義/画面/Popup寿命、複数配置でもactive1、両theme      |
 
-H4c2で「Trend表示完成」とはしない。H4c3で保存定義からの履歴表示までが完成し、画面内常時グラフは別工程である。inline化を再開する時は、同時可視instance数、全体points/bytes、要求fairness、取消中資源、hidden/embedded/Popupの需要集約を先に決める。今回の単一workspace予算を無条件に各shapeへ複製しない。
+H4c2で「Trend表示完成」とはしない。H4c3で保存定義からの履歴表示までが完成し、画面内常時グラフは別工程である。inline化を再開する時は、同時可視instance数、全体points/bytes、要求fairness、取消中資源、hidden/embedded/Popupの需要集約を先に決める。今回の単一workspace予算を無条件に各shapeへ複製しない。これらは2026-11-21に[常時トレンドの設計](historian-live-trend.md#2-画面に複数置いたときの予算)で決めた（未実装）。
 
 次の上流接続工程は、namespaceを実Historianへ結び付けるadapterと製品transport／認証の再開条件を満たした後である。保存Trendを導入しても製品接続・常時収集・長期検索・認証が完成したとはしない。
 

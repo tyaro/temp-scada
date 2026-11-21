@@ -43,7 +43,7 @@ interface Project {
 
 Project schemaはcanonical recording-plan schemaを外部resourceとしてローカル登録して参照し、H1 ID resourceも既存どおり登録する。ネットワークschema解決を行わない。TSはparse/validateRecordingPlan、Rustはrecording_planの既存validatorをProject semantic validationから呼ぶ。独立64KiB/depth32/node4096予算も保存部分へ適用する。Project全体の既存予算をこの64KiBへ置き換えない。現行TS/RustのProject text normalizationはscreens/symbols内のtext shape本文だけを対象としている。この範囲を維持し、recordingPlanのexternalNameやIDへ改行変換・trim・Unicode正規化を適用しない。
 
-planId/groupId/memberIdはH5aの各poolであり、Project object/assetのglobal UUID poolへ追加しない。Hub参照は論理hubRefだけ。seriesId/hubInstanceId/incarnation/segment、endpoint/credentials、SDK pin、mapping/applied revision、receipt、operation状態、取得時刻はProjectへ保存しない。Trend namespace/series参照とdesired memberIdを自動対応させない。
+planId/groupId/memberIdはH5aの各poolであり、Project object/assetのglobal UUID poolへ追加しない。Hub参照は論理hubRefだけ。seriesId/hubInstanceId/incarnation/segment、endpoint/credentials、SDK pin、mapping/applied revision、receipt、operation状態、取得時刻はProjectへ保存しない。Trend namespace/series参照とdesired memberIdの対応はProjectへ保存しない。2026-11-21のオーナーの許可により、表示のための自動の対応づけは行ってよい。方式はhostが適用済みmappingからseriesId→member（externalName）を引く向きだけで、名前の一致で推測しない（[常時トレンド](historian-live-trend.md#1-ペンとタグの対応づけ)）。
 
 ### 変更対象と互換性
 
