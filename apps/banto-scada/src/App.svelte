@@ -3455,6 +3455,14 @@
                 index,
                 point,
               })}
+            onvertexconnect={(id, endpoint, connection) =>
+              edit({
+                type: "set-line-connection",
+                screenId: screen.id,
+                objectId: id,
+                endpoint,
+                connection,
+              })}
             onbeforeedit={() => drafts.allow(() => {})}
             onselect={selectCanvasObjects}
             onrangeselect={selectRange}

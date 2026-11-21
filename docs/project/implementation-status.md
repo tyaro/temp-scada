@@ -557,6 +557,8 @@ G3の型（エラー／警告なし）・TS676件、新機能の関連ブラウ�
 
 2026-11-21のIssue #306 E2で、このサンプルの15本の矢印の両端を箱（矩形・楕円・多角形）のanchorへ接続し、箱を動かしても線が離れないフロー図の見本にした（保存版0.37.0のまま）。接続先の候補・接続中の表示は、名前の無い図形を型名（`rectangle · 3`）でなく種類と配置順（`矩形 · 配置4`）で示す（`connections.ts`の`connectionTargetLabel`）。操作ガイドに図形への接続・多角形のanchor・凹んだ形でanchorが動く注意を足した。TSの`shape-label.test.ts`・`connections-area.test.ts`、Rustの`shape_label_flow_sample_is_valid`、`e2e/shape-label-flow.spec.ts`（両テーマ。Inspectorでの接続先の表示・箱のドラッグでの追従・保存と再読込）で確かめた。残りはE3（端のドラッグで吸着）・E4（作成中の吸着）。
 
+2026-11-21のIssue #306 E3で、接続していない線の端をドラッグしてanchorの近く（画面上12px）で離すと接続するようにした。判定は`connection-snap.ts`、吸着中はanchorに選択色の輪を出し、確定は`set-line-connection`の1回（Undo 1回）。Altで吸着を止める。group・ロックの線と非表示の配置は対象外。TSの`connection-snap.test.ts`と`e2e/connections.spec.ts`（両テーマ）で確かめた。残りはE4（作成中の吸着）。
+
 ## 表
 
 2026-11-13のフロー図 段階1-Fの第1段で、図形`table`（列幅・行の高さの比、固定の文字のセル、セルの塗り・文字色、罫線、地）を追加した。Inspectorではセルの文字・色をタブ区切りで入力し、表計算ソフトから貼り付けられる。文字を含むので反転できない。同日の第2段の2aで、画面の表のセルをタグに結合できるようにした（セルの`binding`と数値の`format`。値・品質の表示はTextの数値表示と同じ）。Inspectorでは「セルのタグ」「セルの書式」をタブ区切りで入力する。Rustの`text_bindings`とTSの`shapeTagBindings`が表のセルを返し、読取・参照一覧・一括置換・貼り付けが表に対応した。Symbol定義内のセルのタグは拒否する。続く2bで、Symbol定義の中の表のセルを宣言済みの読取slotに結合できるようにした（セルの`slotBinding`・`stateColors`・`format`。状態の文字・色と書式付きの数値はslotに結合したTextと同じ規則）。Inspectorでは定義の編集中に「セルのslot」「セルの書式」「セルの取得不能の色」を出す。slotの使用箇所・状態一覧・改名や削除の拒否が表のセルに対応した。schemaVersionは0.37.0のまま。Tauri実機は未確認。[現行仕様](../design/graphics/table.md)。
