@@ -308,3 +308,117 @@ test("grid rounding that lands a dragged end on the other end still snaps to a v
     end: { targetObjectId: pump2, anchor: "left" },
   });
 });
+// Issue #306 E4: 連続配置で配管を選び、クリックで頂点を足して描く。始点・終点は anchor へ吸着する。
+const boxesOnly = (() => {
+  const data = structuredClone(sample) as any;
+  data.screens[0].objects = data.screens[0].objects.slice(0, 2);
+  return data;
+})();
+async function clickAt(p: Page, x: number, y: number) {
+  await p.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  const at = await point(p, x, y);
+  await p.mouse.move(at.x - 3, at.y - 3);
+  await p.mouse.click(at.x, at.y);
+}
+for (const theme of ["light", "dark"])
+  test(`drawing a pipe by clicks snaps both ends to anchors, commits once and Undo removes it in ${theme}`, async ({
+    page: p,
+  }) => {
+    await start(p, boxesOnly);
+    await chooseTheme(p, theme);
+    await selectPanel(p, "部品");
+    await button(p, "連続配置ツール").click();
+    await button(p, "配管を追加").click();
+    await p.getByLabel("グリッドにスナップ", { exact: true }).check();
+    await p.getByLabel("グリッド間隔", { exact: true }).selectOption("10");
+    const bar = p.getByRole("status", { name: "連続配置の状態", exact: true });
+    await expect(bar).toContainText("描く");
+    const objects = mainCanvas(p).locator(":scope > [data-object-id]");
+    await expect(objects).toHaveCount(2);
+    const draft = p.getByTestId("line-draft");
+    // 1 点目: ポンプ1 の right (180,220) の近く。始点の輪が残る。
+    await clickAt(p, 184, 223);
+    const startRing = draft.locator('.connection-snap[data-snap-end="start"]');
+    await expect(startRing).toHaveAttribute("data-snap-target-id", pump1);
+    await expect(startRing).toHaveAttribute("data-snap-anchor", "right");
+    await clickAt(p, 270, 220);
+    await clickAt(p, 270, 320);
+    // 終点の候補: ポンプ2 の left (360,320) の近くで輪が出る。
+    const near = await point(p, 355, 317);
+    await p.mouse.move(near.x, near.y);
+    const endRing = draft.locator('.connection-snap[data-snap-end="end"]');
+    await expect(endRing).toHaveAttribute("data-snap-target-id", pump2);
+    await expect(endRing).toHaveAttribute("data-snap-anchor", "left");
+    await expect(objects).toHaveCount(2);
+    await clickAt(p, 355, 317);
+    await expect(objects).toHaveCount(3);
+    await expect(draft).toHaveCount(0);
+    const line = (await saved(p)).screens[0].objects[2];
+    // 描いた線を選択する（今の追加と同じ。#373 のレビュー）。
+    await expect(
+      mainCanvas(p).locator(`[data-vertex-object-id="${line.id}"]`).first(),
+    ).toBeAttached();
+    expect(line.shape.type).toBe("polyline");
+    expect(line.shape.strokeWidth).toBe(8);
+    expect(line.shape.connections).toEqual({
+      start: { targetObjectId: pump1, anchor: "right" },
+      end: { targetObjectId: pump2, anchor: "left" },
+    });
+    expect(
+      line.shape.points.map((q: any) => ({ x: q.x + line.x, y: q.y + line.y })),
+    ).toEqual([
+      { x: 180, y: 220 },
+      { x: 270, y: 220 },
+      { x: 270, y: 320 },
+      { x: 360, y: 320 },
+    ]);
+    // 配置の状態は残る。Undo 1 回で線ごと消える。
+    await expect(bar).toContainText("描く");
+    await button(p, "元に戻す").click();
+    await expect(objects).toHaveCount(2);
+    await expect(button(p, "元に戻す")).toBeDisabled();
+  });
+test("Escape cancels only the line in progress, Enter commits a free line, and a second Escape stops placement", async ({
+  page: p,
+}) => {
+  await start(p, boxesOnly);
+  await selectPanel(p, "部品");
+  await button(p, "連続配置ツール").click();
+  await button(p, "線を追加").click();
+  const bar = p.getByRole("status", { name: "連続配置の状態", exact: true });
+  const objects = mainCanvas(p).locator(":scope > [data-object-id]");
+  const draft = p.getByTestId("line-draft");
+  await clickAt(p, 100, 400);
+  await clickAt(p, 200, 400);
+  await expect(draft.locator("polyline")).toHaveCount(1);
+  await p.keyboard.press("Escape");
+  await expect(draft).toHaveCount(0);
+  await expect(bar).toBeVisible();
+  await expect(objects).toHaveCount(2);
+  // Backspace で 1 点戻し、Enter で確定する。接続は無い。
+  await clickAt(p, 100, 400);
+  await clickAt(p, 150, 450);
+  await clickAt(p, 200, 400);
+  await p.keyboard.press("Backspace");
+  await p.keyboard.press("Enter");
+  await expect(objects).toHaveCount(3);
+  const line = (await saved(p)).screens[0].objects[2];
+  expect(line.shape.strokeWidth).toBe(2);
+  expect(line.shape.connections).toBeUndefined();
+  expect(line.shape.points).toHaveLength(2);
+  // 画面の外（余白）にも頂点を置ける（#373 のレビュー、オーナーが許容）。
+  await p.getByLabel("表示倍率", { exact: true }).selectOption("0.5");
+  await clickAt(p, -40, 20);
+  await clickAt(p, 100, 100);
+  await p.keyboard.press("Enter");
+  await expect(objects).toHaveCount(4);
+  const outside = (await saved(p)).screens[0].objects[3];
+  expect(Math.round(outside.x)).toBe(-40);
+  await p.keyboard.press("Escape");
+  await expect(bar).toHaveCount(0);
+});

@@ -3,6 +3,7 @@ import type { EditCommand } from "../../editor";
 import type { Point, SymbolDefinition } from "../../project";
 import { DEFAULT_FAVORITES, favoriteKey, FAVORITES_LIMIT } from "../favorites";
 import type { PalettePart } from "../palette-drag";
+import type { FinishedLine, LineDrawKind } from "../../line-drawing";
 
 /**
  * 部品の配置（R7d）。お気に入り・連続配置・パレットからの drag の状態と、
@@ -145,6 +146,49 @@ export function createPartPlacementController(host: PartPlacementHost) {
         () => focusPlacement(ticket),
       );
   }
+  /** 配置する部品が線・配管なら、その種類（クリックで頂点を足して描く、#306 E4）。 */
+  function drawKind(): LineDrawKind | null {
+    return positionPlacement &&
+      armedPart?.type === "basic" &&
+      (armedPart.kind === "line" || armedPart.kind === "pipe")
+      ? armedPart.kind
+      : null;
+  }
+  /** 作図した線を `add-polyline` 1 回で置く。配置の状態は残して続けて描ける。 */
+  function drawArmed(line: FinishedLine) {
+    const part = armedPart;
+    if (!drawKind() || !part || refuses(part)) return;
+    const ticket = placementTicket;
+    const target = host.screenId;
+    const generation = host.generation;
+    host.transition(() => {
+      if (
+        !positionPlacement ||
+        ticket !== placementTicket ||
+        host.mode !== "edit" ||
+        generation !== host.generation ||
+        target !== host.screenId
+      ) {
+        host.report(
+          "error",
+          "配置先が変わったため、線をもう一度描いてください。",
+        );
+        return;
+      }
+      if (
+        host.edit({
+          type: "add-polyline",
+          screenId: target,
+          kind: line.kind,
+          points: line.points,
+          ...(line.connections.start || line.connections.end
+            ? { connections: line.connections }
+            : {}),
+        })
+      )
+        focusPlacement(ticket);
+    });
+  }
   function beginPartDrag(part: PalettePart) {
     stopPlacement();
     return startPaletteDrag(part);
@@ -247,6 +291,10 @@ export function createPartPlacementController(host: PartPlacementHost) {
     isArmed,
     choosePart,
     placeArmed,
+    get drawKind(): LineDrawKind | null {
+      return drawKind();
+    },
+    drawArmed,
     placeFavorite,
     browseParts: () => host.showPartsPanel(),
     beginPartDrag,

@@ -2,19 +2,24 @@
   // 連続配置中の帯。状態と終了の処理は App が持つ（R7c）。
   let {
     armedLabel,
+    drawing = false,
     onstop,
   }: {
     /** 選択中の部品名。未選択なら null */
     armedLabel: string | null;
+    /** 線・配管をクリックで頂点を足して描く（#306 E4）。 */
+    drawing?: boolean;
     onstop: () => void;
   } = $props();
 </script>
 
 <div class="placement-bar" role="status" aria-label="連続配置の状態">
   <span
-    >{armedLabel !== null
-      ? `${armedLabel}を連続配置 · キャンバスをクリック／Enterで中央へ配置`
-      : "連続配置 · 部品を選んでください"}</span
+    >{armedLabel !== null && drawing
+      ? `${armedLabel}を描く · クリックで頂点を追加、接続先の近くで吸着／ダブルクリック・Enterで確定、Backspaceで1点戻す、Escで取消`
+      : armedLabel !== null
+        ? `${armedLabel}を連続配置 · キャンバスをクリック／Enterで中央へ配置`
+        : "連続配置 · 部品を選んでください"}</span
   >
   <button onclick={onstop}>配置を終了 <kbd>Esc</kbd></button>
 </div>

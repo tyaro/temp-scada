@@ -1552,6 +1552,7 @@
       if (screenId !== oldScreenId) editView.showCanvas();
       if (
         command.type === "add" ||
+        command.type === "add-polyline" ||
         command.type === "add-symbol" ||
         command.type === "place-symbol" ||
         command.type === "add-image" ||
@@ -3437,6 +3438,8 @@
             placing={placement.positionPlacement}
             placeReady={!!placement.armedPart}
             onplacepoint={placeArmed}
+            drawLine={placement.drawKind}
+            ondrawline={placement.drawArmed}
             oncancelplacement={() => stopPlacement(true)}
             {canDropPart}
             ondropPart={dropPalettePart}
@@ -3532,6 +3535,7 @@
       {#if mode === "edit" && placement.positionPlacement}
         <PlacementBar
           armedLabel={placement.armedPart ? armedLabel : null}
+          drawing={!!placement.drawKind}
           onstop={() => stopPlacement(true)}
         />
       {/if}

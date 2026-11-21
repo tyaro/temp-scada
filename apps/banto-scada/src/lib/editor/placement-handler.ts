@@ -8,6 +8,7 @@ import {
 import { canvasColors } from "../canvas-colors";
 import { builtinDefinition } from "../builtin-symbols";
 import type {
+  ObjectCommand,
   ObjectCreationCommand,
   ScreenViewPlacementCommand,
 } from "./commands";
@@ -237,4 +238,57 @@ export function applyObjectCreation(
   const added = screen.objects.at(-1)!;
   if (isAreaShape(added.shape)) delete added.fill;
   centerObject(added, command.center);
+}
+
+/**
+ * 作図した線を置く（#306 E4）。頂点は world で受け、始点を配置の位置にする。色・太さ・矢印は
+ * 「線を追加」と同じ既定。接続は確定の追従（`followProjectConnections`）と検査が受け持つ。
+ */
+export function applyPolylineDrawing(
+  screen: Screen | SymbolDefinition,
+  command: Extract<ObjectCommand, { type: "add-polyline" }>,
+  definitionId: string | undefined,
+  targetScreen: Screen | undefined,
+): void {
+  if (command.kind !== "line" && command.kind !== "pipe")
+    throw new Error("線か配管を選んでください");
+  const points = command.points;
+  if (
+    !Array.isArray(points) ||
+    points.length < 2 ||
+    points.some((p) => !p || !Number.isFinite(p.x) || !Number.isFinite(p.y)) ||
+    points.every((p) => p.x === points[0].x && p.y === points[0].y)
+  )
+    throw new Error("線には異なる2点以上の頂点が必要です");
+  const connections = command.connections ?? {};
+  if ((connections.start || connections.end) && definitionId)
+    throw new Error("Symbol定義内の配管接続には対応していません");
+  const origin = points[0];
+  screen.objects.push({
+    id: newId(),
+    order: Math.max(-1, ...screen.objects.map((o) => o.order)) + 1,
+    rotation: 0,
+    x: origin.x,
+    y: origin.y,
+    fill: canvasColors(definitionId ? "#0b1220" : targetScreen!.background)
+      .newShape,
+    shape: {
+      type: "polyline",
+      points: points.map((p) => ({ x: p.x - origin.x, y: p.y - origin.y })),
+      strokeWidth: command.kind === "line" ? 2 : 8,
+      arrow: "none",
+      ...(connections.start || connections.end
+        ? {
+            connections: {
+              ...(connections.start
+                ? { start: structuredClone(connections.start) }
+                : {}),
+              ...(connections.end
+                ? { end: structuredClone(connections.end) }
+                : {}),
+            },
+          }
+        : {}),
+    },
+  });
 }
