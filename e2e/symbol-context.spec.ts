@@ -143,8 +143,13 @@ test("context placement uses the visible canvas center, pending draft applicatio
   const valve = project.symbols.find((d: any) => d.name === "バルブ");
   const placed = project.screens[0].objects.at(-1);
   expect(placed.shape.symbolId).toBe(valve.id);
-  expect(placed.x + placed.width / 2).toBeCloseTo(center.x, 0);
-  expect(placed.y + placed.height / 2).toBeCloseTo(center.y, 0);
+  // 中央の大きさが端数になる（#331 D2 の dock の分割）ので、半 px までの差を許す。
+  expect(Math.abs(placed.x + placed.width / 2 - center.x)).toBeLessThanOrEqual(
+    0.5,
+  );
+  expect(Math.abs(placed.y + placed.height / 2 - center.y)).toBeLessThanOrEqual(
+    0.5,
+  );
   expect(project.symbols).toHaveLength(2);
   await button(page, "元に戻す").click();
   await expect(

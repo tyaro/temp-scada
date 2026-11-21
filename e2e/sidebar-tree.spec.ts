@@ -75,7 +75,7 @@ test("layer search keeps selection, drafts, stacking order, context actions and 
     .getByRole("button", { name: "text · 5", exact: true })
     .click();
   await page.getByLabel("テキスト", { exact: true }).fill("未適用");
-  const root = page.locator("#designer-panel-layers details.tree-section");
+  const root = page.locator("#designer-layers-panel details.tree-section");
   await root.locator("summary").click();
   await expect(layers(page)).toBeHidden();
   await search.fill("RECTANGLE");

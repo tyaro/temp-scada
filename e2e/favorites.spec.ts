@@ -1,4 +1,9 @@
-import { fileCommand, chooseTheme, selectPanel } from "./helpers/designer";
+import {
+  fileCommand,
+  chooseTheme,
+  selectPanel,
+  hideSidebar,
+} from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 const button = (page: Page, name: string) =>
@@ -96,7 +101,7 @@ test("favorites keep palette drafts and Project/history unchanged, persist and r
       exact: true,
     }),
   ).toBeVisible();
-  await button(page, "左パネルを隠す").click();
+  await hideSidebar(page);
   await dock(page)
     .getByRole("button", { name: "部品パネルを開く", exact: true })
     .click();

@@ -13,7 +13,8 @@ function controls(form: HTMLFormElement): Control[] {
 export function createDraftGuard(
   onError: (message: string) => void,
   validate: (forms: HTMLFormElement[]) => boolean,
-  reveal: (form: HTMLFormElement) => void = () => {},
+  /** 未保存のフォームを見えるようにする（Promise なら、欄が見えるまで待つ）。 */
+  reveal: (form: HTMLFormElement) => void | Promise<unknown> = () => {},
   beforeAllow: () => boolean = () => true,
 ) {
   // DOM の登録・解除は Svelte の teardown 内でも発生する。
@@ -180,7 +181,7 @@ export function createDraftGuard(
     );
     if (invalid) {
       onError("入力に不正な値があります。修正してから操作してください。");
-      reveal(invalid);
+      await reveal(invalid);
       await tick();
       invalid.reportValidity();
       return;
@@ -192,7 +193,7 @@ export function createDraftGuard(
         if (!form.isConnected) continue;
         form.requestSubmit();
         if (dirty.has(form)) {
-          reveal(form);
+          await reveal(form);
           await tick();
           controls(form)[0]?.focus();
           return;

@@ -1,19 +1,27 @@
-import {
-  chooseMenuItem,
-  fileCommand,
-  selectPanel,
-  chooseTheme,
-} from "./helpers/designer";
+// #331 D2: 左右の幅は dock の divider が持つ。保存した幅（panel-widths）は最初の
+// 配置にだけ使い、divider で変えた幅は保存しない（配置の自動保存と panel-widths の
+// 撤去は D3）。ここでは divider の操作が入力・Project・履歴・表示の中心を変えないこと、
+// 「パネルの幅を標準に戻す」、保存した幅を最初の配置に使うことを確かめる。
+import { chooseMenuItem, fileCommand, selectPanel } from "./helpers/designer";
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
+/** 根の横の分割の divider（0 = 左と中央の間、1 = 中央と右の間）。 */
 const divider = (page: Page, side: "left" | "right") =>
-  page.getByRole("separator", {
-    name: side === "left" ? "左パネルの幅" : "プロパティの幅",
-    exact: true,
-  });
+  page
+    .getByRole("separator", { name: "パネルのサイズ変更", exact: true })
+    .nth(side === "left" ? 0 : 1);
+const sidebar = (page: Page) =>
+  page.locator("[data-designer-left-pane]:visible").first();
+const inspector = (page: Page) => page.locator("#designer-inspector-panel");
 const storageKey = "banto.ui.scada.designer.panel-widths";
+async function width(page: Page, side: "left" | "right") {
+  return (
+    (await (side === "left" ? sidebar(page) : inspector(page)).boundingBox())
+      ?.width ?? 0
+  );
+}
 async function start(page: Page) {
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto("/");
@@ -46,8 +54,12 @@ async function viewCenter(page: Page) {
       return { x: point.x, y: point.y };
     });
 }
+function near(value: number, expected: number, slack = 16) {
+  expect(value).toBeGreaterThan(expected - slack);
+  expect(value).toBeLessThan(expected + slack);
+}
 
-test("dragging panel borders preserves drafts and saves widths separately from Project and history", async ({
+test("dragging dock dividers preserves drafts, Project and history", async ({
   page,
 }) => {
   await start(page);
@@ -57,14 +69,15 @@ test("dragging panel borders preserves drafts and saves widths separately from P
     .getByRole("button", { name: "rectangle · 3", exact: true })
     .click();
   await page.getByLabel(/^(?:色|塗りの色)$/, { exact: true }).fill("#aabbcc");
-  // プロジェクト名は作業タブへ移ったので、左ペインの下書きはレイヤー検索で確かめる。
   const layerSearch = page.getByLabel("レイヤーを検索", { exact: true });
   await layerSearch.fill("rectangle");
   const saveState = await page.getByTestId("save-state").innerText();
+  const left = await width(page, "left"),
+    right = await width(page, "right");
   await drag(page, "left", 100);
   await drag(page, "right", -80);
-  await expect(divider(page, "left")).toHaveAttribute("aria-valuenow", "340");
-  await expect(divider(page, "right")).toHaveAttribute("aria-valuenow", "368");
+  await expect.poll(() => width(page, "left")).toBeGreaterThan(left + 80);
+  await expect.poll(() => width(page, "right")).toBeGreaterThan(right + 60);
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(layerSearch).toHaveValue("rectangle");
   await expect(
@@ -82,14 +95,10 @@ test("dragging panel borders preserves drafts and saves widths separately from P
     await readFile("examples/minimal.project.json", "utf8"),
   );
   expect(saved).toEqual(original);
-  await page.reload();
-  await button(page, "編集").click();
-  await expect(divider(page, "left")).toHaveAttribute("aria-valuenow", "340");
-  await expect(divider(page, "right")).toHaveAttribute("aria-valuenow", "368");
 });
 
 for (const zoom of [0.25, 1, 4])
-  test(`width adjustments and cancellation keep the manual ${zoom * 100}% design center`, async ({
+  test(`divider drags and cancellation keep the manual ${zoom * 100}% design center`, async ({
     page,
   }) => {
     await start(page);
@@ -105,8 +114,9 @@ for (const zoom of [0.25, 1, 4])
     await expect
       .poll(async () => Math.abs((await viewCenter(page)).y - before.y))
       .toBeLessThan(2 / zoom);
+    const left = await width(page, "left");
     await drag(page, "left", -80, true);
-    await expect(divider(page, "left")).toHaveAttribute("aria-valuenow", "360");
+    await expect.poll(() => width(page, "left")).toBeCloseTo(left, 0);
     await expect
       .poll(async () => Math.abs((await viewCenter(page)).x - before.x))
       .toBeLessThan(2 / zoom);
@@ -115,105 +125,81 @@ for (const zoom of [0.25, 1, 4])
     );
   });
 
-test("keyboard resizing is bounded and the display menu restores standard widths without changing inputs", async ({
+test("the display menu restores standard widths without changing inputs or the arrangement", async ({
   page,
 }) => {
   await start(page);
   await page.getByLabel("画面名", { exact: true }).fill("入力を保持");
-  const left = divider(page, "left"),
-    right = divider(page, "right");
-  await left.focus();
-  await page.keyboard.press("Shift+ArrowRight");
-  await expect(left).toHaveAttribute("aria-valuenow", "272");
-  await page.keyboard.press("Home");
-  await expect(left).toHaveAttribute("aria-valuenow", "200");
-  await page.keyboard.press("End");
-  await expect(left).toHaveAttribute("aria-valuenow", "400");
-  await page.keyboard.press("Enter");
-  await expect(left).toHaveAttribute("aria-valuenow", "240");
-  await right.focus();
-  await page.keyboard.press("ArrowLeft");
-  await expect(right).toHaveAttribute("aria-valuenow", "296");
+  await drag(page, "left", 120);
+  await drag(page, "right", -100);
+  await selectPanel(page, "部品");
   await chooseMenuItem(page, "表示", "パネルの幅を標準に戻す");
-  await expect(right).toHaveAttribute("aria-valuenow", "288");
+  await expect.poll(() => width(page, "left")).toBeLessThan(240 + 16);
+  near(await width(page, "left"), 240);
+  near(await width(page, "right"), 288);
+  await expect(
+    page.getByRole("tab", { name: "部品", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   await expect(page.getByLabel("画面名", { exact: true })).toHaveValue(
     "入力を保持",
   );
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
-for (const theme of ["light", "dark"] as const)
-  test(`saved widths constrain responsively in ${theme}, disappear with panels and survive narrow layouts`, async ({
-    page,
-  }) => {
-    await start(page);
-    await chooseTheme(page, theme);
-    await drag(page, "left", 160);
-    await drag(page, "right", -152);
-    await page.setViewportSize({ width: 1100, height: 800 });
-    await expect(divider(page, "left")).toHaveAttribute("aria-valuenow", "308");
-    await expect(divider(page, "right")).toHaveAttribute(
-      "aria-valuenow",
-      "352",
-    );
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth),
-    ).toBeLessThanOrEqual(1100);
-    await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.getByRole("separator", { name: /幅$/ })).toHaveCount(0);
-    expect(
-      await page.evaluate(() => document.documentElement.scrollWidth),
-    ).toBeLessThanOrEqual(390);
-    await page.setViewportSize({ width: 1600, height: 1000 });
-    await expect(divider(page, "left")).toHaveAttribute("aria-valuenow", "400");
-    await expect(divider(page, "right")).toHaveAttribute(
-      "aria-valuenow",
-      "440",
-    );
-    await button(page, "プロパティを隠す").click();
-    await expect(divider(page, "right")).toHaveCount(0);
-    await chooseMenuItem(page, "表示", "補助パネルをすべて隠す");
-    await expect(page.getByRole("separator", { name: /幅$/ })).toHaveCount(0);
-    await button(page, "表示プレビュー").click();
-    await expect(page.getByRole("separator", { name: /幅$/ })).toHaveCount(0);
-  });
-
-test("invalid stored widths fall back and storage failures still allow session resizing", async ({
+test("standard widths chosen in the narrow display apply when going wide", async ({
   page,
 }) => {
+  await start(page);
+  await drag(page, "left", 120);
+  await drag(page, "right", -100);
+  await expect.poll(() => width(page, "left")).toBeGreaterThan(240 + 80);
+  await page.setViewportSize({ width: 900, height: 800 });
+  await expect(page.locator('[data-dock-band-tab="left"]')).toBeVisible();
+  await chooseMenuItem(page, "表示", "パネルの幅を標準に戻す");
+  // 狭い表示の間は dock が広い配置を控えている。広い表示へ戻すと標準の幅で出る。
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await expect(sidebar(page)).toBeVisible();
+  await expect.poll(() => width(page, "left")).toBeLessThan(240 + 16);
+  near(await width(page, "left"), 240);
+  near(await width(page, "right"), 288);
+});
+
+test("saved widths set the first arrangement and invalid ones fall back", async ({
+  page,
+}) => {
+  await page.addInitScript(
+    (key) => localStorage.setItem(key, '{"left":360,"right":400}'),
+    storageKey,
+  );
+  await start(page);
+  near(await width(page, "left"), 360);
+  near(await width(page, "right"), 400);
   await page.addInitScript(
     (key) => localStorage.setItem(key, '{"left":100000,"right":-10}'),
     storageKey,
   );
-  await start(page);
-  await expect(divider(page, "left")).toHaveAttribute("aria-valuenow", "240");
-  await expect(divider(page, "right")).toHaveAttribute("aria-valuenow", "288");
-  await page.evaluate(() => {
-    Storage.prototype.setItem = () => {
-      throw new Error("storage unavailable");
-    };
-  });
-  await drag(page, "left", 80);
-  await expect(divider(page, "left")).toHaveAttribute("aria-valuenow", "320");
-  await expect(page.locator(".toast-host")).toContainText(
-    "パネルの幅を保存できません",
-  );
+  await page.reload();
+  await button(page, "編集").click();
+  near(await width(page, "left"), 240);
+  near(await width(page, "right"), 288);
 });
 
-test("switching to a narrow layout during a drag cancels the temporary width", async ({
+test("switching to the narrow display during a drag leaves no error and the wide widths come back", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await start(page);
+  const before = await width(page, "left");
   const bounds = (await divider(page, "left").boundingBox())!;
-  await page.mouse.move(bounds.x + 4, bounds.y + 40);
+  await page.mouse.move(bounds.x + 2, bounds.y + 40);
   await page.mouse.down();
-  await page.mouse.move(bounds.x + 84, bounds.y + 40, { steps: 8 });
+  await page.mouse.move(bounds.x + 82, bounds.y + 40, { steps: 8 });
   await page.setViewportSize({ width: 900, height: 800 });
   await page.mouse.up();
-  await expect(page.getByRole("separator", { name: /幅$/ })).toHaveCount(0);
+  await expect(page.locator('[data-dock-band-tab="left"]')).toBeVisible();
   await page.setViewportSize({ width: 1600, height: 1000 });
-  await expect(divider(page, "left")).toHaveAttribute("aria-valuenow", "240");
+  await expect(sidebar(page)).toBeVisible();
+  expect(await width(page, "left")).toBeLessThan(before + 100);
   expect(errors).toEqual([]);
 });

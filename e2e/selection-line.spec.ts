@@ -261,8 +261,9 @@ for (const theme of ["light", "dark"] as const)
       name: "プロパティを隠す",
       exact: true,
     });
+    // #331 D2: 隠すボタンは dock の pane のタイトルバー（Inspector の真上）にある。
     const panelBox = await page
-      .getByRole("complementary", { name: "プロパティパネル", exact: true })
+      .getByRole("toolbar", { name: "プロパティ", exact: true })
       .boundingBox();
     const closeBox = await close.boundingBox();
     expect(closeBox!.y).toBeGreaterThanOrEqual(panelBox!.y);

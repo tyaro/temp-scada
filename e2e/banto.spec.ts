@@ -49,7 +49,8 @@ test("Banto theme persists, follows OS changes and leaves Project colors unchang
     "変更を適用しました",
   );
   await expect(
-    page.getByRole("heading", { name: "プロパティ", exact: true }),
+    // #331 D2: Inspector の見出しは dock の pane のタイトルバー。
+    page.getByRole("toolbar", { name: "プロパティ", exact: true }),
   ).toBeVisible();
   await page.screenshot({ path: "/tmp/scada-banto-light.png", fullPage: true });
   expect(errors).toEqual([]);

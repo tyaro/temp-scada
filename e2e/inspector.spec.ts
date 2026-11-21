@@ -35,7 +35,7 @@ test("hiding properties releases its width, retains drafts and restores through 
     .locator("main")
     .getAttribute("data-project-revision");
   const width = (await viewport(page).boundingBox())!.width;
-  await inspector(page)
+  await page
     .getByRole("button", { name: "プロパティを隠す", exact: true })
     .click();
   await expect(inspector(page)).toHaveCount(0);
@@ -46,7 +46,7 @@ test("hiding properties releases its width, retains drafts and restores through 
   ).toBeFocused();
   await expect
     .poll(async () => (await viewport(page).boundingBox())!.width)
-    .toBeGreaterThan(width + 250);
+    .toBeGreaterThan(width + 200); // 隠した右の幅は dock が残りの区画へ比率で配る（#331 D2）
   await expect(
     page.locator('[data-editor-form="shape-paint"] input[name="fillColor"]'),
   ).toHaveValue("#aabbcc");
@@ -94,12 +94,12 @@ for (const zoom of [0.25, 1, 4]) {
     });
     const before = await center(page);
     const width = (await viewport(page).boundingBox())!.width;
-    await inspector(page)
+    await page
       .getByRole("button", { name: "プロパティを隠す", exact: true })
       .click();
     await expect
       .poll(async () => (await viewport(page).boundingBox())!.width)
-      .toBeGreaterThan(width + 250);
+      .toBeGreaterThan(width + 200); // 隠した右の幅は dock が残りの区画へ比率で配る（#331 D2）
     await expect
       .poll(async () => Math.abs((await center(page)).x - before.x))
       .toBeLessThan(1.1 / zoom);
@@ -143,7 +143,7 @@ test("hidden invalid properties reopen for native and model validation", async (
   const width = page.getByLabel("幅", { exact: true });
   const original = await width.inputValue();
   await width.fill("0");
-  await inspector(page)
+  await page
     .getByRole("button", { name: "プロパティを隠す", exact: true })
     .click();
   await page.keyboard.press("Control+s");
@@ -155,7 +155,7 @@ test("hidden invalid properties reopen for native and model validation", async (
   await width.fill(original);
   await page.getByRole("button", { name: "配管を追加", exact: true }).click();
   await page.getByLabel("頂点", { exact: true }).fill("0,0\n0,0");
-  await inspector(page)
+  await page
     .getByRole("button", { name: "プロパティを隠す", exact: true })
     .click();
   await page.keyboard.press("Control+s");
@@ -181,12 +181,9 @@ for (const theme of ["light", "dark"]) {
     ]) {
       await page.setViewportSize({ width, height });
       await expect(
-        inspector(page).getByRole("button", {
-          name: "プロパティを隠す",
-          exact: true,
-        }),
+        page.getByRole("button", { name: "プロパティを隠す", exact: true }),
       ).toBeInViewport();
-      await inspector(page)
+      await page
         .getByRole("button", { name: "プロパティを隠す", exact: true })
         .click();
       await showInspector(page);

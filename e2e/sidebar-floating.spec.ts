@@ -1,5 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import { selectPanel, chooseTheme, chooseMenuItem } from "./helpers/designer";
+
+// #331 D2〜D4: Designer の枠を dock へ載せ替える間、浮動は止めている（2026-11-21 ユーザー決定）。
+// 自前の浮動（左の作業パネルの浮かせる入口）は画面に出さないので、この spec は D4（dock の浮動の解禁と
+// 自前の浮動の撤去）で dock の浮動の試験に置き換えるまで飛ばす。
+test.skip(() => true, "#331 D2〜D4: 浮動を一時停止中（D4 で置き換える）");
 const key = "banto.ui.scada.designer.sidebar-placement";
 const inspectorKey = "banto.ui.scada.designer.inspector-placement";
 const panel = (page: Page) => page.locator("#designer-project-panel");

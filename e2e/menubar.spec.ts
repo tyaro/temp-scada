@@ -1,4 +1,4 @@
-import { chooseTheme, fileCommand } from "./helpers/designer";
+import { chooseTheme, fileCommand, hideSidebar } from "./helpers/designer";
 import { test, expect } from "@playwright/test";
 
 test("menubar navigates across Banto menus and returns focus on Escape", async ({
@@ -197,10 +197,7 @@ test("file operations use menus with the menubar and sidebar hidden, preserving 
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  const sidebar = page.getByRole("complementary", {
-    name: "Project と部品",
-    exact: true,
-  });
+  const sidebar = page.locator("#designer-project-panel");
   await expect(
     sidebar.getByLabel("Project を開く", { exact: true }),
   ).toHaveCount(0);
@@ -221,9 +218,7 @@ test("file operations use menus with the menubar and sidebar hidden, preserving 
   await page
     .getByRole("menuitem", { name: "メニューバーを隠す", exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "左パネルを隠す", exact: true })
-    .click();
+  await hideSidebar(page);
   const secondChooser = page.waitForEvent("filechooser");
   await fileCommand(page, "Project を開く");
   await (await secondChooser).setFiles("examples/process-light.project.json");
