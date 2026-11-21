@@ -100,6 +100,51 @@ test("the narrow display puts the side panes in edge bands", async ({
   await expect(inspector(page)).toBeVisible();
 });
 
+test("a pane closed with ✕ in the narrow display stays hidden after going wide", async ({
+  page,
+}) => {
+  await start(page);
+  await page.setViewportSize({ width: 900, height: 800 });
+  await expect(page.locator('[data-dock-band-tab="layers"]')).toBeVisible();
+  await selectPanel(page, "レイヤー");
+  await button(page, "レイヤーを隠す").click();
+  await expect(page.locator('[data-dock-band-tab="layers"]')).toHaveCount(0);
+  // 広い表示へ戻すと dock は控えた配置へ戻すが、✕ の希望が勝つ。
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await expect(tab(page, "プロジェクト")).toBeVisible();
+  await expect(tab(page, "部品")).toBeVisible();
+  await expect(tab(page, "レイヤー")).toHaveCount(0);
+  await expect(page.locator("#designer-layers-panel")).toBeHidden();
+
+  // 狭い表示で残りの 2 つも ✕ で閉じると、アプリの「左パネル」も非表示になる。
+  await page.setViewportSize({ width: 900, height: 800 });
+  await selectPanel(page, "部品");
+  await button(page, "部品を隠す").click();
+  await selectPanel(page, "プロジェクト");
+  await button(page, "プロジェクトを隠す").click();
+  await expect(page.locator('[data-dock-band-tab="left"]')).toHaveCount(0);
+  await chooseMenuItem(page, "表示", "左パネルを表示");
+  await expect(page.locator('[data-dock-band-tab="left"]')).toBeVisible();
+});
+
+test("renaming a screen in the narrow display opens the Inspector drawer", async ({
+  page,
+}) => {
+  await start(page);
+  await page.setViewportSize({ width: 900, height: 800 });
+  await expect(page.locator('[data-dock-band-tab="right"]')).toBeVisible();
+  await expect(inspector(page)).toBeHidden();
+  await selectPanel(page, "プロジェクト");
+  await page
+    .getByRole("navigation", { name: "画面一覧" })
+    .getByRole("button", { name: "プロセス画面", exact: true })
+    .click({ button: "right" });
+  await page.getByRole("menuitem", { name: "名前変更", exact: true }).click();
+  const screenName = page.getByRole("textbox", { name: "画面名", exact: true });
+  await expect(screenName).toBeVisible();
+  await expect(screenName).toBeFocused();
+});
+
 // moveBefore の無い環境（古い WebView2）では、組み替えでフォーカス中の欄に blur が出る。
 // Inspector の数値の欄にフォーカスを置いたまま、Inspector のタイトルバーをドラッグして
 // 左の外周へドッキングし直す（タイトルバーの pointerdown はフォーカスを動かさない）。

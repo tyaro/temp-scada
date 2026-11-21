@@ -420,6 +420,9 @@
     get narrow() {
       return designerNarrow || window.innerWidth <= DESIGNER_NARROW_BREAKPOINT;
     },
+    get narrowShown() {
+      return designerNarrow;
+    },
     get inspectorWanted() {
       return inspectorShown;
     },
@@ -672,6 +675,15 @@
       { inspector: visible },
       focus ? "inspector" : undefined,
     );
+  }
+  /**
+   * 明示の編集コマンド（画面名の変更・タグ参照からのジャンプ）で Inspector を開き、
+   * 中の欄を探せるまで待つ。狭い表示では端の帯にあるだけでは中身が見えないので、
+   * 引き出しを開く。
+   */
+  function revealInspector(): Promise<void> {
+    setInspectorVisibility(true);
+    return designerDock.revealInspector().then(() => tick());
   }
   function toggleAuxPanels() {
     if (workScreenShown) {
@@ -1225,12 +1237,11 @@
   function openBinding(usage: BindingUsage) {
     transition(() => {
       editView.showCanvas();
-      setInspectorVisibility(true);
       editingSymbolId = null;
       screenId = usage.screenId;
       selectedIds = expandGroupSelection(screen, [usage.objectId]);
       layerTreeBindings.revealLayerObject(usage.objectId);
-      void tick().then(() => {
+      void revealInspector().then(() => {
         editorRegion?.scrollTo({ top: 0 });
         inspectorPanel
           ?.querySelector<HTMLInputElement>('input[name="externalName"]')
@@ -2015,9 +2026,8 @@
       editingSymbolId = null;
       if (rename) {
         // 画面名は未選択時の Inspector にある（UX §5.5(b)）。
-        setInspectorVisibility(true);
         revealScreenSettings = true;
-        void tick().then(() => {
+        void revealInspector().then(() => {
           if (
             generation !== workspaceGeneration ||
             screenId !== id ||

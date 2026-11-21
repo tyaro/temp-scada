@@ -25,6 +25,8 @@ export interface DesignerDockHost {
    * 途中は、レイヤー・部品が隠れてから `narrow` が true になる）。
    */
   readonly narrow: boolean;
+  /** dock が今、狭い表示を出している（`ThreePaneDock` の `narrow`）。 */
+  readonly narrowShown: boolean;
   /** Inspector を画面に出したい（`showInspector` かつキャンバスの表示中）。 */
   readonly inspectorWanted: boolean;
   /** 利用者の Inspector の表示・非表示を `showInspector` へ写してよい（編集中のキャンバス）。 */
@@ -45,6 +47,10 @@ const PANE_KEYS: readonly PaneKey[] = [...DESIGNER_LEFT_PANES, "inspector"];
  * - `pushed` は最後に dock と一致させた（または依頼した）値。依頼の途中（`inflight`）の
  *   pane は dock の側の変化として数えない。依頼が通らなかったときは、終わった後に
  *   dock の今の値と比べ直す。
+ * - 依頼は pane ごとに新しいものが持ち主になる（`owner`）。古い一括の依頼は、各 await の
+ *   後に持ち主でなくなった pane を飛ばす（後から出した逆の依頼に負ける）。dock の見た目が
+ *   今の希望と同じでも、承認待ちの逆の依頼（`asking`）があれば希望を dock へ伝え直し、
+ *   古い依頼を上流に `stale` にさせる。
  */
 export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
   let view = $state.raw<DesignerDockView>();
@@ -57,6 +63,11 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
   const inflight = new Map<PaneKey, number>();
   /** dock の側の変化を読み直す合図（依頼が終わったとき）。 */
   let settled = $state(0);
+  /** pane ごとの依頼の持ち主（最後に出した依頼の番号）。 */
+  const owner = new Map<PaneKey, number>();
+  let requests = 0;
+  /** dock へ渡して承認を待っている値（pane ごとに最後のもの）。 */
+  const asking = new Map<PaneKey, { want: boolean }>();
 
   function desired(key: PaneKey): boolean {
     if (key === "inspector")
@@ -83,12 +94,41 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
     });
   }
 
+  /** 依頼の持ち主を新しい番号にする（古い依頼はその pane を飛ばす）。 */
+  function claim(keys: readonly PaneKey[]): number {
+    const id = ++requests;
+    for (const key of keys) owner.set(key, id);
+    return id;
+  }
+
+  /** dock の `setVisible` を呼ぶ（承認を待つあいだは `asking` に控える）。 */
+  async function send(target: DesignerDockView, key: PaneKey, want: boolean) {
+    const entry = { want };
+    asking.set(key, entry);
+    try {
+      await target.setVisible(DESIGNER_PANE_IDS[key], want);
+    } finally {
+      if (asking.get(key) === entry) asking.delete(key);
+    }
+  }
+
+  /**
+   * dock の見た目を `want` にする。見た目が同じでも、承認待ちの逆の依頼があれば
+   * 新しい希望を伝える（上流は古い依頼を適用の直前に `stale` にする）。
+   */
+  function ask(target: DesignerDockView, key: PaneKey, want: boolean) {
+    const pending = asking.get(key);
+    if (shown(target, key) === want && (!pending || pending.want === want))
+      return Promise.resolve();
+    return send(target, key, want);
+  }
+
   function push(key: PaneKey, want: boolean): Promise<unknown> {
     pushed.set(key, want);
+    const id = claim([key]);
     return request([key], async () => {
       const target = view;
-      if (!target || shown(target, key) === want) return;
-      await target.setVisible(DESIGNER_PANE_IDS[key], want);
+      if (target && owner.get(key) === id) await ask(target, key, want);
     });
   }
 
@@ -107,36 +147,48 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
       ([pane, want]) => want && !!target && !shown(target, pane),
     );
     for (const [pane, want] of wants) pushed.set(pane, want);
-    return request(
-      wants.map(([pane]) => pane),
-      async () => {
-        if (!target) return;
-        for (const [pane, want] of wants) {
-          if (view !== target) return;
-          if (shown(target, pane) !== want)
-            await target.setVisible(DESIGNER_PANE_IDS[pane], want);
-        }
-        if (!reveals || view !== target) return;
-        // 狭い表示では戻したパネルは端の帯に並ぶ。引き出し（flyout）は開けたままにしない。
-        if (host.narrow) {
-          dock.closeFlyout();
-          return;
-        }
-        const front =
-          before.find((pane) => left[pane]) ??
-          (left.project ? "project" : undefined);
-        if (front && shown(target, front))
-          await target.setVisible(DESIGNER_PANE_IDS[front], true);
-      },
-    );
+    const panes = wants.map(([pane]) => pane);
+    const id = claim(panes);
+    const owns = (pane: DesignerLeftPane) => owner.get(pane) === id;
+    return request(panes, async () => {
+      if (!target) return;
+      for (const [pane, want] of wants) {
+        if (view !== target) return;
+        // 後から出した依頼が持ち主になった pane は飛ばす（古い一括の打ち切り）。
+        if (owns(pane)) await ask(target, pane, want);
+      }
+      if (!reveals || view !== target || !panes.some(owns)) return;
+      // 狭い表示では戻したパネルは端の帯に並ぶ。引き出し（flyout）は開けたままにしない。
+      if (host.narrow) {
+        dock.closeFlyout();
+        return;
+      }
+      const front =
+        before.find((pane) => left[pane]) ??
+        (left.project ? "project" : undefined);
+      if (front && shown(target, front))
+        await target.setVisible(DESIGNER_PANE_IDS[front], true);
+    });
   }
 
-  /** dock の側で変わった（利用者の操作・狭い表示の切り替え・断られた依頼）。 */
-  function adopt(key: PaneKey, visible: boolean) {
+  /**
+   * dock の側で変わった（利用者の操作・狭い表示の切り替え・断られた依頼）。
+   * `banded` は前に見たとき端の帯にあったか、`restored` は広い表示へ戻る切り替えで
+   * 控えの配置から木へ戻ったか。隠し直す左のパネルを返す。
+   */
+  function adopt(
+    key: PaneKey,
+    visible: boolean,
+    banded: boolean,
+    restored: boolean,
+  ): [DesignerLeftPane, boolean] | undefined {
     if (host.mode === "edit" && key !== "inspector") {
-      // 狭い表示への切り替えはレイヤー・部品を隠す。利用者の選択としては数えない
-      // （帯へ戻すのは下の狭い表示の effect、広い表示へ戻ると元の配置に戻る）。
-      if (!visible && host.narrow) return;
+      // 狭い表示への切り替えは木にあったレイヤー・部品を隠す。利用者の選択としては
+      // 数えない（帯へ戻すのは下の狭い表示の effect）。帯の pane の ✕ は利用者の非表示。
+      if (!visible && host.narrow && !banded) return;
+      // 広い表示へ戻ると dock は控えた配置に戻す。狭い表示のあいだに ✕ で隠した pane は
+      // 隠し直す（アプリの希望が勝つ）。
+      if (visible && restored) return left[key] ? undefined : [key, false];
       left[key] = visible;
       return;
     }
@@ -151,20 +203,43 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
     void push(key, desired(key));
   }
 
+  /** 前に見たとき端の帯にあった pane と、dock が狭い表示だったか。 */
+  const wasBanded = new Set<PaneKey>();
+  let wasNarrowShown = false;
+
   // dock → アプリ
   $effect(() => {
     const target = view;
     void settled;
     if (!target) return;
-    const seen = PANE_KEYS.map((key) => [key, shown(target, key)] as const);
+    const seen = PANE_KEYS.map(
+      (key) =>
+        [
+          key,
+          shown(target, key),
+          dock.isAutoHidden(DESIGNER_PANE_IDS[key]),
+        ] as const,
+    );
+    const narrowShown = host.narrowShown;
     untrack(() => {
-      for (const [key, visible] of seen) {
+      // 狭い表示では、出す pane は端の帯へ入る。木へ戻ったのは広い表示への切り替え
+      // （dock の `narrow` は配置が戻った後に false になる）。
+      const leaving = wasNarrowShown || narrowShown;
+      const rehide: [DesignerLeftPane, boolean][] = [];
+      for (const [key, visible, banded] of seen) {
+        const before = wasBanded.has(key);
+        if (banded) wasBanded.add(key);
+        else wasBanded.delete(key);
         if (inflight.has(key)) continue;
         const last = pushed.get(key);
         if (last === visible) continue;
         pushed.set(key, visible);
-        if (last !== undefined) adopt(key, visible);
+        if (last === undefined) continue;
+        const fix = adopt(key, visible, before, visible && leaving && !banded);
+        if (fix) rehide.push(fix);
       }
+      wasNarrowShown = narrowShown;
+      if (rehide.length) void pushLeft(rehide);
     });
   });
 
@@ -195,10 +270,11 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
       );
       if (!panes.length) return;
       for (const pane of panes) pushed.set(pane, true);
+      const id = claim(panes);
       void request(panes, async () => {
         for (const pane of panes)
-          if (view === target && host.narrow)
-            await target.setVisible(DESIGNER_PANE_IDS[pane], true);
+          if (view === target && host.narrow && owner.get(pane) === id)
+            await ask(target, pane, true);
         dock.closeFlyout();
       });
     });
@@ -244,8 +320,11 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
     showLeftPane(pane: DesignerLeftPane): Promise<unknown> {
       left[pane] = true;
       pushed.set(pane, true);
+      const id = claim([pane]);
       return request([pane], async () => {
-        await view?.setVisible(DESIGNER_PANE_IDS[pane], true);
+        // 見えていても表のタブにするので、いつも依頼する。
+        const target = view;
+        if (target && owner.get(pane) === id) await send(target, pane, true);
       });
     },
     /**
@@ -258,6 +337,7 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
       const before = lastFront.length
         ? [...lastFront]
         : frontLeftPanes(dock.layout);
+      claim(PANE_KEYS);
       await request([...PANE_KEYS], () => target.restoreLayout(layout));
       for (const pane of before)
         if (view === target && shown(target, pane))
@@ -268,6 +348,21 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
     /** Inspector の表示をアプリの状態に合わせ直す（`showInspector` を変えた直後に待つ）。 */
     syncInspector(): Promise<unknown> {
       return push("inspector", desired("inspector"));
+    },
+    /**
+     * 明示の編集コマンド（画面名の変更・タグ参照からのジャンプ）で Inspector を開く。
+     * 表示を合わせたうえで、狭い表示で端の帯にあるだけなら引き出しを開く
+     * （帯に項目があることと、引き出しが開いていることは別）。
+     */
+    async revealInspector(): Promise<void> {
+      await push("inspector", desired("inspector"));
+      const id = DESIGNER_PANE_IDS.inspector;
+      if (
+        desired("inspector") &&
+        dock.isAutoHidden(id) &&
+        dock.flyoutPanel !== id
+      )
+        dock.openFlyout(id);
     },
   };
 }
