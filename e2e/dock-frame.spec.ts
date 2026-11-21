@@ -145,6 +145,29 @@ test("renaming a screen in the narrow display opens the Inspector drawer", async
   await expect(screenName).toBeFocused();
 });
 
+test("renaming a shape with F2 in the narrow display opens the Inspector drawer", async ({
+  page,
+}) => {
+  await start(page);
+  await selectPanel(page, "レイヤー");
+  await page
+    .getByRole("navigation", { name: "図形一覧" })
+    .getByRole("button", { name: "rectangle · 3", exact: true })
+    .click();
+  await page.setViewportSize({ width: 900, height: 800 });
+  await expect(page.locator('[data-dock-band-tab="right"]')).toBeVisible();
+  await expect(inspector(page)).toBeHidden();
+  const canvas = page.getByRole("region", {
+    name: "キャンバス操作領域",
+    exact: true,
+  });
+  await canvas.focus();
+  await page.keyboard.press("F2");
+  const name = page.getByLabel("配置名", { exact: true });
+  await expect(name).toBeVisible();
+  await expect(name).toBeFocused();
+});
+
 // moveBefore の無い環境（古い WebView2）では、組み替えでフォーカス中の欄に blur が出る。
 // Inspector の数値の欄にフォーカスを置いたまま、Inspector のタイトルバーをドラッグして
 // 左の外周へドッキングし直す（タイトルバーの pointerdown はフォーカスを動かさない）。

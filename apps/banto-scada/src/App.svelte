@@ -279,10 +279,10 @@
       return;
     }
     expandTreeAncestors(form);
-    if (form.closest("#designer-inspector-panel .screen-settings")) {
+    if (form.closest("#designer-inspector-panel .screen-settings"))
       revealScreenSettings = true;
-      setInspectorVisibility(true);
-    } else setInspectorVisibility(true);
+    // 狭い表示で端の帯にあるだけでは欄が見えないので、引き出しまで開く。
+    void revealInspector();
   }
   import EditToolbar from "./lib/designer/EditToolbar.svelte";
   import {
@@ -666,11 +666,19 @@
         });
   }
   function setInspectorVisibility(visible: boolean, focus = false) {
-    if (showInspector === visible) {
-      if (visible && focus)
-        void tick().then(() => inspectorPanel?.focus({ preventScroll: true }));
+    if (visible && focus) {
+      // 明示に出してフォーカスする（メニュー・文脈メニュー）。狭い表示で端の帯にあるだけ
+      // なら引き出しを開いてから移す（帯にあることと中身が見えることは別）。
+      void revealInspector().then(() => {
+        if (showInspector) inspectorPanel?.focus({ preventScroll: true });
+        else
+          document
+            .querySelector<HTMLButtonElement>("[data-permanent-menu]")
+            ?.focus();
+      });
       return;
     }
+    if (showInspector === visible) return;
     setAuxPanelVisibility(
       { inspector: visible },
       focus ? "inspector" : undefined,
@@ -1835,8 +1843,8 @@
       )
         return;
       selectedIds = ids;
-      setInspectorVisibility(true);
-      void tick().then(() => {
+      // 狭い表示で端の帯にあるだけなら引き出しを開いてから名前欄へ移す。
+      void revealInspector().then(() => {
         if (
           generation === workspaceGeneration &&
           screen.id === target &&
