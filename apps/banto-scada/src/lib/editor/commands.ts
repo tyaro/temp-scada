@@ -363,6 +363,17 @@ export type ObjectCommand = (
   | { type: "remove-many"; screenId: string; objectIds: string[] }
   | { type: "add"; screenId: string; kind: AddKind; center?: Point }
   | {
+      /**
+       * 作図した線を置く（#306 E4）。`points` は world の頂点（始点が配置の位置）。
+       * 接続は画面直下だけで、確定の追従と検査を通る。Undo 1 回で線ごと消える。
+       */
+      type: "add-polyline";
+      screenId: string;
+      kind: "line" | "pipe";
+      points: Point[];
+      connections?: { start?: EndpointConnection; end?: EndpointConnection };
+    }
+  | {
       type: "add-symbol";
       screenId: string;
       template: BuiltinTemplate;
@@ -543,6 +554,7 @@ const commandScopes = {
   align: "object",
   "remove-many": "object",
   add: "object",
+  "add-polyline": "object",
   "add-symbol": "object",
   update: "object",
   "make-symbol-unique": "object",

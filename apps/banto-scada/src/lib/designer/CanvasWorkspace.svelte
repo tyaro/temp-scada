@@ -29,6 +29,19 @@
   import { objectsInRange, selectionBox } from "../range-selection";
   import { snapCoordinate } from "../snap";
   import { PALETTE_MIME } from "./palette-drag";
+  import { CONNECTION_SNAP_PX } from "../connection-snap";
+  import {
+    clickDraft,
+    draftPointer,
+    emptyDraft,
+    finishDraft,
+    removeLastVertex,
+    LINE_DRAW_STROKE,
+    type DrawPointer,
+    type FinishedLine,
+    type LineDraft,
+    type LineDrawKind,
+  } from "../line-drawing";
   import {
     fitZoom,
     viewLayout,
@@ -71,6 +84,8 @@
     placeReady,
     onplacepoint,
     oncancelplacement,
+    drawLine = null,
+    ondrawline,
   }: {
     screen: Screen | SymbolDefinition;
     symbols: SymbolDefinition[];
@@ -122,6 +137,12 @@
     placeReady: boolean;
     onplacepoint: (center: Point) => void;
     oncancelplacement: () => void;
+    /**
+     * 「位置を指定して配置」で選んだ線・配管（#306 E4）。クリックで頂点を足して描き、
+     * 始点・終点を anchor へ吸着させる。null なら今どおり既定の形を置く。
+     */
+    drawLine?: LineDrawKind | null;
+    ondrawline?: (line: FinishedLine) => void;
   } = $props();
   let viewport = $state<HTMLDivElement>();
   let renderer = $state<{
@@ -145,6 +166,78 @@
   }
   $effect(() => {
     if (!placing || !editable) untrack(cancelPlacementPointer);
+  });
+  /** 作図中の線（#306 E4）と、ポインタの位置に置く次の点。 */
+  let lineDraft = $state.raw<LineDraft | null>(null);
+  let drawHover = $state.raw<ReturnType<typeof draftPointer> | null>(null);
+  const drawing = $derived(editable && placing && !!drawLine && !!ondrawline);
+  $effect(() => {
+    // 画面・モード・配置・種類が変わったら作図中の頂点を捨てる。
+    screen.id;
+    drawing;
+    drawLine;
+    untrack(clearDraft);
+  });
+  function clearDraft() {
+    lineDraft = null;
+    drawHover = null;
+  }
+  function drawInput(event: {
+    clientX: number;
+    clientY: number;
+    altKey: boolean;
+    shiftKey: boolean;
+  }): DrawPointer | null {
+    const raw = canvasPoint(event, true);
+    if (!raw) return null;
+    const grid =
+      snapEnabled && !event.altKey
+        ? {
+            x: Math.min(
+              screen.width,
+              Math.max(0, snapCoordinate(raw.x, gridSize)),
+            ),
+            y: Math.min(
+              screen.height,
+              Math.max(0, snapCoordinate(raw.y, gridSize)),
+            ),
+          }
+        : raw;
+    return {
+      grid,
+      raw,
+      shift: event.shiftKey,
+      noSnap: event.altKey,
+      radius: CONNECTION_SNAP_PX / scale,
+      repeatRadius: 5 / scale,
+    };
+  }
+  const drawTargets = $derived("background" in screen ? screen.objects : null);
+  function hoverDraw(event: PointerEvent) {
+    const input = drawInput(event);
+    drawHover =
+      input && drawLine
+        ? draftPointer(lineDraft ?? emptyDraft(drawLine), drawTargets, input)
+        : null;
+  }
+  function clickDraw(event: PointerEvent) {
+    const input = drawInput(event);
+    if (!input || !drawLine || !ondrawline) return;
+    const step = clickDraft(
+      lineDraft ?? emptyDraft(drawLine),
+      drawTargets,
+      input,
+    );
+    lineDraft = step.draft.points.length ? step.draft : null;
+    drawHover = null;
+    if (step.finished) ondrawline(step.finished);
+  }
+  /** 作図中の線の表示（確定した頂点＋ポインタの点）。 */
+  const draftPoints = $derived.by(() => {
+    if (!drawing) return null;
+    const points = [...(lineDraft?.points ?? [])];
+    if (drawHover) points.push(drawHover.point);
+    return points.length ? points : null;
   });
   let range = $state<{
     pointer: number;
@@ -357,7 +450,8 @@
   });
   const panning = $derived(editable && (hand || space || !!pan));
   const marker = $derived(
-    dropPoint ?? (placing && placeReady && !panning ? placementPoint : null),
+    dropPoint ??
+      (placing && placeReady && !panning && !drawing ? placementPoint : null),
   );
   $effect(() => {
     const element = viewport;
@@ -616,7 +710,27 @@
     if (placing && event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
-      oncancelplacement();
+      // 作図中なら作図だけを取り消し、配置の状態は残す（#306 E4）。
+      if (drawing && lineDraft) clearDraft();
+      else oncancelplacement();
+      return;
+    }
+    if (drawing && lineDraft && event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      const finished = finishDraft(lineDraft);
+      if (finished && ondrawline) {
+        clearDraft();
+        ondrawline(finished);
+      }
+      return;
+    }
+    if (drawing && lineDraft && event.key === "Backspace") {
+      event.preventDefault();
+      event.stopPropagation();
+      const next = removeLastVertex(lineDraft);
+      lineDraft = next.points.length ? next : null;
+      drawHover = null;
       return;
     }
     if (placing && event.key === "Enter" && event.target === viewport) {
@@ -709,7 +823,8 @@
     }
     if (placing) {
       cancelPlacementPointer();
-      oncancelplacement();
+      if (drawing && lineDraft) clearDraft();
+      else oncancelplacement();
       return;
     }
     const rect = viewport.getBoundingClientRect();
@@ -833,8 +948,10 @@
         };
       return;
     }
-    if (placing && !hand && !space && !pan)
+    if (placing && !hand && !space && !pan) {
       placementPoint = palettePoint(event);
+      if (drawing) hoverDraw(event);
+    }
     if (
       !pan ||
       !viewport ||
@@ -881,8 +998,10 @@
         previous.point &&
         point &&
         Math.hypot(event.clientX - previous.x, event.clientY - previous.y) < 5
-      )
-        onplacepoint(point);
+      ) {
+        if (drawing) clickDraw(event);
+        else onplacepoint(point);
+      }
       return;
     }
     if (!pan || pan.pointer !== event.pointerId) return;
@@ -966,7 +1085,10 @@
       cancelPlacementPointer();
     }}
     onpointerleave={() => {
-      if (!pan) placementPoint = null;
+      if (!pan) {
+        placementPoint = null;
+        drawHover = null;
+      }
     }}
     onlostpointercapture={() => {
       if (range) cancelRange();
@@ -1039,6 +1161,46 @@
             style:height={`${rangeBox.height * scale}px`}
           ></div>
         {/if}
+        {#if draftPoints && !panning}
+          <!-- `.sheet > svg` は描画の svg だけを指すので、作図の svg は包む。 -->
+          <div class="line-draft" data-testid="line-draft" aria-hidden="true">
+            <svg
+              viewBox={`0 0 ${screen.width} ${screen.height}`}
+              preserveAspectRatio="none"
+            >
+              {#if draftPoints.length > 1}
+                <polyline
+                  points={draftPoints.map((p) => `${p.x},${p.y}`).join(" ")}
+                  stroke-width={LINE_DRAW_STROKE[drawLine ?? "line"]}
+                />
+              {/if}
+              {#if lineDraft?.start}
+                <circle
+                  class="connection-snap"
+                  data-snap-end="start"
+                  data-snap-target-id={lineDraft.start.targetObjectId}
+                  data-snap-anchor={lineDraft.start.anchor}
+                  cx={lineDraft.points[0].x}
+                  cy={lineDraft.points[0].y}
+                  r={10 / scale}
+                  stroke-width={2 / scale}
+                />
+              {/if}
+              {#if drawHover?.snap}
+                <circle
+                  class="connection-snap"
+                  data-snap-end={lineDraft ? "end" : "start"}
+                  data-snap-target-id={drawHover.snap.connection.targetObjectId}
+                  data-snap-anchor={drawHover.snap.connection.anchor}
+                  cx={drawHover.snap.point.x}
+                  cy={drawHover.snap.point.y}
+                  r={10 / scale}
+                  stroke-width={2 / scale}
+                />
+              {/if}
+            </svg>
+          </div>
+        {/if}
         {#if marker && editable}
           <div
             class="drop-marker"
@@ -1087,6 +1249,28 @@
 
   .viewport.drop-ready {
     border-color: var(--banto-primary);
+  }
+  .line-draft {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  .line-draft svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .line-draft polyline {
+    fill: none;
+    stroke: var(--banto-primary);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.6;
+  }
+  .line-draft .connection-snap {
+    fill: none;
+    stroke: var(--banto-primary);
   }
   .drop-marker {
     position: absolute;

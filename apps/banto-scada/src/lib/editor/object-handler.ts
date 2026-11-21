@@ -17,6 +17,7 @@ import { applySelectionCommand } from "./selection-handler";
 import {
   applyScreenViewPlacement,
   applyObjectCreation,
+  applyPolylineDrawing,
 } from "./placement-handler";
 import { applySingleObjectCommand } from "./single-object-handler";
 
@@ -108,6 +109,10 @@ export function applyObjectCommand(
     command.type === "align"
   ) {
     return applySelectionCommand(screen, command);
+  }
+  if (command.type === "add-polyline") {
+    applyPolylineDrawing(screen, command, definitionId, targetScreen);
+    return "finish";
   }
   if (command.type === "add" || command.type === "add-symbol") {
     applyObjectCreation(next, screen, command, definitionId, targetScreen);

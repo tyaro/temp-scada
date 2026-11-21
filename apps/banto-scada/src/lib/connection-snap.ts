@@ -44,11 +44,12 @@ export function snappableEndpoint(
  * 候補は同じ画面の表示中の接続先（ロック中も可）。同じ距離なら前面（order の大きい配置）、
  * 次に `CONNECTION_ANCHORS` の順。`candidate` は保存済みの線（確定の `set-line-connection`
  * と同じ入力。途中の頂点はグリッドで反対の端に重なることがある）で、接続した結果が解決
- * できない候補（両端が同じ点になるなど）は除く。
+ * できない候補（両端が同じ点になるなど）は除く。`candidate` が null（線を描き始める前の
+ * 始点、#306 E4）なら解決の検査を省き、最も近い候補を返す。
  */
 export function findConnectionSnap(
   objects: readonly ScreenObject[],
-  candidate: PolylineObject,
+  candidate: PolylineObject | null,
   endpoint: ConnectionEnd,
   pointer: Point,
   radius: number,
@@ -57,7 +58,7 @@ export function findConnectionSnap(
   const hits: { snap: ConnectionSnap; distance: number; order: number }[] = [];
   for (const target of objects) {
     if (
-      target.id === candidate.id ||
+      target.id === candidate?.id ||
       target.visible === false ||
       !isConnectionTarget(target)
     )
@@ -89,6 +90,7 @@ export function findConnectionSnap(
       anchorRank(a.snap.connection.anchor) -
         anchorRank(b.snap.connection.anchor),
   );
+  if (!candidate) return hits[0]?.snap ?? null;
   for (const hit of hits) {
     const line = withConnection(candidate, hit.snap);
     try {
