@@ -145,6 +145,13 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
    * 後から明示したパネル（`frontIntent.pane`）を表に戻す。狭い表示で端の帯にあれば
    * 引き出しを開き、広い表示では表のタブにする。
    */
+  /** 開いている引き出しが左のパネルのときだけ閉じる（Inspector の引き出しは残す）。 */
+  function closeLeftFlyout() {
+    const open = dock.flyoutPanel;
+    if (DESIGNER_LEFT_PANES.some((pane) => DESIGNER_PANE_IDS[pane] === open))
+      dock.closeFlyout();
+  }
+
   async function keepFront(target: DesignerDockView) {
     const pane = frontIntent.pane;
     if (!pane || view !== target || !left[pane] || !shown(target, pane)) return;
@@ -201,7 +208,7 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
         if (!panes.some(owns)) return;
         // 狭い表示では戻したパネルは端の帯に並ぶ。引き出し（flyout）は開けたままにしない。
         if (host.narrow) {
-          dock.closeFlyout();
+          closeLeftFlyout();
           return;
         }
         const front =
@@ -318,7 +325,7 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
         for (const pane of panes)
           if (view === target && host.narrow && owner.get(pane) === id)
             await ask(target, pane, true);
-        await settleFront(target, id, () => dock.closeFlyout());
+        await settleFront(target, id, closeLeftFlyout);
       });
     });
   });
