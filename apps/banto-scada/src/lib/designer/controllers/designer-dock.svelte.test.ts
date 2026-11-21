@@ -166,6 +166,34 @@ describe("createDesignerDock", () => {
     expect(state.flyout).toBe(DESIGNER_PANE_IDS.parts);
   });
 
+  it("keeps a later Inspector drawer open after an old reveal-all (narrow)", async () => {
+    const { controller, state, visible, calls, release, releaseOne } =
+      setup(true);
+    void controller.setSidebar(false);
+    await release();
+    calls.length = 0;
+    // 左の一括の表示の最初の依頼（Project）を待つ間に、帯の Inspector を明示に開く（F2 など）。
+    void controller.setSidebar(true);
+    expect(calls).toEqual(["left:true"]);
+    await controller.revealInspector();
+    expect(state.flyout).toBe(DESIGNER_PANE_IDS.inspector);
+    // 一括の残りを出すたびに上流は引き出しを左へ切り替えるが、終わったときに Inspector へ戻す。
+    await releaseOne();
+    await release();
+    expect(visible[DESIGNER_PANE_IDS.layers]).toBe(true);
+    expect(visible[DESIGNER_PANE_IDS.parts]).toBe(true);
+    expect(state.flyout).toBe(DESIGNER_PANE_IDS.inspector);
+  });
+
+  it("closes the left drawer after a narrow reveal-all with no later choice", async () => {
+    const { controller, state, release } = setup(true);
+    void controller.setSidebar(false);
+    await release();
+    void controller.setSidebar(true);
+    await release();
+    expect(state.flyout).toBe(null);
+  });
+
   it("still picks the previous front tab when no later choice was made", async () => {
     const { controller, state, release } = setup();
     void controller.setSidebar(false);

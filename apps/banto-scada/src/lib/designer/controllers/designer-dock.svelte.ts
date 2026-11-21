@@ -55,6 +55,11 @@ const PANE_KEYS: readonly PaneKey[] = [...DESIGNER_LEFT_PANES, "inspector"];
  *   最新の意図を番号つきで持つ（`frontIntent`）。一括の処理は終わったときに意図の持ち主で
  *   なければ自分の選び直し（前に表だったもの・引き出しを閉じる）をせず、後から明示した
  *   パネルを表に戻す（途中で戻したパネルが表を奪っていることがある）。
+ * - 狭い表示の引き出しはどれか 1 つだけが開く。どれを開いておくかの最新の明示の意図
+ *   （左のパネルを出す・Inspector を開く）は `flyoutIntent` に別に持つ。上流は狭い表示で
+ *   隠れていた pane を出すとその引き出しを開くので、古い一括の処理は終わったときに
+ *   意図の持ち主でなければ、意図した引き出しを開き直す（Inspector を開く操作は左の表の
+ *   タブを変えないので、広い表示の `frontIntent` には数えない）。
  */
 export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
   let view = $state.raw<DesignerDockView>();
@@ -77,6 +82,17 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
    * パネル（`showLeftPane`）。`pane` が無いのは一括の処理が自分で選び直す意図。
    */
   let frontIntent: { id: number; pane?: DesignerLeftPane } = { id: 0 };
+  /**
+   * 狭い表示でどの引き出しを開いておくかの最新の意図。`pane` は明示に開いたもの
+   * （左のパネル・Inspector）、無いのは一括の処理が自分で決める（左の引き出しを閉じる）意図。
+   */
+  let flyoutIntent: { id: number; pane?: PaneKey } = { id: 0 };
+
+  /** 左で表に出すもの・開く引き出しの意図を、番号 `id` の処理のものにする。 */
+  function intend(id: number, pane?: DesignerLeftPane) {
+    frontIntent = { id, pane };
+    flyoutIntent = { id, pane };
+  }
 
   function desired(key: PaneKey): boolean {
     if (key === "inspector")
@@ -141,10 +157,6 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
     });
   }
 
-  /**
-   * 後から明示したパネル（`frontIntent.pane`）を表に戻す。狭い表示で端の帯にあれば
-   * 引き出しを開き、広い表示では表のタブにする。
-   */
   /** 開いている引き出しが左のパネルのときだけ閉じる（Inspector の引き出しは残す）。 */
   function closeLeftFlyout() {
     const open = dock.flyoutPanel;
@@ -152,15 +164,29 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
       dock.closeFlyout();
   }
 
-  async function keepFront(target: DesignerDockView) {
-    const pane = frontIntent.pane;
-    if (!pane || view !== target || !left[pane] || !shown(target, pane)) return;
+  /** 端の帯にある `pane` の引き出しを開く（開いていれば何もしない）。 */
+  function openBandFlyout(target: DesignerDockView, pane: PaneKey) {
     const id = DESIGNER_PANE_IDS[pane];
-    if (dock.isAutoHidden(id)) {
-      if (dock.flyoutPanel !== id) dock.openFlyout(id);
+    if (!shown(target, pane) || !dock.isAutoHidden(id)) return false;
+    if (dock.flyoutPanel !== id) dock.openFlyout(id);
+    return true;
+  }
+
+  /**
+   * 後から明示したパネルを表に戻す。狭い表示では意図した引き出し（`flyoutIntent.pane`、
+   * Inspector も含む）を開き直し、広い表示では `frontIntent.pane` を表のタブにする。
+   */
+  async function keepFront(target: DesignerDockView) {
+    if (view !== target) return;
+    if (host.narrow) {
+      const pane = flyoutIntent.pane;
+      if (pane && desired(pane)) openBandFlyout(target, pane);
       return;
     }
-    if (!host.narrow) await target.setVisible(id, true);
+    const pane = frontIntent.pane;
+    if (!pane || !left[pane] || !shown(target, pane)) return;
+    if (!openBandFlyout(target, pane))
+      await target.setVisible(DESIGNER_PANE_IDS[pane], true);
   }
 
   /**
@@ -173,7 +199,8 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
     own: () => Promise<unknown> | void,
   ) {
     if (view !== target) return;
-    if (frontIntent.id === id) await own();
+    const intent = host.narrow ? flyoutIntent : frontIntent;
+    if (intent.id === id) await own();
     else await keepFront(target);
   }
 
@@ -194,7 +221,7 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
     for (const [pane, want] of wants) pushed.set(pane, want);
     const panes = wants.map(([pane]) => pane);
     const id = claim(panes);
-    if (reveals) frontIntent = { id };
+    if (reveals) intend(id);
     const owns = (pane: DesignerLeftPane) => owner.get(pane) === id;
     return request(panes, async () => {
       if (!target) return;
@@ -326,7 +353,7 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
       if (!panes.length) return;
       for (const pane of panes) pushed.set(pane, true);
       const id = claim(panes);
-      frontIntent = { id };
+      intend(id);
       void request(panes, async () => {
         for (const pane of panes)
           if (view === target && host.narrow && owner.get(pane) === id)
@@ -377,7 +404,7 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
       left[pane] = true;
       pushed.set(pane, true);
       const id = claim([pane]);
-      frontIntent = { id, pane };
+      intend(id, pane);
       return request([pane], async () => {
         // 見えていても表のタブにするので、いつも依頼する。
         const target = view;
@@ -395,7 +422,7 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
         ? [...lastFront]
         : frontLeftPanes(dock.layout);
       const id = claim(PANE_KEYS);
-      frontIntent = { id };
+      intend(id);
       await request([...PANE_KEYS], () => target.restoreLayout(layout));
       await settleFront(target, id, async () => {
         for (const pane of before)
@@ -415,14 +442,14 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
      * （帯に項目があることと、引き出しが開いていることは別）。
      */
     async revealInspector(): Promise<void> {
+      // 引き出しの最新の意図にする（古い一括の処理が終わった後も開いたままにする）。
+      const intent = { id: ++requests, pane: "inspector" as const };
+      flyoutIntent = intent;
       await push("inspector", desired("inspector"));
-      const id = DESIGNER_PANE_IDS.inspector;
-      if (
-        desired("inspector") &&
-        dock.isAutoHidden(id) &&
-        dock.flyoutPanel !== id
-      )
-        dock.openFlyout(id);
+      // 待つ間に別の引き出しを明示に開いていれば、それを奪わない。
+      const target = view;
+      if (target && flyoutIntent === intent && desired("inspector"))
+        openBandFlyout(target, "inspector");
     },
   };
 }
