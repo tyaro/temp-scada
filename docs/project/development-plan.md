@@ -213,6 +213,26 @@ Banto v7.10.0 で #763 が直った（`persistent` の pane を組み替える�
   - D1 の観点（DOM・確定前の値・dirty・IME）には入れていないので、合格の判定は変えない。2026-11-21 に [Banto #768](https://github.com/tyaro/banto/issues/768) へ起票した。D2 で Inspector が長くなる前に、上流の対応を待つか SCADA 側で控えて戻すかを決める。
 - D2 の条件（D1 合格）はこれで満たす。D2 の着手はユーザーが選ぶ。
 
+## #359 トレンド共通部品の実証（2026-11-21・日本時間）
+
+banto-industrial の `@banto-industrial/trend`（`trend-v0.1.0`、Issue [#359](https://github.com/tyaro/temp-scada/issues/359)）を依存に足し、開発用のページ `apps/banto-scada/probes/trend.html` で `TrendChart` を描いた。データは模擬の source が H1 の minmax の応答を作り、`parseHistoryContract` で契約どおりか確かめてから `lib/history/trend-adapter.ts` で部品の区間へ写し、部品の `createRangeLoader` で読み直す。製品画面（`TrendView.svelte`・HistoryWorkspace）は変えていない。試験は `trend-adapter.test.ts`（H1 の共通 fixture を含む 24 件）と `e2e/trend-probe.spec.ts`（Playwright の Chromium で 3 件合格）。
+
+| 観点             | 結果                                                                                                                                                                            |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 依存             | 合格。`@banto/charts` v7.8.0 は部品の下に別に入り、v7.10.0 の Banto のパッケージと重ならない。ソース配布なので `optimizeDeps.exclude` に足した。型検査は 0 error                |
+| H1 からの変換    | 合格。minmax の区間は `fromMs` → `tMs`、幅は応答の最大の幅（H1 は範囲を整数で割るので 1ms ずれる）。gap・mixedSegment は欠測で線が切れる。raw は min = max の区間、bool は 0／1 |
+| 描画（両テーマ） | 合格。2 本のアナログ（左右の軸）、bit の帯（`bitStyle: "band"` のとき。既定は段の線）、管理線、凡例が出て、色はテーマのトークンで解決される                                     |
+| 表示範囲の操作   | 合格。Ctrl＋ホイールで拡大すると `onRangeChange` → 読み直しで、要求の区間の数は描画域の横幅（`binCount`）                                                                       |
+
+判断の材料:
+
+- 変換で落ちるもの: segment の切れ目（identity の変化）、品質と理由、coverage の帯、`partial` と `complete` の区別、件数。現行の `TrendView` はこれらを描くので、置き換えるなら「欠測の理由の帯」「segment の切れ目」を部品の横の帯（`bands`）か利用側の重ね描きで出すか、上流へ求めるかを決める。
+- 管理線を越えた区間の色（例 `var(--banto-warning)`）が 2 本目のペンの色（`--banto-chart-2`）とほぼ同じ橙で、両テーマとも見分けにくい。管理線の色を変えるか、上流へ伝える。
+- 時刻の軸は端末の地方時で出る（実証では 08:00〜09:00 = UTC 23:00〜00:00）。現行の履歴の入力は UTC を明示するので、置き換えるときに表示の時刻の扱いを揃える。
+- 実機の WebView2 と画面内の常時トレンド（ハイブリッド、リングバッファ + 履歴）は試していない。
+
+次の区切りの候補: (1) HistoryWorkspace の `TrendView` を部品へ置き換える（上の落ちるものの扱いを先に決める）、(2) 画面に置くトレンドの部品（`TrendPainting`）を Runtime で常時の線にする（Hub の購読 → `liveAppend`、履歴 → `hybridData`）。順はユーザーが選ぶ。
+
 ## 戻す手順
 
 - `apps/banto-scada`／`crates/scada-*`と固有サンプル・テストを元の配置へ移す。
