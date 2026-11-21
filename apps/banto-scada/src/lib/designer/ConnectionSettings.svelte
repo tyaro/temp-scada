@@ -5,9 +5,8 @@
     type LineConnections,
     type ConnectionAnchor,
     isConnectionTarget,
-    connectionTargetKind,
+    connectionTargetLabel,
   } from "../connections";
-  import { placementLabel } from "../placement-label";
   import type { createDraftGuard } from "./drafts.svelte";
   let {
     objectId,
@@ -46,9 +45,8 @@
     (event.currentTarget as HTMLSelectElement).form!.dataset.composing =
       String(value);
   }
-  function targetLabel(target: ScreenObject) {
-    return `${placementLabel(target, project.symbols)}（${connectionTargetKind(target)}） · 配置${target.order + 1}`;
-  }
+  const targetLabel = (target: ScreenObject) =>
+    connectionTargetLabel(target, project.symbols);
 </script>
 
 <section aria-label="配管の接続設定">

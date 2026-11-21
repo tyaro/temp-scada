@@ -1,4 +1,10 @@
-import type { Project, Screen, ScreenObject, PolylineObject } from "./project";
+import type {
+  Project,
+  Screen,
+  ScreenObject,
+  PolylineObject,
+  SymbolDefinition,
+} from "./project";
 import {
   connectionAnchorPoint,
   isConnectionTarget,
@@ -22,6 +28,24 @@ export function connectionTargetKind(object: ScreenObject): string | undefined {
   return isConnectionTarget(object)
     ? targetKinds[object.shape.type]
     : undefined;
+}
+/**
+ * 接続先の候補・接続中の表示の名前（#306 E2）。名前の無い図形は型名（`rectangle · 3`）にせず
+ * 種類だけを出し、配置順で見分ける。名前の無い Symbol 配置は定義の名前を使う。
+ */
+export function connectionTargetLabel(
+  target: ScreenObject,
+  symbols: readonly SymbolDefinition[] = [],
+): string {
+  const kind = connectionTargetKind(target);
+  const shape = target.shape;
+  const name =
+    target.name ||
+    (shape.type === "symbol"
+      ? (symbols.find((d) => d.id === shape.symbolId)?.name ?? "Symbol")
+      : undefined);
+  const order = `配置${target.order + 1}`;
+  return name ? `${name}（${kind}） · ${order}` : `${kind} · ${order}`;
 }
 export type ConnectionEnd = "start" | "end";
 export interface EndpointConnection {
