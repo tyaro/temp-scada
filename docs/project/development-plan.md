@@ -1,8 +1,12 @@
 # SCADA の独立開発と industrial への統合
 
-状態: **現在の計画・統合方針**。2026-11-11（日本時間）更新。[文書索引](../README.md)、[実装状況](implementation-status.md)、[操作ガイド](../guides/user-guide.md)、[実装履歴](../history/implementation-history.md)を使い分ける。機能仕様の基準は[統合設計](../design/scada-integrated-design.md)。
+状態: **現在の計画・統合方針**。2026-11-21（日本時間）更新。[文書索引](../README.md)、[実装状況](implementation-status.md)、[操作ガイド](../guides/user-guide.md)、[実装履歴](../history/implementation-history.md)を使い分ける。機能仕様の基準は[統合設計](../design/scada-integrated-design.md)。
 
 ## 次の実装順
+
+2026-11-21 の見直し: Issue #306（線の端を面の図形へつなぐ E1〜E4、PR #369〜#373）、#304（警報の色）、#279（正式Runtime mode）、#280（書込みAction）を閉じた。開いている Issue は 12 件。新しく banto-industrial からトレンドの共通部品 `@banto-industrial/trend`（trend-v0.1.0）が提供された（[#359](https://github.com/tyaro/temp-scada/issues/359)）。区間は `{ tMs, min, max }` だけで、データの取得は利用側の `TrendFetch` が持つ。現行の自前 TrendView は区間の min/max を既に持つので寄せやすく、下の段落で後続とした「常時inline chart」の土台にもなる。採るときは D1 と同じく実証（依存の同居・両テーマ・HistoryWorkspace での表示）→ 既存の置き換え → 画面内の常時トレンドの順に分ける。
+
+候補の推奨順（着手はユーザーが選ぶ）: 1 #359 の実証、2 目標に直結する描画の #310（点滅）・#313（インターロック図の記号）、3 #331 D2（dock の載せ替えの本体）、4 操作の後続 #311・#312・#315、5 #305 の別件 #343〜#345、6 C6 の連続運用、7 警報の残課題。以下の段落は各時点の記録である。
 
 2026-11-17 時点で、フロー図目標の段階3の警報（[設計](../design/runtime/alarm-stage3-design.md)§10 の 3-A〜3-E、PR #216〜#229）を完了した。Tauri 実機・実 Hub では 3-C1 の保存操作と 3-C3a の DB 書込み失敗を確認済みで、警報の適用・切替などは未確認、ブザーの音はオーナー確認待ち。同日、警報の後続の[端末設定](../design/runtime/alarm-terminal-settings.md)（保持の上限・読み直しの値・ブザーの音と、その画面、PR #231〜#235）も完了した（Tauri 実機は未確認）。次の候補は、C6 の連続運用とリリース判断（下記）と、上流の書込み契約の成立後の段階3の操作（[差分文書](../design/editor/flow-diagram-gap-2026-11-12.md)§3 の 9）で、順序はユーザーが選ぶ。
 
@@ -99,14 +103,14 @@ S0／S1のDesign Domain・正式Project layout・型／参照整合性・revisio
 
 上流草案（[scada-design](../upstream/industrial/scada-design.md)、2026-10-01版）と現状を比べると、作図・Historian・Alarmは先行した一方、Core v1の中心が残っている。依存の順に並べる。Issueは着手するものだけ、PR 1本の大きさで立てる。
 
-| 順  | 残り                                                                      | 上流草案 | 前提                | Issue                                                  |
-| --- | ------------------------------------------------------------------------- | -------- | ------------------- | ------------------------------------------------------ |
-| 1   | 正式Runtime modeとcapability分離                                          | §18      | なし                | [#279](https://github.com/tyaro/temp-scada/issues/279) |
-| 2   | 書込みActionとexecution record                                            | §10・§16 | 1                   | [#280](https://github.com/tyaro/temp-scada/issues/280) |
-| 3   | 保存世代の契約（working／保存世代の分離、external-modified）と正式package | §4.3・§5 | なし                | 後で                                                   |
-| 4   | 式と宣言的mappingによる動的表示                                           | §9.5     | なし                | 後で                                                   |
-| 5   | 正式Faceplate                                                             | §7.4     | 2（操作を含むため） | 後で                                                   |
-| 6   | Design Domain（共通mutation／validation）                                 | §19.2    | 3                   | 後で                                                   |
+| 順  | 残り                                                                      | 上流草案 | 前提                | Issue                                                                     |
+| --- | ------------------------------------------------------------------------- | -------- | ------------------- | ------------------------------------------------------------------------- |
+| 1   | 正式Runtime modeとcapability分離                                          | §18      | なし                | [#279](https://github.com/tyaro/temp-scada/issues/279)（2026-11-20 完了） |
+| 2   | 書込みActionとexecution record                                            | §10・§16 | 1                   | [#280](https://github.com/tyaro/temp-scada/issues/280)（2026-11-20 完了） |
+| 3   | 保存世代の契約（working／保存世代の分離、external-modified）と正式package | §4.3・§5 | なし                | 後で                                                                      |
+| 4   | 式と宣言的mappingによる動的表示                                           | §9.5     | なし                | 後で                                                                      |
+| 5   | 正式Faceplate                                                             | §7.4     | 2（操作を含むため） | 後で                                                                      |
+| 6   | Design Domain（共通mutation／validation）                                 | §19.2    | 3                   | 後で                                                                      |
 
 ## 作成支援・プラント運用の追加検討（2026-10-20・日本時間）
 
