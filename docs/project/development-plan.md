@@ -237,7 +237,7 @@ banto-industrial の `@banto-industrial/trend`（`trend-v0.1.0`、Issue [#359](h
 
 2026-11-21 のユーザーの選択で (1) を実施した（全部を部品へ。設計は [historian-history-presentation.md の置き換えの節](../design/runtime/historian-history-presentation.md#共通部品への置き換え3592026-11-21日本時間)。上流へ [banto-industrial#1272](https://github.com/tyaro/banto-industrial/issues/1272)（ペンの色）と [#1273](https://github.com/tyaro/banto-industrial/issues/1273)（時刻の区間の帯）を起票）。次の区切りの候補: (1) HistoryWorkspace の `TrendView` を部品へ置き換える（上の落ちるものの扱いを先に決める）、(2) 画面に置くトレンドの部品（`TrendPainting`）を Runtime で常時の線にする（Hub の購読 → `liveAppend`、履歴 → `hybridData`）。順はユーザーが選ぶ。
 
-(1) は #376 で済んだ。(2) の設計を [画面に置いたトレンドの常時表示](../design/runtime/historian-live-trend.md) に書いた（2026-11-21。設計だけで未実装）。2026-11-21 にオーナーがペンと Hub タグの自動の対応づけを許可したので、ペンの `seriesId` から host の適用済みの記録の対応（member の `externalName`）を引く方式を採り、記録計画の 2 文書の禁止を表示の対応づけに限って改めた。同時に動かす配置は 4、系列のライブのサンプルは 20,000・合計 160,000、常時表示の問い合わせは全配置で active 1 の round robin で、HistoryWorkspace の明示の検索を優先する。区切り: L1 host のライブの対応 → L2 読取Host のトレンド用 stream → L3 画面側の需要・予算・scheduler（L1 と並べてよい）→ L4 Runtime の `TrendPainting` → L5 Editor の運転表示・Popup・埋め込み → L6 実機。
+(1) は #376 で済んだ。(2) の設計を [画面に置いたトレンドの常時表示](../design/runtime/historian-live-trend.md) に書いた（2026-11-21。設計だけで未実装）。2026-11-21 にオーナーがペンと Hub タグの自動の対応づけを許可したので、ペンの `seriesId` から host の適用済みの記録の対応（member の `externalName`）を引く方式を採り、記録計画の 2 文書の禁止を表示の対応づけに限って改めた。ライブは読取Host ではなく Recorder が記録のために観測した値（時刻は履歴と同じ `sampleTimeMs`、間隔は記録周期）を host から配送する（#377 のオーナーのレビューで時刻の正本を揃えた）。同時に動かす配置は 4、系列は 8、系列のライブのサンプルはハード上限 80,000、保持は窓を常に覆う。常時表示の問い合わせは全配置で active 1 の round robin で、HistoryWorkspace の明示の検索を優先する（App 全体で合計 2）。区切り: L1 host のライブの対応 → L2 Recorder の観測のライブの配送 → L3 画面側の需要・予算・scheduler（L1 と並べてよい）→ L4 Runtime の `TrendPainting` → L5 Editor の運転表示・Popup・埋め込み → L6 実機。
 
 ## 戻す手順
 

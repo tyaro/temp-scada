@@ -121,7 +121,7 @@ editorのdefault作成時に架空seriesを作らない。最初の定義は利�
 
 ## 要求の有限性と寿命
 
-配置数は既存Project／expanded placement予算に含める。配置の見える数によってqueryを増やさない。Appに一つのworkspace/controllerを保持し、常にactive Promise最大1、pending最新1、H1 query最大8系列／8000点／1時間のままとする。すべてのPopupからもこのownerへ委譲する。新しいModalや画面ごとにcontrollerを作って旧query資源を忘れない。
+配置数は既存Project／expanded placement予算に含める。配置の見える数によってqueryを増やさない。Appに一つのworkspace/controllerを保持し、常にactive Promise最大1、pending最新1、H1 query最大8系列／8000点／1時間のままとする。すべてのPopupからもこのownerへ委譲する。新しいModalや画面ごとにcontrollerを作って旧query資源を忘れない。2026-11-21の[常時トレンドの設計](historian-live-trend.md#23-問い合わせの公平さ)で、画面内の常時表示に限り、このworkspace/controllerとは別にAppに一つのscheduler（active 1、配置数によらない）を置くと改めた。App全体のhostへの未settleのqueryはworkspaceの1と常時表示の1の合計2まで（未実装）。
 
 presetを開くcommandはProject object／workspaceGeneration／definition.id／開いた回ごとのtokenを持ち、現在Projectから定義を再取得して検証する。同じdefinitionを再度開いても新しいopen tokenで前の結果と入力をclearする。保存定義だけを捕捉した旧callbackで検索しない。
 
