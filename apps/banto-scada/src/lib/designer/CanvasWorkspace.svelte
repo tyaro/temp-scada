@@ -24,6 +24,7 @@
   import Renderer from "../Renderer.svelte";
   import Ruler from "./Ruler.svelte";
   import type { NavTarget, Screen, SymbolDefinition, Point } from "../project";
+  import type { ConnectionEnd, EndpointConnection } from "../connections";
   import type { Geometry } from "../resize";
   import { objectsInRange, selectionBox } from "../range-selection";
   import { snapCoordinate } from "../snap";
@@ -61,6 +62,7 @@
     onmove,
     onresize,
     onvertexmove,
+    onvertexconnect,
     canDropPart,
     ondropPart,
     onviewchange,
@@ -107,6 +109,11 @@
     onmove: (ids: string[], dx: number, dy: number) => void;
     onresize: (id: string, geometry: Geometry) => void;
     onvertexmove: (id: string, index: number, point: Point) => void;
+    onvertexconnect: (
+      id: string,
+      endpoint: ConnectionEnd,
+      connection: EndpointConnection,
+    ) => void;
     canDropPart: () => boolean;
     ondropPart: (token: string, center: Point) => void;
     onviewchange: (view: CanvasView) => void;
@@ -1015,6 +1022,7 @@
             {onmove}
             {onresize}
             {onvertexmove}
+            {onvertexconnect}
             {equipmentContext}
             {readings}
             {trends}

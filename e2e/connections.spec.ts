@@ -186,3 +186,125 @@ test("an unconnected polygon keeps its in-progress vertex preview on a screen wi
   await expect(p.getByTestId("project-status")).toContainText("1以上");
   await expect(polygon).toHaveAttribute("points", "80,0 160,100 0,100");
 });
+// Issue #306 E3: 接続していない端をドラッグして anchor の近くで離すと接続する。
+const loose = (() => {
+  const data = structuredClone(sample) as any;
+  const line = data.screens[0].objects[2];
+  line.shape.connections = { start: line.shape.connections.start };
+  line.shape.points[3] = { x: 300, y: 320 };
+  return data;
+})();
+async function dragEnd(p: Page, to: { x: number; y: number }, alt = false) {
+  await select(p, pipe);
+  const from = await point(p, 300, 320),
+    target = await point(p, to.x, to.y);
+  await mainCanvas(p)
+    .locator(`[data-vertex-object-id="${pipe}"][data-vertex-index="3"]`)
+    .waitFor();
+  await p.mouse.move(from.x, from.y);
+  await p.mouse.down();
+  if (alt) await p.keyboard.down("Alt");
+  await p.mouse.move(target.x, target.y, { steps: 5 });
+}
+for (const theme of ["light", "dark"])
+  test(`dragging a loose end near an anchor snaps, connects with one Undo, and Alt skips it in ${theme}`, async ({
+    page: p,
+  }) => {
+    await start(p, loose);
+    await chooseTheme(p, theme);
+    const before = await vertices(p);
+    expect(before.at(-1)).toEqual({ x: 300, y: 320 });
+    await dragEnd(p, { x: 355, y: 323 });
+    const ring = mainCanvas(p).locator(".connection-snap");
+    await expect(ring).toHaveAttribute("data-snap-target-id", pump2);
+    await expect(ring).toHaveAttribute("data-snap-anchor", "left");
+    await expect
+      .poll(async () => (await vertices(p)).at(-1))
+      .toEqual({ x: 360, y: 320 });
+    await p.mouse.up();
+    await expect(ring).toHaveCount(0);
+    await expect
+      .poll(() => vertices(p))
+      .toEqual([...before.slice(0, -1), { x: 360, y: 320 }]);
+    const result = await saved(p);
+    expect(result.screens[0].objects[2].shape.connections).toEqual(
+      sample.screens[0].objects[2].shape.connections,
+    );
+    await button(p, "元に戻す").click();
+    await expect.poll(() => vertices(p)).toEqual(before);
+    await expect(button(p, "元に戻す")).toBeDisabled();
+    // Alt を押す間は吸着もグリッドも止まり、離した位置へ動くだけ。
+    await dragEnd(p, { x: 357, y: 321 }, true);
+    await expect(ring).toHaveCount(0);
+    await p.mouse.up();
+    await p.keyboard.up("Alt");
+    await expect
+      .poll(async () => {
+        const end = (await vertices(p)).at(-1)!;
+        return [Math.round(end.x), Math.round(end.y)];
+      })
+      .toEqual([357, 321]);
+    expect(
+      (await saved(p)).screens[0].objects[2].shape.connections.end,
+    ).toBeUndefined();
+    // anchor の近くに置いた端をクリックしただけでは、接続も座標も履歴も変わらない
+    // （#372 のレビュー P2）。
+    const placed = await vertices(p);
+    const at = await point(p, placed.at(-1)!.x, placed.at(-1)!.y);
+    await p.mouse.move(at.x, at.y);
+    await p.mouse.down();
+    await expect(ring).toHaveCount(0);
+    await p.mouse.up();
+    await expect(ring).toHaveCount(0);
+    await expect.poll(() => vertices(p)).toEqual(placed);
+    expect(
+      (await saved(p)).screens[0].objects[2].shape.connections.end,
+    ).toBeUndefined();
+    await button(p, "元に戻す").click();
+    await expect.poll(() => vertices(p)).toEqual(before);
+    await expect(button(p, "元に戻す")).toBeDisabled();
+  });
+test("grid rounding that lands a dragged end on the other end still snaps to a valid anchor", async ({
+  page: p,
+}) => {
+  // #372 のレビュー P3: 2 点の線 (360,330)→(300,330) の終点を、ポンプ2 の left
+  // (360,320) の近くの (361,326) へ寄せる。グリッド 10 の丸めでは途中の終点が始点
+  // (360,330) に重なるが、確定と同じく保存済みの線で判定するので left へ接続する。
+  const data = structuredClone(sample) as any;
+  const line = data.screens[0].objects[2];
+  delete line.shape.connections;
+  line.shape.points = [
+    { x: 360, y: 330 },
+    { x: 300, y: 330 },
+  ];
+  await start(p, data);
+  await p.getByLabel("グリッドにスナップ", { exact: true }).check();
+  await select(p, pipe);
+  const from = await point(p, 300, 330),
+    to = await point(p, 361, 326);
+  await mainCanvas(p)
+    .locator(`[data-vertex-object-id="${pipe}"][data-vertex-index="1"]`)
+    .waitFor();
+  await p.mouse.move(from.x, from.y);
+  await p.mouse.down();
+  await p.mouse.move(to.x, to.y, { steps: 5 });
+  const ring = mainCanvas(p).locator(".connection-snap");
+  await expect(ring).toHaveAttribute("data-snap-target-id", pump2);
+  await expect(ring).toHaveAttribute("data-snap-anchor", "left");
+  await expect
+    .poll(() => vertices(p))
+    .toEqual([
+      { x: 360, y: 330 },
+      { x: 360, y: 320 },
+    ]);
+  await p.mouse.up();
+  await expect
+    .poll(() => vertices(p))
+    .toEqual([
+      { x: 360, y: 330 },
+      { x: 360, y: 320 },
+    ]);
+  expect((await saved(p)).screens[0].objects[2].shape.connections).toEqual({
+    end: { targetObjectId: pump2, anchor: "left" },
+  });
+});

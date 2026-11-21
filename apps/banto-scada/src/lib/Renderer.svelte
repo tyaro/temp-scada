@@ -1,6 +1,18 @@
 <script lang="ts">
   import type { TrendDefinition } from "./trend-definitions";
-  import { resolveConnectionObjects, connectedVertex } from "./connections";
+  import {
+    resolveConnectionObjects,
+    connectedVertex,
+    type ConnectionEnd,
+    type EndpointConnection,
+  } from "./connections";
+  import {
+    CONNECTION_SNAP_PX,
+    findConnectionSnap,
+    snappableEndpoint,
+    withConnection,
+    type ConnectionSnap,
+  } from "./connection-snap";
   import type { EquipmentContext } from "./symbol-slots";
   import { previewEquipmentLink } from "./equipment-read-details";
   import { untrack } from "svelte";
@@ -20,6 +32,7 @@
     getLocalBounds,
     isAreaShape,
     type Point,
+    type PolylineObject,
     type Screen,
     type ScreenObject,
     type SymbolDefinition,
@@ -80,6 +93,7 @@
     onbeforeedit,
     onresize,
     onvertexmove,
+    onvertexconnect,
     onselect,
     onmove,
   }: {
@@ -117,6 +131,15 @@
     onbeforeedit?: () => boolean;
     onresize?: (id: string, geometry: Geometry) => void;
     onvertexmove?: (id: string, index: number, point: Point) => void;
+    /**
+     * 線の端を anchor へ吸着させて離した（#306 E3）。`set-line-connection` を 1 回送り、
+     * 端点は確定の追従で anchor へ移る（Undo 1 回）。未指定なら吸着しない。
+     */
+    onvertexconnect?: (
+      id: string,
+      endpoint: ConnectionEnd,
+      connection: EndpointConnection,
+    ) => void;
     onselect?: (
       id: string | null,
       additive: boolean,
@@ -245,6 +268,8 @@
     original: Point;
     current: Point;
   } | null>(null);
+  /** 線の端のドラッグ中に吸着している anchor（#306 E3）。 */
+  let vertexSnap = $state.raw<ConnectionSnap | null>(null);
   let resizeDrag = $state<{
     id: string;
     handle: ResizeHandle;
@@ -360,6 +385,7 @@
     interactionOwner = null;
     drag = null;
     vertexDrag = null;
+    vertexSnap = null;
     resizeDrag = null;
   }
   export function isInteracting() {
@@ -426,6 +452,14 @@
    */
   function connectionCandidate(object: ScreenObject): ScreenObject {
     if (
+      vertexSnap &&
+      vertexDrag?.id === object.id &&
+      object.shape.type === "polyline"
+    )
+      // 確定の `set-line-connection` と同じく保存済みの線へ接続を足す。途中の頂点は
+      // グリッドで反対の端に重なることがあり、それで有効な anchor を落とさない。
+      return withConnection(object as PolylineObject, vertexSnap);
+    if (
       "width" in object &&
       object.shape.type === "polygon" &&
       vertexDrag?.id === object.id &&
@@ -445,9 +479,10 @@
   const connectionPreviews = $derived.by(() => {
     if (
       !editable ||
-      !screen.objects.some(
-        (o) => o.shape.type === "polyline" && o.shape.connections,
-      )
+      (!vertexSnap &&
+        !screen.objects.some(
+          (o) => o.shape.type === "polyline" && o.shape.connections,
+        ))
     )
       return null;
     try {
@@ -753,6 +788,7 @@
           ).points[vertexDrag!.index];
         })(),
       };
+      vertexSnap = snapFor(vertexDrag, delta, event.altKey);
     } else if (drag && drag.pointer === event.pointerId) {
       const delta = dragOffset(
         drag.anchor,
@@ -771,9 +807,13 @@
       if (editable) onresize?.(finished.id, finished.current);
     } else if (vertexDrag && vertexDrag.pointer === event.pointerId) {
       const finished = vertexDrag;
+      const snap = vertexSnap;
       vertexDrag = null;
+      vertexSnap = null;
       interactionOwner = null;
-      if (
+      if (editable && snap && onvertexconnect)
+        onvertexconnect(finished.id, snap.endpoint, snap.connection);
+      else if (
         editable &&
         (finished.current.x !== finished.original.x ||
           finished.current.y !== finished.original.y)
@@ -786,6 +826,37 @@
       if (editable && (finished.dx !== 0 || finished.dy !== 0))
         onmove?.(finished.ids, finished.dx, finished.dy);
     }
+  }
+  /**
+   * 線の端のドラッグで吸着する anchor（#306 E3）。画面直下の線の接続していない端だけ。
+   * 距離はグリッドの丸めの前のポインタの位置で測り、Alt を押す間は吸着しない。
+   * サイズ変更と同じ移動の閾値（0.5）を超えるまでは吸着しない。クリックだけ
+   * （`up` が同じ座標で `move` を呼ぶ）では接続・座標・履歴を変えない。
+   */
+  function snapFor(
+    current: NonNullable<typeof vertexDrag>,
+    delta: Point,
+    noSnap: boolean,
+  ): ConnectionSnap | null {
+    if (
+      noSnap ||
+      !onvertexconnect ||
+      !("background" in screen) ||
+      Math.hypot(delta.x, delta.y) <= 0.5
+    )
+      return null;
+    const line = screen.objects.find((object) => object.id === current.id);
+    if (!line || line.shape.type !== "polyline") return null;
+    const endpoint = snappableEndpoint(screen, line, current.index);
+    if (!endpoint) return null;
+    const origin = objectToWorld(line as PolylineObject, current.original);
+    return findConnectionSnap(
+      screen.objects,
+      line as PolylineObject,
+      endpoint,
+      { x: origin.x + delta.x, y: origin.y + delta.y },
+      CONNECTION_SNAP_PX / viewScale,
+    );
   }
   function position(object: ScreenObject) {
     return `translate(${object.x + (editable && !connectionPreviews && drag?.ids.includes(object.id) ? drag.dx : 0)} ${object.y + (editable && !connectionPreviews && drag?.ids.includes(object.id) ? drag.dy : 0)})`;
@@ -1071,6 +1142,22 @@
           />
         {/each}
       {/if}
+    {/if}
+    {#if object && vertexSnap && vertexDrag?.id === object.id}
+      <!-- #306 E3: 離すとつながる anchor。色は選択色、太さは表示の倍率によらない。 -->
+      <circle
+        class="connection-snap"
+        cx={vertexSnap.point.x}
+        cy={vertexSnap.point.y}
+        r={10 / viewScale}
+        fill="none"
+        stroke="var(--canvas-accent)"
+        stroke-width="2"
+        vector-effect="non-scaling-stroke"
+        pointer-events="none"
+        data-snap-target-id={vertexSnap.connection.targetObjectId}
+        data-snap-anchor={vertexSnap.connection.anchor}
+      />
     {/if}
     {#if object && !object.locked && object.visible !== false && "width" in object && object.shape.type === "polygon"}
       {@const visual = previewObject(object)}
