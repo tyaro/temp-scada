@@ -607,7 +607,7 @@ format 5のpolicy定義／適用／stateとjob.policy_applied_revisionが永続�
 
 `apps/banto-scada/src/lib/history/presentation.ts`が差替え可能なHistorySourceとcontrollerを所有する。一実行＋最新一待機、opaque token、query全文照合、Abort後のquiescence待ち、旧結果／sourceの拒否、状態通知の再入を扱う。`owned-json.ts`がaccessorを評価しないplain JSON所有とbyte／depth／node制限・凍結を担当する。H1 moduleは公開type aliasだけを追加し、validatorを複製しない。
 
-2026-11-21（#359）に描画を共通部品へ置き換えた: `TrendView.svelte`は`@banto-industrial/trend`の`TrendChart`で全系列を1枚に重ねる（raw は点だけ、minmax は部品の包絡、bool の minmax は帯、2本目の数値のペンは右の目盛り、凡例に系列ID）。H1 → 部品の区間の写し（segment の変わる所で線を切る）とペンの hex に近い色の枠の選択は`history/trend-adapter.ts`、`history/trend-model.ts`はUTCの時刻の文字列だけを持つ。coverage・segment・観測点の品質の表示は上流の時刻の帯（banto-industrial#1273）を待って落としている。設計は[置き換えの節](../design/runtime/historian-history-presentation.md#共通部品への置き換え3592026-11-21日本時間)。
+2026-11-21（#359）に minmax の描画を共通部品へ置き換えた: `TrendView.svelte`は minmax を`@banto-industrial/trend`の`TrendChart`で1枚に重ね（単位・型ごとにペンを分ける・bool は段線・凡例に系列IDと目盛りの持ち主）、raw は上流の点の表示（banto-industrial#1274）が整うまで旧表示の`RawTrendView.svelte`を出す。H1 → 部品の区間とペンの写し（`historyTrendPens`。segment の変わる所で線を切る）と hex に近い色の枠の選択は`history/trend-adapter.ts`。`history/trend-model.ts`は旧表示のための投影（validated H1から観測／bin／coverageを変えずにsegment別laneへ）を持つ。設計は[置き換えの節](../design/runtime/historian-history-presentation.md#共通部品への置き換え3592026-11-21日本時間)。
 
 2単体fileの新規36件が配送・所有・再入・budgetと既存SQL結果projectionを担当する。`history/__fixtures__/HistoryPresentation.svelte`はe2e entry差替えだけでmountし、`e2e/history-presentation.spec.ts`の6件で両テーマと表示・取消・旧応答を受け入れる。既存H1 browser6件も回帰した。通常main／App／Projectは変更せず、[次の接続と限界](../design/runtime/historian-history-presentation.md)を分ける。
 
