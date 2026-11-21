@@ -85,7 +85,7 @@
 
 host の `history_query` はもともと 1 件ずつ順に実行する。画面側は**全配置で 1 つの常時表示用の scheduler** を持ち、同時に host へ出す問い合わせを **1 件**にする。
 
-- 配置ごとの待ちは、**通常の読み直し 1 件**（新しい要求で置き換える）と、**境界の読み直しを要求の署名（範囲とペン）ごとに 1 件**（ペンの数まで。置き換えるのは同じ署名だけ）。`createBoundaryLoader` は計画の要求を debounce の後に全部同時に `fetch` するので、それを scheduler の待ちに積んで 1 件ずつ出す。合計の待ちは 4 配置 × (1 + 8) = 36 件まで。
+- 配置ごとの待ちは、**通常の読み直し 1 件**（新しい要求で置き換える）と、**境界の読み直しを要求の署名（範囲とペン）ごとに 1 件**（ペンの数まで。置き換えるのは同じ署名だけ）。`createBoundaryLoader` は計画の要求を debounce の後に全部同時に `fetch` するので、それを scheduler の待ちに積んで 1 件ずつ出す。合計の待ちは 4 配置 × (1 + 8) = 36 件まで。確定待ちの再試行（§3.3）は、その要求の待ちの 1 件に「この時刻より前に出さない」期限を付けて戻したもので、件数は増えない。期限前の件は順番が来ても飛ばし、次の配置へ進む。
 - 配置の間は**順番（round robin）**で、1 回の番に 1 件だけ出す。同じ配置の中では境界の読み直しを通常の読み直しより先に出す（小さく、待つ間その区間が欠測のため）。`createBoundaryLoader` の `fetch` はこの scheduler を通す。
 - **利用者が HistoryWorkspace で明示した検索を優先する。** workspace の要求が待っている間、常時表示の scheduler は新しい問い合わせを出さない（実行中の 1 件は終わりを待つ。host は問い合わせを直列に待たせ、1 件の期限は 5 秒）。workspace の検索は利用者の操作ごとに 1 件で、終われば常時表示の順番に戻るので、常時表示が止まり続けることはない。App 全体で host に待たせるのは workspace の 1 件と常時表示の 1 件の合計 2 まで。
 - 読み直しの回数の上限: 配置ごとに、通常の履歴の読み直し（§3.3 の穴埋め・確定待ち）は 10 秒に 1 回、合わせて 1 分に 6 回まで。境界の読み直しは `liveFrom` が進んだときだけで、件数の上限で進むのは上限の 10% ぶんごと（100 ms 周期で約 13 分に 1 回）、時間の追い出しで進むのは保持の 10% ぶんごと。
@@ -121,6 +121,7 @@ Recording host ── context（namespace・contextId・系列ごとの live の
 - そこで、ライブは読取Host の値（最新の値だけで時刻が無い。値が据え置かれると source の時刻も進まない）ではなく、**Recorder が記録のために観測した同じ snapshot** を host から配送する（L2）。値・品質・`sampleTimeMs`・segment は記録される record と同じで、届く間隔は記録周期になる。Hub の更新が周期より速くても件数は増えない。source の時刻が据え置かれても、観測の時刻は周期ごとに進むので線は右へ伸びる。
   - 1 件: `{ seriesId, segmentId, tMs: sampleTimeMs, value: number | null }`。品質が悪い・無値の record は `value: null`（`live.ts` の欠測）。bool は 0／1。`sourceTimeMs` は送らない（診断は HistoryWorkspace で見る）。batch には記録の `sessionId` と tick の `sequence`（record と同じ記録 session の通し番号）と、その session の最初の `sequence` を載せる。履歴の確定の判定（§3.3）に使う。
   - 時計が逆行した（`clockEpoch` が変わった）ときは、その系列に**途切れの印**を送る（`liveAppend` は前以下の時刻を捨てるため、印なしでは新しい epoch の値が積めない）。
+  - **配送は commit が成功した tick だけ**にする（host 側の確定の根拠。commit は記録 session の中で `sequence` の順に進むので、`sequence` が `s` の件を受けた後に始めた H1 の照会は、同じ session の `s` 以前をすべて読める）。commit が失敗した tick は配送せず途切れの印を送る。表示は commit の間隔ぶん遅れる。
   - 配送は tick ごとにまとめた batch に `sequence` を付ける。配送は記録を止めない（受け手が遅くても Recorder の tick を待たせない）。キューが溢れたら古い件を黙って捨てず、捨てた系列に途切れの印を送る（画面は `liveBreak`）。
   - 記録の session が変わった（停止・再開・新しい apply）ときは、旧 session の件を捨て、全系列に途切れの印を送る。
 - 画面は batch の件を系列ごとに `liveAppend`（1 件ずつ受ける API。同じ tick の複数の系列は `liveAppendAll`）で積み、§2.2 の件数の上限で包む。状態は不変なので `$state.raw` に載せる。`sampleIntervalMs` は対応の `periodMs` を渡す。
@@ -133,10 +134,11 @@ Recording host ── context（namespace・contextId・系列ごとの live の
 - `boundaryPlan` の要求は `createBoundaryLoader` へ毎回渡し、`fetch` は §2.3 の scheduler を通す。`fetch` は要求のペン（§3.4 の（`seriesId`, `segmentId`）のペン）を系列へ戻して H1 を 1 区間で読み、応答の segment をペンの segment で絞ってから返す。結果は `boundaryValuesFrom` で配置の `boundary` に足し、`pruneBoundary` で要らなくなったものを捨てる。
 - **確定の証拠は coverage の理由ではなく commit watermark**: いまの SQLite の reader は、commit 前の tick を読んだとき record を返さず、coverage を `unknownCoverage`・`watermark` を null にする（`pendingFlush` とは書かない。`crates/scada-historian/src/store/query/tests.rs` の `uncommitted_append_is_absent_and_never_labelled_as_pending_flush`）。そこで coverage の理由で確定を決めない。H1 の系列の結果の `watermark`（`sessionId`・`committedThrough`。[Historian／Trend契約](historian-trend-contract.md)の「記録session／sequenceごとのcommit済み位置」）と、ライブの batch の `sessionId`・`sequence` を比べる。
   - ペンの `liveFrom` の件の `sequence` を `s` とする。応答が `[a, liveFrom)` について**確定**とは、(1) `watermark.sessionId` がライブの session と同じで `committedThrough ≥ s - 1`、または (2) `s` がその session の最初の `sequence`（区間がすべて前の session に入り、今の session で commit を待つ tick が無い）のどちらか。
-  - 確定でない応答（`watermark` が null・別 session・`committedThrough` が足りない）は、値があっても最終の結果として扱わない。
-- **境界の結果がまだ確定していないとき**: 境界の区間は `liveFrom` の直前で、Recorder がまだ commit していないことがある。loader は成功した要求を読み直さないので、`fetch` の中で、確定でなければ 10 秒おきに同じ範囲を読み直し（最大 6 回。scheduler の 1 件として数える）、確定してから返す。6 回で確定しなければ失敗として返し、その区間は欠測のまま（線が切れる）にする。
-- **履歴の「確定した終わり」**: 要求の `toMs` ではなく、上の証拠で確定した範囲の終わりを使う。初回の応答も同じで、確定でなければ確定した終わりを「ライブの session の commit 済みの最後の tick の `sampleTimeMs` の直後」（分からなければ応答の最後の値のある区間の始まり）とする。`pendingFlush` も確定に含めない（[契約](historian-trend-contract.md)の「pendingFlushは未確定として残す」）。
-- **穴埋め**: 理由を問わず、確定した終わりがペンの `liveFrom` より前にある（切断・途切れ・記録の再開の後、件数の上限で `liveFrom` が進んだ後、または初回の応答が確定でない）ときは、`[確定した終わり, liveFrom)` を含むように履歴を読み直す。間隔と回数は §2.3（10 秒に 1 回・1 分に 6 回）。確定するまで続け、記録が追いつけば埋まる。それまでは穴のまま（線が切れる）で正しい。
+  - 確定でない応答（`watermark` が null・別 session・`committedThrough` が足りない）は、値があっても最終の結果として扱わない。§3.2 の「commit 後だけ配送」があるので、`liveFrom` の件を受けた後に始めた照会はふつう確定になる。この判定は、照会が commit の前の snapshot を読んだ場合（照会の開始と配送の競合）の守りとして残す。
+- **境界の結果がまだ確定していないとき**: loader は成功した要求を読み直さないので、`fetch` の論理の要求は確定するまで settle させない。ただし**待つ間は scheduler の実行枠を持たない**。物理の照会は応答が settle した時点で枠を返し、次の試行は「10 秒後から」の期限付きで同じ配置の待ち（境界の署名の 1 件）に戻す。その間、ほかの配置の照会は順番どおり進む。試行は最大 6 回で、確定しなければ `fetch` を失敗として返し、その区間は欠測のまま（線が切れる）にする。
+- **履歴の「確定した終わり」**: 要求の `toMs` ではなく、上の証拠で確定した範囲の終わりを使う。H1 の `watermark` 自体は tick の時刻を持たないので、`committedThrough` を時刻に引くのは、画面が受けたライブの件（`sequence` → `sampleTimeMs`）からだけにする。確定の (1)・(2) が成り立てば確定した終わりは `liveFrom`。成り立たず、`committedThrough` の tick の時刻も画面が知らないときは、**何も確定していない**（確定した終わり = 要求の始まり）と扱う。応答の値のある区間の終わりなどから推測しない。とくに全区間が欠測の minmax の応答を、要求の末尾まで確定とは扱わない。`pendingFlush` も確定に含めない（[契約](historian-trend-contract.md)の「pendingFlushは未確定として残す」）。
+- **穴埋め**: 理由を問わず、確定した終わりがペンの `liveFrom` より前にある（切断・途切れ・記録の再開の後、件数の上限で `liveFrom` が進んだ後、または初回の応答が確定でない）ときは履歴を読み直す。**範囲はいまの表示窓で切る**: `[max(確定した終わり, now - windowMs), liveFrom)`。窓の外の穴は追わない（長い停止の後でも、窓 ≤ 1 時間なので 1 回の H1 の上限に収まり、24 時間開いたままの画面でも再開できる）。間隔と回数は §2.3（10 秒に 1 回・1 分に 6 回。確定待ちの再試行と同じく、待つ間は実行枠を持たない）。確定するまで続け、記録が追いつけば埋まる。それまでは穴のまま（線が切れる）で正しい。
+  - **結合の規則**: 読み直しは既存の履歴と同じ `binMs` と同じ格子（既存の取得範囲の始まりから `binMs` の整数倍）で、始まりを格子へ切り下げて読む。結果は、既存の履歴のうち始まりが読み直しの始まり以後の区間を置き換え、それより前の区間は残す。窓の外へ出た区間は捨てる。既存の履歴がすべて窓の外なら、読み直しの結果をそのまま履歴にする（取得範囲も読み直しの範囲）。結合した履歴の取得範囲は（残した始まり, 読み直しの終わり）で、`hybridData` へ 1 つの `TrendData` として渡す。
 - 保持時間が窓より長い（§2.2）ので、通常の追従では `liveFrom` より前に窓の左端は来ない。初回の履歴の後は、窓の左端が履歴の範囲の外へ出るだけで、読み直しは要らない（窓の中はライブが描く）。件数の上限で `liveFrom` が窓の中まで進んだとき（上限の計算より周期が短い場合が将来生じたとき）も、同じ穴埋めの規則で `[確定した終わり, liveFrom)` を読む。
 
 ### 3.4 segment とペン
@@ -177,8 +179,8 @@ controller は App（Editor）と RuntimeShell にそれぞれ 1 つで、`creat
 表に加えて、各区切りで次も受入に入れる。
 
 - L1: 計画が disabled・適用済みだが未 activation のとき `recorderStopped` になる。namespace が違う context で対応を引かない。
-- L2: batch の `sessionId`・`sequence` が記録される record と一致し、H1 の `watermark` と比べられる（commit の前後で同じ tick を読む試験）。
-- L3: 確定の判定（§3.3 の (1)・(2)、`watermark` null・別 session・`committedThrough` 不足）、保持が窓より短い場合（件数の上限）の穴埋めの読み直しの回数、境界の要求が同じ配置で複数あるときの待ち、猶予中の系列を数に入れる。
+- L2: batch の `sessionId`・`sequence` が記録される record と一致し、H1 の `watermark` と比べられる。commit が成功した tick だけを配送し、失敗した tick は途切れの印になる。一時 SQLite で「未確定（`unknownCoverage`・`watermark` null）→ commit → 配送 → 再取得で確定」を確かめる（mock だけで確定の入口を試さない）。
+- L3: 確定の判定（§3.3 の (1)・(2)、`watermark` null・別 session・`committedThrough` 不足、`committedThrough` を時刻に引けないときは何も確定しない、全区間が欠測の応答を末尾まで確定としない）、**配置 A の確定待ちの間に配置 B の照会が進む**（待つ間は実行枠を持たない）、穴埋めの範囲が表示窓で切られる（3 時間の停止の後でも 1 回の照会が 1 時間以内）と結合の規則、保持が窓より短い場合（件数の上限）の穴埋めの読み直しの回数、境界の要求が同じ配置で複数あるときの待ち、猶予中の系列を数に入れる。
 - L4: bool の段線（`hybridData` の出力に当てる）、複数 segment、ライブの batch の `contextId` の変化で取り直す、`mode: raw` の定義の注記、ブラウザ（デモ）では静的カードのままの回帰、CPU と GC の計測（§2.2）。
 - L5: 運転表示の中で Project が変わる、枠の配置、窓が隠れている間は描画を止める。
 - 各区切り: [コード地図](../../engineering/code-map.md)と[実装状況](../../project/implementation-status.md)の更新。形式を変える区切り（L1）は Rust／TS／サンプル／fixture／検証を揃える。
