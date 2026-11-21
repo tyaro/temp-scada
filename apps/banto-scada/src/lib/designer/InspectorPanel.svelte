@@ -18,7 +18,7 @@
   import { placementLabel } from "../placement-label";
   import ImageFitSettings from "./ImageFitSettings.svelte";
   import ConnectionSettings from "./ConnectionSettings.svelte";
-  import { connectionUsages } from "../connections";
+  import { connectionUsages, isConnectionTarget } from "../connections";
   import ImageCrop from "./ImageCrop.svelte";
   import ShapePaint from "./ShapePaint.svelte";
   import ShapeLabel from "./ShapeLabel.svelte";
@@ -716,12 +716,12 @@
             onsubmit={properties}
           />
         {/if}
-        {#if selected.shape.type === "symbol" && !activeDefinition}
+        {#if isConnectionTarget(selected) && !activeDefinition}
           {@const usages = connectionUsages(screen, selected.id)}
           {#if usages.length}
             <section
               class="connection-usages"
-              aria-label="このSymbolに接続中の配管"
+              aria-label="この配置に接続中の配管"
             >
               <h3>接続中の配管 · {usages.length}端点</h3>
               <ul>
@@ -742,7 +742,7 @@
                 {/each}
               </ul>
               <p class="numeric-hint">
-                接続を解除するか配管も選択してから、このSymbolを削除してください。
+                接続を解除するか配管も選択してから、この配置を削除してください。
               </p>
             </section>
           {/if}

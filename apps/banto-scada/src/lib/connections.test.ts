@@ -6,7 +6,10 @@ import { emptyHistory, recordEdit, travelHistory } from "./history";
 import { projectContent } from "./save-state";
 import { copyObjects, parseClipboard } from "./clipboard";
 import { objectToWorld } from "./rotation";
-import { symbolAnchorPoint, sameConnectionPoint } from "./connection-geometry";
+import {
+  connectionAnchorPoint,
+  sameConnectionPoint,
+} from "./connection-geometry";
 import { connectionUsages } from "./connections";
 const fresh = () => parseProject(JSON.stringify(sample));
 const screenId = sample.screens[0].id;
@@ -32,7 +35,10 @@ it("tracks target geometry while preserving world bends, input, no-op and one-ac
   const after = positions(result.project),
     target = result.project.screens[0].objects[0];
   expect(
-    sameConnectionPoint(after[0], symbolAnchorPoint(target as any, "right")),
+    sameConnectionPoint(
+      after[0],
+      connectionAnchorPoint(target as any, "right"),
+    ),
   ).toBe(true);
   expect(after.slice(1)).toEqual(before.slice(1));
   expect(result.history.past).toHaveLength(1);

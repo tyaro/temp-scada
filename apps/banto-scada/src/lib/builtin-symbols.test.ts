@@ -52,7 +52,7 @@ describe("built-in parts", () => {
     },
   );
 
-  // Pipes attach to the frame's edge midpoints (connection-geometry.ts symbolAnchorPoint).
+  // Pipes attach to the frame's edge midpoints (connection-geometry.ts connectionAnchorPoint).
   // The pump and valve predate this rule and are left as they are.
   it.each(
     BUILTIN_PARTS.filter(

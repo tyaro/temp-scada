@@ -4,6 +4,8 @@
     CONNECTION_ANCHORS,
     type LineConnections,
     type ConnectionAnchor,
+    isConnectionTarget,
+    connectionTargetKind,
   } from "../connections";
   import { placementLabel } from "../placement-label";
   import type { createDraftGuard } from "./drafts.svelte";
@@ -28,7 +30,7 @@
     drafts: ReturnType<typeof createDraftGuard>;
     onsubmit: (event: SubmitEvent) => void;
   } = $props();
-  const targets = $derived(objects.filter((o) => o.shape.type === "symbol"));
+  const targets = $derived(objects.filter(isConnectionTarget));
   const labels: Record<ConnectionAnchor, string> = {
     top: "上",
     right: "右",
@@ -45,17 +47,19 @@
       String(value);
   }
   function targetLabel(target: ScreenObject) {
-    return `${placementLabel(target, project.symbols)} · 配置${target.order + 1}`;
+    return `${placementLabel(target, project.symbols)}（${connectionTargetKind(target)}） · 配置${target.order + 1}`;
   }
 </script>
 
 <section aria-label="配管の接続設定">
   <h3>配管の接続</h3>
   <p>
-    Symbolの配置枠へ接続します。移動・回転・サイズ変更に端点が追従し、中間点はその場に残ります。
+    Symbol配置・矩形・楕円・多角形の上・右・下・左・中心へ接続します（多角形の上下左右は、枠の中央を通る線と外周の交点）。移動・回転・サイズ変更に端点が追従し、中間点はその場に残ります。
   </p>
   {#if disabledReason}<p>{disabledReason}</p>{/if}
-  {#if !targets.length}<p>この画面に接続先のSymbolがありません。</p>{/if}
+  {#if !targets.length}<p>
+      この画面に接続先（Symbol配置・矩形・楕円・多角形）がありません。
+    </p>{/if}
   {#each ends as endpoint}
     {@const label = endpoint === "start" ? "始点" : "終点"}
     {@const current = connections?.[endpoint]}
@@ -77,7 +81,9 @@
         else onsubmit(event);
       }}
     >
-      <fieldset disabled={locked || !!disabledReason || !targets.length}>
+      <fieldset
+        disabled={locked || !!disabledReason || (!targets.length && !current)}
+      >
         <legend>{label}</legend>
         <p class="current">
           {current && target

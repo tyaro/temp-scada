@@ -13,6 +13,7 @@
     dragPolygonVertex,
     polygonLayout,
     previewPolygonVertex,
+    reframedPolygonVertex,
   } from "./polygon-frame";
   import {
     getBounds,
@@ -404,6 +405,43 @@
     };
   }
 
+  /** 線の端から参照されている配置の id。作り直しはここに入る多角形だけに当てる。 */
+  const connectionTargetIds = $derived(
+    new Set(
+      screen.objects.flatMap((object) =>
+        object.shape.type === "polyline" && object.shape.connections
+          ? [
+              object.shape.connections.start?.targetObjectId,
+              object.shape.connections.end?.targetObjectId,
+            ].filter((id): id is string => id !== undefined)
+          : [],
+      ),
+    ),
+  );
+  /**
+   * 接続の解決へ渡す候補。線から参照されている多角形の頂点をドラッグ中は、確定
+   * （`move-vertex`）と同じく枠を作り直した形にし、途中と確定で anchor と端点を
+   * 一致させる。作り直しが拒否される形は例外にして、下の catch で確定済みの形を
+   * 表示する。参照されていない多角形は従来の途中の形（`previewPolygonVertex`）のまま。
+   */
+  function connectionCandidate(object: ScreenObject): ScreenObject {
+    if (
+      "width" in object &&
+      object.shape.type === "polygon" &&
+      vertexDrag?.id === object.id &&
+      connectionTargetIds.has(object.id)
+    ) {
+      const frame = reframedPolygonVertex(
+        { ...object, shape: object.shape },
+        vertexDrag.index,
+        vertexDrag.current,
+      );
+      if (!frame.ok) throw new Error(frame.reason);
+      return frame.object;
+    }
+    return rawPreviewObject(object);
+  }
+
   const connectionPreviews = $derived.by(() => {
     if (
       !editable ||
@@ -412,13 +450,13 @@
       )
     )
       return null;
-    const candidates = screen.objects.map((object) => {
-      const visual = rawPreviewObject(object);
-      return drag?.ids.includes(object.id)
-        ? { ...visual, x: visual.x + drag.dx, y: visual.y + drag.dy }
-        : visual;
-    });
     try {
+      const candidates = screen.objects.map((object) => {
+        const visual = connectionCandidate(object);
+        return drag?.ids.includes(object.id)
+          ? { ...visual, x: visual.x + drag.dx, y: visual.y + drag.dy }
+          : visual;
+      });
       return new Map(
         resolveConnectionObjects(candidates).map((object) => [
           object.id,

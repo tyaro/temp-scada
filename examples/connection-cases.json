@@ -35,7 +35,7 @@
     ]
   },
   {
-    "name": "line-is-not-symbol",
+    "name": "line-is-not-a-connection-target",
     "valid": false,
     "patches": [
       {
@@ -1043,6 +1043,823 @@
             "y": 320
           }
         ]
+      }
+    ]
+  },
+  {
+    "name": "rectangle-target",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "rectangle-wrong-anchor",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "top"
+      }
+    ]
+  },
+  {
+    "name": "ellipse-target",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "ellipse",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  {
+    "name": "rectangle-rotated-180",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 180,
+          "shape": {
+            "type": "rectangle",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "left"
+      }
+    ]
+  },
+  {
+    "name": "ellipse-rotated-90",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 90,
+          "shape": {
+            "type": "ellipse",
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "top"
+      },
+      {
+        "path": "/screens/0/objects/2/shape/points/0",
+        "value": {
+          "x": 160,
+          "y": 220
+        }
+      }
+    ]
+  },
+  {
+    "name": "polygon-flipped-x",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "flipX": true,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.5
+              },
+              {
+                "x": 0,
+                "y": 1
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "left"
+      }
+    ]
+  },
+  {
+    "name": "polygon-flipped-x-stale-endpoint",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "flipX": true,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.5
+              },
+              {
+                "x": 0,
+                "y": 1
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "left"
+      },
+      {
+        "path": "/screens/0/objects/2/shape/points/0",
+        "value": {
+          "x": 100,
+          "y": 220
+        }
+      }
+    ]
+  },
+  {
+    "name": "polygon-diamond-matches-frame-midpoint",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0.5,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.5
+              },
+              {
+                "x": 0.5,
+                "y": 1
+              },
+              {
+                "x": 0,
+                "y": 0.5
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "top"
+      },
+      {
+        "path": "/screens/0/objects/2/shape/points/0",
+        "value": {
+          "x": 140,
+          "y": 200
+        }
+      }
+    ]
+  },
+  {
+    "name": "polygon-centerline-through-vertex",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0
+              },
+              {
+                "x": 0.5,
+                "y": 1
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "bottom"
+      },
+      {
+        "path": "/screens/0/objects/2/shape/points/0",
+        "value": {
+          "x": 140,
+          "y": 240
+        }
+      }
+    ]
+  },
+  {
+    "name": "polygon-edge-on-centerline",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.4
+              },
+              {
+                "x": 0.5,
+                "y": 0.4
+              },
+              {
+                "x": 0.5,
+                "y": 1
+              },
+              {
+                "x": 0,
+                "y": 1
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "bottom"
+      },
+      {
+        "path": "/screens/0/objects/2/shape/points/0",
+        "value": {
+          "x": 140,
+          "y": 240
+        }
+      }
+    ]
+  },
+  {
+    "name": "polygon-concave-center-outside",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 0.25,
+                "y": 0
+              },
+              {
+                "x": 0.25,
+                "y": 0.75
+              },
+              {
+                "x": 0.75,
+                "y": 0.75
+              },
+              {
+                "x": 0.75,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 1
+              },
+              {
+                "x": 0,
+                "y": 1
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "top"
+      },
+      {
+        "path": "/screens/0/objects/2/shape/points/0",
+        "value": {
+          "x": 140,
+          "y": 230
+        }
+      }
+    ]
+  },
+  {
+    "name": "polygon-regular-pentagon-left",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0.5,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.381966
+              },
+              {
+                "x": 0.809017,
+                "y": 1
+              },
+              {
+                "x": 0.190983,
+                "y": 1
+              },
+              {
+                "x": 0,
+                "y": 0.381966
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "left"
+      },
+      {
+        "path": "/screens/0/objects/2/shape/points/0",
+        "value": {
+          "x": 102.91796081406524,
+          "y": 220.0
+        }
+      }
+    ]
+  },
+  {
+    "name": "polygon-regular-pentagon-left-is-not-frame-midpoint",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0.5,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 0.381966
+              },
+              {
+                "x": 0.809017,
+                "y": 1
+              },
+              {
+                "x": 0.190983,
+                "y": 1
+              },
+              {
+                "x": 0,
+                "y": 0.381966
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "left"
+      },
+      {
+        "path": "/screens/0/objects/2/shape/points/0",
+        "value": {
+          "x": 100,
+          "y": 220
+        }
+      }
+    ]
+  },
+  {
+    "name": "polygon-self-intersecting",
+    "valid": true,
+    "patches": [
+      {
+        "path": "/screens/0/objects/0",
+        "value": {
+          "id": "0199fd00-0000-7000-8000-000000000001",
+          "order": 0,
+          "name": "箱1",
+          "x": 100,
+          "y": 200,
+          "width": 80,
+          "height": 40,
+          "rotation": 0,
+          "shape": {
+            "type": "polygon",
+            "points": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 1,
+                "y": 1
+              },
+              {
+                "x": 1,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 1
+              }
+            ],
+            "paint": {
+              "fill": {
+                "enabled": true,
+                "paint": {
+                  "type": "solid",
+                  "color": "#83bfcd",
+                  "alpha": 1
+                }
+              },
+              "stroke": {
+                "color": "#112233",
+                "width": 2
+              }
+            }
+          }
+        }
+      },
+      {
+        "path": "/screens/0/objects/2/shape/connections/start/anchor",
+        "value": "top"
+      },
+      {
+        "path": "/screens/0/objects/2/shape/points/0",
+        "value": {
+          "x": 140,
+          "y": 220
+        }
+      }
+    ]
+  },
+  {
+    "name": "text-is-not-target",
+    "valid": false,
+    "patches": [
+      {
+        "path": "/screens/0/objects/1/shape",
+        "value": {
+          "type": "text",
+          "text": "ポンプ2",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": "normal",
+            "align": "left"
+          }
+        }
       }
     ]
   }
