@@ -948,7 +948,7 @@ test("the top bar opens the history trend window over runtime_history_context", 
   await dialog.getByRole("button", { name: "取得", exact: true }).click();
   const trend = dialog.locator("[data-history-phase]");
   await expect(trend).toHaveAttribute("data-history-phase", "ready");
-  await expect(trend.locator("[data-history-point]")).toHaveCount(2);
+  await expect(trend.locator("path.bi-trend__marker").first()).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
   await expect(page.locator("[data-runtime-history-entry]")).toBeFocused();

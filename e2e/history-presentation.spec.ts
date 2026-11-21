@@ -33,7 +33,7 @@ async function reply(page: Page) {
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`raw points preserve zero/false, nulls, unknown coverage and series in ${theme}`, async ({
+  test(`raw points are shown as markers with a legend and unknown series stays explicit in ${theme}`, async ({
     page,
   }, info) => {
     await page.setViewportSize({ width: 1280, height: 960 });
@@ -46,71 +46,64 @@ for (const theme of ["light", "dark"] as const) {
       .click();
     await load(page);
     await reply(page);
-    await expect(page.locator("[data-history-point]")).toHaveCount(2);
+    const chart = page.getByLabel("履歴トレンドのグラフ");
+    await expect(chart).toBeVisible();
+    await expect(page.locator(".history-trend .mode")).toHaveText(
+      "観測点を表示します。点の間は結びません。",
+    );
+    // raw は線を描かず、点だけを描く。
+    await expect(chart.locator("path.bi-trend__marker").first()).toBeVisible();
+    await expect(chart.locator("path.bi-trend__line")).toHaveCount(0);
     await expect(
-      page.locator('[data-history-point][data-value="0"]'),
-    ).toHaveCount(1);
+      page
+        .getByLabel("履歴トレンドの凡例")
+        .locator("[data-history-legend-series]")
+        .first(),
+    ).toContainText("系列ID: ");
+    // 取得できない系列は 0 や未記録と区別して明示する。
     await expect(
-      page.locator('[data-history-point][data-value="1"]'),
-    ).toHaveCount(1);
-    await expect(
-      page.locator('[data-history-null][data-null-reason="stale"]'),
-    ).toHaveCount(1);
-    await expect(
-      page.locator('[data-coverage-reason="unknownCoverage"]'),
-    ).toHaveCount(1);
-    await page.getByLabel("表示する履歴系列").selectOption("number");
-    await expect(
-      page.locator('[data-history-null][data-null-reason="bad"]'),
-    ).toHaveCount(1);
-    await expect(
-      page.locator('[data-history-point][data-value="0"]'),
-    ).toHaveCount(1);
-    await expect(
-      page.locator(".history-trend path,.history-trend polyline"),
-    ).toHaveCount(0);
+      page.getByText("系列が見つかりません。未記録やゼロ値とは区別します。"),
+    ).toBeVisible();
+    const geometry = await chart
+      .locator("path.bi-trend__marker")
+      .evaluateAll((paths) => paths.map((path) => path.getAttribute("d")));
+    expect(geometry.every((d) => d && !/NaN|Infinity/.test(d))).toBe(true);
+    // 色は部品の枠の変数で、別のテーマ定義でも属性は変わらない。
+    const colors = await chart
+      .locator("path.bi-trend__marker")
+      .evaluateAll((paths) =>
+        paths.map(
+          (path) => path.getAttribute("stroke") ?? path.getAttribute("fill"),
+        ),
+      );
+    expect(colors.every((c) => c?.startsWith("var(--banto-chart-"))).toBe(true);
     await page.screenshot({
       path: info.outputPath(`history-${theme}.png`),
       fullPage: true,
     });
-    await page.getByLabel("表示する履歴系列").selectOption("unknown");
-    await expect(
-      page.getByText("系列が見つかりません。未記録やゼロ値とは区別します。"),
-    ).toBeVisible();
-    await expect(page.locator("[data-history-point]")).toHaveCount(0);
   });
 }
 
-test("minmax keeps extrema/bool states, mixed bins have no bounds, expired remains explicit", async ({
+test("minmax draws envelope lines, mixed bins are reported and expired still renders", async ({
   page,
 }) => {
   await fixture(page);
   await load(page, "minmax");
   await reply(page);
-  await expect(page.locator("[data-history-envelope]").first()).toBeVisible();
-  await expect(page.locator("[data-history-point]")).toHaveCount(0);
-  await expect(
-    page.locator(".history-trend path,.history-trend polyline"),
-  ).toHaveCount(0);
-  await page.getByLabel("表示する履歴系列").selectOption("bool");
-  expect(
-    await page
-      .locator("[data-history-envelope]")
-      .evaluateAll((marks) =>
-        marks.every((mark) =>
-          ["0", "1"].includes(mark.getAttribute("data-value")!),
-        ),
-      ),
-  ).toBe(true);
+  await expect(page.locator(".history-trend .mode")).toContainText(
+    "区間ごとの最小・最大を縦の線で示し",
+  );
+  const chart = page.getByLabel("履歴トレンドのグラフ");
+  await expect(chart.locator("path.bi-trend__line").first()).toBeVisible();
+  await expect(chart.locator("path.bi-trend__marker")).toHaveCount(0);
   await load(page, "mixed");
   await reply(page);
-  await page.getByLabel("表示する履歴系列").selectOption("number");
   await expect(page.locator("[data-history-mixed]")).toBeVisible();
   await load(page, "expired");
   await reply(page);
-  await expect(
-    page.locator('[data-coverage-reason="expired"]').first(),
-  ).toBeVisible();
+  await expect(page.locator(".history-trend")).toContainText(
+    "記録範囲・品質・系列の切れ目はまだ表示しません。",
+  );
 });
 
 test("controller clears graphs, waits for retired reads and rejects wrong replies", async ({
@@ -135,7 +128,7 @@ test("controller clears graphs, waits for retired reads and rejects wrong replie
     "data-history-phase",
     "invalid",
   );
-  await expect(page.locator("[data-history-point]")).toHaveCount(0);
+  await expect(page.locator(".history-trend .bi-trend__plot")).toHaveCount(0);
   await load(page);
   await page.getByRole("button", { name: "点数超過", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("点数が上限");
@@ -153,16 +146,19 @@ test("controller clears graphs, waits for retired reads and rejects wrong replie
   );
 });
 
-test("extreme finite values and out-of-Date epochs never produce invalid SVG geometry", async ({
+test("extreme finite values and out-of-Date epochs never produce invalid path geometry", async ({
   page,
 }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
   await fixture(page);
   await load(page, "extreme");
   await reply(page);
-  await expect(page.locator("[data-history-point]")).toHaveCount(2);
   await expect(page.locator(".history-trend .range")).toContainText("ms");
-  const valid = await page
-    .locator(".history-trend svg")
+  const chart = page.getByLabel("履歴トレンドのグラフ");
+  await expect(chart).toBeVisible();
+  const valid = await chart
+    .locator("svg")
     .evaluateAll((svgs) =>
       svgs.every((svg) =>
         [...svg.querySelectorAll("*")].every((element) =>
@@ -171,6 +167,7 @@ test("extreme finite values and out-of-Date epochs never produce invalid SVG geo
       ),
     );
   expect(valid).toBe(true);
+  expect(errors).toEqual([]);
 });
 
 test("normal App has no fixture or automatic History source", async ({

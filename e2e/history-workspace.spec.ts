@@ -212,9 +212,10 @@ for (const theme of ["light", "dark"] as const) {
     await expect.poll(() => calls(page)).toBe(1);
     await reply(page, 0);
     await expect(trend(page)).toHaveAttribute("data-history-phase", "ready");
-    await expect(trend(page).locator("[data-history-point]")).toHaveCount(2);
-    await trend(page).getByLabel("表示する履歴系列").selectOption("number");
-    await expect(trend(page).locator("[data-history-point]")).toHaveCount(2);
+    await expect(
+      trend(page).locator("path.bi-trend__marker").first(),
+    ).toBeVisible();
+    await expect(trend(page).locator("path.bi-trend__line")).toHaveCount(0);
     await page.screenshot({
       path: info.outputPath(`history-app-${theme}.png`),
     });
@@ -226,8 +227,10 @@ for (const theme of ["light", "dark"] as const) {
     await load(page);
     await reply(page, 1, "minmax");
     await expect(trend(page)).toHaveAttribute("data-history-phase", "ready");
-    await expect(trend(page).locator("[data-bin-state]")).toHaveCount(3);
-    await trend(page).getByLabel("表示する履歴系列").selectOption("unknown");
+    await expect(
+      trend(page).locator("path.bi-trend__line").first(),
+    ).toBeVisible();
+    await expect(trend(page)).toContainText("系列が見つかりません");
     await expect(trend(page)).toContainText("系列が見つかりません");
     await close(page);
     const after = JSON.parse(

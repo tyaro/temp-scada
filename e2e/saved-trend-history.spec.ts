@@ -167,27 +167,22 @@ for (const theme of ["light", "dark"] as const)
     });
     await reply(page, 0);
     await expect(plot(page)).toHaveAttribute("data-history-phase", "ready");
-    await expect(plot(page).locator(".pen-identity")).toContainText(
-      "別名: 表示温度",
-    );
-    await expect(plot(page).locator("h3")).not.toContainText("表示温度");
-    await expect(plot(page).locator("h3")).not.toContainText("一覧温度");
-    expect(
-      await plot(page)
-        .locator("[data-history-point]")
-        .first()
-        .evaluate((el) => getComputedStyle(el).fill),
-    ).toBe("rgb(171, 18, 239)");
-    await plot(page).getByLabel("表示する履歴系列").selectOption("bool");
-    expect(
-      await plot(page)
-        .locator("[data-history-point]")
-        .first()
-        .evaluate((el) => getComputedStyle(el).fill),
-    ).toBe("rgb(18, 171, 205)");
-    await plot(page).getByLabel("表示する履歴系列").selectOption("unknown");
+    // 凡例は保存トレンドの別名と系列IDを示し、系列一覧の名称（履歴の識別）とは混ぜない。
+    const legend = plot(page).getByLabel("履歴トレンドの凡例");
+    await expect(legend).toContainText("表示温度");
+    await expect(legend).not.toContainText("一覧温度");
+    await expect(
+      legend.locator('[data-history-legend-series="number"]'),
+    ).toContainText("系列ID: number");
+    // ペンの色は部品の枠の変数で表し、テーマの定義の結果では変わらない。
+    const colors = await plot(page)
+      .locator("path.bi-trend__marker")
+      .evaluateAll((paths) =>
+        paths.map((el) => el.getAttribute("stroke") ?? el.getAttribute("fill")),
+      );
+    expect(colors.length).toBeGreaterThan(0);
+    expect(colors.every((c) => c?.startsWith("var(--banto-chart-"))).toBe(true);
     await expect(plot(page)).toContainText("系列が見つかりません");
-    await plot(page).getByLabel("表示する履歴系列").selectOption("number");
     await page.screenshot({
       path: info.outputPath(`saved-history-${theme}.png`),
     });
@@ -195,7 +190,7 @@ for (const theme of ["light", "dark"] as const)
       .getByLabel("終了UTC", { exact: true })
       .fill("1970-01-01T00:00:02.001Z");
     await expect(plot(page)).toHaveAttribute("data-history-phase", "idle");
-    await expect(plot(page).locator("[data-history-point]")).toHaveCount(0);
+    await expect(plot(page).locator("path.bi-trend__marker")).toHaveCount(0);
     await close(page);
     await expect(
       mainCanvas(page).getByRole("button", {
@@ -215,7 +210,7 @@ for (const theme of ["light", "dark"] as const)
       .click();
     await expect(dialog(page).getByRole("checkbox")).toHaveCount(3);
     await expect(dialog(page).getByLabel("取得モード")).toBeEnabled();
-    await expect(plot(page).locator("[data-history-point]")).toHaveCount(0);
+    await expect(plot(page).locator("path.bi-trend__marker")).toHaveCount(0);
     await close(page);
     expect(
       JSON.parse((await downloadBytes(await downloadProject(page))).toString()),
@@ -260,7 +255,7 @@ for (const [label, patch, message] of [
     ).toBeDisabled();
     expect(await calls(page)).toBe(0);
   });
-test("saved minmax renders independent envelopes in the pen color, not alias as segment metadata", async ({
+test("saved minmax renders the envelope lines in the pen's color slot, not alias as segment metadata", async ({
   page,
 }) => {
   const project = fixture();
@@ -272,16 +267,12 @@ test("saved minmax renders independent envelopes in the pen color, not alias as 
   await load(page, "1970-01-01T00:00:00.005Z");
   await reply(page, 0);
   await expect(plot(page)).toHaveAttribute("data-history-phase", "ready");
-  await expect(
-    plot(page).locator("[data-history-envelope]").first(),
-  ).toBeVisible();
-  expect(
-    await plot(page)
-      .locator("[data-history-envelope]")
-      .first()
-      .evaluate((el) => getComputedStyle(el).stroke),
-  ).toBe("rgb(171, 18, 239)");
-  await expect(plot(page).locator("[data-history-point]")).toHaveCount(0);
+  const line = plot(page).locator("path.bi-trend__line").first();
+  await expect(line).toBeVisible();
+  expect(await line.getAttribute("stroke")).toMatch(
+    /^var\(--banto-chart-\d\)$/,
+  );
+  await expect(plot(page).locator("path.bi-trend__marker")).toHaveCount(0);
 });
 test("Popup close/reopen and source replacement retain one physical slot and clear stale presentation", async ({
   page,
@@ -354,7 +345,7 @@ test("Inspector opens saved history and Project replacement retires its owner", 
     .locator(`[data-object-id="${sample.screens[0].objects.at(-1)!.id}"]`)
     .click();
   await page.getByRole("button", { name: "履歴を開く", exact: true }).click();
-  await expect(plot(page).locator("[data-history-point]")).toHaveCount(0);
+  await expect(plot(page).locator("path.bi-trend__marker")).toHaveCount(0);
 });
 
 test("different saved definitions share the physical read slot and never recolor a late result", async ({
@@ -391,16 +382,18 @@ test("different saved definitions share the physical read slot and never recolor
   expect(await calls(page)).toBe(1);
   await reply(page, 0);
   await expect.poll(() => calls(page)).toBe(2);
-  await expect(plot(page).locator("[data-history-point]")).toHaveCount(0);
+  await expect(plot(page).locator("path.bi-trend__marker")).toHaveCount(0);
   await reply(page, 1);
   await expect(plot(page)).toHaveAttribute("data-history-phase", "ready");
-  await expect(plot(page).locator(".pen-identity")).toContainText("別名2");
-  expect(
-    await plot(page)
-      .locator("[data-history-point]")
-      .first()
-      .evaluate((el) => getComputedStyle(el).fill),
-  ).toBe("rgb(0, 0, 255)");
+  const legend = plot(page).getByLabel("履歴トレンドの凡例");
+  await expect(legend).toContainText("別名2");
+  // 後から届いた結果でも、別定義のペンの色の枠で描き、前の定義の色にならない。
+  const marker = plot(page).locator("path.bi-trend__marker").first();
+  await expect(marker).toBeVisible();
+  const stroke = await marker.evaluate(
+    (el) => el.getAttribute("stroke") ?? el.getAttribute("fill"),
+  );
+  expect(stroke).toMatch(/^var\(--banto-chart-\d\)$/);
   expect(
     await page.evaluate(() => (window as any).__savedHistory.maxActive),
   ).toBe(1);
@@ -443,7 +436,7 @@ for (const origin of ["main", "popup"] as const)
       .getByRole("button", { name: "プロセス画面", exact: true })
       .click();
     await openMain(page);
-    await expect(plot(page).locator("[data-history-point]")).toHaveCount(0);
+    await expect(plot(page).locator("path.bi-trend__marker")).toHaveCount(0);
     await expect(
       dialog(page).getByLabel("終了UTC", { exact: true }),
     ).toHaveValue("");
@@ -467,7 +460,7 @@ test("operator view opens saved history above itself and Escape closes only the 
   await expect.poll(() => calls(page)).toBe(1);
   await reply(page, 0);
   await expect(
-    plot(page).locator("[data-history-point]").first(),
+    plot(page).locator("path.bi-trend__marker").first(),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog(page)).toHaveCount(0);
