@@ -3,36 +3,30 @@ import { selectPanel, chooseTheme } from "./helpers/designer";
 
 const panels = ["プロジェクト", "レイヤー", "部品"] as const;
 
-test("sidebar tabs use manual keyboard activation and expose only the active panel", async ({
+// #331 D2: 左の 3 つは dock のタブ（キーボード操作は dock の部品のもの）。
+test("sidebar panes are dock tabs that show only the active pane and hide outside editing", async ({
   page,
 }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "編集", exact: true }).click();
   const tab = (name: string) => page.getByRole("tab", { name, exact: true });
-  await tab("プロジェクト").focus();
-  await tab("プロジェクト").press("ArrowRight");
-  await expect(tab("レイヤー")).toBeFocused();
   await expect(tab("プロジェクト")).toHaveAttribute("aria-selected", "true");
-  await page.keyboard.press("Enter");
+  await tab("レイヤー").click();
   await expect(tab("レイヤー")).toHaveAttribute("aria-selected", "true");
   await expect(
-    page.getByRole("tabpanel", { name: "レイヤー", exact: true }),
+    page.getByRole("region", { name: "レイヤー", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("tabpanel")).toHaveCount(1);
-  await tab("レイヤー").press("End");
-  await expect(tab("部品")).toBeFocused();
-  await page.keyboard.press(" ");
+  await expect(page.locator("#designer-layers-panel")).toBeVisible();
+  await expect(page.locator("#designer-project-panel")).toBeHidden();
+  await expect(page.locator("#designer-parts-panel")).toBeHidden();
+  await tab("部品").click();
   await expect(tab("部品")).toHaveAttribute("aria-selected", "true");
-  await tab("部品").press("ArrowRight");
-  await expect(tab("プロジェクト")).toBeFocused();
-  await page.keyboard.press("Home");
-  await expect(tab("プロジェクト")).toBeFocused();
   await page
     .getByRole("button", { name: "表示プレビュー", exact: true })
     .click();
-  await expect(tab("プロジェクト")).toHaveAttribute("aria-selected", "true");
-  await expect(tab("レイヤー")).toBeDisabled();
-  await expect(tab("部品")).toBeDisabled();
+  await expect(page.locator("#designer-project-panel")).toBeVisible();
+  await expect(tab("レイヤー")).toHaveCount(0);
+  await expect(tab("部品")).toHaveCount(0);
 });
 
 test("switching panels preserves hidden screen drafts, selection, viewport and history", async ({
@@ -191,7 +185,7 @@ for (const theme of ["light", "dark"]) {
           page.getByRole("tab", { name, exact: true }),
         ).toBeInViewport();
         await expect(
-          page.getByRole("tabpanel", { name, exact: true }),
+          page.getByRole("region", { name, exact: true }),
         ).toBeInViewport();
         await expect(
           page.getByRole("button", {

@@ -276,7 +276,7 @@ test("Undo changing a captured parent stops autoscroll without another dragover"
   let data = await begin(page, b);
   await folder(page, c).dispatchEvent("drop", { dataTransfer: data });
   data = await begin(page, b);
-  const panel = page.locator("#designer-panel-layers");
+  const panel = page.getByRole("region", { name: "レイヤー", exact: true });
   await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
   const box = (await panel.boundingBox())!,
     before = await panel.evaluate((el) => el.scrollTop);

@@ -228,6 +228,7 @@ Designer の `<main>` の内側を `ThreePaneDock` に替えた（入口は [cod
 - **浮動は D2〜D4 のあいだ止める**（2026-11-21 ユーザー決定）: dock は全 pane で `undock: false`（浮かせない・別ウィンドウにしない）。自前の浮動の入口（表示メニューの「…を浮動にする」・配置の保存と復元、Inspector と左の見出しの配置メニュー）は出さない。コード（`floating-*`・`FloatingPanelHeader`・`inspector-layout.ts`・placement の設定キー）は残し、**D4 で dock の浮動を解禁するときに消す**。ドッキング中の移動・タブ・divider・隠す／表示はできる。ピン（自動で隠す）も D4 まで出さない（`autoHide: false`）。
 - blur の保護: `lib/designer/dock-focus.ts` の `isRearrangingBlur`（dock の `isDockRearranging` を見る）を `ShapeLabel` の文字サイズと Inspector の数値の欄の blur の確定の前に置いた。`moveBefore` の無い WebView2 の組み替えと、どの環境でも狭い表示へ切り替えて Inspector が帯へ移るときの blur では確定しない。Tab で離れたときは今までどおり 1 回確定する（`e2e/dock-frame.spec.ts` で `moveBefore` を消した場合と有る場合の両方を確かめる）。
 - 見た目は上流のまま（2026-11-20 の判断）。左の 3 つのタブはそれぞれに「パネルの操作」と ✕ を持つので、既定の幅 240px ではタブの帯が詰まって横にスクロールする。必要なら Banto に Issue を立てる（未起票）。
+- 狭い表示の制約: 広い表示で Inspector の中のタグの選択の窓を開いたまま 1100px 未満へ狭めると、Inspector が帯へ移るので窓も隠れる（閉じてから帯の Inspector で開き直せる）。左のタブの組の本体はタブを切り替えても同じ要素で、レイヤーのドラッグの自動スクロールはスクロールする祖先をその都度探す（`layer-drag.ts`）。dock の分割の大きさは端数の px になるので、キャンバスの中心・倍率の e2e は半 px〜1px の差を許すようにした。
 - 配置の保存はしない（D3）。既存の placement の設定キーにも触れていない。
 - スクロール位置が組み替えで先頭に戻る件（[Banto #768](https://github.com/tyaro/banto/issues/768)）は上流で修正済み・未リリース（v7.10.0 には無い）。**次の Banto で入る**ので、D2 では対処していない。
 - e2e: パネルのセレクタに頼る spec を直した（`panel-visibility`・`layout-reset`・`panel-widths` を dock の pane・divider・帯に合わせ、`panel-widths` は divider の操作・幅の標準化・最初の幅に書き直した）。浮動を試す `inspector-floating`・`sidebar-floating` は D4 まで `test.skip`（理由を spec に書いた）。新しく `e2e/dock-frame.spec.ts`。

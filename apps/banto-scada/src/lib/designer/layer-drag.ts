@@ -198,9 +198,25 @@ type DropOptions = {
   };
 };
 
+/**
+ * スクロールする祖先（#331 D2 から左のパネルは dock の pane で、スクロールするのは pane の
+ * 本体。据え置きの pane は組み替えで親が変わるので、使うたびに探す）。
+ */
+function scrollParent(node: HTMLElement): HTMLElement | null {
+  for (let el = node.parentElement; el; el = el.parentElement) {
+    const { overflowY } = getComputedStyle(el);
+    if (
+      (overflowY === "auto" || overflowY === "scroll") &&
+      el.scrollHeight > el.clientHeight
+    )
+      return el;
+  }
+  return null;
+}
+
 // Folder centers keep membership semantics; row edges offer sibling insertion.
 export function layerDropSurface(node: HTMLElement, options: DropOptions) {
-  const panel = node.closest<HTMLElement>('[role="tabpanel"]')!;
+  let panel: HTMLElement | null = null;
   let frame = 0,
     velocity = 0;
   function stop() {
@@ -213,7 +229,7 @@ export function layerDropSurface(node: HTMLElement, options: DropOptions) {
       stop();
       return;
     }
-    panel.scrollTop += velocity;
+    if (panel) panel.scrollTop += velocity;
     frame = requestAnimationFrame(scroll);
   }
   function over(event: DragEvent) {
@@ -239,6 +255,11 @@ export function layerDropSurface(node: HTMLElement, options: DropOptions) {
       event.preventDefault();
       if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
     } else if (event.dataTransfer) event.dataTransfer.dropEffect = "none";
+    panel = scrollParent(node);
+    if (!panel) {
+      stop();
+      return;
+    }
     const rect = panel.getBoundingClientRect();
     velocity =
       event.clientY < rect.top + 40

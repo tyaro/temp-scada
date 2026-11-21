@@ -223,6 +223,10 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
     set view(value: DesignerDockView | undefined) {
       view = value;
     },
+    /** アプリの側からの表示・非表示・置き換えを dock へ依頼している途中。 */
+    get requesting() {
+      return inflight.size > 0;
+    },
     /** 左のパネルが 1 つでも出ている（編集モードの「左パネル」）。 */
     get showSidebar() {
       return DESIGNER_LEFT_PANES.some((pane) => left[pane]);

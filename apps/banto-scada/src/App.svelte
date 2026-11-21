@@ -490,10 +490,13 @@
     designerGesture = false;
     if (kind === "divider") canvasWorkspace?.finishPanelResize();
   }
-  function designerPanelChange(_change: DockPanelChange) {
+  function designerPanelChange(change: DockPanelChange) {
     // どの pane も据え置き（persistent）なので、組み替えで中身は失われない。
-    // 中央の大きさが変わるので、キャンバスの表示の中心を保つ。
-    canvasWorkspace?.preparePanelResize();
+    // 中央の大きさが変わりうる組み替えでは、キャンバスの表示の中心を保つ
+    // （タブの切り替えは中央の大きさを変えないので触らない。アプリ自身の表示・非表示の
+    // 依頼は、呼んだ側が必要なら先に整える。モードの切り替えでは今までどおり整えない）。
+    if (change.kind !== "tab-switch" && !designerDock.requesting)
+      canvasWorkspace?.preparePanelResize();
     return true;
   }
   let bottomResizer = $state<{ cancel: () => void }>();

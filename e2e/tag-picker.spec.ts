@@ -166,7 +166,16 @@ for (const theme of ["light", "dark"]) {
     await chooseTheme(page, theme);
     await button(page, "タグを選択").click();
     for (const width of [1920, 1280, 600]) {
-      await page.setViewportSize({ width, height: 800 });
+      if (width < 1100) {
+        // #331 D2: 狭い表示では Inspector は右端の帯へ移り、その中の選択の窓も隠れる。
+        // 閉じてから狭くし、帯から Inspector を引き出して開き直す。
+        await button(page, "キャンセル").click();
+        await page.setViewportSize({ width, height: 800 });
+        const band = page.locator('[data-dock-band-tab="right"]');
+        if ((await band.getAttribute("aria-expanded")) !== "true")
+          await band.click();
+        await button(page, "タグを選択").click();
+      } else await page.setViewportSize({ width, height: 800 });
       const box = await dialog(page).boundingBox();
       expect(box!.x).toBeGreaterThanOrEqual(0);
       expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);

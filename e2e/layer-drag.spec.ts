@@ -243,7 +243,7 @@ test("dragging near the panel edge scrolls the long tree and stops on cancellati
   page,
 }) => {
   await start(page, { long: true });
-  const panel = page.getByRole("tabpanel", { name: "レイヤー", exact: true });
+  const panel = page.getByRole("region", { name: "レイヤー", exact: true });
   await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
   const data = await begin(page, row(page, ids[2]));
   const box = (await panel.boundingBox())!;
@@ -266,7 +266,7 @@ test("invalidating the drag session stops autoscroll without waiting for native 
   page,
 }) => {
   await start(page, { long: true });
-  const panel = page.locator("#designer-panel-layers");
+  const panel = page.getByRole("region", { name: "レイヤー", exact: true });
   await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
   const data = await begin(page, row(page, ids[2]));
   const box = (await panel.boundingBox())!;
@@ -279,10 +279,12 @@ test("invalidating the drag session stops autoscroll without waiting for native 
   await expect
     .poll(() => panel.evaluate((el) => el.scrollTop))
     .toBeLessThan(before - 50);
+  // #331 D2: タブの組の本体（スクロールする要素）は表のタブが変わっても同じ要素。
+  const scroller = (await panel.elementHandle())!;
   await selectPanel(page, "プロジェクト");
-  const position = await panel.evaluate((el) => el.scrollTop);
+  const position = await scroller.evaluate((el) => el.scrollTop);
   await page.waitForTimeout(150);
-  expect(await panel.evaluate((el) => el.scrollTop)).toBe(position);
+  expect(await scroller.evaluate((el) => el.scrollTop)).toBe(position);
   await selectPanel(page, "レイヤー");
   await expect(page.locator(".layer-drag-guide")).toHaveCount(0);
 });

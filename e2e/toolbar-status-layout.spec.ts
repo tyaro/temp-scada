@@ -26,6 +26,12 @@ for (const theme of ["light", "dark"] as const)
       1920, 1840, 1760, 1680, 1600, 1440, 1280, 1100, 900, 650,
     ].entries()) {
       await page.setViewportSize({ width, height: 1080 });
+      // #331 D2: 1100px 未満は dock の狭い表示。Inspector を右端の帯から引き出す。
+      if (width < 1100) {
+        const band = page.locator('[data-dock-band-tab="right"]');
+        if ((await band.getAttribute("aria-expanded")) !== "true")
+          await band.click();
+      }
       const baseline = await height();
       await x.fill(String(320 + index));
       await expect(status).toContainText("未適用の入力あり");
