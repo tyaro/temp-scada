@@ -162,9 +162,7 @@ test("native shell reads history through the host commands", async ({
   await expect(trend(page)).toHaveAttribute("data-history-phase", "loading");
   await page.evaluate(() => (window as any).__nativeHistoryHost.reply(0));
   await expect(trend(page)).toHaveAttribute("data-history-phase", "ready");
-  await expect(
-    trend(page).locator("path.bi-trend__marker").first(),
-  ).toBeVisible();
+  await expect(trend(page).locator("[data-history-point]")).toHaveCount(2);
 
   // A host failure reaches the screen as its fixed code.
   await dialog(page).getByRole("button", { name: "取得", exact: true }).click();
