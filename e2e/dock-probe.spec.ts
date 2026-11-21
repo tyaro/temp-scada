@@ -306,3 +306,51 @@ test("数値の欄にフォーカスがあるまま組み替えても blur で s
   expect(await call(page, "resetLayout")).toBe("applied");
   await expectKept(page, "図形の文字サイズ");
 });
+
+// #331 D2: `Element.moveBefore` の無い環境（古い WebView2）では、組み替えでフォーカス中の欄に blur が
+// 出る。ShapeLabel の数値の欄は `isRearrangingBlur`（dock の `isDockRearranging`）でその blur では
+// 確定しない。dock がフォーカスを戻した後、Tab で離れたときは今までどおり 1 回確定する。
+test("moveBefore が無くても、組み替えの blur では確定せず、Tab で離れると 1 回確定する（D2）", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    delete (Element.prototype as { moveBefore?: unknown }).moveBefore;
+  });
+  await open(page);
+  expect(await page.evaluate(() => "moveBefore" in Element.prototype)).toBe(
+    false,
+  );
+  await text(page).fill(draftText);
+  await size(page).click();
+  await size(page).fill(draftSize);
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    w.__baseSubmits = w.__dockProbe.submits;
+    w.__blurs = 0;
+    document
+      .querySelector('[name="labelFontSize"]')!
+      .addEventListener("blur", () => w.__blurs++);
+  });
+  for (const [method, ...args] of [
+    ["float", "right"],
+    ["dockBack", "right"],
+    ["move", "right", { tabWith: "left" }],
+    ["resetLayout"],
+  ] as const) {
+    expect(await call(page, method, ...args)).toBe("applied");
+    await expectKept(page, "図形の文字サイズ");
+  }
+  // blur は実際に出ていた（moveBefore の無い経路を通った）。
+  expect(
+    await page.evaluate(() => (window as any).__blurs), // eslint-disable-line @typescript-eslint/no-explicit-any
+  ).toBeGreaterThan(0);
+  await page.keyboard.press("Tab");
+  await expect
+    .poll(
+      async () =>
+        (await submitCount(page)) -
+        (await page.evaluate(() => (window as any).__baseSubmits)),
+    ) // eslint-disable-line @typescript-eslint/no-explicit-any
+    .toBe(1);
+});

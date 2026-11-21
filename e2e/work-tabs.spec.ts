@@ -114,11 +114,11 @@ test("作業画面の表示中はキャンバス向けの操作を無効にし�
 
   // レイヤー・部品は inert にして理由を示す。
   await selectPanel(page, "部品");
-  const parts = page.locator("#designer-panel-parts");
+  const parts = page.locator("#designer-parts-panel");
   await expect(parts.getByText("画面タブを選ぶと使えます")).toBeVisible();
   await expect(parts.locator(".canvas-only")).toHaveAttribute("inert", "");
   await selectPanel(page, "レイヤー");
-  const layers = page.locator("#designer-panel-layers");
+  const layers = page.locator("#designer-layers-panel");
   await expect(layers.getByText("画面タブを選ぶと使えます")).toBeVisible();
   await expect(layers.locator(".canvas-only")).toHaveAttribute("inert", "");
 
@@ -150,7 +150,7 @@ test("作業画面の表示中はキャンバス向けの操作を無効にし�
     ["ファイル", "画像を配置"],
     ["表示", "選択範囲を表示"],
     ["表示", "プロパティを隠す"],
-    ["表示", "プロパティを浮動にする"],
+    // 「プロパティを浮動にする」は D2〜D4 の浮動の一時停止で出さない（#331）。
     ["表示", "タグ参照一覧を隠す"],
     ["表示", "ルーラーを隠す"],
   ] as const) {
@@ -179,7 +179,7 @@ test("作業画面の表示中はキャンバス向けの操作を無効にし�
     1,
   );
   await expect(
-    page.locator("#designer-panel-layers .canvas-only"),
+    page.locator("#designer-layers-panel .canvas-only"),
   ).not.toHaveAttribute("inert", "");
 });
 

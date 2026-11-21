@@ -8,7 +8,6 @@ test("desktop workspace keeps properties beside the canvas and scrolls tools ind
   await selectPanel(page, "プロジェクト");
   await fileCommand(page, "工程図サンプルを開く");
   await page.getByRole("button", { name: "編集", exact: true }).click();
-  const sidebar = page.getByRole("complementary", { name: "Project と部品" });
   await selectPanel(page, "レイヤー");
   await page
     .getByRole("navigation", { name: "図形一覧" })
@@ -26,7 +25,8 @@ test("desktop workspace keeps properties beside the canvas and scrolls tools ind
   expect((await inspector.boundingBox())!.x).toBeGreaterThan(
     before.x + before.width,
   );
-  const panel = sidebar.getByRole("tabpanel");
+  // #331 D2: 左のタブの組の本体（dock の pane の本体がスクロールする）。
+  const panel = page.getByRole("region", { name: "レイヤー", exact: true });
   await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
   await panel.evaluate((el) => (el.scrollTop = 0));
   const after = (await svg.boundingBox())!;
@@ -72,6 +72,8 @@ test("small screens stack editor controls without horizontal overflow", async ({
   await page.getByRole("button", { name: "編集", exact: true }).click();
   await selectPanel(page, "部品");
   await page.getByRole("button", { name: "配管を追加", exact: true }).click();
+  // #331 D2: 狭い表示では Inspector は右端の帯から引き出す。
+  await page.locator('[data-dock-band-tab="right"]').click();
   await expect(page.getByLabel("頂点", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(

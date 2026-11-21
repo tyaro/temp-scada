@@ -1,12 +1,30 @@
 import type { Page } from "@playwright/test";
 
-/** Follow the same tab entry points as the editor user. */
+const PANES = {
+  プロジェクト: { id: "left", content: "#designer-project-panel" },
+  レイヤー: { id: "layers", content: "#designer-layers-panel" },
+  部品: { id: "parts", content: "#designer-parts-panel" },
+} as const;
+
+/**
+ * Follow the same tab entry points as the editor user. #331 D2 から左は dock のパネル:
+ * まとまっていれば dock のタブ、狭い表示では端の帯（引き出す）、1 枚だけならそのまま。
+ */
 export async function selectPanel(
   page: Page,
   name: "プロジェクト" | "レイヤー" | "部品",
 ) {
+  const { id, content } = PANES[name];
   const tab = page.getByRole("tab", { name, exact: true });
-  if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+  const band = page.locator(`[data-dock-band-tab="${id}"]`);
+  const alone = page.locator(`${content}:visible`);
+  await tab.or(band).or(alone).first().waitFor();
+  if (await tab.count()) {
+    if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();
+  } else if (await band.count()) {
+    if ((await band.getAttribute("aria-expanded")) !== "true")
+      await band.click();
+  }
 }
 
 /** Use the compact theme icon menu, retaining the explicit OS-following option. */
@@ -51,6 +69,14 @@ export async function chooseMenuItem(
       .getByRole("menuitem", { name, exact: true })
       .click();
   }
+}
+
+/**
+ * 左の 3 つのパネル（Project・レイヤー・部品）をまとめて隠す。#331 D2 から左は dock の
+ * 別々のパネルで、各パネルの ✕ はそのパネルだけを隠すので、まとめて隠すのは表示メニュー。
+ */
+export async function hideSidebar(page: Page) {
+  await chooseMenuItem(page, "表示", "左パネルを隠す");
 }
 
 /** 作業タブ「プロジェクト設定」を表示メニューから開く（開いていれば選ぶ）。 */

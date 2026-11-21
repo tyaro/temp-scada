@@ -217,6 +217,26 @@ Banto v7.10.0 で #763 が直った（`persistent` の pane を組み替える�
   - D1 の観点（DOM・確定前の値・dirty・IME）には入れていないので、合格の判定は変えない。2026-11-21 に [Banto #768](https://github.com/tyaro/banto/issues/768) へ起票した。D2 で Inspector が長くなる前に、上流の対応を待つか SCADA 側で控えて戻すかを決める。
 - D2 の条件（D1 合格）はこれで満たす。D2 の着手はユーザーが選ぶ。
 
+### D2 の結果（2026-11-21・日本時間）
+
+Designer の `<main>` の内側を `ThreePaneDock` に替えた（入口は [code-map の「Designer の枠」](../engineering/code-map.md#designer-の枠331-d22026-11-21)）。`main.ts` の `mount(App, …)` の形と `__TAURI_INTERNALS__` の分岐は変えていない。
+
+- 配置: 中央 = 画面プレビュー（キャンバス・作業画面・参照パネル・StatusRow。参照パネルの下パネル化は D5 なので中央に残す）。右 = Inspector。左3タブ（Project・レイヤー・部品）は dock の別々のパネル（`left`・`layers`・`parts`）にし、最初は左の区画に dock のタブとしてまとめて Project を表にする。どの pane も `persistent`（✕は hide で中身を保つ）。キャンバスの寸法の測定（`use:measureWorkspace`・`measuredStackHeight`）は中央の中へ移した。自前の tablist（`DesignerSidebar.svelte`）は消した。
+- 表示・非表示: 「左パネルを隠す／表示」「プロパティを隠す／表示」「補助パネルをすべて…」・ショートカット・部品パレットへの移動は、`controllers/designer-dock.svelte.ts` を通して dock の `setVisible` へ渡す 1 つの状態にした。dock の ✕ で隠したときは、編集中ならアプリの状態（左3つの表示・`showInspector`）へ写す。「左パネル」は左3つのまとめ（どれか 1 つでも出ていれば表示中）。まとめて隠して戻すと、前に表だったタブを表に戻す。「標準レイアウトに戻す」は既定の配置に置き換え、表のタブ・入力を保つ。
+- モード・幅: プレビューでは Project だけを出し、全画面プレビューでは左も隠す（今の挙動のまま）。Inspector は編集モードだけ。狭い幅は dock の狭い表示（`narrowBreakpoint` 1099px。今までの 1100px 未満と同じ）で、左右は端の帯から引き出す（今までの縦に積む表示から変わった）。dock の狭い表示は左右の pane だけを帯に置くので、出しているレイヤー・部品は SCADA 側で左端の帯へ並べ直す（引き出しは閉じたまま）。どの幅でも画面の高さに収め（`#app` を 100dvh）、中央がスクロールする。
+- 幅: 分割の幅は dock の divider が持つ。保存した幅（`panel-widths.ts`）は最初の配置の `leftWidth`/`rightWidth` にだけ使い、divider で変えた幅は保存しない。左右の `PanelResizeHandle` は外した（参照パネルの高さのハンドルは残す）。dock の分割は比率なので、窓の幅が変わったときは左右の区画の px を保つように比率を直す（`keepDesignerPaneWidths`。今までの固定幅と同じ見え方）。「パネルの幅を標準に戻す」は配置を変えずに根の分割の比率だけを既定の px へ戻す。divider の操作の間はキャンバスの表示の中心を保つ（`preparePanelResize`）。
+- **浮動は D2〜D4 のあいだ止める**（2026-11-21 ユーザー決定）: dock は全 pane で `undock: false`（浮かせない・別ウィンドウにしない）。自前の浮動の入口（表示メニューの「…を浮動にする」・配置の保存と復元、Inspector と左の見出しの配置メニュー）は出さない。コード（`floating-*`・`FloatingPanelHeader`・`inspector-layout.ts`・placement の設定キー）は残し、**D4 で dock の浮動を解禁するときに消す**。ドッキング中の移動・タブ・divider・隠す／表示はできる。ピン（自動で隠す）も D4 まで出さない（`autoHide: false`）。
+- blur の保護: `lib/designer/dock-focus.ts` の `isRearrangingBlur`（dock の `isDockRearranging` を見る）を `ShapeLabel` の文字サイズと Inspector の数値の欄の blur の確定の前に置いた。`moveBefore` の無い WebView2 の組み替えと、どの環境でも狭い表示へ切り替えて Inspector が帯へ移るときの blur では確定しない。Tab で離れたときは今までどおり 1 回確定する（`e2e/dock-frame.spec.ts` で `moveBefore` を消した場合と有る場合の両方を確かめる）。
+- 見た目は上流のまま（2026-11-20 の判断）。左の 3 つのタブはそれぞれに「パネルの操作」と ✕ を持つので、既定の幅 240px ではタブの帯が詰まって横にスクロールする。必要なら Banto に Issue を立てる（未起票）。
+- 配置の保存はしない（D3）。既存の placement の設定キーにも触れていない。
+- スクロール位置が組み替えで先頭に戻る件（[Banto #768](https://github.com/tyaro/banto/issues/768)）は上流で修正済み・未リリース（v7.10.0 には無い）。**次の Banto で入る**ので、D2 では対処していない。
+- e2e: パネルのセレクタに頼る spec を直した（`panel-visibility`・`layout-reset`・`panel-widths` を dock の pane・divider・帯に合わせ、`panel-widths` は divider の操作・幅の標準化・最初の幅に書き直した）。浮動を試す `inspector-floating`・`sidebar-floating` は D4 まで `test.skip`（理由を spec に書いた）。新しく `e2e/dock-frame.spec.ts`。
+
+残り（受け渡し）:
+
+- D3: 配置の自動保存（`layoutSnapshot()` を新しい設定キー 1 つへ）、「標準に戻す」・「表示」メニュー（`viewMenuItems`）、`panel-widths.ts` と旧キー `panel-widths` の撤去。D2 の「標準レイアウトに戻す」は `restoreLayout` で既定の配置へ置き換えるだけで、`resetLayout`（`ThreePaneDock` の既定はレイヤー・部品を外周に置く）は使っていない。
+- D4: 浮動・再ドッキングの解禁（`undock`・`autoHide` を戻す）、自前の `floating-panel*`・`FloatingPanelHeader`・`inspector-layout.ts`・placement の設定キーの撤去、飛ばした浮動の spec の置き換え。
+
 ## #359 トレンド共通部品の実証（2026-11-21・日本時間）
 
 banto-industrial の `@banto-industrial/trend`（`trend-v0.1.0`、Issue [#359](https://github.com/tyaro/temp-scada/issues/359)）を依存に足し、開発用のページ `apps/banto-scada/probes/trend.html` で `TrendChart` を描いた。データは模擬の source が H1 の minmax の応答を作り（表示範囲は H1 の 1 回の問い合わせの上限 1 時間に収め、区間の数は整数にする。1 時間を超えて見せるときの問い合わせの分割は別に決める）、`parseHistoryContract` で契約どおりか確かめてから `lib/history/trend-adapter.ts` で部品の区間へ写し、部品の `createRangeLoader` で読み直す。製品画面（`TrendView.svelte`・HistoryWorkspace）は変えていない。試験は `trend-adapter.test.ts`（H1 の共通 fixture を含む 24 件）と `e2e/trend-probe.spec.ts`（Playwright の Chromium で 5 件合格。初期の 1 時間からの縮小と、端数の出る拡大の繰り返しを含む）。

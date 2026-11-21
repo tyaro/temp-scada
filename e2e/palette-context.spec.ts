@@ -248,7 +248,8 @@ test("target replacement, search, tab switches and hidden panels close obsolete 
   await page.getByRole("searchbox", { name: "部品を検索" }).fill("ポンプ");
   await expect(menu(page, "Rectangle")).toHaveCount(0);
   await button(page, "ポンプを追加").click({ button: "right" });
-  await button(page, "左パネルを隠す").click();
+  // #331 D2: 部品のパネルの dock の ✕（部品だけを隠す）。
+  await button(page, "部品を隠す").click();
   await expect(menu(page, "ポンプ（組込）")).toHaveCount(0);
 });
 
@@ -263,6 +264,8 @@ for (const theme of ["light", "dark"])
       [650, 900],
     ]) {
       await page.setViewportSize({ width, height });
+      // #331 D2: 狭い表示では部品のパネルを左端の帯から引き出す。
+      await selectPanel(page, "部品");
       await button(page, "Rectangle を追加").click({ button: "right" });
       const popup = menu(page, "Rectangle");
       await expect(popup).toBeInViewport({ ratio: 1 });

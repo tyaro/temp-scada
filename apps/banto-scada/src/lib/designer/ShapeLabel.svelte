@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isRearrangingBlur } from "./dock-focus";
   import { isAreaShape, type ScreenObject } from "../project";
   import { shapeLabelFormValues } from "./forms/shape-label";
   import type { createDraftGuard } from "./drafts.svelte";
@@ -37,6 +38,7 @@
   function blurSize(event: FocusEvent) {
     const input = event.currentTarget as HTMLInputElement;
     if (
+      isRearrangingBlur(event) ||
       composing ||
       locked ||
       drafts.pending ||

@@ -232,10 +232,22 @@
   import CanvasControls from "./lib/designer/CanvasControls.svelte";
   import { createLayerTreeController } from "./lib/designer/controllers/layer-tree.svelte";
   import LayersPanel from "./lib/designer/LayersPanel.svelte";
-  import DesignerSidebar, {
-    type DesignerPanel,
-  } from "./lib/designer/DesignerSidebar.svelte";
-  let activePanel = $state<DesignerPanel>("project");
+  import {
+    ThreePaneDock,
+    createDockState,
+    type DockCapabilities,
+    type DockGestureKind,
+    type DockPanelChange,
+  } from "@banto/dock-svelte";
+  import {
+    DESIGNER_NARROW_BREAKPOINT,
+    DESIGNER_PANE_IDS,
+    DESIGNER_PANE_TITLES,
+    designerDockLayout,
+    keepDesignerPaneWidths,
+    withDesignerPaneWidths,
+  } from "./lib/designer/dock-layout";
+  import { createDesignerDock } from "./lib/designer/controllers/designer-dock.svelte";
   // Screen settings live in the unselected Inspector (UX §5.5(b)); a reveal
   // keeps them shown over the current selection until the selection changes.
   let revealScreenSettings = $state(false);
@@ -282,11 +294,9 @@
   import { DEFAULT_PANEL_LAYOUT } from "./lib/designer/panel-layout";
   import {
     DEFAULT_PANEL_WIDTHS,
-    PANEL_WIDTH_LIMITS,
     panelWidthMaximum,
     type PanelWidths,
   } from "./lib/designer/panel-widths";
-  import FloatingPanelHeader from "./lib/designer/FloatingPanelHeader.svelte";
   import { createFloatingPanelWorkspace } from "./lib/designer/controllers/floating-panel.svelte";
   import { createFloatingSidebar } from "./lib/designer/controllers/floating-sidebar.svelte";
   const floatingPanels = createFloatingPanelWorkspace();
@@ -326,12 +336,18 @@
     canvasWorkspace?.finishPanelResize();
     if (commit) void setPanelWidths(panelWidths);
   }
-  function changePanelWidth(side: keyof PanelWidths, width: number) {
-    panelWidths = { ...panelWidths, [side]: width };
-  }
   function resetPanelWidths() {
     beginPanelResize();
     panelWidths = { ...DEFAULT_PANEL_WIDTHS };
+    if (!designerNarrow)
+      designerDockState.layout = withDesignerPaneWidths(
+        designerDockState.layout,
+        {
+          hostWidth: windowWidth,
+          leftWidth: DEFAULT_PANEL_WIDTHS.left,
+          rightWidth: DEFAULT_PANEL_WIDTHS.right,
+        },
+      );
     finishPanelResize(true);
   }
   let measuredStackHeight = $state(0);
@@ -385,10 +401,101 @@
   import ScreenViewDialog from "./lib/designer/ScreenViewDialog.svelte";
   import InspectorPanel from "./lib/designer/InspectorPanel.svelte";
   let showInspector = $state(DEFAULT_PANEL_LAYOUT.panels.inspector);
-  let showSidebar = $state(DEFAULT_PANEL_LAYOUT.panels.sidebar);
   let showReferences = $state(DEFAULT_PANEL_LAYOUT.panels.references);
-  let leftResizer = $state<{ cancel: () => void }>();
-  let rightResizer = $state<{ cancel: () => void }>();
+  // #331 D2: Designer の枠は ThreePaneDock。分割の幅は dock の divider が持ち、
+  // 保存した幅（panel-widths）は最初の配置にだけ使う（外すのは D3）。配置は保存しない。
+  const designerDockState = createDockState();
+  const designerInitialLayout = designerDockLayout({
+    hostWidth: untrack(() => windowWidth),
+    leftWidth: untrack(() => leftWidth),
+    rightWidth: untrack(() => rightWidth),
+  });
+  const designerDock = createDesignerDock(designerDockState, {
+    get mode() {
+      return mode;
+    },
+    get previewFullscreen() {
+      return previewFullscreenActive;
+    },
+    get narrow() {
+      return designerNarrow || window.innerWidth <= DESIGNER_NARROW_BREAKPOINT;
+    },
+    get inspectorWanted() {
+      return inspectorShown;
+    },
+    get inspectorAdoptable() {
+      return canvasActive;
+    },
+    adoptInspector(visible) {
+      showInspector = visible;
+      // dock の ✕ で隠したとき: 今までの「プロパティを隠す」と同じく常設メニューへ戻す。
+      if (!visible)
+        void tick().then(() => {
+          const active = document.activeElement;
+          if (!active || active === document.body || active.closest("main"))
+            document
+              .querySelector<HTMLButtonElement>("[data-permanent-menu]")
+              ?.focus();
+        });
+    },
+  });
+  const showSidebar = $derived(designerDock.showSidebar);
+  const activePanel = $derived(designerDock.activePanel);
+  let designerNarrow = $state(false);
+  let designerThreePane = $state.raw<ReturnType<typeof ThreePaneDock>>();
+  // 窓の幅が変わっても左右の pane の px を保つ（狭い表示の間は数えない）。
+  let designerHostWidth = untrack(() => windowWidth);
+  $effect(() => {
+    const width = windowWidth;
+    if (designerNarrow) return;
+    untrack(() => {
+      if (width !== designerHostWidth && !designerGesture)
+        designerDockState.layout = keepDesignerPaneWidths(
+          designerDockState.layout,
+          designerHostWidth,
+          width,
+        );
+      designerHostWidth = width;
+    });
+  });
+  $effect(() => {
+    designerDock.view = designerThreePane;
+  });
+  let inspectorPaneWidth = $state(0);
+  /** 浮動は D2〜D4 のあいだ止める（2026-11-21 ユーザー決定）。中央の能力は dock が固定する。 */
+  function designerPaneCapabilities(): DockCapabilities {
+    return { undock: false, autoHide: false };
+  }
+  /** dock の操作（divider のドラッグなど）の途中。 */
+  let designerGesture = false;
+  /** false の間は利用者が組み替えられない。進行中の操作を取り消すのに一瞬だけ使う。 */
+  let designerArrange = $state(true);
+  async function cancelDesignerGesture() {
+    if (!designerGesture) return;
+    designerArrange = false;
+    await tick();
+    designerArrange = true;
+    await tick();
+  }
+  function designerGestureStart(kind: DockGestureKind) {
+    designerGesture = true;
+    if (kind === "divider") canvasWorkspace?.preparePanelResize(true);
+    else if (kind === "drag" || kind === "drag-candidate") {
+      canvasWorkspace?.cancelInteractions();
+      layerTreeBindings.endLayerDrag();
+    }
+    return true;
+  }
+  function designerGestureEnd(kind: DockGestureKind) {
+    designerGesture = false;
+    if (kind === "divider") canvasWorkspace?.finishPanelResize();
+  }
+  function designerPanelChange(_change: DockPanelChange) {
+    // どの pane も据え置き（persistent）なので、組み替えで中身は失われない。
+    // 中央の大きさが変わるので、キャンバスの表示の中心を保つ。
+    canvasWorkspace?.preparePanelResize();
+    return true;
+  }
   let bottomResizer = $state<{ cancel: () => void }>();
   const floatingInspector = createFloatingInspector(
     {
@@ -409,14 +516,10 @@
         return busy || !!drafts.pending || !!replacement || mode !== "edit";
       },
       beforePlacementChange() {
-        leftResizer?.cancel();
-        rightResizer?.cancel();
         bottomResizer?.cancel();
         canvasWorkspace?.preparePanelResize();
       },
       cancelWorkspaceInteraction() {
-        leftResizer?.cancel();
-        rightResizer?.cancel();
         bottomResizer?.cancel();
         stopPlacement();
         canvasWorkspace?.cancelInteractions();
@@ -450,14 +553,10 @@
         return busy || !!drafts.pending || !!replacement || mode !== "edit";
       },
       beforePlacementChange() {
-        leftResizer?.cancel();
-        rightResizer?.cancel();
         bottomResizer?.cancel();
         canvasWorkspace?.preparePanelResize();
       },
       cancelWorkspaceInteraction() {
-        leftResizer?.cancel();
-        rightResizer?.cancel();
         bottomResizer?.cancel();
         stopPlacement();
         canvasWorkspace?.cancelInteractions();
@@ -471,15 +570,23 @@
   );
   function restorePanelLayout() {
     if (mode !== "edit" || busy || drafts.pending || replacement) return;
-    leftResizer?.cancel();
-    rightResizer?.cancel();
     bottomResizer?.cancel();
     canvasWorkspace?.preparePanelResize();
     floatingInspector.standard();
     floatingSidebar.standard();
     panelWidths = { ...DEFAULT_PANEL_LAYOUT.widths };
     referenceHeight = DEFAULT_PANEL_LAYOUT.referenceHeight;
-    showSidebar = DEFAULT_PANEL_LAYOUT.panels.sidebar;
+    void cancelDesignerGesture()
+      .then(() =>
+        designerDock.restore(
+          designerDockLayout({
+            hostWidth: windowWidth,
+            leftWidth: DEFAULT_PANEL_LAYOUT.widths.left,
+            rightWidth: DEFAULT_PANEL_LAYOUT.widths.right,
+          }),
+        ),
+      )
+      .then(() => designerDock.setSidebar(DEFAULT_PANEL_LAYOUT.panels.sidebar));
     showInspector = DEFAULT_PANEL_LAYOUT.panels.inspector;
     showReferences = DEFAULT_PANEL_LAYOUT.panels.references;
     showMenubar = DEFAULT_PANEL_LAYOUT.menubar;
@@ -503,6 +610,15 @@
   };
   let previousPanels = $state<AuxVisibility | null>(null);
   let sidebarPanel = $state<HTMLElement>();
+  /** 表に出ている左のパネル（Project を優先）。 */
+  function frontSidebarPane(): HTMLElement | undefined {
+    const panes = [
+      ...document.querySelectorAll<HTMLElement>("[data-designer-left-pane]"),
+    ].filter((pane) => pane.checkVisibility());
+    return (
+      panes.find((pane) => pane === sidebarPanel) ?? panes[0] ?? sidebarPanel
+    );
+  }
   let referencesPanel = $state<HTMLDivElement>();
   function panelVisibility(): AuxVisibility {
     return {
@@ -517,24 +633,31 @@
   ) {
     canvasWorkspace?.preparePanelResize();
     previousPanels = null;
-    if (patch.sidebar !== undefined) showSidebar = patch.sidebar;
-    if (patch.inspector !== undefined) showInspector = patch.inspector;
+    const changes: Promise<unknown>[] = [];
+    if (patch.sidebar !== undefined)
+      changes.push(designerDock.setSidebar(patch.sidebar));
+    if (patch.inspector !== undefined) {
+      showInspector = patch.inspector;
+      changes.push(designerDock.syncInspector());
+    }
     if (patch.references !== undefined) showReferences = patch.references;
     if (focus)
-      void tick().then(() => {
-        const visible = panelVisibility()[focus];
-        const panel =
-          focus === "sidebar"
-            ? sidebarPanel
-            : focus === "inspector"
-              ? inspectorPanel
-              : referencesPanel;
-        if (visible) panel?.focus({ preventScroll: true });
-        else
-          document
-            .querySelector<HTMLButtonElement>("[data-permanent-menu]")
-            ?.focus();
-      });
+      void Promise.all(changes)
+        .then(tick)
+        .then(() => {
+          const visible = panelVisibility()[focus];
+          const panel =
+            focus === "sidebar"
+              ? frontSidebarPane()
+              : focus === "inspector"
+                ? inspectorPanel
+                : referencesPanel;
+          if (visible) panel?.focus({ preventScroll: true });
+          else
+            document
+              .querySelector<HTMLButtonElement>("[data-permanent-menu]")
+              ?.focus();
+        });
   }
   function setInspectorVisibility(visible: boolean, focus = false) {
     if (showInspector === visible) {
@@ -621,8 +744,10 @@
         ?.querySelector<HTMLElement>('[aria-label="キャンバス操作領域"]')
         ?.focus({ preventScroll: true }),
     showPartsPanel: () => {
-      setAuxPanelVisibility({ sidebar: true }, "sidebar");
-      activePanel = "parts";
+      void (showSidebar ? Promise.resolve() : designerDock.setSidebar(true))
+        .then(() => designerDock.showLeftPane("parts"))
+        .then(tick)
+        .then(() => frontSidebarPane()?.focus({ preventScroll: true }));
     },
     loadFavorites: getFavorites,
     saveFavorites: setFavorites,
@@ -2582,8 +2707,7 @@
       add,
     },
     view: {
-      inspectorLayout: floatingInspector,
-      sidebarLayout: floatingSidebar,
+      // 浮動の入口は D4 まで出さない（#331 D2、2026-11-21 ユーザー決定）。
       get mode() {
         return mode;
       },
@@ -3164,40 +3288,55 @@
   {/if}
 </div>
 <main
-  use:measureWorkspace
   data-project-revision={project.manifest.projectRevision}
-  style:--sidebar-width={`${leftWidth}px`}
-  style:--inspector-width={`${rightWidth}px`}
   class:editing={mode === "edit"}
   class:fullscreen-preview={mode === "preview" && previewFullscreenActive}
-  class:sidebar-visible={mode === "edit"
-    ? showSidebar && !floatingSidebar.floating
-    : !previewFullscreenActive}
-  class:inspector-visible={inspectorShown && !floatingInspector.floating}
 >
-  <aside
-    class="project-sidebar"
-    class:floating={floatingSidebar.floating}
-    data-panel-placement={floatingSidebar.floating ? "floating" : "docked"}
-    style={floatingSidebar.style}
-    onpointerdown={() => floatingSidebar.raise()}
-    onfocusin={() => floatingSidebar.raise()}
-    id="designer-project-panel"
-    aria-label="Project と部品"
-    hidden={mode === "edit" && !showSidebar}
-    bind:this={sidebarPanel}
-    tabindex="-1"
+  <!-- #331 D2: 左 = Project（レイヤー・部品は追加パネル）、中央 = 画面プレビュー、右 = Inspector。
+       どの pane も据え置き（persistent）。浮動は D4 まで止める（undock: false）。 -->
+  <ThreePaneDock
+    bind:this={designerThreePane}
+    bind:narrow={designerNarrow}
+    dock={designerDockState}
+    initialLayout={designerInitialLayout}
+    {leftWidth}
+    {rightWidth}
+    narrowBreakpoint={DESIGNER_NARROW_BREAKPOINT}
+    panels={[
+      {
+        id: DESIGNER_PANE_IDS.layers,
+        title: DESIGNER_PANE_TITLES.layers,
+        content: layersPane,
+        initial: { edge: "left" },
+      },
+      {
+        id: DESIGNER_PANE_IDS.parts,
+        title: DESIGNER_PANE_TITLES.parts,
+        content: partsPane,
+        initial: { edge: "left" },
+      },
+    ]}
+    persistent={() => true}
+    arrange={designerArrange}
+    capabilities={designerPaneCapabilities}
+    canStartGesture={designerGestureStart}
+    onGestureEnd={designerGestureEnd}
+    beforePanelChange={designerPanelChange}
+    messages={{
+      threePaneLeft: () => DESIGNER_PANE_TITLES.project,
+      threePaneCenter: () => DESIGNER_PANE_TITLES.center,
+      threePaneRight: () => DESIGNER_PANE_TITLES.inspector,
+      close: (title) => `${title}を隠す`,
+    }}
   >
-    {#if mode === "edit"}<FloatingPanelHeader
-        layout={floatingSidebar}
-        label="作業パネル"
-        panelName="作業パネル"
-        dockSide="左"
-        hideLabel="左パネルを隠す"
-        onclose={() => setAuxPanelVisibility({ sidebar: false }, "sidebar")}
-      />{/if}
-    <DesignerSidebar bind:active={activePanel} editable={mode === "edit"}>
-      {#snippet projectPanel()}
+    {#snippet left()}
+      <div
+        class="project-sidebar sidebar-pane"
+        id="designer-project-panel"
+        data-designer-left-pane="project"
+        bind:this={sidebarPanel}
+        tabindex="-1"
+      >
         <ProjectPanel
           {project}
           editing={mode === "edit"}
@@ -3222,458 +3361,443 @@
           onopenwork={(kind) => workTabs.open(kind)}
           onopenRecordingPlan={recordingTrend.openRecordingPlan}
         />
-      {/snippet}
-      {#snippet layersPanel()}
-        <LayersPanel
-          editing={mode === "edit"}
-          {canvasActive}
-          images={assetImages}
-          tree={layerTreeBindings}
+      </div>
+    {/snippet}
+    {#snippet right()}
+      <div class="inspector-pane" bind:clientWidth={inspectorPaneWidth}>
+        {#if mode === "edit"}
+          <InspectorPanel
+            {catalogSelection}
+            bind:this={inspectorController}
+            bind:element={inspectorPanel}
+            generation={workspaceGeneration}
+            {commitNumber}
+            visible={inspectorShown}
+            onclose={() => setInspectorVisibility(false, true)}
+            {project}
+            {selectedIds}
+            {selected}
+            {selectionLocked}
+            {hiddenSelectionCount}
+            ontogglevisibility={toggleObjectVisibility}
+            ontogglelock={toggleObjectLock}
+            activeDefinition={!!activeDefinition}
+            {screen}
+            {drafts}
+            {properties}
+            {moveSelection}
+            {edit}
+            openDefinition={editView.openDefinition}
+            onselectsource={(id) => selectObjects(id)}
+            onopenequipment={openSelectedEquipment}
+            onopenequipmentsettings={(id) =>
+              openSelectedEquipment(id, "settings")}
+            onmanagetrend={recordingTrend.openTrendDefinitions}
+            onopentrend={(objectId) =>
+              recordingTrend.openTrendHistory(screen.id, objectId)}
+            {openScreen}
+            images={assetImages}
+            onreplaceimage={imageImport.openReplacement}
+            imageBusy={imageImport.busy || busy || !!replacement}
+            screenSettings={screenSettingsPanel}
+            showScreenSettings={revealScreenSettings}
+          />
+        {/if}
+      </div>
+    {/snippet}
+    <section
+      class="designer-center"
+      use:measureWorkspace
+      aria-label="画面プレビュー"
+      bind:this={editorRegion}
+    >
+      {#if activeDefinition}
+        <DefinitionBanner
+          usageCount={symbolUsage(project, activeDefinition.id)}
+          strokeOverflow={symbolStrokeOverflow}
+          onreturn={editView.returnFromDefinition}
         />
-      {/snippet}
-      {#snippet partsPanel()}
-        <PartsPanel
+      {/if}
+      {#if mode === "preview"}
+        {#key `${workspaceGeneration}:${screen.id}`}
+          <SlotReadStatus
+            {screen}
+            screens={project.screens}
+            symbols={project.symbols}
+            equipmentContext={readContext.equipmentContext}
+          />
+        {/key}
+      {/if}
+      <div class="canvas-stack" bind:clientHeight={measuredStackHeight}>
+        {#each workTabs.tabs as kind (kind)}
+          <!-- W3: 開いている作業画面は非選択中も破棄せず hidden で保持する。 -->
+          <div
+            class="work-screen"
+            data-work-screen={kind}
+            role="region"
+            aria-labelledby={`work-screen-title-${kind}`}
+            hidden={!workScreenShown || workTabs.selected !== kind}
+          >
+            <h2 id={`work-screen-title-${kind}`} tabindex="-1">
+              {workTabLabel(kind)}
+            </h2>
+            {#if kind === "equipment"}
+              <div class="equipment-work">
+                {#key workspaceGeneration}<EquipmentLibrary
+                    {catalogSelection}
+                    bind:this={equipmentLibrary}
+                    {project}
+                    generation={workspaceGeneration}
+                    {drafts}
+                    {transition}
+                    oncommand={edit}
+                    onsubmit={submitForm}
+                    onopenusage={editView.openSymbolUsage}
+                    onopentable={openBindingTable}
+                    tableDisabled={editBlocked && !bindingTableOpen}
+                  />{/key}
+              </div>
+            {:else if kind === "alarm-definitions"}
+              <div class="alarm-definitions-work">
+                <AlarmSettings
+                  {project}
+                  generation={workspaceGeneration}
+                  {drafts}
+                  disabled={editBlocked}
+                  tagNames={catalogSelection.available
+                    ? catalogSelection.catalog.tags.map(
+                        (tag) => tag.externalName,
+                      )
+                    : []}
+                  oncommand={(command) => edit(command)}
+                  onsubmit={submitForm}
+                />
+              </div>
+            {:else if kind === "project-settings"}
+              <div class="project-settings-work">
+                {#key `${workspaceGeneration}:${project.manifest.projectId}`}
+                  <form
+                    use:drafts.track={{ name: project.manifest.name }}
+                    data-editor-form="project"
+                    aria-label="プロジェクト情報"
+                    onsubmit={submitForm}
+                    oncompositionstart={(event) =>
+                      composingForms.add(event.currentTarget)}
+                    oncompositionend={(event) =>
+                      composingForms.delete(event.currentTarget)}
+                  >
+                    <label class="banto-field banto-field--stacked"
+                      ><span class="banto-field-label">プロジェクト名</span
+                      ><input
+                        class="banto-field-control"
+                        onkeydown={nameFormKey}
+                        name="name"
+                        required
+                        maxlength="200"
+                      /></label
+                    >
+                    <button type="submit">プロジェクト名を適用</button>
+                  </form>
+                {/key}
+                <h3>運転表示の設定</h3>
+                <!-- 確定値は drafts.track の update で同期し、関係のない編集で未適用の選択を消さない。 -->
+                {#key `${workspaceGeneration}:${project.manifest.projectId}`}
+                  <form
+                    use:drafts.track={{
+                      startScreenId: project.operatorFrame?.startScreenId ?? "",
+                      headerScreenId:
+                        project.operatorFrame?.headerScreenId ?? "",
+                      footerScreenId:
+                        project.operatorFrame?.footerScreenId ?? "",
+                    }}
+                    data-editor-form="operator-frame"
+                    aria-label="運転表示の設定"
+                    onsubmit={submitForm}
+                  >
+                    {#each [["startScreenId", "開始画面"], ["headerScreenId", "ヘッダー画面"], ["footerScreenId", "フッター画面"]] as [key, label]}
+                      <label class="banto-field banto-field--stacked"
+                        ><span class="banto-field-label">{label}</span><select
+                          class="banto-field-control"
+                          name={key}
+                          aria-label={label}
+                          disabled={editBlocked}
+                          ><option value="">なし</option>
+                          {#each project.screens as target (target.id)}<option
+                              value={target.id}>{target.name}</option
+                            >{/each}</select
+                        ></label
+                      >
+                    {/each}
+                    <p class="hint">
+                      開始・ヘッダー・フッターは別の画面にします。ヘッダー・フッターの画面は画面切替ボタンの行き先にできません。
+                    </p>
+                    <button type="submit" disabled={editBlocked}
+                      >運転表示の設定を適用</button
+                    >
+                  </form>
+                {/key}
+                <h3>記録希望設定</h3>
+                <button
+                  class="open-recording-plan"
+                  disabled={editBlocked}
+                  onclick={recordingTrend.openRecordingPlan}
+                  >記録希望設定を開く</button
+                >
+              </div>
+            {/if}
+          </div>
+        {/each}
+        <div class="canvas-area" class:covered={workScreenShown}>
+          {#key workspaceGeneration}
+            <CanvasWorkspace
+              onopentrend={(objectId) =>
+                recordingTrend.openTrendHistory(screen.id, objectId)}
+              onopenequipment={mode === "preview" && !menuBlocked
+                ? (id, origin, placement) =>
+                    previewPopups?.showEquipment(id, origin, placement)
+                : undefined}
+              onnavigate={mode === "preview" && !menuBlocked
+                ? (target) => {
+                    if (target.kind === "screen") openScreen(target.screenId);
+                    else if (target.kind === "alarmList") openAlarmList();
+                    // operationList は Runtime だけの窓（O4c）。Editor では何もしない。
+                    else if (target.kind === "silenceBuzzer") silenceBuzzer();
+                  }
+                : undefined}
+              buzzerAvailable={!!alarmFeed?.silenceBuzzer}
+              equipmentContext={readContext.equipmentContext}
+              readings={readContext.readings}
+              bind:this={canvasWorkspace}
+              onviewchange={(view) => (canvasView = view)}
+              oncontextrequest={requestSelectionContext}
+              {screen}
+              symbols={project.symbols}
+              screens={project.screens}
+              images={assetImages}
+              editable={mode === "edit"}
+              {selectedIds}
+              {showGrid}
+              {showRulers}
+              {snapEnabled}
+              {gridSize}
+              placing={placement.positionPlacement}
+              placeReady={!!placement.armedPart}
+              onplacepoint={placeArmed}
+              drawLine={placement.drawKind}
+              ondrawline={placement.drawArmed}
+              oncancelplacement={() => stopPlacement(true)}
+              {canDropPart}
+              ondropPart={dropPalettePart}
+              onresize={(id, geometry) =>
+                edit({
+                  type: "update",
+                  screenId: screen.id,
+                  objectId: id,
+                  patch: geometry,
+                })}
+              onvertexmove={(id, index, point) =>
+                edit({
+                  type: "move-vertex",
+                  screenId: screen.id,
+                  objectId: id,
+                  index,
+                  point,
+                })}
+              onvertexconnect={(id, endpoint, connection) =>
+                edit({
+                  type: "set-line-connection",
+                  screenId: screen.id,
+                  objectId: id,
+                  endpoint,
+                  connection,
+                })}
+              onbeforeedit={() => drafts.allow(() => {})}
+              onselect={selectCanvasObjects}
+              onrangeselect={selectRange}
+              onnudge={nudgeSelection}
+              onmove={(ids, dx, dy) =>
+                edit({
+                  type: "move-many",
+                  screenId: screen.id,
+                  objectIds: ids,
+                  dx,
+                  dy,
+                })}
+              trends={project.trends}
+            />
+          {/key}
+          {#if mode === "preview"}
+            {#key `${workspaceGeneration}:${screen.id}:${mode}`}
+              <PreviewPopups
+                onopentrend={recordingTrend.openTrendHistory}
+                onretiretrend={recordingTrend.retirePopupTrend}
+                bind:this={previewPopups}
+                equipmentContext={readContext.equipmentContext}
+                readings={readContext.readings}
+                {project}
+                images={assetImages}
+                onopenusage={editView.openPreviewEquipmentUsage}
+                onmessage={(message) => report("error", message)}
+                operations={simulatedOperations}
+              />
+            {/key}
+          {/if}
+          {#if mode === "edit" && (showSidebar || showInspector || showReferences)}
+            <div class="canvas-navigation" class:has-map={showMinimap}>
+              <FavoritesDock
+                images={assetImages}
+                items={favoriteItems}
+                positionPlacement={placement.positionPlacement}
+                {isArmed}
+                onarm={armPart}
+                onimmediate={placeFavorite}
+                contextKey={`${contextScope}:${placement.favoriteKeys.join(",")}`}
+                onplace={choosePart}
+                onremove={toggleFavorite}
+                onbrowse={browseParts}
+                onstartdrag={beginPartDrag}
+                onenddrag={placement.endPaletteDrag}
+              />
+              {#if showMinimap}
+                {#key `${workspaceGeneration}:${screen.id}`}
+                  <Minimap
+                    equipmentContext={readContext.equipmentContext}
+                    readings={readContext.readings}
+                    {screen}
+                    symbols={project.symbols}
+                    screens={project.screens}
+                    images={assetImages}
+                    view={canvasView}
+                    oncenter={(point) => canvasWorkspace?.centerOn(point)}
+                    onfit={() => canvasWorkspace?.zoom(null)}
+                    trends={project.trends}
+                  />
+                {/key}
+              {/if}
+            </div>
+          {/if}
+        </div>
+        {#if mode === "edit" && placement.positionPlacement}
+          <PlacementBar
+            armedLabel={placement.armedPart ? armedLabel : null}
+            drawing={!!placement.drawKind}
+            onstop={() => stopPlacement(true)}
+          />
+        {/if}
+        <StatusRow
+          {message}
           editing={mode === "edit"}
-          {canvasActive}
-          images={assetImages}
-          definitions={project.symbols}
-          allowSymbols={!activeDefinition}
-          hasAlarmDefinitions={!!project.alarms?.definitions.length}
-          contextKey={paletteContextKey}
-          positionPlacement={placement.positionPlacement}
-          {isFavorite}
-          {isArmed}
-          onarm={armPart}
-          onimmediate={placeFavorite}
-          ontoggleFavorite={toggleFavorite}
-          onedit={editView.openDefinition}
-          onduplicate={(id) => edit({ type: "duplicate-symbol", symbolId: id })}
-          onadd={(kind) => choosePart({ type: "basic", kind })}
-          onstartdrag={beginPartDrag}
-          onenddrag={placement.endPaletteDrag}
-          onbuiltin={(template) => choosePart({ type: "builtin", template })}
-          onplace={(id) => choosePart({ type: "symbol", symbolId: id })}
-        />
-      {/snippet}
-    </DesignerSidebar>
-    {#if floatingSidebar.floating && floatingSidebar.rect}
-      <button
-        type="button"
-        class="sidebar-floating-size"
-        aria-label="作業パネルのサイズを変更"
-        title="ドラッグまたはEnterと矢印でサイズ変更"
-        style:left={`${floatingSidebar.rect.x + floatingSidebar.rect.width - 22}px`}
-        style:top={`${floatingSidebar.rect.y + floatingSidebar.rect.height - 22}px`}
-        onpointerdown={(event) => floatingSidebar.pointerStart("resize", event)}
-        onkeydown={(event) => floatingSidebar.keyboardStart("resize", event)}
-        >↘</button
-      >
-    {/if}
-  </aside>
-  <section aria-label="画面プレビュー" bind:this={editorRegion}>
-    {#if activeDefinition}
-      <DefinitionBanner
-        usageCount={symbolUsage(project, activeDefinition.id)}
-        strokeOverflow={symbolStrokeOverflow}
-        onreturn={editView.returnFromDefinition}
-      />
-    {/if}
-    {#if mode === "preview"}
-      {#key `${workspaceGeneration}:${screen.id}`}
-        <SlotReadStatus
+          readStatusKey={`${workspaceGeneration}:${screen.id}`}
           {screen}
           screens={project.screens}
           symbols={project.symbols}
           equipmentContext={readContext.equipmentContext}
+          showReferencesToggle={mode === "edit" &&
+            showReferences &&
+            references.length > 0 &&
+            !workScreenShown}
+          referenceCount={references.length}
+          {referenceUsageCount}
+          {referencesExpanded}
+          ontogglereferences={toggleReferences}
         />
-      {/key}
-    {/if}
-    <div class="canvas-stack" bind:clientHeight={measuredStackHeight}>
-      {#each workTabs.tabs as kind (kind)}
-        <!-- W3: 開いている作業画面は非選択中も破棄せず hidden で保持する。 -->
-        <div
-          class="work-screen"
-          data-work-screen={kind}
-          role="region"
-          aria-labelledby={`work-screen-title-${kind}`}
-          hidden={!workScreenShown || workTabs.selected !== kind}
-        >
-          <h2 id={`work-screen-title-${kind}`} tabindex="-1">
-            {workTabLabel(kind)}
-          </h2>
-          {#if kind === "equipment"}
-            <div class="equipment-work">
-              {#key workspaceGeneration}<EquipmentLibrary
-                  {catalogSelection}
-                  bind:this={equipmentLibrary}
-                  {project}
-                  generation={workspaceGeneration}
-                  {drafts}
-                  {transition}
-                  oncommand={edit}
-                  onsubmit={submitForm}
-                  onopenusage={editView.openSymbolUsage}
-                  onopentable={openBindingTable}
-                  tableDisabled={editBlocked && !bindingTableOpen}
-                />{/key}
-            </div>
-          {:else if kind === "alarm-definitions"}
-            <div class="alarm-definitions-work">
-              <AlarmSettings
-                {project}
-                generation={workspaceGeneration}
-                {drafts}
-                disabled={editBlocked}
-                tagNames={catalogSelection.available
-                  ? catalogSelection.catalog.tags.map((tag) => tag.externalName)
-                  : []}
-                oncommand={(command) => edit(command)}
-                onsubmit={submitForm}
+        {#if mode === "edit"}
+          <div
+            hidden={!showReferences || workScreenShown}
+            id="designer-references-panel"
+            class="references-panel"
+            style:height={canSizeReferences &&
+            referencesExpanded &&
+            references.length
+              ? `${displayedReferenceHeight}px`
+              : undefined}
+            bind:this={referencesPanel}
+            tabindex="-1"
+            role="region"
+            aria-label="タグ参照パネル"
+          >
+            {#if showReferences && references.length && referencesExpanded && canSizeReferences}
+              <PanelResizeHandle
+                bind:this={bottomResizer}
+                side="bottom"
+                value={displayedReferenceHeight}
+                min={MIN_REFERENCE_HEIGHT}
+                max={referenceMaximum}
+                standard={DEFAULT_REFERENCE_HEIGHT}
+                onstart={beginReferenceResize}
+                onchange={(height) => (referenceHeight = height)}
+                onend={finishReferenceResize}
+                canCommit={() =>
+                  window.innerWidth >= 1100 &&
+                  (referencesPanel?.parentElement?.clientHeight ?? 0) >= 500}
               />
-            </div>
-          {:else if kind === "project-settings"}
-            <div class="project-settings-work">
-              {#key `${workspaceGeneration}:${project.manifest.projectId}`}
-                <form
-                  use:drafts.track={{ name: project.manifest.name }}
-                  data-editor-form="project"
-                  aria-label="プロジェクト情報"
-                  onsubmit={submitForm}
-                  oncompositionstart={(event) =>
-                    composingForms.add(event.currentTarget)}
-                  oncompositionend={(event) =>
-                    composingForms.delete(event.currentTarget)}
-                >
-                  <label class="banto-field banto-field--stacked"
-                    ><span class="banto-field-label">プロジェクト名</span><input
-                      class="banto-field-control"
-                      onkeydown={nameFormKey}
-                      name="name"
-                      required
-                      maxlength="200"
-                    /></label
-                  >
-                  <button type="submit">プロジェクト名を適用</button>
-                </form>
-              {/key}
-              <h3>運転表示の設定</h3>
-              <!-- 確定値は drafts.track の update で同期し、関係のない編集で未適用の選択を消さない。 -->
-              {#key `${workspaceGeneration}:${project.manifest.projectId}`}
-                <form
-                  use:drafts.track={{
-                    startScreenId: project.operatorFrame?.startScreenId ?? "",
-                    headerScreenId: project.operatorFrame?.headerScreenId ?? "",
-                    footerScreenId: project.operatorFrame?.footerScreenId ?? "",
-                  }}
-                  data-editor-form="operator-frame"
-                  aria-label="運転表示の設定"
-                  onsubmit={submitForm}
-                >
-                  {#each [["startScreenId", "開始画面"], ["headerScreenId", "ヘッダー画面"], ["footerScreenId", "フッター画面"]] as [key, label]}
-                    <label class="banto-field banto-field--stacked"
-                      ><span class="banto-field-label">{label}</span><select
-                        class="banto-field-control"
-                        name={key}
-                        aria-label={label}
-                        disabled={editBlocked}
-                        ><option value="">なし</option>
-                        {#each project.screens as target (target.id)}<option
-                            value={target.id}>{target.name}</option
-                          >{/each}</select
-                      ></label
-                    >
-                  {/each}
-                  <p class="hint">
-                    開始・ヘッダー・フッターは別の画面にします。ヘッダー・フッターの画面は画面切替ボタンの行き先にできません。
-                  </p>
-                  <button type="submit" disabled={editBlocked}
-                    >運転表示の設定を適用</button
-                  >
-                </form>
-              {/key}
-              <h3>記録希望設定</h3>
-              <button
-                class="open-recording-plan"
-                disabled={editBlocked}
-                onclick={recordingTrend.openRecordingPlan}
-                >記録希望設定を開く</button
-              >
-            </div>
-          {/if}
-        </div>
-      {/each}
-      <div class="canvas-area" class:covered={workScreenShown}>
-        {#key workspaceGeneration}
-          <CanvasWorkspace
-            onopentrend={(objectId) =>
-              recordingTrend.openTrendHistory(screen.id, objectId)}
-            onopenequipment={mode === "preview" && !menuBlocked
-              ? (id, origin, placement) =>
-                  previewPopups?.showEquipment(id, origin, placement)
-              : undefined}
-            onnavigate={mode === "preview" && !menuBlocked
-              ? (target) => {
-                  if (target.kind === "screen") openScreen(target.screenId);
-                  else if (target.kind === "alarmList") openAlarmList();
-                  // operationList は Runtime だけの窓（O4c）。Editor では何もしない。
-                  else if (target.kind === "silenceBuzzer") silenceBuzzer();
-                }
-              : undefined}
-            buzzerAvailable={!!alarmFeed?.silenceBuzzer}
-            equipmentContext={readContext.equipmentContext}
-            readings={readContext.readings}
-            bind:this={canvasWorkspace}
-            onviewchange={(view) => (canvasView = view)}
-            oncontextrequest={requestSelectionContext}
-            {screen}
-            symbols={project.symbols}
-            screens={project.screens}
-            images={assetImages}
-            editable={mode === "edit"}
-            {selectedIds}
-            {showGrid}
-            {showRulers}
-            {snapEnabled}
-            {gridSize}
-            placing={placement.positionPlacement}
-            placeReady={!!placement.armedPart}
-            onplacepoint={placeArmed}
-            drawLine={placement.drawKind}
-            ondrawline={placement.drawArmed}
-            oncancelplacement={() => stopPlacement(true)}
-            {canDropPart}
-            ondropPart={dropPalettePart}
-            onresize={(id, geometry) =>
-              edit({
-                type: "update",
-                screenId: screen.id,
-                objectId: id,
-                patch: geometry,
-              })}
-            onvertexmove={(id, index, point) =>
-              edit({
-                type: "move-vertex",
-                screenId: screen.id,
-                objectId: id,
-                index,
-                point,
-              })}
-            onvertexconnect={(id, endpoint, connection) =>
-              edit({
-                type: "set-line-connection",
-                screenId: screen.id,
-                objectId: id,
-                endpoint,
-                connection,
-              })}
-            onbeforeedit={() => drafts.allow(() => {})}
-            onselect={selectCanvasObjects}
-            onrangeselect={selectRange}
-            onnudge={nudgeSelection}
-            onmove={(ids, dx, dy) =>
-              edit({
-                type: "move-many",
-                screenId: screen.id,
-                objectIds: ids,
-                dx,
-                dy,
-              })}
-            trends={project.trends}
-          />
-        {/key}
-        {#if mode === "preview"}
-          {#key `${workspaceGeneration}:${screen.id}:${mode}`}
-            <PreviewPopups
-              onopentrend={recordingTrend.openTrendHistory}
-              onretiretrend={recordingTrend.retirePopupTrend}
-              bind:this={previewPopups}
-              equipmentContext={readContext.equipmentContext}
-              readings={readContext.readings}
-              {project}
-              images={assetImages}
-              onopenusage={editView.openPreviewEquipmentUsage}
-              onmessage={(message) => report("error", message)}
-              operations={simulatedOperations}
-            />
-          {/key}
-        {/if}
-        {#if mode === "edit" && (showSidebar || showInspector || showReferences)}
-          <div class="canvas-navigation" class:has-map={showMinimap}>
-            <FavoritesDock
-              images={assetImages}
-              items={favoriteItems}
-              positionPlacement={placement.positionPlacement}
-              {isArmed}
-              onarm={armPart}
-              onimmediate={placeFavorite}
-              contextKey={`${contextScope}:${placement.favoriteKeys.join(",")}`}
-              onplace={choosePart}
-              onremove={toggleFavorite}
-              onbrowse={browseParts}
-              onstartdrag={beginPartDrag}
-              onenddrag={placement.endPaletteDrag}
-            />
-            {#if showMinimap}
-              {#key `${workspaceGeneration}:${screen.id}`}
-                <Minimap
-                  equipmentContext={readContext.equipmentContext}
-                  readings={readContext.readings}
-                  {screen}
-                  symbols={project.symbols}
-                  screens={project.screens}
-                  images={assetImages}
-                  view={canvasView}
-                  oncenter={(point) => canvasWorkspace?.centerOn(point)}
-                  onfit={() => canvasWorkspace?.zoom(null)}
-                  trends={project.trends}
-                />
-              {/key}
             {/if}
+            {#key workspaceGeneration}
+              <BindingReferences
+                {project}
+                scope={`${workspaceGeneration}:${mode}:${screenId}:${editingSymbolId ?? ""}`}
+                editable={mode === "edit"}
+                {drafts}
+                onedit={edit}
+                expanded={referencesExpanded}
+                sized={canSizeReferences && referencesExpanded}
+                {references}
+                onopen={openBinding}
+                onclose={closeReferences}
+              />
+            {/key}
           </div>
         {/if}
       </div>
-      {#if mode === "edit" && placement.positionPlacement}
-        <PlacementBar
-          armedLabel={placement.armedPart ? armedLabel : null}
-          drawing={!!placement.drawKind}
-          onstop={() => stopPlacement(true)}
-        />
-      {/if}
-      <StatusRow
-        {message}
-        editing={mode === "edit"}
-        readStatusKey={`${workspaceGeneration}:${screen.id}`}
-        {screen}
-        screens={project.screens}
-        symbols={project.symbols}
-        equipmentContext={readContext.equipmentContext}
-        showReferencesToggle={mode === "edit" &&
-          showReferences &&
-          references.length > 0 &&
-          !workScreenShown}
-        referenceCount={references.length}
-        {referenceUsageCount}
-        {referencesExpanded}
-        ontogglereferences={toggleReferences}
-      />
-      {#if mode === "edit"}
-        <div
-          hidden={!showReferences || workScreenShown}
-          id="designer-references-panel"
-          class="references-panel"
-          style:height={canSizeReferences &&
-          referencesExpanded &&
-          references.length
-            ? `${displayedReferenceHeight}px`
-            : undefined}
-          bind:this={referencesPanel}
-          tabindex="-1"
-          role="region"
-          aria-label="タグ参照パネル"
-        >
-          {#if showReferences && references.length && referencesExpanded && canSizeReferences}
-            <PanelResizeHandle
-              bind:this={bottomResizer}
-              side="bottom"
-              value={displayedReferenceHeight}
-              min={MIN_REFERENCE_HEIGHT}
-              max={referenceMaximum}
-              standard={DEFAULT_REFERENCE_HEIGHT}
-              onstart={beginReferenceResize}
-              onchange={(height) => (referenceHeight = height)}
-              onend={finishReferenceResize}
-              canCommit={() =>
-                window.innerWidth >= 1100 &&
-                (referencesPanel?.parentElement?.clientHeight ?? 0) >= 500}
-            />
-          {/if}
-          {#key workspaceGeneration}
-            <BindingReferences
-              {project}
-              scope={`${workspaceGeneration}:${mode}:${screenId}:${editingSymbolId ?? ""}`}
-              editable={mode === "edit"}
-              {drafts}
-              onedit={edit}
-              expanded={referencesExpanded}
-              sized={canSizeReferences && referencesExpanded}
-              {references}
-              onopen={openBinding}
-              onclose={closeReferences}
-            />
-          {/key}
-        </div>
-      {/if}
-    </div>
-  </section>
-  {#if mode === "edit"}
-    <InspectorPanel
-      {catalogSelection}
-      layout={floatingInspector}
-      bind:this={inspectorController}
-      bind:element={inspectorPanel}
-      generation={workspaceGeneration}
-      {commitNumber}
-      visible={inspectorShown}
-      onclose={() => setInspectorVisibility(false, true)}
-      {project}
-      {selectedIds}
-      {selected}
-      {selectionLocked}
-      {hiddenSelectionCount}
-      ontogglevisibility={toggleObjectVisibility}
-      ontogglelock={toggleObjectLock}
-      activeDefinition={!!activeDefinition}
-      {screen}
-      {drafts}
-      {properties}
-      {moveSelection}
-      {edit}
-      openDefinition={editView.openDefinition}
-      onselectsource={(id) => selectObjects(id)}
-      onopenequipment={openSelectedEquipment}
-      onopenequipmentsettings={(id) => openSelectedEquipment(id, "settings")}
-      onmanagetrend={recordingTrend.openTrendDefinitions}
-      onopentrend={(objectId) =>
-        recordingTrend.openTrendHistory(screen.id, objectId)}
-      {openScreen}
-      images={assetImages}
-      onreplaceimage={imageImport.openReplacement}
-      imageBusy={imageImport.busy || busy || !!replacement}
-      screenSettings={screenSettingsPanel}
-      showScreenSettings={revealScreenSettings}
-    />
-  {/if}
-  {#if mode === "edit" && windowWidth >= 1100}
-    {#if showSidebar && !floatingSidebar.floating}
-      <PanelResizeHandle
-        bind:this={leftResizer}
-        side="left"
-        value={leftWidth}
-        min={PANEL_WIDTH_LIMITS.left.min}
-        max={panelWidthMaximum("left", windowWidth)}
-        standard={DEFAULT_PANEL_WIDTHS.left}
-        onstart={beginPanelResize}
-        onchange={(width) => changePanelWidth("left", width)}
-        onend={finishPanelResize}
-        canCommit={() => window.innerWidth >= 1100}
-      />
-    {/if}
-    {#if inspectorShown && !floatingInspector.floating}
-      <PanelResizeHandle
-        bind:this={rightResizer}
-        side="right"
-        value={rightWidth}
-        min={PANEL_WIDTH_LIMITS.right.min}
-        max={panelWidthMaximum("right", windowWidth)}
-        standard={DEFAULT_PANEL_WIDTHS.right}
-        onstart={beginPanelResize}
-        onchange={(width) => changePanelWidth("right", width)}
-        onend={finishPanelResize}
-        canCommit={() => window.innerWidth >= 1100}
-      />
-    {/if}
-  {/if}
+    </section>
+  </ThreePaneDock>
 </main>
+{#snippet layersPane()}
+  <div
+    class="sidebar-pane"
+    id="designer-layers-panel"
+    data-designer-left-pane="layers"
+    tabindex="-1"
+  >
+    <LayersPanel
+      editing={mode === "edit"}
+      {canvasActive}
+      images={assetImages}
+      tree={layerTreeBindings}
+    />
+  </div>
+{/snippet}
+{#snippet partsPane()}
+  <div
+    class="sidebar-pane"
+    id="designer-parts-panel"
+    data-designer-left-pane="parts"
+    tabindex="-1"
+  >
+    <PartsPanel
+      editing={mode === "edit"}
+      {canvasActive}
+      images={assetImages}
+      definitions={project.symbols}
+      allowSymbols={!activeDefinition}
+      hasAlarmDefinitions={!!project.alarms?.definitions.length}
+      contextKey={paletteContextKey}
+      positionPlacement={placement.positionPlacement}
+      {isFavorite}
+      {isArmed}
+      onarm={armPart}
+      onimmediate={placeFavorite}
+      ontoggleFavorite={toggleFavorite}
+      onedit={editView.openDefinition}
+      onduplicate={(id) => edit({ type: "duplicate-symbol", symbolId: id })}
+      onadd={(kind) => choosePart({ type: "basic", kind })}
+      onstartdrag={beginPartDrag}
+      onenddrag={placement.endPaletteDrag}
+      onbuiltin={(template) => choosePart({ type: "builtin", template })}
+      onplace={(id) => choosePart({ type: "symbol", symbolId: id })}
+    />
+  </div>
+{/snippet}
 <ContextActions
   floating
   bind:this={selectionMenu}
@@ -4014,8 +4138,10 @@
 {/if}
 <div
   class="toast-anchor"
-  style:--banto-toast-right={inspectorShown && !floatingInspector.floating
-    ? `${rightWidth + 16}px`
+  style:--banto-toast-right={inspectorShown &&
+  !designerNarrow &&
+  inspectorPaneWidth > 0
+    ? `${inspectorPaneWidth + 16}px`
     : undefined}
   style:--banto-toast-bottom={mode === "edit" ? "40px" : undefined}
 >
@@ -4087,11 +4213,19 @@
   :global(*) {
     box-sizing: border-box;
   }
-  .project-sidebar {
+  /* 左の pane の中身（#331 D2）。スクロールは dock の pane の本体が持つ。 */
+  .sidebar-pane {
+    min-height: 100%;
+    padding: 6px 8px;
+    outline: none;
+  }
+  .sidebar-pane:focus-visible {
+    box-shadow: inset var(--banto-focus-ring);
+  }
+  .inspector-pane {
     display: flex;
     flex-direction: column;
-    padding: 0;
-    overflow: hidden;
+    min-height: 100%;
   }
   .save-state {
     display: flex;
@@ -4268,42 +4402,16 @@
   }
   main {
     position: relative;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    display: flex;
     flex: 1;
     min-height: 0;
   }
-  main.sidebar-visible {
-    grid-template-columns: 240px minmax(0, 1fr);
+  main > :global(*) {
+    flex: 1;
+    min-width: 0;
   }
   [hidden] {
     display: none;
-  }
-  .project-sidebar.floating {
-    border: 1px solid var(--banto-border);
-    border-radius: 6px;
-    box-shadow: 0 10px 32px #0003;
-    overflow: auto;
-    min-height: 0;
-    box-sizing: border-box;
-  }
-  .sidebar-floating-size {
-    position: fixed;
-    width: 22px;
-    height: 22px;
-    margin: 0;
-    padding: 0;
-    z-index: 2;
-    background: var(--banto-surface);
-    color: var(--banto-text);
-    border: 1px solid var(--banto-border);
-    border-radius: 3px;
-    touch-action: none;
-    cursor: nwse-resize;
-  }
-  aside {
-    padding: 16px;
-    border-right: 1px solid var(--banto-border);
   }
   p {
     font-size: 13px;
@@ -4356,9 +4464,6 @@
     grid-column: 1 / -1;
   }
   :global(#app) .app-header.fullscreen-preview {
-    display: none;
-  }
-  :global(#app) main.fullscreen-preview > .project-sidebar {
     display: none;
   }
   .canvas-stack {
@@ -4426,33 +4531,23 @@
   .references-panel {
     position: relative;
   }
+  /* dock が高さを決めるので、どの幅でも画面の高さに収める（#331 D2）。 */
+  :global(#app) {
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .designer-center {
+    height: 100%;
+    overflow: auto;
+    box-sizing: border-box;
+  }
   @media (min-width: 1100px) {
-    :global(#app) {
-      height: 100dvh;
-      overflow: hidden;
-    }
-    main.editing.sidebar-visible {
-      grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-    }
-    main.editing.inspector-visible {
-      grid-template-columns: minmax(0, 1fr) var(--inspector-width);
-    }
-    main.editing.sidebar-visible.inspector-visible {
-      grid-template-columns: var(--sidebar-width) minmax(0, 1fr) var(
-          --inspector-width
-        );
-    }
-    main > aside,
-    main > section {
-      overflow: auto;
-      min-height: 0;
-    }
-    main > section {
+    .designer-center {
       display: flex;
       flex-direction: column;
       padding: 12px 16px;
     }
-    main > section > :not(.canvas-stack),
+    .designer-center > :not(.canvas-stack),
     .canvas-stack > :not(.canvas-area),
     .canvas-area > :not(:global(.canvas-workspace)) {
       flex-shrink: 0;
@@ -4466,21 +4561,6 @@
       flex-direction: column;
       flex: 1;
       min-height: 0;
-    }
-  }
-  @media (min-width: 701px) and (max-width: 1099px) {
-    .project-sidebar {
-      grid-row: span 2;
-    }
-  }
-  @media (max-width: 700px) {
-    main,
-    main.sidebar-visible {
-      grid-template-columns: 1fr;
-    }
-    aside {
-      border-right: 0;
-      border-bottom: 1px solid var(--banto-border);
     }
   }
 </style>
