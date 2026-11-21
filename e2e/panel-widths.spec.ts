@@ -146,6 +146,24 @@ test("the display menu restores standard widths without changing inputs or the a
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
 
+test("standard widths chosen in the narrow display apply when going wide", async ({
+  page,
+}) => {
+  await start(page);
+  await drag(page, "left", 120);
+  await drag(page, "right", -100);
+  await expect.poll(() => width(page, "left")).toBeGreaterThan(240 + 80);
+  await page.setViewportSize({ width: 900, height: 800 });
+  await expect(page.locator('[data-dock-band-tab="left"]')).toBeVisible();
+  await chooseMenuItem(page, "表示", "パネルの幅を標準に戻す");
+  // 狭い表示の間は dock が広い配置を控えている。広い表示へ戻すと標準の幅で出る。
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await expect(sidebar(page)).toBeVisible();
+  await expect.poll(() => width(page, "left")).toBeLessThan(240 + 16);
+  near(await width(page, "left"), 240);
+  near(await width(page, "right"), 288);
+});
+
 test("saved widths set the first arrangement and invalid ones fall back", async ({
   page,
 }) => {

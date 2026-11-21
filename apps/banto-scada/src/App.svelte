@@ -339,15 +339,9 @@
   function resetPanelWidths() {
     beginPanelResize();
     panelWidths = { ...DEFAULT_PANEL_WIDTHS };
-    if (!designerNarrow)
-      designerDockState.layout = withDesignerPaneWidths(
-        designerDockState.layout,
-        {
-          hostWidth: windowWidth,
-          leftWidth: DEFAULT_PANEL_WIDTHS.left,
-          rightWidth: DEFAULT_PANEL_WIDTHS.right,
-        },
-      );
+    // 狭い表示の間は dock が広い配置を控えているので、広い表示へ戻ったときに当てる。
+    if (designerNarrow) pendingWidthReset = true;
+    else applyStandardPaneWidths(windowWidth);
     finishPanelResize(true);
   }
   let measuredStackHeight = $state(0);
@@ -445,6 +439,18 @@
   const showSidebar = $derived(designerDock.showSidebar);
   const activePanel = $derived(designerDock.activePanel);
   let designerNarrow = $state(false);
+  /** 狭い表示の間に「パネルの幅を標準に戻す」を選んだ（広い表示へ戻ったら当てる）。 */
+  let pendingWidthReset = false;
+  function applyStandardPaneWidths(hostWidth: number) {
+    designerDockState.layout = withDesignerPaneWidths(
+      designerDockState.layout,
+      {
+        hostWidth,
+        leftWidth: DEFAULT_PANEL_WIDTHS.left,
+        rightWidth: DEFAULT_PANEL_WIDTHS.right,
+      },
+    );
+  }
   let designerThreePane = $state.raw<ReturnType<typeof ThreePaneDock>>();
   // 窓の幅が変わっても左右の pane の px を保つ（狭い表示の間は数えない）。
   let designerHostWidth = untrack(() => windowWidth);
@@ -452,7 +458,10 @@
     const width = windowWidth;
     if (designerNarrow) return;
     untrack(() => {
-      if (width !== designerHostWidth && !designerGesture)
+      if (pendingWidthReset) {
+        pendingWidthReset = false;
+        applyStandardPaneWidths(width);
+      } else if (width !== designerHostWidth && !designerGesture)
         designerDockState.layout = keepDesignerPaneWidths(
           designerDockState.layout,
           designerHostWidth,
