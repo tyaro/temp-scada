@@ -20,6 +20,9 @@ importers:
 
   apps/banto-scada:
     dependencies:
+      '@banto-industrial/trend':
+        specifier: github:tyaro/banto-industrial#trend-v0.1.0&path:packages/trend
+        version: https://codeload.github.com/tyaro/banto-industrial/tar.gz/68170bc0ddfda25d15f4acfcb49eff751e0a595f#path:packages/trend(svelte@5.57.2)
       '@banto/admin-core':
         specifier: github:tyaro/banto#v7.10.0&path:packages/admin-core
         version: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/admin-core
@@ -66,9 +69,19 @@ importers:
 
 packages:
 
+  '@banto-industrial/trend@https://codeload.github.com/tyaro/banto-industrial/tar.gz/68170bc0ddfda25d15f4acfcb49eff751e0a595f#path:packages/trend':
+    resolution: {path: packages/trend, tarball: https://codeload.github.com/tyaro/banto-industrial/tar.gz/68170bc0ddfda25d15f4acfcb49eff751e0a595f}
+    version: 0.1.0
+    peerDependencies:
+      svelte: ^5.57.2
+
   '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/admin-core':
     resolution: {path: packages/admin-core, tarball: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060}
     version: 7.10.0
+
+  '@banto/charts@https://codeload.github.com/tyaro/banto/tar.gz/8e76b3222255b075db4e06af89805f8990d09856#path:packages/charts':
+    resolution: {path: packages/charts, tarball: https://codeload.github.com/tyaro/banto/tar.gz/8e76b3222255b075db4e06af89805f8990d09856}
+    version: 7.8.0
 
   '@banto/dock-svelte@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/dock-svelte':
     resolution: {path: packages/dock-svelte, tarball: https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060}
@@ -632,7 +645,14 @@ packages:
 
 snapshots:
 
+  '@banto-industrial/trend@https://codeload.github.com/tyaro/banto-industrial/tar.gz/68170bc0ddfda25d15f4acfcb49eff751e0a595f#path:packages/trend(svelte@5.57.2)':
+    dependencies:
+      '@banto/charts': https://codeload.github.com/tyaro/banto/tar.gz/8e76b3222255b075db4e06af89805f8990d09856#path:packages/charts
+      svelte: 5.57.2
+
   '@banto/admin-core@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/admin-core': {}
+
+  '@banto/charts@https://codeload.github.com/tyaro/banto/tar.gz/8e76b3222255b075db4e06af89805f8990d09856#path:packages/charts': {}
 
   '@banto/dock-svelte@https://codeload.github.com/tyaro/banto/tar.gz/9caa238c7ac10f2fac64cce860cbdb1ec1dc5060#path:packages/dock-svelte': {}
 
