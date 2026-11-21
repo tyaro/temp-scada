@@ -246,6 +246,12 @@ export function createDesignerDock(dock: DockState, host: DesignerDockHost) {
       host.mode === "edit" &&
       host.inspectorAdoptable
     ) {
+      // 左と同じく、広い表示へ戻って控えの配置から出てきたときはアプリの希望が勝つ
+      // （狭い表示のあいだに ✕ で隠した Inspector を開き直さない）。
+      if (visible && restored) {
+        if (!desired(key)) void push(key, false);
+        return;
+      }
       host.adoptInspector(visible);
       return;
     }

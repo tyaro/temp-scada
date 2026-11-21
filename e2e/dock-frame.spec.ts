@@ -127,6 +127,23 @@ test("a pane closed with ✕ in the narrow display stays hidden after going wide
   await expect(page.locator('[data-dock-band-tab="left"]')).toBeVisible();
 });
 
+test("the Inspector closed with ✕ in the narrow display stays hidden after going wide", async ({
+  page,
+}) => {
+  await start(page);
+  await page.setViewportSize({ width: 900, height: 800 });
+  await page.locator('[data-dock-band-tab="right"]').click();
+  await expect(inspector(page)).toBeVisible();
+  await button(page, "プロパティを隠す").click();
+  await expect(page.locator('[data-dock-band-tab="right"]')).toHaveCount(0);
+  // 広い表示へ戻すと dock は控えた配置（Inspector あり）へ戻すが、✕ の希望が勝つ。
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await expect(tab(page, "プロジェクト")).toBeVisible();
+  await expect(inspector(page)).toBeHidden();
+  await chooseMenuItem(page, "表示", "プロパティを表示");
+  await expect(inspector(page)).toBeVisible();
+});
+
 test("renaming a screen in the narrow display opens the Inspector drawer", async ({
   page,
 }) => {
