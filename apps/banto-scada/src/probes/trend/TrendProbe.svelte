@@ -68,7 +68,11 @@
   /** H1 の minmax の応答を作る模擬の source（記録 DB の代わり）。 */
   function respond(query: HistoryQuery): unknown {
     const span = query.toMs - query.fromMs;
-    const count = Math.min(query.maxPointsPerSeries, Math.max(1, span / 1000));
+    // 区間の数は先に整数にする（小数だと最後の区間が要求の終端を越える）。
+    const count = Math.min(
+      query.maxPointsPerSeries,
+      Math.max(1, Math.floor(span / 1000)),
+    );
     return {
       version: 1,
       kind: "result",
@@ -121,6 +125,17 @@
     };
   }
 
+  // H1 の 1 回の問い合わせの上限（history-contract.ts の query の検査）。
+  // 製品で 1 時間を超えて見せるときの問い合わせの分割は別に決める。
+  const H1_MAX_SPAN_MS = 3_600_000;
+  const H1_MAX_POINTS = 8000;
+  /** 表示範囲を H1 の上限の幅に収める（右端は保つ）。 */
+  function clampToH1(next: TimeRange): TimeRange {
+    return next.endMs - next.startMs > H1_MAX_SPAN_MS
+      ? { startMs: next.endMs - H1_MAX_SPAN_MS, endMs: next.endMs }
+      : next;
+  }
+
   let fetches = 0;
   const requests: { range: TimeRange; bins: number }[] = [];
   const fetchTrend: TrendFetch = async ({ range, penIds, bins }) => {
@@ -134,10 +149,17 @@
       fromMs: range.startMs,
       toMs: range.endMs,
       mode: "minmax",
-      maxPointsPerSeries: bins,
+      maxPointsPerSeries: Math.min(
+        bins,
+        Math.floor(H1_MAX_POINTS / penIds.length),
+      ),
     };
     const parsed = parseHistoryContract(respond(query));
     if (parsed.kind !== "result") throw Error("unexpected contract");
+    for (const series of parsed.series)
+      for (const bin of series.bins)
+        if (bin.fromMs < query.fromMs || bin.toMs > query.toMs)
+          throw Error(`bin outside the query: ${bin.fromMs}..${bin.toMs}`);
     return historyResultToTrendSeries(parsed);
   };
 
@@ -204,7 +226,7 @@
     label="実証のトレンド"
     height={360}
     nowMs={NOW}
-    onRangeChange={(next) => (range = next)}
+    onRangeChange={(next) => (range = clampToH1(next))}
   />
 </main>
 

@@ -111,3 +111,51 @@ test("ctrl+wheel zooms the range and refetches through the adapter", async ({
   expect(after.requests.at(-1)!.range).toEqual(after.range);
   expect(after.errors).toEqual([]);
 });
+
+async function ctrlWheel(page: Page, deltaY: number) {
+  const box = (await plot(page).first().boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, deltaY);
+  await page.keyboard.up("Control");
+}
+
+test("zooming out from the initial hour stays within the H1 query limit", async ({
+  page,
+}) => {
+  await open(page, "light");
+  const before = await probe(page);
+  await ctrlWheel(page, 100);
+  await expect
+    .poll(async () => (await probe(page)).fetches)
+    .toBeGreaterThan(before.fetches);
+  await expect.poll(async () => (await probe(page)).loaded).toBe(true);
+  const after = await probe(page);
+  for (const request of after.requests)
+    expect(request.range.endMs - request.range.startMs).toBeLessThanOrEqual(
+      3_600_000,
+    );
+  expect(after.errors).toEqual([]);
+});
+
+test("repeated zoom-in with fractional spans keeps every bin inside the query", async ({
+  page,
+}) => {
+  await open(page, "light");
+  for (let i = 0; i < 8; i++) {
+    const before = (await probe(page)).fetches;
+    await ctrlWheel(page, -100);
+    await expect
+      .poll(async () => (await probe(page)).fetches)
+      .toBeGreaterThan(before);
+    await expect.poll(async () => (await probe(page)).loaded).toBe(true);
+  }
+  const state = await probe(page);
+  // 1 秒で割り切れない幅（区間の数が小数になる場合）を実際に通したこと。
+  expect(
+    state.requests.some(
+      (request) => (request.range.endMs - request.range.startMs) % 1000 !== 0,
+    ),
+  ).toBe(true);
+  expect(state.errors).toEqual([]);
+});

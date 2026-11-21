@@ -215,7 +215,7 @@ Banto v7.10.0 で #763 が直った（`persistent` の pane を組み替える�
 
 ## #359 トレンド共通部品の実証（2026-11-21・日本時間）
 
-banto-industrial の `@banto-industrial/trend`（`trend-v0.1.0`、Issue [#359](https://github.com/tyaro/temp-scada/issues/359)）を依存に足し、開発用のページ `apps/banto-scada/probes/trend.html` で `TrendChart` を描いた。データは模擬の source が H1 の minmax の応答を作り、`parseHistoryContract` で契約どおりか確かめてから `lib/history/trend-adapter.ts` で部品の区間へ写し、部品の `createRangeLoader` で読み直す。製品画面（`TrendView.svelte`・HistoryWorkspace）は変えていない。試験は `trend-adapter.test.ts`（H1 の共通 fixture を含む 24 件）と `e2e/trend-probe.spec.ts`（Playwright の Chromium で 3 件合格）。
+banto-industrial の `@banto-industrial/trend`（`trend-v0.1.0`、Issue [#359](https://github.com/tyaro/temp-scada/issues/359)）を依存に足し、開発用のページ `apps/banto-scada/probes/trend.html` で `TrendChart` を描いた。データは模擬の source が H1 の minmax の応答を作り（表示範囲は H1 の 1 回の問い合わせの上限 1 時間に収め、区間の数は整数にする。1 時間を超えて見せるときの問い合わせの分割は別に決める）、`parseHistoryContract` で契約どおりか確かめてから `lib/history/trend-adapter.ts` で部品の区間へ写し、部品の `createRangeLoader` で読み直す。製品画面（`TrendView.svelte`・HistoryWorkspace）は変えていない。試験は `trend-adapter.test.ts`（H1 の共通 fixture を含む 24 件）と `e2e/trend-probe.spec.ts`（Playwright の Chromium で 5 件合格。初期の 1 時間からの縮小と、端数の出る拡大の繰り返しを含む）。
 
 | 観点             | 結果                                                                                                                                                                            |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -226,7 +226,7 @@ banto-industrial の `@banto-industrial/trend`（`trend-v0.1.0`、Issue [#359](h
 
 判断の材料:
 
-- 変換で落ちるもの: segment の切れ目（identity の変化）、品質と理由、coverage の帯、`partial` と `complete` の区別、件数。現行の `TrendView` はこれらを描くので、置き換えるなら「欠測の理由の帯」「segment の切れ目」を部品の横の帯（`bands`）か利用側の重ね描きで出すか、上流へ求めるかを決める。
+- 変換で落ちるもの: segment の切れ目（identity の変化）、品質と理由、coverage の帯、`partial` と `complete` の区別、件数。現行の `TrendView` はこれらを描くので、置き換える前に扱いを決める。部品の `bands`（`core/bands.ts`）はペンの**縦軸の値域**を全時間幅に塗る型で、coverage の時間区間や segment の時刻の境界は渡せない。候補は、利用側で時刻の軸に重ね描く（部品の描画域の位置を得る口が要る）か、時刻の区間の帯を上流（banto-industrial）へ求めるか。
 - 管理線を越えた区間の色（例 `var(--banto-warning)`）が 2 本目のペンの色（`--banto-chart-2`）とほぼ同じ橙で、両テーマとも見分けにくい。管理線の色を変えるか、上流へ伝える。
 - 時刻の軸は端末の地方時で出る（実証では 08:00〜09:00 = UTC 23:00〜00:00）。現行の履歴の入力は UTC を明示するので、置き換えるときに表示の時刻の扱いを揃える。
 - 実機の WebView2 と画面内の常時トレンド（ハイブリッド、リングバッファ + 履歴）は試していない。
