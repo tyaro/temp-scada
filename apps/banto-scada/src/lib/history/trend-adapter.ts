@@ -23,16 +23,26 @@ export function historyResultToTrendSeries(
 }
 
 function fromBins(series: HistorySeriesResult): TrendSeries {
-  const bins = [...series.bins]
-    .sort((a, b) => a.fromMs - b.fromMs)
-    .map((bin) => {
-      const missing = bin.state === "gap" || bin.state === "mixedSegment";
-      return {
-        tMs: bin.fromMs,
-        min: missing ? null : bin.min,
-        max: missing ? null : bin.max,
-      };
+  const sorted = [...series.bins].sort((a, b) => a.fromMs - b.fromMs);
+  const bins: { tMs: number; min: number | null; max: number | null }[] = [];
+  sorted.forEach((bin, index) => {
+    const previous = sorted[index - 1];
+    // segment が変わる所では、直前に 1ms の欠測の区間を挟んで線を切る（segment をまたぐ偽の連続を作らない）。
+    if (
+      previous &&
+      previous.segmentId !== null &&
+      bin.segmentId !== null &&
+      previous.segmentId !== bin.segmentId &&
+      bin.fromMs - 1 > previous.fromMs
+    )
+      bins.push({ tMs: bin.fromMs - 1, min: null, max: null });
+    const missing = bin.state === "gap" || bin.state === "mixedSegment";
+    bins.push({
+      tMs: bin.fromMs,
+      min: missing ? null : bin.min,
+      max: missing ? null : bin.max,
     });
+  });
   // 区間の幅は応答の実際の値。H1 は範囲を整数で割るので 1ms ずれることがあり、広い方を採る。
   const binMs = series.bins.reduce(
     (width, bin) => Math.max(width, bin.toMs - bin.fromMs),
@@ -64,4 +74,56 @@ export function isBoolSeries(series: HistorySeriesResult): boolean {
     series.segments.length > 0 &&
     series.segments.every((segment) => segment.valueType === "bool")
   );
+}
+
+export type Rgb = readonly [number, number, number];
+
+/** `#rrggbb` を RGB に。形が違えば null。 */
+export function hexRgb(color: string | undefined): Rgb | null {
+  const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color ?? "");
+  return match
+    ? [parseInt(match[1], 16), parseInt(match[2], 16), parseInt(match[3], 16)]
+    : null;
+}
+
+/**
+ * ペンの色（hex）に最も近い色の枠（1 始まり）を、ペンどうしで重ならないように選ぶ。
+ * `palette[i]` は枠 i + 1 の計算後の色（読めなければ null）。色を決めていないペンと、
+ * 空きの枠が無いペンは、残りの枠を順に使い、それも尽きたら 9〜16（部品の `--bi-chart-N`）を使う。
+ * 上流が CSS の色を受けるようになるまでのつなぎ（banto-industrial#1272）。
+ */
+export function nearestColorSlots(
+  colors: readonly (string | undefined)[],
+  palette: readonly (Rgb | null)[],
+): number[] {
+  const used = new Set<number>();
+  const slots: (number | undefined)[] = colors.map(() => undefined);
+  colors.forEach((color, index) => {
+    const rgb = hexRgb(color);
+    if (!rgb) return;
+    let best: number | undefined;
+    let bestDistance = Infinity;
+    palette.forEach((candidate, slotIndex) => {
+      if (!candidate || used.has(slotIndex + 1)) return;
+      const distance =
+        (candidate[0] - rgb[0]) ** 2 +
+        (candidate[1] - rgb[1]) ** 2 +
+        (candidate[2] - rgb[2]) ** 2;
+      if (distance < bestDistance) {
+        bestDistance = distance;
+        best = slotIndex + 1;
+      }
+    });
+    if (best !== undefined) {
+      used.add(best);
+      slots[index] = best;
+    }
+  });
+  let next = 1;
+  return slots.map((slot) => {
+    if (slot !== undefined) return slot;
+    while (used.has(next) && next < 16) next++;
+    used.add(next);
+    return next;
+  });
 }

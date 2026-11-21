@@ -4,7 +4,11 @@ import minmaxCases from "../../../../../examples/history-minmax-cases.json";
 import coverageCases from "../../../../../examples/history-coverage-cases.json";
 import retentionCases from "../../../../../examples/history-retention-cases.json";
 import { parseHistoryContract, type HistoryResult } from "../history-contract";
-import { historyResultToTrendSeries, isBoolSeries } from "./trend-adapter";
+import {
+  historyResultToTrendSeries,
+  isBoolSeries,
+  nearestColorSlots,
+} from "./trend-adapter";
 
 function parsed(input: unknown): HistoryResult {
   const value = parseHistoryContract(input);
@@ -38,8 +42,19 @@ describe("historyResultToTrendSeries", () => {
           expect(series).toBeUndefined();
           continue;
         }
+        const sorted = [...row.bins].sort((a, b) => a.fromMs - b.fromMs);
+        const switches = sorted.filter(
+          (bin, i) =>
+            i > 0 &&
+            bin.segmentId !== null &&
+            sorted[i - 1].segmentId !== null &&
+            sorted[i - 1].segmentId !== bin.segmentId &&
+            bin.fromMs - 1 > sorted[i - 1].fromMs,
+        ).length;
         const count =
-          input.query.mode === "raw" ? row.raw.length : row.bins.length;
+          input.query.mode === "raw"
+            ? row.raw.length
+            : row.bins.length + switches;
         expect(series.bins).toHaveLength(count);
         expect(series.binMs).toBeGreaterThanOrEqual(1);
         const times = series.bins.map((bin) => bin.tMs);
@@ -169,5 +184,73 @@ describe("historyResultToTrendSeries", () => {
         { tMs: 1000, min: 1, max: 1 },
       ],
     });
+  });
+
+  it("breaks the line where the segment changes", () => {
+    const bin = (fromMs: number, segmentId: string) => ({
+      fromMs,
+      toMs: fromMs + 100,
+      min: 1,
+      max: 2,
+      validCount: 1,
+      invalidCount: 0,
+      state: "complete" as const,
+      segmentId,
+      source: "real" as const,
+    });
+    const result = {
+      version: 1,
+      kind: "result",
+      status: "ready",
+      snapshotId: null,
+      query: {
+        version: 1,
+        kind: "query",
+        requestId: "r",
+        seriesIds: ["a"],
+        fromMs: 0,
+        toMs: 300,
+        mode: "minmax",
+        maxPointsPerSeries: 3,
+      },
+      series: [
+        {
+          seriesId: "a",
+          status: "ready",
+          segments: [],
+          raw: [],
+          coverage: [],
+          watermark: null,
+          bins: [bin(0, "s1"), bin(100, "s1"), bin(200, "s2")],
+        },
+      ],
+    } as HistoryResult;
+    expect(historyResultToTrendSeries(result).a.bins).toEqual([
+      { tMs: 0, min: 1, max: 2 },
+      { tMs: 100, min: 1, max: 2 },
+      { tMs: 199, min: null, max: null },
+      { tMs: 200, min: 1, max: 2 },
+    ]);
+  });
+});
+
+describe("nearestColorSlots", () => {
+  const palette = [[37, 99, 235], [234, 88, 12], [22, 163, 74], null] as const;
+  it("picks the closest unused slot for each hex color", () => {
+    expect(nearestColorSlots(["#f97316", "#2563eb"], palette)).toEqual([2, 1]);
+  });
+  it("does not give two pens the same slot", () => {
+    expect(nearestColorSlots(["#ea580c", "#f97316"], palette)).toEqual([2, 3]);
+  });
+  it("gives pens without a valid hex the remaining slots in order", () => {
+    expect(nearestColorSlots([undefined, "#16a34a", "red"], palette)).toEqual([
+      1, 3, 2,
+    ]);
+  });
+  it("falls back to slots 9-16 when the palette is exhausted", () => {
+    const colors = Array.from({ length: 10 }, () => undefined);
+    expect(nearestColorSlots(colors, [])).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+    ]);
   });
 });
