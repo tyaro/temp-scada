@@ -188,19 +188,27 @@
     altKey: boolean;
     shiftKey: boolean;
   }): DrawPointer | null {
-    const raw = canvasPoint(event, true);
-    if (!raw) return null;
+    // 画面の外（余白）にも頂点を置ける。表示とクリックは同じ点を使う（#373 のレビュー、
+    // 画面外にとりあえず置く使い方をオーナーが許容した）。
+    const matrix = viewport
+      ?.querySelector<SVGSVGElement>(".sheet > svg")
+      ?.getScreenCTM();
+    if (!matrix) return null;
+    let raw: Point;
+    try {
+      const p = new DOMPoint(event.clientX, event.clientY).matrixTransform(
+        matrix.inverse(),
+      );
+      raw = { x: p.x, y: p.y };
+    } catch {
+      return null;
+    }
+    if (!Number.isFinite(raw.x) || !Number.isFinite(raw.y)) return null;
     const grid =
       snapEnabled && !event.altKey
         ? {
-            x: Math.min(
-              screen.width,
-              Math.max(0, snapCoordinate(raw.x, gridSize)),
-            ),
-            y: Math.min(
-              screen.height,
-              Math.max(0, snapCoordinate(raw.y, gridSize)),
-            ),
+            x: snapCoordinate(raw.x, gridSize),
+            y: snapCoordinate(raw.y, gridSize),
           }
         : raw;
     return {
@@ -995,12 +1003,10 @@
         placing &&
         !hand &&
         !space &&
-        previous.point &&
-        point &&
         Math.hypot(event.clientX - previous.x, event.clientY - previous.y) < 5
       ) {
         if (drawing) clickDraw(event);
-        else onplacepoint(point);
+        else if (previous.point && point) onplacepoint(point);
       }
       return;
     }

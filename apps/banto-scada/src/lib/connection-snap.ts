@@ -54,11 +54,44 @@ export function findConnectionSnap(
   pointer: Point,
   radius: number,
 ): ConnectionSnap | null {
-  if (!(radius > 0) || !Number.isFinite(pointer.x + pointer.y)) return null;
+  const snaps = connectionSnapCandidates(
+    objects,
+    candidate?.id,
+    endpoint,
+    pointer,
+    radius,
+  );
+  if (!candidate) return snaps[0] ?? null;
+  for (const snap of snaps) {
+    const line = withConnection(candidate, snap);
+    try {
+      resolveConnectionObjects(
+        objects.map((object) => (object.id === line.id ? line : object)),
+      );
+      return snap;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+/**
+ * `pointer` から `radius` 以内の anchor を、選ぶ順（距離・前面・anchor の順）に並べる。
+ * 解決の検査はしない。`excludeId` の配置（線自身）は候補にしない。
+ */
+export function connectionSnapCandidates(
+  objects: readonly ScreenObject[],
+  excludeId: string | undefined,
+  endpoint: ConnectionEnd,
+  pointer: Point,
+  radius: number,
+): ConnectionSnap[] {
+  if (!(radius > 0) || !Number.isFinite(pointer.x + pointer.y)) return [];
   const hits: { snap: ConnectionSnap; distance: number; order: number }[] = [];
   for (const target of objects) {
     if (
-      target.id === candidate?.id ||
+      target.id === excludeId ||
       target.visible === false ||
       !isConnectionTarget(target)
     )
@@ -90,19 +123,7 @@ export function findConnectionSnap(
       anchorRank(a.snap.connection.anchor) -
         anchorRank(b.snap.connection.anchor),
   );
-  if (!candidate) return hits[0]?.snap ?? null;
-  for (const hit of hits) {
-    const line = withConnection(candidate, hit.snap);
-    try {
-      resolveConnectionObjects(
-        objects.map((object) => (object.id === line.id ? line : object)),
-      );
-      return hit.snap;
-    } catch {
-      continue;
-    }
-  }
-  return null;
+  return hits.map((hit) => hit.snap);
 }
 
 /** 途中の線に一時の接続を足す（表示・判定の候補）。 */

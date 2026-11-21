@@ -411,6 +411,14 @@ test("Escape cancels only the line in progress, Enter commits a free line, and a
   expect(line.shape.strokeWidth).toBe(2);
   expect(line.shape.connections).toBeUndefined();
   expect(line.shape.points).toHaveLength(2);
+  // 画面の外（余白）にも頂点を置ける（#373 のレビュー、オーナーが許容）。
+  await p.getByLabel("表示倍率", { exact: true }).selectOption("0.5");
+  await clickAt(p, -40, 20);
+  await clickAt(p, 100, 100);
+  await p.keyboard.press("Enter");
+  await expect(objects).toHaveCount(4);
+  const outside = (await saved(p)).screens[0].objects[3];
+  expect(Math.round(outside.x)).toBe(-40);
   await p.keyboard.press("Escape");
   await expect(bar).toHaveCount(0);
 });

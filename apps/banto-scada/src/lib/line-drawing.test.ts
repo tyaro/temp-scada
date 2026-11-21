@@ -81,7 +81,11 @@ it("Alt と Symbol 定義では吸着しない", () => {
   const draft = emptyDraft("line");
   expect(
     clickDraft(draft, objects, at(184, 223, { noSnap: true })).draft,
-  ).toEqual({ kind: "line", points: [{ x: 180, y: 220 }] });
+  ).toEqual({
+    kind: "line",
+    points: [{ x: 180, y: 220 }],
+    lastRaw: { x: 184, y: 223 },
+  });
   expect(clickDraft(draft, null, at(184, 223)).draft.start).toBeUndefined();
   expect(draftPointer(draft, objects, at(250, 250)).snap).toBeNull();
 });
@@ -232,4 +236,112 @@ it("add-polyline は 2 点未満と Symbol 定義の中の接続を拒否する"
       "edit",
     ),
   ).toThrow("Symbol定義内の配管接続");
+});
+
+// #373 のレビュー: グリッド 32・倍率 1 の例。
+function at32(x: number, y: number, extra: Partial<DrawPointer> = {}) {
+  return at(x, y, {
+    grid: { x: Math.round(x / 32) * 32, y: Math.round(y / 32) * 32 },
+    ...extra,
+  });
+}
+/** 右の anchor が (96,96) の矩形 A と、左の anchor が (108,96) の矩形 B。 */
+function twoBoxes(): Project {
+  const project: any = structuredClone(sample);
+  const box = (id: string, x: number, order: number) => ({
+    id,
+    order,
+    x,
+    y: 76,
+    width: 40,
+    height: 40,
+    rotation: 0,
+    shape: {
+      type: "rectangle",
+      paint: {
+        fill: {
+          enabled: true,
+          paint: { type: "solid", color: "#83bfcd", alpha: 1 },
+        },
+        stroke: { color: "#112233", width: 2 },
+      },
+    },
+  });
+  project.screens[0].objects = [
+    box("0199fd00-0000-7000-8000-0000000000a1", 56, 0),
+    box("0199fd00-0000-7000-8000-0000000000b2", 108, 1),
+  ];
+  return parseProject(JSON.stringify(project));
+}
+
+it("離れたクリックが丸めで直前の頂点に重なっても、足しも確定もしない", () => {
+  let draft = clickDraft(emptyDraft("line"), null, at32(10, 10)).draft;
+  draft = clickDraft(draft, null, at32(96, 96)).draft;
+  expect(draft.points).toEqual([
+    { x: 0, y: 0 },
+    { x: 96, y: 96 },
+  ]);
+  const step = clickDraft(draft, null, at32(110, 107));
+  expect(step.finished).toBeNull();
+  expect(step.draft).toEqual(draft);
+  // ダブルクリックの 2 回目（最後のクリックの近く）は、丸めた頂点から 5 を超えても確定する。
+  const far = clickDraft(draft, null, at32(90, 90)).draft;
+  expect(far.points.at(-1)).toEqual({ x: 96, y: 96 });
+  const done = clickDraft(
+    clickDraft(draft, null, at32(120, 122)).draft,
+    null,
+    at32(121, 124),
+  );
+  expect(done.finished?.points.at(-1)).toEqual({ x: 128, y: 128 });
+});
+
+it("終点は anchor の実座標で検査する。丸めで始点に重なる別の anchor へ吸着し、同じ anchor は除く", () => {
+  const project = twoBoxes();
+  const [a, b] = screenOf(project).objects;
+  const draft = clickDraft(
+    emptyDraft("line"),
+    screenOf(project).objects,
+    at32(96, 96, { radius: 5 }),
+  ).draft;
+  expect(draft.start).toEqual({ targetObjectId: a.id, anchor: "right" });
+  // (108,96) はグリッド 32 で始点 (96,96) に丸まるが、B の left へ吸着して 2 点の線になる。
+  const step = clickDraft(draft, screenOf(project).objects, at32(108, 96));
+  expect(step.finished).toEqual({
+    kind: "line",
+    points: [
+      { x: 96, y: 96 },
+      { x: 108, y: 96 },
+    ],
+    connections: {
+      start: { targetObjectId: a.id, anchor: "right" },
+      end: { targetObjectId: b.id, anchor: "left" },
+    },
+  });
+  // 始点と同じ anchor だけが半径にあるときは吸着しない。
+  expect(
+    draftPointer(draft, screenOf(project).objects, at32(96, 97, { radius: 5 }))
+      .snap,
+  ).toBeNull();
+});
+
+it("画面の外の頂点も置ける（画面外にとりあえず置く）", () => {
+  const project = fresh();
+  const result = applyCommand(
+    project,
+    {
+      type: "add-polyline",
+      screenId: screenOf(project).id,
+      kind: "line",
+      points: [
+        { x: -40, y: 20 },
+        { x: 1200, y: 700 },
+      ],
+    },
+    "edit",
+  );
+  const added = screenOf(result).objects.at(-1) as PolylineObject;
+  expect(added.shape.points.map((p) => objectToWorld(added, p))).toEqual([
+    { x: -40, y: 20 },
+    { x: 1200, y: 700 },
+  ]);
 });

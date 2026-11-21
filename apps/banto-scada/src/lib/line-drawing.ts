@@ -2,8 +2,14 @@
 // 始点・終点の anchor への吸着は E3 の `findConnectionSnap` を使う。確定は `add-polyline` 1 回。
 // 仕様: docs/design/editor/connection-follow-design.md の「E4：線を引きながら接続」。
 import type { Point, PolylineObject, ScreenObject } from "./project";
-import { findConnectionSnap, type ConnectionSnap } from "./connection-snap";
-import type { EndpointConnection } from "./connections";
+import {
+  connectionSnapCandidates,
+  type ConnectionSnap,
+} from "./connection-snap";
+import {
+  resolveConnectionObjects,
+  type EndpointConnection,
+} from "./connections";
 
 export type LineDrawKind = "line" | "pipe";
 
@@ -19,6 +25,8 @@ export interface LineDraft {
   points: Point[];
   /** 始点を吸着させた接続。 */
   start?: EndpointConnection;
+  /** 最後のクリックの丸めの前の位置（ダブルクリックの 2 回目を再クリックとみなす）。 */
+  lastRaw?: Point;
 }
 
 export interface FinishedLine {
@@ -39,7 +47,7 @@ export interface DrawPointer {
   noSnap: boolean;
   /** 吸着の半径（world）。 */
   radius: number;
-  /** 直前の頂点の再クリックとみなす半径（world）。 */
+  /** 直前の頂点の再クリックとみなす半径（world、丸めの前のポインタで測る）。 */
   repeatRadius: number;
 }
 
@@ -88,27 +96,29 @@ export function draftPointer(
   const point =
     last && input.shift ? constrainToAxis(last, input.grid) : input.grid;
   if (!objects || input.noSnap) return { point, snap: null };
-  if (!last) {
-    const snap = findConnectionSnap(
-      objects,
-      null,
-      "start",
-      input.raw,
-      input.radius,
-    );
-    return { point: snap?.point ?? point, snap };
-  }
-  const candidate = draftPolyline(draft.kind, [...draft.points, point], {
-    start: draft.start,
-  });
-  const snap = findConnectionSnap(
-    [...objects, candidate],
-    candidate,
-    "end",
+  const snaps = connectionSnapCandidates(
+    objects,
+    DRAFT_ID,
+    last ? "end" : "start",
     input.raw,
     input.radius,
   );
-  return { point: snap?.point ?? point, snap };
+  if (!last) return { point: snaps[0]?.point ?? point, snap: snaps[0] ?? null };
+  // 終点の候補は、終点を anchor の実座標に置いた線で検査する（丸めた位置で検査すると、
+  // 始点と同じ点に丸まった別の anchor まで落ちる。#373 のレビュー）。
+  for (const snap of snaps) {
+    const line = draftPolyline(draft.kind, [...draft.points, snap.point], {
+      start: draft.start,
+      end: snap.connection,
+    });
+    try {
+      resolveConnectionObjects([...objects, line]);
+      return { point: snap.point, snap };
+    } catch {
+      continue;
+    }
+  }
+  return { point, snap: null };
 }
 
 /**
@@ -127,6 +137,7 @@ export function clickDraft(
       draft: {
         kind: draft.kind,
         points: [point],
+        lastRaw: input.raw,
         ...(snap ? { start: snap.connection } : {}),
       },
       finished: null,
@@ -140,14 +151,20 @@ export function clickDraft(
       ? { draft: emptyDraft(draft.kind), finished }
       : { draft, finished: null };
   }
-  if (Math.hypot(point.x - last.x, point.y - last.y) <= input.repeatRadius) {
+  // 再クリックは丸めの前のポインタで測る。離れているのに丸めで直前の頂点と同じ点になった
+  // ときは、足しも確定もしない（#373 のレビュー）。
+  const near = (p: Point) =>
+    Math.hypot(input.raw.x - p.x, input.raw.y - p.y) <= input.repeatRadius;
+  if (near(last) || (draft.lastRaw && near(draft.lastRaw))) {
     const finished = finishDraft(draft);
     return finished
       ? { draft: emptyDraft(draft.kind), finished }
       : { draft, finished: null };
   }
+  if (point.x === last.x && point.y === last.y)
+    return { draft, finished: null };
   return {
-    draft: { ...draft, points: [...draft.points, point] },
+    draft: { ...draft, points: [...draft.points, point], lastRaw: input.raw },
     finished: null,
   };
 }
@@ -177,7 +194,14 @@ export function finishDraft(
 /** 最後の頂点を消す。始点を消したら始点の接続も消える。 */
 export function removeLastVertex(draft: LineDraft): LineDraft {
   const points = draft.points.slice(0, -1);
-  return points.length ? { ...draft, points } : emptyDraft(draft.kind);
+  // 再クリックの基準は消した頂点のものなので持ち越さない。
+  return points.length
+    ? {
+        kind: draft.kind,
+        points,
+        ...(draft.start ? { start: draft.start } : {}),
+      }
+    : emptyDraft(draft.kind);
 }
 
 export function emptyDraft(kind: LineDrawKind): LineDraft {
