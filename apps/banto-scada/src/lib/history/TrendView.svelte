@@ -97,15 +97,15 @@
     );
     return trendPens.map((pen, index) => ({
       id: pen.id,
-      label: pen.split
-        ? `${nameOf(pen.seriesId)}（${pen.unit ?? "単位なし"}${pen.bool ? "・bool" : ""}）`
+      label: pen.part
+        ? `${nameOf(pen.seriesId)}（${pen.part.index}/${pen.part.count}・${pen.unit ?? "単位なし"}${pen.bool ? "・bool" : ""}）`
         : nameOf(pen.seriesId),
       colorSlot: slots[index],
       unit: pen.unit,
       // 目盛りは 1 本目が左、2 本目が右。3 本目以降は凡例の範囲の独自の尺度。
       ...(index === 1 ? { axis: "right" as const } : {}),
-      // bool は段線（欠測で線が切れ、記録された OFF と記録なしを見分けられる）。
-      ...(pen.bool ? { bit: true } : {}),
+      // bool は 0／1 の高さを固定した段線（欠測で線が切れ、記録された OFF と記録なしを見分けられる）。
+      ...(pen.bool ? { bit: true, yMin: 0, yMax: 1 } : {}),
     }));
   });
   const scaleOf = (penId: string) => {
@@ -158,7 +158,7 @@
         {historyTime(result.query.fromMs)} 〜 {historyTime(result.query.toMs)} · UTC・終了時刻を含まない（グラフの目盛りは端末の地方時）
       </p>
       <p class="mode">
-        区間ごとの最小・最大を縦の線で示し、隣の区間とつなぎます。区間内の順序は表しません。boolは段線で、欠測では線が切れます。単位や型が途中で変わった系列はペンを分けます。目盛りは1本目が左、2本目が右で、3本目以降は凡例の範囲で縦の位置を決めます。
+        区間ごとの最小・最大を縦の線で示し、隣の区間とつなぎます。区間内の順序は表しません。boolは段線で、欠測では線が切れます。記録の区切り（segment。単位や型の変わり目など）が複数ある系列は区切りごとに別の線にします。目盛りは1本目が左、2本目が右で、3本目以降は凡例の範囲で縦の位置を決めます。
       </p>
       {#if chartPens.length}
         <TrendChart

@@ -5,8 +5,8 @@ import type { HistoryResult, HistorySeriesResult } from "../history-contract";
  * Issue #359: H1 の History の応答を、共通部品 `@banto-industrial/trend` の
  * 区間の契約（`{ tMs, min, max }` と系列ごとの `binMs`）へ写す。
  *
- * 写すときに落ちるもの（共通の契約に無い）: segment の切れ目（identity の変化）、
- * 品質・理由、coverage、`partial`／`mixedSegment` の区別、件数。
+ * 写すときに落ちるもの（共通の契約に無い）: 品質・理由、coverage、`partial`／`mixedSegment`
+ * の区別、件数。この関数は segment を分けない（実証のページ用）。製品は `historyTrendPens`。
  * `gap` と `mixedSegment` の区間は欠測（min・max とも null）として線をつながない。
  * raw の点は min = max の区間にし、bool は 0／1 にする。
  */
@@ -22,66 +22,54 @@ export function historyResultToTrendSeries(
   return out;
 }
 
-/** 同じ系列の segment を、単位と値の型が同じものどうしにまとめた 1 本のペン。 */
+/** 履歴のペン 1 本。segment が 1 つなら系列そのもの、複数なら segment ごと。 */
 export interface HistoryTrendPen {
   /** 分けなければ系列ID。分けたときは `系列ID~番号`。 */
   id: string;
   seriesId: string;
   unit: string | null;
   bool: boolean;
-  /** 単位・型の違う segment があり、系列を分けたか。 */
-  split: boolean;
+  /** segment ごとに分けたときの何番目か・いくつに分けたか。分けなければ null。 */
+  part: { index: number; count: number } | null;
   series: TrendSeries;
 }
 
 /**
- * ready の系列ごとに、単位と値の型が同じ segment をまとめてペンにする。単位や型が途中で変わった
- * 系列は複数のペンに分け、ほかのペンの segment の区間は欠測にする（後半に前半の単位を付けない）。
+ * ready の系列をペンにする。segment（記録の意味・単位・型の区切り）が複数ある系列は segment ごとの
+ * ペンに分け、ほかの segment の区間は欠測にする。線は segment ごとの別の path になり、
+ * segment をまたいでつながらない。区間の時刻と長さは変えない（欠測の区間を挟んで正常な区間を
+ * 打ち切らない）。bool の minmax は段の形にする（`boolSteps`）。
  */
 export function historyTrendPens(result: HistoryResult): HistoryTrendPen[] {
+  const raw = result.query.mode === "raw";
   const pens: HistoryTrendPen[] = [];
   for (const series of result.series) {
     if (series.status !== "ready") continue;
-    const groups = new Map<
-      string,
-      { unit: string | null; bool: boolean; segments: Set<string> }
-    >();
-    for (const segment of series.segments) {
-      const key = JSON.stringify([segment.valueType, segment.unit]);
-      const group = groups.get(key) ?? {
-        unit: segment.unit,
-        bool: segment.valueType === "bool",
-        segments: new Set<string>(),
-      };
-      group.segments.add(segment.segmentId);
-      groups.set(key, group);
-    }
-    const list = [...groups.values()];
-    if (list.length <= 1) {
+    const segments = series.segments;
+    if (segments.length <= 1) {
+      const bool = segments[0]?.valueType === "bool";
       pens.push({
         id: series.seriesId,
         seriesId: series.seriesId,
-        unit: list[0]?.unit ?? null,
-        bool: list[0]?.bool ?? false,
-        split: false,
-        series:
-          result.query.mode === "raw" ? fromRaw(series) : fromBins(series),
+        unit: segments[0]?.unit ?? null,
+        bool,
+        part: null,
+        series: raw ? fromRaw(series) : fromBins(series, undefined, bool),
       });
       continue;
     }
-    list.forEach((group, index) =>
+    segments.forEach((segment, index) => {
+      const keep = new Set([segment.segmentId]);
+      const bool = segment.valueType === "bool";
       pens.push({
         id: `${series.seriesId}~${index + 1}`,
         seriesId: series.seriesId,
-        unit: group.unit,
-        bool: group.bool,
-        split: true,
-        series:
-          result.query.mode === "raw"
-            ? fromRaw(series, group.segments)
-            : fromBins(series, group.segments),
-      }),
-    );
+        unit: segment.unit,
+        bool,
+        part: { index: index + 1, count: segments.length },
+        series: raw ? fromRaw(series, keep) : fromBins(series, keep, bool),
+      });
+    });
   }
   return pens;
 }
@@ -89,42 +77,49 @@ export function historyTrendPens(result: HistoryResult): HistoryTrendPen[] {
 function fromBins(
   series: HistorySeriesResult,
   keep?: ReadonlySet<string>,
+  bool = false,
 ): TrendSeries {
   const sorted = [...series.bins].sort((a, b) => a.fromMs - b.fromMs);
   const bins: { tMs: number; min: number | null; max: number | null }[] = [];
-  sorted.forEach((bin, index) => {
-    const previous = sorted[index - 1];
-    // segment が変わる所では、直前に欠測の区間を挟んで線を切る（segment をまたぐ偽の連続を作らない）。
-    // 欠測の区間は次の区間の 1ms 前から。区間が 1ms しか離れていないときは間の小数の時刻に置く。
-    if (
-      previous &&
-      previous.segmentId !== null &&
-      bin.segmentId !== null &&
-      previous.segmentId !== bin.segmentId &&
-      bin.fromMs > previous.fromMs
-    )
-      bins.push({
-        tMs: Math.max(bin.fromMs - 1, (previous.fromMs + bin.fromMs) / 2),
-        min: null,
-        max: null,
-      });
+  for (const bin of sorted) {
     const missing =
       bin.state === "gap" ||
       bin.state === "mixedSegment" ||
       (keep !== undefined &&
         (bin.segmentId === null || !keep.has(bin.segmentId)));
-    bins.push({
-      tMs: bin.fromMs,
+    const value = {
       min: missing ? null : bin.min,
       max: missing ? null : bin.max,
-    });
-  });
+    };
+    if (bool && !missing) bins.push(...boolSteps(bin.fromMs, bin.toMs, value));
+    else bins.push({ tMs: bin.fromMs, ...value });
+  }
   // 区間の幅は応答の実際の値。H1 は範囲を整数で割るので 1ms ずれることがあり、広い方を採る。
   const binMs = series.bins.reduce(
     (width, bin) => Math.max(width, bin.toMs - bin.fromMs),
     1,
   );
   return { bins, binMs };
+}
+
+/**
+ * bool の区間を、始め・中・終わりの 3 つの小区間に分ける。部品の包絡は区間の中央の縦線を
+ * 隣の区間の近い端へつなぐので、1 区間 1 点では OFF→ON が斜めの線になる。小区間に分けると、
+ * 区間の中は水平で、区間の境目でほぼ垂直に変わる段の形になる（両方の状態を含む区間は縦線）。
+ */
+export function boolSteps(
+  fromMs: number,
+  toMs: number,
+  value: { min: number | null; max: number | null },
+): { tMs: number; min: number | null; max: number | null }[] {
+  const width = toMs - fromMs;
+  if (!(width > 0)) return [{ tMs: fromMs, ...value }];
+  const edge = width / 1000;
+  return [
+    { tMs: fromMs, ...value },
+    { tMs: fromMs + edge, ...value },
+    { tMs: toMs - edge, ...value },
+  ];
 }
 
 function fromRaw(
