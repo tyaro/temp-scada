@@ -8,14 +8,15 @@
   import type { HistoryPresentation } from "./presentation";
   import { historyTime } from "./trend-model";
   import {
-    historyResultToTrendSeries,
-    isBoolSeries,
+    historyTrendPens,
     nearestColorSlots,
     type Rgb,
   } from "./trend-adapter";
+  import RawTrendView from "./RawTrendView.svelte";
   import type { TrendPen } from "../trend-definitions";
 
-  // #359: 描画は共通部品 TrendChart。全系列を 1 枚に重ね、範囲は取得した query に固定する
+  // #359: minmax の描画は共通部品 TrendChart。全系列を 1 枚に重ね、範囲は取得した query に固定する。
+  // raw は、部品の点が区間の中央に寄り近い点を間引くので、上流の対応まで旧表示（RawTrendView）を使う
   // （設計 historian-history-presentation.md の「共通部品への置き換え」）。
   let {
     state: presentation,
@@ -88,30 +89,35 @@
     return () => observer.disconnect();
   });
 
+  const trendPens = $derived(result ? historyTrendPens(result) : []);
   const chartPens = $derived.by((): ChartPen[] => {
-    if (!result) return [];
-    const raw = result.query.mode === "raw";
     const slots = nearestColorSlots(
-      ready.map((series) => penFor(series.seriesId)?.color),
+      trendPens.map((pen) => penFor(pen.seriesId)?.color),
       palette,
     );
-    let analog = 0;
-    return ready.map((series, index) => {
-      const bool = isBoolSeries(series);
-      // 2 本目の数値のペンは右の目盛り（部品の目盛りは左右の 2 本）。
-      const axis = !bool && analog++ === 1 ? ("right" as const) : undefined;
-      const pen: ChartPen = {
-        id: series.seriesId,
-        label: nameOf(series.seriesId),
-        colorSlot: slots[index],
-        unit: series.segments[0]?.unit ?? null,
-        ...(axis ? { axis } : {}),
-      };
-      // raw は点だけ（点の間を結ばない）。bool の minmax は区間の帯。
-      if (raw) return { ...pen, lineStyle: "none", marker: "circle" };
-      return bool ? { ...pen, bit: true, bitStyle: "band" } : pen;
-    });
+    return trendPens.map((pen, index) => ({
+      id: pen.id,
+      label: pen.split
+        ? `${nameOf(pen.seriesId)}（${pen.unit ?? "単位なし"}${pen.bool ? "・bool" : ""}）`
+        : nameOf(pen.seriesId),
+      colorSlot: slots[index],
+      unit: pen.unit,
+      // 目盛りは 1 本目が左、2 本目が右。3 本目以降は凡例の範囲の独自の尺度。
+      ...(index === 1 ? { axis: "right" as const } : {}),
+      // bool は段線（欠測で線が切れ、記録された OFF と記録なしを見分けられる）。
+      ...(pen.bool ? { bit: true } : {}),
+    }));
   });
+  const scaleOf = (penId: string) => {
+    const index = chartPens.findIndex((pen) => pen.id === penId);
+    return index === 0
+      ? "左の目盛り"
+      : index === 1
+        ? "右の目盛り"
+        : "独自の尺度（目盛りなし）";
+  };
+  const seriesOf = (penId: string) =>
+    trendPens.find((pen) => pen.id === penId)?.seriesId ?? penId;
   const range = $derived(
     result
       ? { startMs: result.query.fromMs, endMs: result.query.toMs }
@@ -119,7 +125,12 @@
   );
   const data = $derived<TrendData | null>(
     result && range
-      ? { range, series: historyResultToTrendSeries(result) }
+      ? {
+          range,
+          series: Object.fromEntries(
+            trendPens.map((pen) => [pen.id, pen.series]),
+          ),
+        }
       : null,
   );
   const mixedCount = $derived(
@@ -131,52 +142,56 @@
   );
 </script>
 
-<section
-  class="history-trend"
-  aria-label="履歴トレンド"
-  data-history-phase={presentation.phase}
->
-  <header>
-    <strong>履歴トレンド</strong><span role="status">{phaseText}</span>
-  </header>
-  {#if result && range}
-    <p class="range">
-      {historyTime(result.query.fromMs)} 〜 {historyTime(result.query.toMs)} · UTC・終了時刻を含まない（グラフの目盛りは端末の地方時）
-    </p>
-    <p class="mode">
-      {result.query.mode === "raw"
-        ? "観測点を表示します。点の間は結びません。"
-        : "区間ごとの最小・最大を縦の線で示し、隣の区間とつなぎます。区間内の順序は表しません。"}
-    </p>
-    {#if chartPens.length}
-      <TrendChart
-        {range}
-        pens={chartPens}
-        {data}
-        label="履歴トレンドのグラフ"
-        legendLabel="履歴トレンドの凡例"
-        height={320}
-        emptyMessage="この期間に表示できる数値はありません"
-      >
-        {#snippet legendBadge(pen)}<small
-            class="series-id"
-            data-history-legend-series={pen.id}>系列ID: {pen.id}</small
-          >{/snippet}
-      </TrendChart>
-    {/if}
-    {#each failed as series (series.seriesId)}
-      <p class="notice" data-history-series-status={series.status}>
-        {nameOf(series.seriesId)}: {series.status === "unknownSeries"
-          ? "系列が見つかりません。未記録やゼロ値とは区別します。"
-          : "この系列の履歴を取得できません。"}
+{#if result?.query.mode === "raw"}
+  <RawTrendView state={presentation} {pens} />
+{:else}
+  <section
+    class="history-trend"
+    aria-label="履歴トレンド"
+    data-history-phase={presentation.phase}
+  >
+    <header>
+      <strong>履歴トレンド</strong><span role="status">{phaseText}</span>
+    </header>
+    {#if result && range}
+      <p class="range">
+        {historyTime(result.query.fromMs)} 〜 {historyTime(result.query.toMs)} · UTC・終了時刻を含まない（グラフの目盛りは端末の地方時）
       </p>
-    {/each}
-    {#if mixedCount}<p class="notice" data-history-mixed>
-        記録の意味・時刻domain等が混在する区間 {mixedCount}件。最小・最大を混ぜて表示しません。
-      </p>{/if}
-    <p class="notice">記録範囲・品質・系列の切れ目はまだ表示しません。</p>
-  {/if}
-</section>
+      <p class="mode">
+        区間ごとの最小・最大を縦の線で示し、隣の区間とつなぎます。区間内の順序は表しません。boolは段線で、欠測では線が切れます。単位や型が途中で変わった系列はペンを分けます。目盛りは1本目が左、2本目が右で、3本目以降は凡例の範囲で縦の位置を決めます。
+      </p>
+      {#if chartPens.length}
+        <TrendChart
+          {range}
+          pens={chartPens}
+          {data}
+          label="履歴トレンドのグラフ"
+          legendLabel="履歴トレンドの凡例"
+          height={320}
+          emptyMessage="この期間に表示できる数値はありません"
+        >
+          {#snippet legendBadge(pen)}<small
+              class="series-id"
+              data-history-legend-series={seriesOf(pen.id)}
+              data-history-legend-scale={scaleOf(pen.id)}
+              >系列ID: {seriesOf(pen.id)} · {scaleOf(pen.id)}</small
+            >{/snippet}
+        </TrendChart>
+      {/if}
+      {#each failed as series (series.seriesId)}
+        <p class="notice" data-history-series-status={series.status}>
+          {nameOf(series.seriesId)}: {series.status === "unknownSeries"
+            ? "系列が見つかりません。未記録やゼロ値とは区別します。"
+            : "この系列の履歴を取得できません。"}
+        </p>
+      {/each}
+      {#if mixedCount}<p class="notice" data-history-mixed>
+          記録の意味・時刻domain等が混在する区間 {mixedCount}件。最小・最大を混ぜて表示しません。
+        </p>{/if}
+      <p class="notice">記録範囲・品質・系列の切れ目はまだ表示しません。</p>
+    {/if}
+  </section>
+{/if}
 
 <style>
   .history-trend {

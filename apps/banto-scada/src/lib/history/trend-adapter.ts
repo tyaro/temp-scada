@@ -22,7 +22,74 @@ export function historyResultToTrendSeries(
   return out;
 }
 
-function fromBins(series: HistorySeriesResult): TrendSeries {
+/** 同じ系列の segment を、単位と値の型が同じものどうしにまとめた 1 本のペン。 */
+export interface HistoryTrendPen {
+  /** 分けなければ系列ID。分けたときは `系列ID~番号`。 */
+  id: string;
+  seriesId: string;
+  unit: string | null;
+  bool: boolean;
+  /** 単位・型の違う segment があり、系列を分けたか。 */
+  split: boolean;
+  series: TrendSeries;
+}
+
+/**
+ * ready の系列ごとに、単位と値の型が同じ segment をまとめてペンにする。単位や型が途中で変わった
+ * 系列は複数のペンに分け、ほかのペンの segment の区間は欠測にする（後半に前半の単位を付けない）。
+ */
+export function historyTrendPens(result: HistoryResult): HistoryTrendPen[] {
+  const pens: HistoryTrendPen[] = [];
+  for (const series of result.series) {
+    if (series.status !== "ready") continue;
+    const groups = new Map<
+      string,
+      { unit: string | null; bool: boolean; segments: Set<string> }
+    >();
+    for (const segment of series.segments) {
+      const key = JSON.stringify([segment.valueType, segment.unit]);
+      const group = groups.get(key) ?? {
+        unit: segment.unit,
+        bool: segment.valueType === "bool",
+        segments: new Set<string>(),
+      };
+      group.segments.add(segment.segmentId);
+      groups.set(key, group);
+    }
+    const list = [...groups.values()];
+    if (list.length <= 1) {
+      pens.push({
+        id: series.seriesId,
+        seriesId: series.seriesId,
+        unit: list[0]?.unit ?? null,
+        bool: list[0]?.bool ?? false,
+        split: false,
+        series:
+          result.query.mode === "raw" ? fromRaw(series) : fromBins(series),
+      });
+      continue;
+    }
+    list.forEach((group, index) =>
+      pens.push({
+        id: `${series.seriesId}~${index + 1}`,
+        seriesId: series.seriesId,
+        unit: group.unit,
+        bool: group.bool,
+        split: true,
+        series:
+          result.query.mode === "raw"
+            ? fromRaw(series, group.segments)
+            : fromBins(series, group.segments),
+      }),
+    );
+  }
+  return pens;
+}
+
+function fromBins(
+  series: HistorySeriesResult,
+  keep?: ReadonlySet<string>,
+): TrendSeries {
   const sorted = [...series.bins].sort((a, b) => a.fromMs - b.fromMs);
   const bins: { tMs: number; min: number | null; max: number | null }[] = [];
   sorted.forEach((bin, index) => {
@@ -41,7 +108,11 @@ function fromBins(series: HistorySeriesResult): TrendSeries {
         min: null,
         max: null,
       });
-    const missing = bin.state === "gap" || bin.state === "mixedSegment";
+    const missing =
+      bin.state === "gap" ||
+      bin.state === "mixedSegment" ||
+      (keep !== undefined &&
+        (bin.segmentId === null || !keep.has(bin.segmentId)));
     bins.push({
       tMs: bin.fromMs,
       min: missing ? null : bin.min,
@@ -56,8 +127,12 @@ function fromBins(series: HistorySeriesResult): TrendSeries {
   return { bins, binMs };
 }
 
-function fromRaw(series: HistorySeriesResult): TrendSeries {
+function fromRaw(
+  series: HistorySeriesResult,
+  keep?: ReadonlySet<string>,
+): TrendSeries {
   const bins = [...series.raw]
+    .filter((sample) => keep === undefined || keep.has(sample.segmentId))
     .sort((a, b) => a.sampleTimeMs - b.sampleTimeMs)
     .map((sample) => {
       const value =

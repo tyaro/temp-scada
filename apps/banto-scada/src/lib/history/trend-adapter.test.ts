@@ -6,6 +6,7 @@ import retentionCases from "../../../../../examples/history-retention-cases.json
 import { parseHistoryContract, type HistoryResult } from "../history-contract";
 import {
   historyResultToTrendSeries,
+  historyTrendPens,
   isBoolSeries,
   nearestColorSlots,
 } from "./trend-adapter";
@@ -279,6 +280,89 @@ describe("segment breaks between 1 ms bins", () => {
       { tMs: 0.5, min: null, max: null },
       { tMs: 1, min: 1, max: 2 },
     ]);
+  });
+});
+
+describe("historyTrendPens", () => {
+  const identity = (segmentId: string, unit: string) => ({
+    seriesId: "t",
+    hubInstanceId: "h",
+    incarnationId: "i",
+    externalName: "温度",
+    segmentId,
+    valueType: "number" as const,
+    unit,
+    periodMs: 1000,
+    source: "real" as const,
+  });
+  const bin = (fromMs: number, segmentId: string, value: number) => ({
+    fromMs,
+    toMs: fromMs + 100,
+    min: value,
+    max: value,
+    validCount: 1,
+    invalidCount: 0,
+    state: "complete" as const,
+    segmentId,
+    source: "real" as const,
+  });
+  const result = (segments: ReturnType<typeof identity>[]) =>
+    ({
+      version: 1,
+      kind: "result",
+      status: "ready",
+      snapshotId: null,
+      query: {
+        version: 1,
+        kind: "query",
+        requestId: "r",
+        seriesIds: ["t"],
+        fromMs: 0,
+        toMs: 400,
+        mode: "minmax",
+        maxPointsPerSeries: 4,
+      },
+      series: [
+        {
+          seriesId: "t",
+          status: "ready",
+          segments,
+          raw: [],
+          coverage: [],
+          watermark: null,
+          bins: [
+            bin(0, "c", 20),
+            bin(100, "c", 21),
+            bin(200, "f", 70),
+            bin(300, "f", 71),
+          ],
+        },
+      ],
+    }) as HistoryResult;
+
+  it("keeps one pen with its unit when the unit does not change", () => {
+    const pens = historyTrendPens(
+      result([identity("c", "C"), identity("f", "C")]),
+    );
+    expect(pens.map((pen) => [pen.id, pen.unit, pen.split])).toEqual([
+      ["t", "C", false],
+    ]);
+  });
+
+  it("splits a series whose unit changes and blanks the other unit's bins", () => {
+    const pens = historyTrendPens(
+      result([identity("c", "C"), identity("f", "F")]),
+    );
+    expect(pens.map((pen) => [pen.id, pen.unit, pen.split])).toEqual([
+      ["t~1", "C", true],
+      ["t~2", "F", true],
+    ]);
+    const values = (index: number) =>
+      pens[index].series.bins
+        .filter((b) => b.tMs % 100 === 0)
+        .map((b) => b.max);
+    expect(values(0)).toEqual([20, 21, null, null]);
+    expect(values(1)).toEqual([null, null, 70, 71]);
   });
 });
 
