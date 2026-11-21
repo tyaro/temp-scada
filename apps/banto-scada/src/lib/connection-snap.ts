@@ -42,8 +42,9 @@ export function snappableEndpoint(
 /**
  * `pointer`（world、グリッドの丸めの前）から `radius`（world）以内で最も近い anchor。
  * 候補は同じ画面の表示中の接続先（ロック中も可）。同じ距離なら前面（order の大きい配置）、
- * 次に `CONNECTION_ANCHORS` の順。`candidate` は端点を動かした途中の線で、接続した結果が
- * 解決できない候補（両端が同じ点になるなど）は除く。
+ * 次に `CONNECTION_ANCHORS` の順。`candidate` は保存済みの線（確定の `set-line-connection`
+ * と同じ入力。途中の頂点はグリッドで反対の端に重なることがある）で、接続した結果が解決
+ * できない候補（両端が同じ点になるなど）は除く。
  */
 export function findConnectionSnap(
   objects: readonly ScreenObject[],

@@ -160,3 +160,28 @@ it("確定は set-line-connection 1 回で端点が anchor へ移り、Undo 1 �
   // 編集の前の Project は変わらない（Undo はこの 1 件を戻す）。
   expect(lineOf(project).shape.connections).toBeUndefined();
 });
+
+it("途中の頂点がグリッドで反対の端に重なっても、保存済みの線で判定して吸着する", () => {
+  // PR #372 のレビュー: 始点 (180,220)・終点 (300,220) の 2 点の線の終点を、ポンプ1 の
+  // 右の anchor (180,220) の手前 (184,220) へ寄せる。グリッド 10 なら途中の終点は始点と
+  // 同じ点になるが、確定は保存済みの線から解決するので接続できる。
+  const project: any = structuredClone(sample);
+  const line = project.screens[0].objects[2];
+  delete line.shape.connections;
+  line.shape.points = [
+    { x: 180, y: 260 },
+    { x: 300, y: 260 },
+  ];
+  const parsed = parseProject(JSON.stringify(project));
+  const snap = findConnectionSnap(
+    screenOf(parsed).objects,
+    lineOf(parsed),
+    "end",
+    { x: 184, y: 222 },
+    12,
+  );
+  expect(snap?.connection).toEqual({
+    targetObjectId: screenOf(parsed).objects[0].id,
+    anchor: "right",
+  });
+});

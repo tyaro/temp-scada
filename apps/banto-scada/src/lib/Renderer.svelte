@@ -456,10 +456,9 @@
       vertexDrag?.id === object.id &&
       object.shape.type === "polyline"
     )
-      return withConnection(
-        rawPreviewObject(object) as PolylineObject,
-        vertexSnap,
-      );
+      // 確定の `set-line-connection` と同じく保存済みの線へ接続を足す。途中の頂点は
+      // グリッドで反対の端に重なることがあり、それで有効な anchor を落とさない。
+      return withConnection(object as PolylineObject, vertexSnap);
     if (
       "width" in object &&
       object.shape.type === "polygon" &&
@@ -845,7 +844,7 @@
     const origin = objectToWorld(line as PolylineObject, current.original);
     return findConnectionSnap(
       screen.objects,
-      rawPreviewObject(line) as PolylineObject,
+      line as PolylineObject,
       endpoint,
       { x: origin.x + delta.x, y: origin.y + delta.y },
       CONNECTION_SNAP_PX / viewScale,
