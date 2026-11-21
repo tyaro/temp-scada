@@ -8,12 +8,14 @@ import {
   isAreaShape,
   parseProject,
   serializeProject,
+  type PolylineObject,
   type Project,
   type ScreenObject,
   type ShapeLabel,
   type ShapePaint,
 } from "./project";
 import { emptyHistory, recordEdit, travelHistory } from "./history";
+import { objectToWorld } from "./rotation";
 import { copyObjects } from "./clipboard";
 import { AssetStore } from "./image-assets";
 import { readProjectFile, writeProjectPackage } from "./project-package";
@@ -493,5 +495,61 @@ describe("フロー図のサンプル（#305 L3）", () => {
     ).toHaveLength(4);
     expect(objects.filter((o) => o.shape.type === "text")).toHaveLength(0);
     expect(objects.filter((o) => o.shape.type === "polyline")).toHaveLength(15);
+  });
+  // #306 E2: 15 本の矢印は両端とも図形の anchor へ接続済みで、箱を動かすと離れない。
+  it("矢印は両端とも図形へ接続し、箱を動かすと前後の矢印が追従する", () => {
+    const project = parseProject(JSON.stringify(flowSample));
+    const screen = project.screens[0];
+    const lines = screen.objects.filter(
+      (o): o is PolylineObject => o.shape.type === "polyline",
+    );
+    const byId = new Map(screen.objects.map((o) => [o.id, o]));
+    for (const line of lines)
+      for (const end of ["start", "end"] as const) {
+        const connection = line.shape.connections?.[end];
+        expect(connection, `${line.name} ${end}`).toBeDefined();
+        expect(byId.get(connection!.targetObjectId)?.shape.type).toMatch(
+          /^(rectangle|ellipse|polygon)$/,
+        );
+      }
+    // 判断（ひし形）は上から入り、左へ出る。動かすと前後の 2 本が付いてくる。
+    const diamond = screen.objects.find((o) => o.name === "判断 温度")!;
+    const ends = (p: Project) =>
+      p.screens[0].objects
+        .filter((o): o is PolylineObject => o.shape.type === "polyline")
+        .map((o) => o.shape.points.map((point) => objectToWorld(o, point)));
+    const before = ends(project);
+    const moved = applyCommand(
+      project,
+      {
+        type: "move-many",
+        screenId: screen.id,
+        objectIds: [diamond.id],
+        dx: 30,
+        dy: 20,
+      },
+      "edit",
+    );
+    const after = ends(moved);
+    const touched = lines
+      .map((line, index) => ({ line, index }))
+      .filter(({ line }) =>
+        [line.shape.connections?.start, line.shape.connections?.end].some(
+          (c) => c?.targetObjectId === diamond.id,
+        ),
+      );
+    expect(touched).toHaveLength(2);
+    for (const { line, index } of touched) {
+      const end = line.shape.connections?.end?.targetObjectId === diamond.id;
+      const i = end ? before[index].length - 1 : 0;
+      expect(after[index][i]).toEqual({
+        x: before[index][i].x + 30,
+        y: before[index][i].y + 20,
+      });
+      expect(after[index][end ? 0 : before[index].length - 1]).toEqual(
+        before[index][end ? 0 : before[index].length - 1],
+      );
+    }
+    expect(parseProject(serializeProject(moved))).toEqual(moved);
   });
 });

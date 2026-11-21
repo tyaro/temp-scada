@@ -682,7 +682,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000001",
+                "anchor": "right"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000002",
+                "anchor": "left"
+              }
+            }
           },
           "rotation": 0
         },
@@ -706,7 +716,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000002",
+                "anchor": "right"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000003",
+                "anchor": "left"
+              }
+            }
           },
           "rotation": 0
         },
@@ -730,7 +750,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000003",
+                "anchor": "right"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000004",
+                "anchor": "left"
+              }
+            }
           },
           "rotation": 0
         },
@@ -754,7 +784,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000004",
+                "anchor": "bottom"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000005",
+                "anchor": "top"
+              }
+            }
           },
           "rotation": 0
         },
@@ -778,7 +818,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000005",
+                "anchor": "left"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000006",
+                "anchor": "right"
+              }
+            }
           },
           "rotation": 0
         },
@@ -802,7 +852,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000006",
+                "anchor": "left"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000007",
+                "anchor": "right"
+              }
+            }
           },
           "rotation": 0
         },
@@ -826,7 +886,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000007",
+                "anchor": "left"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000008",
+                "anchor": "right"
+              }
+            }
           },
           "rotation": 0
         },
@@ -850,7 +920,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000008",
+                "anchor": "bottom"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000009",
+                "anchor": "top"
+              }
+            }
           },
           "rotation": 0
         },
@@ -874,7 +954,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000009",
+                "anchor": "right"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000a",
+                "anchor": "left"
+              }
+            }
           },
           "rotation": 0
         },
@@ -898,7 +988,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000a",
+                "anchor": "right"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000b",
+                "anchor": "left"
+              }
+            }
           },
           "rotation": 0
         },
@@ -922,7 +1022,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000b",
+                "anchor": "right"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000c",
+                "anchor": "left"
+              }
+            }
           },
           "rotation": 0
         },
@@ -946,7 +1056,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000c",
+                "anchor": "bottom"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000d",
+                "anchor": "top"
+              }
+            }
           },
           "rotation": 0
         },
@@ -970,7 +1090,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000d",
+                "anchor": "left"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000e",
+                "anchor": "right"
+              }
+            }
           },
           "rotation": 0
         },
@@ -994,7 +1124,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000e",
+                "anchor": "left"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000f",
+                "anchor": "right"
+              }
+            }
           },
           "rotation": 0
         },
@@ -1018,7 +1158,17 @@
               }
             ],
             "strokeWidth": 2,
-            "arrow": "end"
+            "arrow": "end",
+            "connections": {
+              "start": {
+                "targetObjectId": "0199f306-0000-7000-8000-00000000000f",
+                "anchor": "left"
+              },
+              "end": {
+                "targetObjectId": "0199f306-0000-7000-8000-000000000010",
+                "anchor": "right"
+              }
+            }
           },
           "rotation": 0
         }

@@ -12,7 +12,11 @@ import {
 import { applyCommand, type EditCommand } from "./editor";
 import { objectToWorld } from "./rotation";
 import { connectionAnchorPoint } from "./connection-geometry";
-import { connectionUsages, resolveConnectionObjects } from "./connections";
+import {
+  connectionTargetLabel,
+  connectionUsages,
+  resolveConnectionObjects,
+} from "./connections";
 import { reframedPolygonVertex } from "./polygon-frame";
 import { lineConnectionCommand } from "./designer/forms/line-connection";
 
@@ -212,4 +216,20 @@ it("connects and disconnects an area target through the Inspector form command",
   expect(connectionUsages(disconnected.screens[0], box)).toHaveLength(0);
   expect(positions(disconnected)).toEqual(positions(project));
   expect(target(disconnected, box)).toEqual(target(project, box));
+});
+
+it("labels unnamed shapes by their kind instead of the type name (#306 E2)", () => {
+  const project = fresh();
+  const shape = { ...target(project, box), name: undefined };
+  expect(connectionTargetLabel(shape)).toBe(`矩形 · 配置${shape.order + 1}`);
+  expect(connectionTargetLabel({ ...shape, name: "工程 A" })).toBe(
+    `工程 A（矩形） · 配置${shape.order + 1}`,
+  );
+  const symbol = {
+    ...shape,
+    shape: { type: "symbol", symbolId: "pump" },
+  } as any;
+  expect(
+    connectionTargetLabel(symbol, [{ id: "pump", name: "ポンプ" } as any]),
+  ).toBe(`ポンプ（Symbol） · 配置${shape.order + 1}`);
 });
