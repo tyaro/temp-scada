@@ -102,153 +102,144 @@ const SEV = {
 } as const;
 const BOTH = threshold({ hh: "high", h: "medium" });
 
+/**
+ * 組合せの例の 1 行。conditions は condition id の接尾辞（"" は bit の alarmId そのもの）から状態へ。
+ * severity・underline は無いことも確かめる（undefined は「付かない」）。title は確かめる行だけ書く。
+ */
+type Example = {
+  name: string;
+  def: AlarmDefinition;
+  conditions: Record<string, AlarmConditionState>;
+  severities?: Record<string, AlarmSeverity>;
+  tone: "normal" | "severity" | "unknown";
+  severity?: AlarmSeverity;
+  underline?: AlarmSeverity;
+  title?: string;
+};
+const at = (suffix: string) => (suffix ? `${ID}:${suffix}` : ID);
+const unapplied = "（この警報は適用されていません）";
+const EXAMPLES: Example[] = [
+  {
+    name: "すべて正常",
+    def: BOTH,
+    conditions: { hh: cond("normal"), h: cond("normal") },
+    tone: "normal",
+    title: "正常",
+  },
+  {
+    name: "H 発生中・確認済み、HH 発生中・未確認",
+    def: BOTH,
+    conditions: { hh: cond("unacked"), h: cond("acked") },
+    tone: "severity",
+    severity: "high",
+    underline: "high",
+    title: "HH 未確認（発生中）、H 発生中",
+  },
+  {
+    name: "H 発生中・確認済み、HH 復帰・未確認",
+    def: BOTH,
+    conditions: { hh: cond("returned"), h: cond("acked") },
+    tone: "severity",
+    severity: "medium",
+    underline: "high",
+  },
+  {
+    name: "HH 復帰・未確認、ほかは正常",
+    def: BOTH,
+    conditions: { hh: cond("returned"), h: cond("normal") },
+    tone: "normal",
+    underline: "high",
+    title: "HH 復帰・未確認",
+  },
+  {
+    name: "HH 復帰・未確認、追加した L が未適用（不明）",
+    def: threshold({ hh: "high", h: "medium", l: "low" }),
+    conditions: { hh: cond("returned"), h: cond("normal") },
+    tone: "unknown",
+    underline: "high",
+    title: `HH 復帰・未確認、L 不明${unapplied}`,
+  },
+  {
+    name: "編集で外した HH が Engine で発生中・確認済み、H は正常",
+    def: threshold({ h: "medium" }),
+    conditions: { hh: cond("acked"), h: cond("normal") },
+    tone: "severity",
+    severity: "high",
+  },
+  {
+    name: "編集で外した HH が Engine で発生中・未確認、H は正常",
+    def: threshold({ h: "medium" }),
+    conditions: { hh: cond("unacked"), h: cond("normal") },
+    tone: "severity",
+    severity: "high",
+    underline: "high",
+  },
+  {
+    name: "しきい値 → bit へ変えて未適用、Engine の HH が発生中・未確認",
+    def: bit(),
+    conditions: { hh: cond("unacked") },
+    tone: "severity",
+    severity: "high",
+    underline: "high",
+    title: `HH 未確認（発生中）、不明${unapplied}`,
+  },
+  {
+    name: "bit → しきい値へ変えて未適用、Engine の bit が発生中・確認済み",
+    def: threshold({ hh: "high" }),
+    conditions: { "": cond("acked") },
+    severities: { [ID]: "low" },
+    tone: "severity",
+    severity: "low",
+  },
+  {
+    name: "しきい値 → bit へ変えて未適用、Engine の限界はすべて正常",
+    def: bit(),
+    conditions: { hh: cond("normal"), h: cond("normal") },
+    tone: "unknown",
+    title: `不明${unapplied}`,
+  },
+  {
+    name: "追加した LL だけが未適用、ほかは正常",
+    def: threshold({ hh: "high", ll: "high" }),
+    conditions: { hh: cond("normal") },
+    tone: "unknown",
+  },
+  {
+    name: "H 発生中・確認済みで condition 単位の評価不能が重なる",
+    def: threshold({ h: "medium" }),
+    conditions: { h: cond("acked", { unavailable: "x" }) },
+    tone: "severity",
+    severity: "medium",
+    title: "H 発生中・評価不能",
+  },
+  {
+    name: "H 発生中・未確認で condition 単位の評価不能が重なる",
+    def: threshold({ h: "medium" }),
+    conditions: { h: cond("unacked", { unavailable: "x" }) },
+    tone: "severity",
+    severity: "medium",
+    underline: "medium",
+  },
+  {
+    name: "評価不能だけ（発生中なし）は不明の灰色",
+    def: threshold({ h: "medium" }),
+    conditions: { h: cond("unavailable") },
+    tone: "unknown",
+    title: "H 評価不能",
+  },
+];
+
 describe("alarmValueColor: 組合せの例の表", () => {
-  it("すべて正常", () => {
-    const r = run(
-      BOTH,
-      snap({ [`${ID}:hh`]: cond("normal"), [`${ID}:h`]: cond("normal") }, SEV),
+  it.each(EXAMPLES)("$name", (example) => {
+    const conditions = Object.fromEntries(
+      Object.entries(example.conditions).map(([k, v]) => [at(k), v]),
     );
-    expect(r).toMatchObject({
-      tone: "normal",
-      blink: false,
-      title: "警報 T-01 温度: 正常",
-    });
-    expect(r.underline).toBeUndefined();
-    expect(r.severity).toBeUndefined();
-  });
-
-  it("H 発生中・確認済み、HH 発生中・未確認", () => {
-    const r = run(
-      BOTH,
-      snap({ [`${ID}:hh`]: cond("unacked"), [`${ID}:h`]: cond("acked") }, SEV),
-    );
-    expect(r).toMatchObject({
-      tone: "severity",
-      severity: "high",
-      underline: "high",
-    });
-    expect(r.title).toBe("警報 T-01 温度: HH 未確認（発生中）、H 発生中");
-  });
-
-  it("H 発生中・確認済み、HH 復帰・未確認", () => {
-    const r = run(
-      BOTH,
-      snap({ [`${ID}:hh`]: cond("returned"), [`${ID}:h`]: cond("acked") }, SEV),
-    );
-    expect(r).toMatchObject({
-      tone: "severity",
-      severity: "medium",
-      underline: "high",
-    });
-  });
-
-  it("HH 復帰・未確認、ほかは正常", () => {
-    const r = run(
-      BOTH,
-      snap(
-        { [`${ID}:hh`]: cond("returned"), [`${ID}:h`]: cond("normal") },
-        SEV,
-      ),
-    );
-    expect(r).toMatchObject({ tone: "normal", underline: "high" });
-    expect(r.severity).toBeUndefined();
-    expect(r.title).toBe("警報 T-01 温度: HH 復帰・未確認");
-  });
-
-  it("HH 復帰・未確認、追加した L が未適用（不明）", () => {
-    const def = threshold({ hh: "high", h: "medium", l: "low" });
-    const r = run(
-      def,
-      snap(
-        { [`${ID}:hh`]: cond("returned"), [`${ID}:h`]: cond("normal") },
-        SEV,
-      ),
-    );
-    expect(r).toMatchObject({ tone: "unknown", underline: "high" });
-    expect(r.title).toBe(
-      "警報 T-01 温度: HH 復帰・未確認、L 不明（この警報は適用されていません）",
-    );
-  });
-
-  it("編集で外した HH が Engine で発生中、H は正常", () => {
-    const def = threshold({ h: "medium" });
-    const s = (kind: Kind) =>
-      snap({ [`${ID}:hh`]: cond(kind), [`${ID}:h`]: cond("normal") }, SEV);
-    expect(run(def, s("acked"))).toMatchObject({
-      tone: "severity",
-      severity: "high",
-    });
-    expect(run(def, s("acked")).underline).toBeUndefined();
-    expect(run(def, s("unacked"))).toMatchObject({
-      tone: "severity",
-      severity: "high",
-      underline: "high",
-    });
-  });
-
-  it("しきい値 → bit へ変えて未適用、Engine の HH が発生中・未確認", () => {
-    const r = run(bit(), snap({ [`${ID}:hh`]: cond("unacked") }, SEV));
-    expect(r).toMatchObject({
-      tone: "severity",
-      severity: "high",
-      underline: "high",
-    });
-    expect(r.title).toBe(
-      "警報 T-01 温度: HH 未確認（発生中）、不明（この警報は適用されていません）",
-    );
-  });
-
-  it("bit → しきい値へ変えて未適用、Engine の bit が発生中・確認済み", () => {
-    const r = run(
-      threshold({ hh: "high" }),
-      snap({ [ID]: cond("acked") }, { [ID]: "low" }),
-    );
-    expect(r).toMatchObject({ tone: "severity", severity: "low" });
-    expect(r.underline).toBeUndefined();
-  });
-
-  it("しきい値 → bit へ変えて未適用、Engine の限界はすべて正常", () => {
-    const r = run(
-      bit(),
-      snap({ [`${ID}:hh`]: cond("normal"), [`${ID}:h`]: cond("normal") }, SEV),
-    );
-    expect(r).toMatchObject({ tone: "unknown" });
-    expect(r.underline).toBeUndefined();
-    expect(r.title).toBe(
-      "警報 T-01 温度: 不明（この警報は適用されていません）",
-    );
-  });
-
-  it("追加した LL だけが未適用、ほかは正常", () => {
-    const def = threshold({ hh: "high", ll: "high" });
-    const r = run(def, snap({ [`${ID}:hh`]: cond("normal") }, SEV));
-    expect(r).toMatchObject({ tone: "unknown", blink: false });
-    expect(r.underline).toBeUndefined();
-  });
-
-  it("H 発生中で condition 単位の評価不能が重なる", () => {
-    const def = threshold({ h: "medium" });
-    const acked = run(
-      def,
-      snap({ [`${ID}:h`]: cond("acked", { unavailable: "x" }) }, SEV),
-    );
-    expect(acked).toMatchObject({ tone: "severity", severity: "medium" });
-    expect(acked.underline).toBeUndefined();
-    expect(acked.title).toBe("警報 T-01 温度: H 発生中・評価不能");
-    const unacked = run(
-      def,
-      snap({ [`${ID}:h`]: cond("unacked", { unavailable: "x" }) }, SEV),
-    );
-    expect(unacked).toMatchObject({ tone: "severity", underline: "medium" });
-  });
-
-  it("評価不能だけ（発生中なし）は不明の灰色", () => {
-    const r = run(
-      threshold({ h: "medium" }),
-      snap({ [`${ID}:h`]: cond("unavailable") }, SEV),
-    );
-    expect(r.tone).toBe("unknown");
-    expect(r.title).toBe("警報 T-01 温度: H 評価不能");
+    const r = run(example.def, snap(conditions, example.severities ?? SEV));
+    expect(r).toMatchObject({ tone: example.tone, blink: false });
+    expect(r.severity).toBe(example.severity);
+    expect(r.underline).toBe(example.underline);
+    if (example.title !== undefined)
+      expect(r.title).toBe(`警報 T-01 温度: ${example.title}`);
   });
 
   describe("snapshot が使えない", () => {
