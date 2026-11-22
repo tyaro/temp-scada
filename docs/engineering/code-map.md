@@ -314,7 +314,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 - `designer/FloatingPanelHeader.svelte`／`InspectorPanel.svelte`: 非モーダルな操作ハンドルと配置メニュー。フォーム本体を移設・再生成しない。
 - `banto/setup.ts`: Banto UI設定の専用slot。書込成功時のみ保存済みsnapshotを更新する。各設定は`banto/ui-preference.ts`（上流`createSavedSetting`の包み。送信は1件ずつ・まとめ、通知の文言はSCADA）で持つ。単体は`ui-preference.test.ts`。
 - Appの`measureWorkspace`（D2 から中央の`<section>`に付く）: ResizeObserverで上部境界を追跡。`CanvasWorkspace.cancelInteractions`は配置変更と作図gestureを排他にする。既存の手動倍率・中心保持は共用する。
-- `e2e/inspector-floating.spec.ts`: DOM identity・複数draft・IME・通常blur・取消・保存復元・狭い画面・上位Menuを実操作で確認する。
+- 浮動の e2e（`e2e/inspector-floating.spec.ts`・`e2e/sidebar-floating.spec.ts`）は #331 D2〜D4 の浮動の停止中に skip のままだったので、2026-11-22 に削除した（D4 で書き直す。元の内容は git の履歴にある）。
 
 ## キャンバス周りの配置（UX精査 P1-3／§5.5 段階 (a)）
 
@@ -354,7 +354,7 @@ Symbolと機器の候補確認は`symbol-equipment-check.ts`が実使用slotを�
 
 `multiline-text-layout.ts`の`normalizeTextNewlines`／`fitTextWidth`／`fitStaticLines`は純粋な文字計測adapterを受け取り、空行と幅／高さの省略・実inkのunionを計算する。`multiline-text-layout.test.ts`で字体・grapheme・縦省略と一時cacheを検証する。`text-content.ts`がTS公開読込・編集・保存のLF正規化を担い、Rust・schema・共有ケースを揃える。`Primitive.svelte`は静的かつLFを含む配置だけ`MultilineTextPrimitive.svelte`へ渡し、従来の一行描画を保つ。`InspectorPanel.svelte`のtextareaと`object-form.ts`がIME・確定・入力保護を接続する。`multiline-text.spec.ts`が両テーマ、動的表示・再利用・保存・clipboardを確認する。Project0.32.0の契約と範囲は[具体設計](../design/graphics/multiline-text-design.md)を参照する。
 
-浮動Inspectorのgestureは開始時のnative window寸法も保持し、入力捕捉時に照合する。`e2e/inspector-floating.spec.ts`の通知遅延ケースはresizeイベントへの依存を切り離して確定競合を再現する。
+浮動Inspectorのgestureは開始時のnative window寸法も保持し、入力捕捉時に照合する。通知遅延の確定競合を再現していた`e2e/inspector-floating.spec.ts`は2026-11-22に削除した（上記）。
 
 左右の浮動配置は`App.svelte`で一つのworkspaceへ接続し、表示・上位層・作図操作・固定幅と連携する。sidebarはプレビュー時だけ浮動を休止する。`setup.ts`は各slotを独立して明示保存し、`designer-actions.ts`は復帰と前面表示を提供する。`sidebar-floating.spec.ts`と`inspector-floating.spec.ts`で同じDOM・入力保持・排他・永続化を確認する。
 
@@ -452,7 +452,7 @@ Project0.35.0の`Polyline.shape.connections`は同一画面の接続先4種の�
 
 `crates/scada-historian/schema/history-contract.schema.json`が版付きquery／sampleBatch／resultの構造を規定する。`scada-historian::validate_history_contract`と`lib/history-contract.ts`は同じSchemaの検査後、期間・点数・identity・record／segment参照・Quality／sourceと値・順序・coverage・watermarkの関係を検査する。JSON整数の1／1.0を同じ意味で扱い、unsafe整数は構造検査で拒否する。
 
-`examples/history-contract-cases.json`の110 fixtureをRust／TS／実ブラウザで共有する。`crates/scada-historian/tests/contracts.rs`、`history-contract.test.ts`、`e2e/history-contract.spec.ts`が検証入口。通常Appはこのmoduleをimportせず、UI／ネットワーク／DBへ接続しない。[H1の保証範囲](../design/runtime/historian-contract-fixtures.md)と[H2の保存設計](../design/runtime/historian-storage-decision.md)を混同しない。
+`examples/history-contract-cases.json`の110 fixtureをRust／TSで共有する。`crates/scada-historian/tests/contracts.rs`、`history-contract.test.ts`が検証入口。通常Appはこのmoduleをimportせず、UI／ネットワーク／DBへ接続しない。[H1の保証範囲](../design/runtime/historian-contract-fixtures.md)と[H2の保存設計](../design/runtime/historian-storage-decision.md)を混同しない。
 
 ## Historianの原子append adapter（H2a）
 
@@ -464,7 +464,7 @@ Project0.35.0の`Polyline.shape.connections`は同一画面の接続先4種の�
 
 `crates/scada-historian/src/store/query/mod.rs`の`HistoryReader`が専用READ_ONLY接続、同一snapshot内のmetadata／raw／watermark投影、H1 result検査、typed error、transaction終了を所有する。`query/control.rs`は共有取消token・単調deadline・VM／decode行／結果bytesの有限予算を所有し、SQLごとの端数も保守的に計上する。公開factoryは`SqliteStore::reader()`で、最大2個のidleを含むreader leaseがwriter lockを共有し、全接続の終了まで排他を維持する。
 
-`query/tests.rs`が競合・取消・処理量・cleanupのunit試験、`store/test_support.rs`がH2a／H2b共通の一時DB・型付き入力fixtureを担当する。`tests/query_fixtures.rs`が`examples/history-query-cases.json`の実SQLite出力を照合し、TS `history-contract.test.ts`と実ブラウザ `e2e/history-contract.spec.ts`も同じ期待resultを検証する。coverageと期限除去は下記H2b4／H2c1で追加した。通常Appからの利用・容量運用は後続へ残し、UIのDB直読は追加しない。
+`query/tests.rs`が競合・取消・処理量・cleanupのunit試験、`store/test_support.rs`がH2a／H2b共通の一時DB・型付き入力fixtureを担当する。`tests/query_fixtures.rs`が`examples/history-query-cases.json`の実SQLite出力を照合し、TS `history-contract.test.ts`も同じ期待resultを検証する。coverageと期限除去は下記H2b4／H2c1で追加した。通常Appからの利用・容量運用は後続へ残し、UIのDB直読は追加しない。
 
 ## Historianのmin/max集約（H2b2）
 
@@ -482,7 +482,7 @@ Project0.35.0の`Polyline.shape.connections`は同一画面の接続先4種の�
 
 `store/query/coverage.rs`がsession／plan／永久descriptor／gapの参照・状態検証、他domainの可能期間を除く区間演算、残存欠測内recordのSQL EXISTS確認、結合・unknown補集合・最大256区間を所有する。`query/mod.rs`はraw／minmaxから同じ関数をsnapshot内で呼び、EvidenceLimit／CoverageLimitを公開する。`query/control.rs`は既存予算に加えて証拠JSON本文64 KiB／要求入力合計8 MiBをparse前に検査する。入力合計は利用者が下げられる出力bytesとは独立し、全系列で共有する。
 
-`query/coverage/tests.rs`が他session・未確定終了・untimed、snapshot競合、端点、上限、破損参照・永久descriptor照合と取消後cleanupの14単体試験を担当する。`tests/query_fixtures.rs`はtimed開始／gap／終了を組み立て、`examples/history-coverage-cases.json`の6成功出力を実SQLiteと比較する。TS `history-contract.test.ts`とブラウザ `e2e/history-contract.spec.ts`も同じ期待resultを共有する。[H2b4設計](../design/runtime/historian-coverage-projection.md)を参照。保持・容量・復旧・recorder・製品API／画面接続は後続。
+`query/coverage/tests.rs`が他session・未確定終了・untimed、snapshot競合、端点、上限、破損参照・永久descriptor照合と取消後cleanupの14単体試験を担当する。`tests/query_fixtures.rs`はtimed開始／gap／終了を組み立て、`examples/history-coverage-cases.json`の6成功出力を実SQLiteと比較する。TS `history-contract.test.ts`も同じ期待resultを共有する。[H2b4設計](../design/runtime/historian-coverage-projection.md)を参照。保持・容量・復旧・recorder・製品API／画面接続は後続。
 
 ## Historianの原子trimとexpired（H2c1）
 
@@ -674,7 +674,7 @@ nativeの`validate_trend_definitions(&Value)`／`TrendDefinitions::from_value`�
 
 native `json_contract.rs`がTrendと記録計画のcompact JSON byte・node・depth walkとblank定義、TS `json-text.ts`がbounded owned JSONのscalar／blankを共有する。`history/owned-json.ts`はH5a用node上限引数を受け、従来callerの既定250,000を維持する。予算計数や名前の判定を各契約に再実装しない。
 
-`examples/recording-plan-cases.json`139件をnative `recording_plan/tests.rs`、TS `recording-plan.test.ts`、`e2e/recording-plan-contract.spec.ts`で共用する。TSの`__fixtures__/recording-plan-cases.ts`とnative test helperが大きな不正入力のrecipeを同じ値へ展開する。browserは通常Appを保ちmoduleを評価し、remote schema取得なし、所有／member順、Project書出し不変、未知Project fieldの拒否を確認する。通常mainへテスト用serviceやvalidator画面を追加しない。
+`examples/recording-plan-cases.json`139件をnative `recording_plan/tests.rs`、TS `recording-plan.test.ts`で共用する。TSの`__fixtures__/recording-plan-cases.ts`とnative test helperが大きな不正入力のrecipeを同じ値へ展開する。browserは通常Appを保ちmoduleを評価し、remote schema取得なし、所有／member順、Project書出し不変、未知Project fieldの拒否を確認する。通常mainへテスト用serviceやvalidator画面を追加しない。
 
 ## 記録計画の永続台帳（H5b1）
 
@@ -746,7 +746,7 @@ native7新規（`recording_plan/resume/tests.rs`）・SDK4新規（`recorder_sou
 
 TSの公開入口は`lib/recording-management-contract.ts`。`recording-management/types.ts`はreadonly DTO、`semantic.ts`はschema検査後のDB整合、`recording-plan-comparison.ts`は編集とも共用する固定field本文比較。`history/owned-json.ts`が有限JSONを所有し、root／nested request・contextとH5a desiredへ独立予算を使う。Host／SDKは別時点であり、DBとのsession一致やRunningから接続状態を導出しない。
 
-`examples/recording-management-cases.json`は受理447・比較18・全文request9を共有する。Rust `recording_management/tests.rs`、TS `recording-management-contract.test.ts`と`__fixtures__/recording-management-cases.ts`、`e2e/recording-management-contract.spec.ts`で同じ期待値、H5a139のネスト、予算端点・所有権を確認する。TS比較はunknownを再検証し、Rust比較は検証済みwrapperのみ。このpure moduleから副作用を呼ばない。service／controller／通常App管理表示はd3bで追加し、native projectionは後続。
+`examples/recording-management-cases.json`は受理447・比較18・全文request9を共有する。Rust `recording_management/tests.rs`、TS `recording-management-contract.test.ts`と`__fixtures__/recording-management-cases.ts`で同じ期待値、H5a139のネスト、予算端点・所有権を確認する。TS比較はunknownを再検証し、Rust比較は検証済みwrapperのみ。このpure moduleから副作用を呼ばない。service／controller／通常App管理表示はd3bで追加し、native projectionは後続。
 
 ## 記録管理状態のworkspace（H5d3b）
 
@@ -762,7 +762,7 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 
 共有schemaは`crates/scada-model/schema/recording-operations.schema.json`。Rust公開入口は`recording_operations`、`semantic.rs`は検証後のreceipt・stage・回復整合、`equality.rs`はprivate wrapper同士の数値表記を無視する全文一致を担当する。TS公開入口は`lib/recording-operations-contract.ts`で、`recording-operations/types.ts`と`semantic.ts`に分ける。種類別のrootとnested envelopeの128KiB／4096node、resultの256KiB／8192node、H5a desiredの64KiBを維持する。
 
-`examples/recording-operations-cases.json`の受理925・全文一致102と、H5aネスト695・d3 target447をRust `recording_operations/tests.rs`、TS `recording-operations-contract.test.ts`／`__fixtures__/recording-operations-cases.ts`、`e2e/recording-operations-contract.spec.ts`で共有する。pure検証は過去receipt／latchの記憶やnative実行の証拠を持たない。通常Appの保存不変と既存d3管理表示もbrowserで確認する。
+`examples/recording-operations-cases.json`の受理925・全文一致102と、H5aネスト695・d3 target447をRust `recording_operations/tests.rs`、TS `recording-operations-contract.test.ts`／`__fixtures__/recording-operations-cases.ts`で共有する。pure検証は過去receipt／latchの記憶やnative実行の証拠を持たない。通常Appの保存不変と既存d3管理表示もbrowserで確認する。
 
 ## 記録計画の操作workspace（H5d4b）
 
@@ -796,7 +796,7 @@ TSの公開入口は`lib/recording-management-contract.ts`。`recording-manageme
 
 TSの`recording-admission-contract.ts`と`recording-admission/{types,semantic,capacity}.ts`は同じ境界を持つ。`history/owned-json.ts`へadmission opt-inを追加し、既定のcompact／depth32を変えない。`json-equality.ts`は既存d4aと共有するowned JSON比較で、配列順を保持する。
 
-`examples/recording-admission-cases.json`とtest-only `__fixtures__/recording-admission-cases.ts`をRust `recording_admission/tests.rs`、TS `recording-admission-contract.test.ts`、`e2e/recording-admission-contract.spec.ts`で共有する。予算境界、最大reply、再帰closure回避、nested契約、所有・Unicode・外部取得なしと通常App保存不変を確認する。c4bのasync monitor／UIは下節、実lease／registry／IPC／製品hostは未実装で、pure JSON受理をnative実行の証拠にしない。
+`examples/recording-admission-cases.json`とtest-only `__fixtures__/recording-admission-cases.ts`をRust `recording_admission/tests.rs`、TS `recording-admission-contract.test.ts`で共有する。予算境界、最大reply、再帰closure回避、nested契約、所有・Unicode・外部取得なしと通常App保存不変を確認する。c4bのasync monitor／UIは下節、実lease／registry／IPC／製品hostは未実装で、pure JSON受理をnative実行の証拠にしない。
 
 ## 非同期の記録操作monitor／UI（H5d4c4b）
 
@@ -816,7 +816,7 @@ TSの`recording-admission-contract.ts`と`recording-admission/{types,semantic,ca
 
 TSの`recording-wire-contract.ts`と`recording-wire/{types,budget,semantic,capacity}.ts`も同じ責務を持つ。`history/owned-json.ts`とRust `json_contract.rs`はopt-inの保守会計・node／depth計数を提供し、既存compact／admission／local profileの既定上限は変えない。raw bytes受信・registryの空き容量と認可はこの純粋境界に含まない。
 
-`examples/recording-wire-cases.json`とtest-only `__fixtures__/recording-wire-cases.ts`をRust `recording_wire/tests.rs`、TS `recording-wire-contract.test.ts`、`e2e/recording-wire-contract.spec.ts`で共有する。14root、最長ID、独立nested契約、自己照会排除、容量のexact／1不足byte・node・depth、会計上限、所有と通常App保存不変を検証する。実lease発行、registry adapter、native配送・認証・製品hostは後続で、c4b local portへ透過的に接続しない。
+`examples/recording-wire-cases.json`とtest-only `__fixtures__/recording-wire-cases.ts`をRust `recording_wire/tests.rs`、TS `recording-wire-contract.test.ts`で共有する。14root、最長ID、独立nested契約、自己照会排除、容量のexact／1不足byte・node・depth、会計上限、所有と通常App保存不変を検証する。実lease発行、registry adapter、native配送・認証・製品hostは後続で、c4b local portへ透過的に接続しない。
 
 ## 記録操作registryの純粋状態モデル（H5d4c4c-prep2a）
 
@@ -824,7 +824,7 @@ TSの`recording-wire-contract.ts`と`recording-wire/{types,budget,semantic,capac
 
 保守bytesは`scada-model::recording_wire::conservative_recording_json_bound`が既存JsonBudgetから計数する。最大profileより大きいcaller limitを拒否し、schema-validやnative実行資格の判定には使わない。raw session scopeも複製前に同walkerで打ち切る。admissionのrequest＋二返信・completionの要求由来予約とread別枠はモデル終了まで維持する。
 
-`recording_registry_model/tests.rs`は`examples/recording-registry-model-cases.json`の55シナリオを実行して期待DTOへ照合する。`tests/boundaries.rs`はraw scope・instance ticket・ID／lease4上限と原子性を検証する。TSのtest-only `__fixtures__/recording-registry-model-cases.ts`、`recording-registry-model-contract.test.ts`、`e2e/recording-registry-model-contract.spec.ts`は同じtranscriptの既存validator適合・所有・App保存不変を確認し、第二のregistryは実装しない。Accepted後の新mutation停止、後続prep2bとP3bのgateを維持する。
+`recording_registry_model/tests.rs`は`examples/recording-registry-model-cases.json`の55シナリオを実行して期待DTOへ照合する。`tests/boundaries.rs`はraw scope・instance ticket・ID／lease4上限と原子性を検証する。TSのtest-only `__fixtures__/recording-registry-model-cases.ts`、`recording-registry-model-contract.test.ts`は同じtranscriptの既存validator適合・所有を確認し、第二のregistryは実装しない。Accepted後の新mutation停止、後続prep2bとP3bのgateを維持する。
 
 ## 記録registryモデルの結果観測（H5d4c4c-prep2b1）
 
@@ -832,7 +832,7 @@ TSの`recording-wire-contract.ts`と`recording-wire/{types,budget,semantic,capac
 
 `admission.rs`は要求由来のknowledge／元terminal／completion保持予約を受付前に確保し、Accepted保存とhandle登録を原子的に行う。rootのModelStatsはhandle数・観測数・未回収slot・模擬native recoveryのsticky ORを表示する。実時計／native owner／DB／SDK／transportは引き続き参照しない。
 
-`examples/recording-observation-model-cases.json`の48シナリオ480ステップを既存Rust scenario driverへ追加し、`tests/observation_boundaries.rs`でinstance固有ticket・ref競合・上限・二重回収の境界を確認する。test-only `__fixtures__/recording-observation-model-cases.ts`、`recording-observation-model-contract.test.ts`、`e2e/recording-observation-model-contract.spec.ts`は期待DTOの既存validator受入と通常App保存不変を確認する。既存prep2a fixtureの容量期待値は追加予約へ合わせる。schemaや第二のTS registryは追加しない。
+`examples/recording-observation-model-cases.json`の48シナリオ480ステップを既存Rust scenario driverへ追加し、`tests/observation_boundaries.rs`でinstance固有ticket・ref競合・上限・二重回収の境界を確認する。test-only `__fixtures__/recording-observation-model-cases.ts`、`recording-observation-model-contract.test.ts`は期待DTOの既存validator受入を確認する。既存prep2a fixtureの容量期待値は追加予約へ合わせる。schemaや第二のTS registryは追加しない。
 
 ## 記録registryモデルの取消（H5d4c4c-prep2b2）
 
@@ -840,7 +840,7 @@ TSの`recording-wire-contract.ts`と`recording-wire/{types,budget,semantic,capac
 
 rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedのfalse→trueだけを追加する。通知・ackは既存operation/read completion・admission・観測slot・recoveryを変更しない。JSONの論理completionから返すalreadyCompletedを実native task静止の証拠にしない。
 
-`examples/recording-cancel-model-cases.json`の41シナリオ415ステップをRustの共通driverで実行し、`tests/cancel_boundaries.rs`でticket所有・改変・counter overflow・受付拒否原子性・他軸不変を検証する。test-only `__fixtures__/recording-cancel-model-cases.ts`、`recording-cancel-model-contract.test.ts`、`e2e/recording-cancel-model-contract.spec.ts`は既存JSON契約と通常App保存不変だけを確認する。prep2aのoriginal fixtureはprep2b3で未登録AttachのnotFoundへ更新し、取消の第二のTSモデルを作らない。
+`examples/recording-cancel-model-cases.json`の41シナリオ415ステップをRustの共通driverで実行し、`tests/cancel_boundaries.rs`でticket所有・改変・counter overflow・受付拒否原子性・他軸不変を検証する。test-only `__fixtures__/recording-cancel-model-cases.ts`、`recording-cancel-model-contract.test.ts`は既存JSON契約だけを確認する。prep2aのoriginal fixtureはprep2b3で未登録AttachのnotFoundへ更新し、取消の第二のTSモデルを作らない。
 
 ## 記録registryモデルのsnapshotと購読（H5d4c4c-prep2b3）
 
@@ -848,7 +848,7 @@ rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedの
 
 `subscription.rs`は原子的attach、request全文へ束縛した不変attach／control返信、明示detachとlive slotだけの一回返却、state／controlの独立takeを担当する。rootは単一ownerのinitial descriptor 1KiB、typesは縮小専用limitsとstatsを追加する。`inspection.rs`は保存済みAttach／Controlを再構築し、未知originalを実行しない。
 
-`examples/recording-subscription-model-cases.json`の48シナリオ293ステップをRust共通driverで実行し、`tests/subscription_boundaries.rs`で三次元投影容量・revision／ID境界・不変返信・返却一回性と既存schema分岐の上界を検証する。TSのtest-only `__fixtures__/recording-subscription-model-cases.ts`、`recording-subscription-model-contract.test.ts`、`e2e/recording-subscription-model-contract.spec.ts`は141期待DTOの独立validator適合・所有・既知document対応とApp保存不変だけを確認する。第二のregistry／受信state machineは作らない。既存三fixtureのread予約期待へ初期descriptor 1KiBを加算した。
+`examples/recording-subscription-model-cases.json`の48シナリオ293ステップをRust共通driverで実行し、`tests/subscription_boundaries.rs`で三次元投影容量・revision／ID境界・不変返信・返却一回性と既存schema分岐の上界を検証する。TSのtest-only `__fixtures__/recording-subscription-model-cases.ts`、`recording-subscription-model-contract.test.ts`は141期待DTOの独立validator適合・所有・既知document対応だけを確認する。第二のregistry／受信state machineは作らない。既存三fixtureのread予約期待へ初期descriptor 1KiBを加算した。
 
 ## 記録registryの単一workflow（H5d4c4c-prep2b4a）
 
@@ -856,13 +856,13 @@ rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedの
 
 `workflow/mod.rs`はprivate instance ticket、元changeへの束縛、lease／beginの明示入口とnative identity登録planを担当する。`workflow/escrow.rs`は4stageの将来request／lease上界、projection high-water、11revision＋close1の予約・移管と未発行stageだけの返却を担当する。`workflow/state.rs`は元call／knowledge／immutable completionに基づくphaseとread gateを判定し、sourceを実行しない。通常mutation入口からWorkflow modeの予約を迂回できない。
 
-`examples/recording-workflow-model-cases.json`の47シナリオ597ステップと`tests/workflow_boundaries.rs`の10境界試験をRustの共通driverで実行する。test-only `recording-model-budget.ts`は独立した要求由来の会計oracle、`__fixtures__/recording-workflow-model-cases.ts`、`recording-workflow-model-contract.test.ts`、`e2e/recording-workflow-model-contract.spec.ts`は92期待DTO・全入力の既存validator受入とApp保存不変を確認する。既存四fixtureの会計を同期した。TS registry／workflow実行機構やnative接続は追加しない。
+`examples/recording-workflow-model-cases.json`の47シナリオ597ステップと`tests/workflow_boundaries.rs`の10境界試験をRustの共通driverで実行する。test-only `recording-model-budget.ts`は独立した要求由来の会計oracle、`__fixtures__/recording-workflow-model-cases.ts`、`recording-workflow-model-contract.test.ts`は92期待DTO・全入力の既存validator受入を確認する。既存四fixtureの会計を同期した。TS registry／workflow実行機構やnative接続は追加しない。
 
 ## 記録registryの次workflow受入（H5d4c4c-prep2b4b）
 
 [次workflow受入](../design/runtime/historian-recording-registry-workflow-renewal.md)の`workflow/renewal.rs`は初回／専用次予約API、creationとpredecessorの再送束縛、履歴台帳の累積予約と各1024bytes管理費用、全静止gate、current accepted apply限定の新read検査を担当する。`workflow/mod.rs`はrecordsとcurrentを分離し、旧ticketによる新操作を防ぎ、proofを元recordへ保存する。caller／native IDのcollisionは全履歴attemptへ検査する。`state.rs`／`escrow.rs`は累積used／reservedと正常終了時の未発行枠だけの返却を維持する。`handle.rs`は正常paused保存時のsticky ever_clean_joinedを更新する。
 
-`examples/recording-workflow-renewal-cases.json`の50シナリオ947ステップと`tests/renewal_boundaries.rs`の10境界試験を共通Rust driverで実行する。test-only `__fixtures__/recording-workflow-renewal-cases.ts`、`recording-workflow-renewal-contract.test.ts`、`e2e/recording-workflow-renewal-contract.spec.ts`は154期待DTO・全入力の契約、累積保持会計、App保存不変を検査する。既存47workflow fixtureへ初回管理費用だけを加算した。複数scopeの全量予約は次節のdomainへ追加済み。受信frame順序／矛盾の検査は後述prep2cの純粋TS receiverへ分離し、実接続は後続である。
+`examples/recording-workflow-renewal-cases.json`の50シナリオ947ステップと`tests/renewal_boundaries.rs`の10境界試験を共通Rust driverで実行する。test-only `__fixtures__/recording-workflow-renewal-cases.ts`、`recording-workflow-renewal-contract.test.ts`は154期待DTO・全入力の契約、累積保持会計を検査する。既存47workflow fixtureへ初回管理費用だけを加算した。複数scopeの全量予約は次節のdomainへ追加済み。受信frame順序／矛盾の検査は後述prep2cの純粋TS receiverへ分離し、実接続は後続である。
 
 ## 記録registryの複数scope資源（H5d4c4c-prep2b5a）
 
@@ -874,7 +874,7 @@ rootはCancelRecordと4096 ID・未終端1枠、`handle.rs`はcancel_notifiedの
 
 [Astraの採用設計](../design/runtime/historian-recording-wire-receiver.md)に沿うpure TS receiver。公開入口`recording-wire-receiver.ts`はfactory・全mutationの再入guard・直前commit済みpoll状態を提供する。`recording-wire-receiver/types.ts`はopaque AttachGeneration/ControlCallとreadonly結果、`core.ts`は固定Scope・有限台帳・資格/予約・公開view、`calls.ts`はexact登録と元reply保存/表示昇格の二段階、`frames.ts`はparse前の世代資格・state/control別slot、`snapshots.ts`は全文履歴と昇順の原子的promotionを担当する。既存`recording-wire-contract.ts`と`json-equality.ts`の検証・同値判定を再利用する。
 
-`examples/recording-wire-receiver-cases.json`の59シナリオはtest-only `__fixtures__/recording-wire-receiver-cases.ts`を通じて実receiverへ入力する。これはtest command DSLで、第二のserver registryではない。`recording-wire-receiver.test.ts`は共有シナリオに加え、独立予算oracle・全mutationへのProxy再入・ownership・terminal保持・容量exact/1不足を検査する。`e2e/recording-wire-receiver.spec.ts`も同じreceiverと全シナリオをChromiumで実行し、通常Appの保存不変・外部送信無しを確認する。
+`examples/recording-wire-receiver-cases.json`の59シナリオはtest-only `__fixtures__/recording-wire-receiver-cases.ts`を通じて実receiverへ入力する。これはtest command DSLで、第二のserver registryではない。`recording-wire-receiver.test.ts`は共有シナリオに加え、独立予算oracle・全mutationへのProxy再入・ownership・terminal保持・容量exact/1不足を検査する。
 
 callback／Promise終端／I/Oやnative registryの複製は含めない。`recording-async/port.ts`とcoordinatorは同realm test-only契約のままで、wireのownerEpoch／closed／ControlFrameを捨てた透過接続を作らない。snapshot64件/8MiBとcall8MiBは返却しない有限保持で、長時間運用を保証しない。通常Appへの投影契約と実host・P3bは別工程である。
 
@@ -882,7 +882,7 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 [Astraのclient境界設計](../design/runtime/historian-recording-wire-client-boundary.md)に沿い、`recording-wire-receiver.ts`へ`currentDisplay()`／`attachTerminal()`／`controlTerminal()`を追加した。`recording-wire-receiver/readout.ts`はcommit済みstateからの純粋表示と、元recordの不変参照を共有する小wrapperを担当する。`types.ts`は独立したRecordingWireDisplay／StoredTerminalを公開する。読取は既存guardを共有しつつ再publishせず、更新中はbusy、表示だけは直前のcommit済みcacheを返す。新ledger／copy／quota返却は追加しない。
 
-`examples/recording-wire-readout-cases.json`の19追加シナリオは既存test-only receiver driverで実行する。同driverは既存59シナリオ全stepでも元配送のACK全文・pending／terminal・read後のcache identity／旧poll不変を照合する。`recording-wire-readout.test.ts`と既存receiver testの拡張はforeign／wrong-kind token、参照共有、全入力mutationのProxy再入、getter反復と容量停止後の回収を確認する。`e2e/recording-wire-receiver.spec.ts`は両fixtureをChromiumで実行し、通常App保存bytes・外部送信無しを確認する。
+`examples/recording-wire-readout-cases.json`の19追加シナリオは既存test-only receiver driverで実行する。同driverは既存59シナリオ全stepでも元配送のACK全文・pending／terminal・read後のcache identity／旧poll不変を照合する。`recording-wire-readout.test.ts`と既存receiver testの拡張はforeign／wrong-kind token、参照共有、全入力mutationのProxy再入、getter反復と容量停止後の回収を確認する。
 
 `recording-async/coordinator.ts`／`state.ts`／`port.ts`は変更しない。表示をLocalOwnerFrameへcastせず、Promise完了・native操作資格を生成しない。元call配送台帳の具体型と上限、local-v2、通常App注入は次の詳細設計・実装へ分ける。
 
@@ -890,7 +890,7 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 [Astraの採用設計](../design/runtime/historian-recording-wire-delivery-ledger.md)に沿うpure TS実装。公開入口`recording-wire-delivery-ledger.ts`はfactory・全mutation/getterのguard・dirty時だけのpoll commitを担当する。`recording-wire-delivery-ledger/types.ts`はopaque元call/query/attempt tokenとreadonly状態、`core.ts`は固定Scope・有限台帳・未回収枠・pool/credit・options、`validation.ts`は既存parser・kind別scope/ID/roleとQ/R/I、`original.ts`は原子的登録と不変元reply、`inspection.ts`はquery/attempt・初回credit移管・repeat・正規化返信の二段階保存を担当する。
 
-`examples/recording-wire-delivery-ledger-cases.json`の61シナリオをtest-only `__fixtures__/recording-wire-delivery-ledger-cases.ts`経由で実台帳へ流す。driverは正常DTOを既存wire/c4a validatorへ照合し、元返信・attempt全文と旧poll結果を確認する。`recording-wire-delivery-ledger.test.ts`は共通シナリオと独立Q/R/I oracle・exact/1不足・credit/未回収枠・ownershipを確認する。`recording-wire-delivery-boundaries.test.ts`は全parse入口のprototype/descriptor再入とR/I故障注入、`e2e/recording-wire-delivery-ledger.spec.ts`はChromiumの実module・App保存bytes不変・外部送信無しを確認する。独立oracleは既存receiver fixtureの保守計数を再利用し、production walkerを参照しない。
+`examples/recording-wire-delivery-ledger-cases.json`の61シナリオをtest-only `__fixtures__/recording-wire-delivery-ledger-cases.ts`経由で実台帳へ流す。driverは正常DTOを既存wire/c4a validatorへ照合し、元返信・attempt全文と旧poll結果を確認する。`recording-wire-delivery-ledger.test.ts`は共通シナリオと独立Q/R/I oracle・exact/1不足・credit/未回収枠・ownershipを確認する。`recording-wire-delivery-boundaries.test.ts`は全parse入口のprototype/descriptor再入とR/I故障注入を確認する。独立oracleは既存receiver fixtureの保守計数を再利用し、production walkerを参照しない。
 
 元replyは元record、query/attemptは専用recordへ保持する。inspection包絡全体は永続複製せず、query request・closed outcome・元reply参照へ正規化する。mutation6MiB/read2MiB内で元begin時に初回probeも先取りし、履歴/creditを返却しない有限モデル。getterは新たな内部cacheを増やさない。既存receiverのAttach/Controlと本文を二重所有せず、Observationは次節へ分離する。通常App／coordinator／port／Promise adapter／実transport／nativeは未接続である。
 
@@ -898,19 +898,19 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 `recording-wire-delivery-ledger/observation.ts`が既存台帳内にAccepted由来のtarget、論理query、正常返信ごとのattemptを保存する。公開入口と`types.ts`はopaque tokenとgetterを追加し、`core.ts`は独立4MiB pool・各4096 ID・未回収attempt最大1を管理する。元Admission返信やCallInspectionの保存内容は変更せず、target結果とquery terminalを別に保持する。返信喪失・malformed時は未回収枠を消さず、retire／dispose／sticky停止後も登録済みattemptの正常後着返信を保存する。pendingで終わった2回目以降のattemptは件数と管理bytesを返す（C6）。
 
-`examples/recording-wire-observation-ledger-cases.json`のoperation／reconciliation／unavailable共通シナリオを`__fixtures__/recording-wire-observation-ledger-cases.ts`でNodeとChromiumへ流す。`recording-wire-observation-ledger.test.ts`はさらにAdmissionInspection、pending→terminal、同一ID、参照衝突、容量、二段階保存、再入を検証する。`e2e/recording-wire-delivery-ledger.spec.ts`はChromium実moduleで同じ進行とProject保存bytes不変を確認する。local-v2、Promise adapter、実transport、native ownerはこのpure台帳の外に残る。
+`examples/recording-wire-observation-ledger-cases.json`のoperation／reconciliation／unavailable共通シナリオを`__fixtures__/recording-wire-observation-ledger-cases.ts`でNodeへ流す。`recording-wire-observation-ledger.test.ts`はさらにAdmissionInspection、pending→terminal、同一ID、参照衝突、容量、二段階保存、再入を検証する。local-v2、Promise adapter、実transport、native ownerはこのpure台帳の外に残る。
 
 ## 記録wireのlocal-v2配送（C4）
 
 [採用設計](../design/runtime/historian-recording-wire-local-v2.md)に沿い、`recording-wire-local-v2.ts`が実factory由来のledger／receiverのopaque tokenを六経路の同realm Promiseへ結ぶ。`recording-wire-delivery-ledger.ts`と`recording-wire-receiver.ts`のprivate WeakSetがsource instanceを検査する。明示`pump()`は元getterに保存済みの正常返信だけを一度配送する。`recording-async`、通常App、native owner、transportへの接続は後続工程である。
 
-`examples/recording-wire-local-v2-cases.json`と`__fixtures__/recording-wire-local-v2-cases.ts`はNode／Chromium共通の配送経路を実moduleで実行する。`recording-wire-local-v2.test.ts`はforeign source／token、未配送、Observationのattemptとquery、後着、有限容量を確認し、`e2e/recording-wire-local-v2.spec.ts`はProject保存bytes不変も確認する。
+`examples/recording-wire-local-v2-cases.json`と`__fixtures__/recording-wire-local-v2-cases.ts`はNodeで配送経路を実moduleで実行する。`recording-wire-local-v2.test.ts`はforeign source／token、未配送、Observationのattemptとquery、後着、有限容量を確認する。
 
 ## 記録wire coordinator-v2（C4、test-only）
 
 [採用設計](../design/runtime/historian-recording-coordinator-v2.md)に沿い、`recording-wire-coordinator-v2.ts`が実ledger／receiver／local-v2とtest-only portを固定scopeで束縛する。source単位の一回claim、token帰属・容量、元返信Promiseと個別transport ticketの終了、Observation queryとattempt、close後の後着回収を別に保持する。`recording-wire-local-v2.ts`のprivate source brandは同scopeでも別ledger／receiverの組合せを拒否する。test portの同期lifecycleは開始前に終了したticketを送信へ流さず、元返信やnative workerの静止を偽装しない。
 
-`examples/recording-wire-coordinator-v2-cases.json`と`__fixtures__/recording-wire-coordinator-v2-cases.ts`をNode／Chromiumで共通実行する。`recording-wire-coordinator-v2.test.ts`はreply／taskの全順序、CallInspection、Observation pending、Attach／Control、有限容量、source再claim、再入・後着を検証する。`e2e/recording-wire-coordinator-v2.spec.ts`はProject保存bytes不変を確認する。既存`recording-async`／通常App／Tauri／native ownerはこの区切りで接続しない。
+`examples/recording-wire-coordinator-v2-cases.json`と`__fixtures__/recording-wire-coordinator-v2-cases.ts`をNodeで実行する。`recording-wire-coordinator-v2.test.ts`はreply／taskの全順序、CallInspection、Observation pending、Attach／Control、有限容量、source再claim、再入・後着を検証する。既存`recording-async`／通常App／Tauri／native ownerはこの区切りで接続しない。
 
 ## native registryへのowner引渡し（C4、seed）
 
