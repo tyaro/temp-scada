@@ -193,7 +193,9 @@ test("the header row holds mode and save state so the 1440px toolbar stays on on
   const height = async (selector: string) =>
     (await page.locator(selector).boundingBox())!.height;
   expect(await height(".app-header")).toBeLessThanOrEqual(36);
-  expect(await height('[role="toolbar"]')).toBeLessThanOrEqual(48);
+  expect(
+    await height('[role="toolbar"][aria-label="共通編集ツールバー"]'),
+  ).toBeLessThanOrEqual(48);
   await page.screenshot({
     path: "test-results/header-1440.png",
     clip: { x: 0, y: 0, width: 1440, height: 120 },

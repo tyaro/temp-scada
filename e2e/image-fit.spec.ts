@@ -101,10 +101,20 @@ async function pixels(
           c.height = image.height;
           const context = c.getContext("2d")!;
           context.drawImage(image, 0, 0);
-          return points.map((p, i) => {
-            const actual = context.getImageData(p.x, p.y, 1, 1).data;
-            return colors[i].every((v, j) => Math.abs(v - actual[j]) < 8);
-          });
+          // 中央の位置が端数の px になる（#331 D2 の dock の分割）ので、隣の 1px も見る。
+          return points.map((p, i) =>
+            [0, -1, 1].some((dx) =>
+              [0, -1, 1].some((dy) => {
+                const actual = context.getImageData(
+                  p.x + dx,
+                  p.y + dy,
+                  1,
+                  1,
+                ).data;
+                return colors[i].every((v, j) => Math.abs(v - actual[j]) < 8);
+              }),
+            ),
+          );
         },
         { screenshot, points, colors: expectedColors },
       );

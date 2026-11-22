@@ -7,6 +7,7 @@ import {
   openEquipmentLedger,
   returnToCanvas,
   selectPanel,
+  hideSidebar,
 } from "./helpers/designer";
 const entry = (page: Page) =>
   page.getByRole("button", { name: "関連機器の台帳設定を開く", exact: true });
@@ -43,9 +44,7 @@ for (const theme of ["light", "dark"] as const)
       .getByRole("button", { name: "機器種別", exact: true })
       .click();
     await returnToCanvas(page);
-    await page
-      .getByRole("button", { name: "左パネルを隠す", exact: true })
-      .click();
+    await hideSidebar(page);
     await expect(entry(page)).toBeEnabled();
     await entry(page).click();
     await expect(

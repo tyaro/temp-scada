@@ -4,8 +4,9 @@ import sample from "../examples/minimal.project.json" with { type: "json" };
 import { selectPanel, chooseTheme, chooseMenuItem } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
+// #331 D2: 左は dock の pane（Project・レイヤー・部品）。表に出ているどれかで見る。
 const sidebar = (page: Page) =>
-  page.getByRole("complementary", { name: "Project と部品", exact: true });
+  page.locator("[data-designer-left-pane]:visible").first();
 const inspector = (page: Page) =>
   page.getByRole("complementary", { name: "プロパティパネル", exact: true });
 const viewport = (page: Page) =>
@@ -60,14 +61,19 @@ async function expectDefaults(page: Page) {
   await expect(page.getByRole("menubar")).toBeVisible();
   await expect(page.getByTestId("ruler-x")).toBeVisible();
   await expect(button(page, "ミニマップで表示位置を移動")).toBeVisible();
-  await expect(divider(page, "左パネルの幅")).toHaveAttribute(
-    "aria-valuenow",
-    "240",
-  );
-  await expect(divider(page, "プロパティの幅")).toHaveAttribute(
-    "aria-valuenow",
-    "288",
-  );
+  // 分割の幅は dock の divider が持つ（#331 D2）。既定の幅の px に戻ったかを測る。
+  await expect
+    .poll(async () => (await sidebar(page).boundingBox())?.width ?? 0)
+    .toBeGreaterThan(240 - 16);
+  await expect
+    .poll(async () => (await sidebar(page).boundingBox())?.width ?? 0)
+    .toBeLessThan(240 + 16);
+  await expect
+    .poll(async () => (await inspector(page).boundingBox())?.width ?? 0)
+    .toBeGreaterThan(288 - 16);
+  await expect
+    .poll(async () => (await inspector(page).boundingBox())?.width ?? 0)
+    .toBeLessThan(288 + 16);
 }
 test("standard layout restores hidden regions without resolving drafts, changing context, theme, favorites or Project", async ({
   page,
@@ -90,7 +96,7 @@ test("standard layout restores hidden regions without resolving drafts, changing
   const state = await page.getByTestId("save-state").innerText();
   await menu(page, "タグ参照一覧を隠す");
   await menu(page, "補助パネルをすべて隠す");
-  await expect(sidebar(page)).toHaveCount(0);
+  await expect(sidebar(page)).toBeHidden();
   await menu(page, "標準レイアウトに戻す");
   await expectDefaults(page);
   await expect(
@@ -185,7 +191,7 @@ for (const zoom of ["0.25", "1", "4", "fit"])
     await start(page);
     await page.getByLabel("表示倍率", { exact: true }).selectOption(zoom);
     await menu(page, "補助パネルをすべて隠す");
-    await expect(sidebar(page)).toHaveCount(0);
+    await expect(sidebar(page)).toBeHidden();
     const before = await center(page);
     await menu(page, "標準レイアウトに戻す");
     await expectDefaults(page);
@@ -242,7 +248,7 @@ test("restore cancels an active divider drag so later pointer movement cannot ov
   page,
 }) => {
   await start(page);
-  const handle = divider(page, "左パネルの幅"),
+  const handle = divider(page, "パネルのサイズ変更").first(),
     box = (await handle.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + 50);
   await page.mouse.down();
@@ -274,8 +280,11 @@ for (const theme of ["light", "dark"])
     await menu(page, "補助パネルをすべて隠す");
     await page.setViewportSize({ width: 960, height: 720 });
     await menu(page, "標準レイアウトに戻す");
-    await expect(sidebar(page)).toBeVisible();
-    await expect(inspector(page)).toBeVisible();
+    // 1100px 未満は dock の狭い表示: 左右は端の帯から引き出す（#331 D2）。
+    for (const pane of ["left", "layers", "parts", "right"])
+      await expect(
+        page.locator(`[data-dock-band-tab="${pane}"]`),
+      ).toBeVisible();
     await expect(page.getByLabel("配置名", { exact: true })).toHaveValue(
       "保持する入力",
     );

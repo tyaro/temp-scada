@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isRearrangingBlur } from "./dock-focus";
   import type { Snippet } from "svelte";
   import FloatingPanelHeader from "./FloatingPanelHeader.svelte";
   import { lineArrowLabels, lineArrows } from "../line-arrow";
@@ -392,6 +393,8 @@
   }
   function blurNumber(event: FocusEvent) {
     const input = event.currentTarget as HTMLInputElement;
+    // #331 D2: dock の組み替えによる blur（moveBefore の無い WebView2）では確定しない。
+    if (isRearrangingBlur(event)) return;
     if (composing.has(input)) blurred.add(input);
     else commitInput(input);
   }
@@ -468,7 +471,9 @@
   hidden={!visible}
   tabindex="-1"
 >
-  <FloatingPanelHeader {layout} {onclose} />
+  <!-- #331 D2: dock の pane のタイトルバーが見出しと ✕（プロパティを隠す）を持つ。
+       自前の見出しは浮動の controller を渡したとき（D4 で消す）だけ出す。 -->
+  {#if layout}<FloatingPanelHeader {layout} {onclose} />{/if}
   {#if selected}<div class="inspector-subject">
       <strong title={placementLabel(selected, project.symbols)}
         >{placementLabel(selected, project.symbols)}</strong
@@ -2027,9 +2032,8 @@
     margin: 0;
   }
   .inspector {
+    flex: 1;
     min-height: 0;
-    overflow: auto;
-    border-left: 1px solid var(--banto-border);
     background: var(--banto-surface);
   }
   .inspector[hidden] {
@@ -2192,24 +2196,6 @@
   .apply-state {
     font-size: 12px;
     color: var(--banto-text-muted);
-  }
-  @media (min-width: 701px) and (max-width: 1099px) {
-    .inspector {
-      grid-column: 2;
-      border-left: 0;
-      border-top: 1px solid var(--banto-border);
-    }
-  }
-  @media (min-width: 701px) and (max-width: 1099px) {
-    :global(main:not(.sidebar-visible)) .inspector {
-      grid-column: 1;
-    }
-  }
-  @media (max-width: 700px) {
-    .inspector {
-      border-left: 0;
-      border-top: 1px solid var(--banto-border);
-    }
   }
   .flip-toggles {
     display: flex;

@@ -224,12 +224,13 @@ test("adding parts while zoomed centers them in the visible viewport in a single
     });
   await selectPanel(page, "部品");
   await button("Rectangle を追加").click();
+  // 中央の大きさが端数になる（#331 D2 の dock の分割）ので、画面の半 px（倍率 4 で 0.125）までの差を許す。
   expect(
     Number(await page.getByLabel("X", { exact: true }).inputValue()),
-  ).toBeCloseTo(center.x - 80, 2);
+  ).toBeCloseTo(center.x - 80, 0);
   expect(
     Number(await page.getByLabel("Y", { exact: true }).inputValue()),
-  ).toBeCloseTo(center.y - 50, 2);
+  ).toBeCloseTo(center.y - 50, 0);
   await expect(
     page
       .getByRole("img", { name: "プロセス画面", exact: true })

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { addScreen, chooseTheme } from "./helpers/designer";
+import { addScreen, chooseTheme, hideSidebar } from "./helpers/designer";
 const button = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
 const strip = (page: Page) =>
@@ -55,7 +55,7 @@ test("studio chrome follows Banto themes while Project background and hidden pan
     await expect(strip(page)).toBeVisible();
     await expect(page.getByRole("menubar")).toBeVisible();
   }
-  await button(page, "左パネルを隠す").click();
+  await hideSidebar(page);
   await strip(page)
     .getByRole("button", { name: "プロセス画面", exact: true })
     .click();

@@ -98,13 +98,18 @@ async function assertFit(
           (element.clientHeight - 64) / b.height,
         ),
       ),
+      // 中央の大きさが端数の px になる（#331 D2 の dock の分割）ので、clientWidth /
+      // clientHeight の丸め（1px）の分の倍率の差を許す。
+      onePixel: Math.max(1 / b.width, 1 / b.height),
     };
   }, bounds);
   // Chromium quantizes styled SVG dimensions to 1/64 CSS px. A fixed number
   // of zoom decimals is too strict for small Symbol viewports.
   expect(
     Math.abs(values.actual - values.expected) * values.shortestViewBoxSide,
-  ).toBeLessThan(1 / 64 + 1e-6);
+  ).toBeLessThan(
+    Math.max(1 / 64 + 1e-6, values.onePixel * values.shortestViewBoxSide),
+  );
 }
 for (const theme of ["light", "dark"] as const)
   test(`selected outlines fit the actual viewport once without Project changes in ${theme}`, async ({

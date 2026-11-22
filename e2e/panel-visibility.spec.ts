@@ -2,8 +2,9 @@ import { test, expect, type Page } from "@playwright/test";
 import { selectPanel, chooseTheme, chooseMenuItem } from "./helpers/designer";
 import sample from "../examples/tag-binding.project.json" with { type: "json" };
 
+// #331 D2: 左は dock の pane（Project・レイヤー・部品）。表に出ているどれかで見る。
 const sidebar = (page: Page) =>
-  page.getByRole("complementary", { name: "Project と部品", exact: true });
+  page.locator("[data-designer-left-pane]:visible").first();
 const inspector = (page: Page) =>
   page.getByRole("complementary", { name: "プロパティパネル", exact: true });
 const viewport = (page: Page) =>
@@ -44,8 +45,8 @@ test("restore returns the previous panel subset, search, tab, selection and unap
     .getAttribute("data-project-revision");
   const width = (await viewport(page).boundingBox())!.width;
   await menu(page, "補助パネルをすべて隠す");
-  await expect(sidebar(page)).toHaveCount(0);
-  await expect(inspector(page)).toHaveCount(0);
+  await expect(sidebar(page)).toBeHidden();
+  await expect(inspector(page)).toBeHidden();
   await expect
     .poll(async () => (await viewport(page).boundingBox())!.width)
     .toBeGreaterThan(width + 500);
@@ -144,10 +145,8 @@ test("tag reference visibility retains search and disclosure, individual changes
     }),
   ).toHaveCount(0);
   await page.keyboard.press("Escape");
-  await expect(inspector(page)).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "左パネルを隠す", exact: true })
-    .click();
+  await expect(inspector(page)).toBeHidden();
+  await menu(page, "左パネルを隠す");
   await menu(page, "補助パネルをすべて表示");
   await expect(sidebar(page)).toBeVisible();
   await expect(inspector(page)).toBeVisible();
@@ -203,17 +202,23 @@ for (const theme of ["light", "dark"])
       [650, 900],
     ]) {
       await page.setViewportSize({ width, height });
-      await page
-        .getByRole("button", { name: "左パネルを隠す", exact: true })
-        .click();
-      await expect(sidebar(page)).toHaveCount(0);
-      await expect(inspector(page)).toBeVisible();
-      const preview = await page
-        .getByRole("region", { name: "画面プレビュー", exact: true })
-        .boundingBox();
-      expect(preview!.width).toBeGreaterThan(
-        width >= 1100 ? width - 310 : width - 10,
-      );
+      await menu(page, "左パネルを隠す");
+      await expect(sidebar(page)).toBeHidden();
+      // 1100px 未満は dock の狭い表示: Inspector は右端の帯から引き出す。
+      if (width >= 1100) await expect(inspector(page)).toBeVisible();
+      else
+        await expect(
+          page.locator('[data-dock-band-tab="right"]'),
+        ).toBeVisible();
+      await expect
+        .poll(
+          async () =>
+            (await page
+              .getByRole("region", { name: "画面プレビュー", exact: true })
+              .boundingBox())!.width,
+        )
+        // 幅は dock の比率（隠した左の分は残りの区画へ比率で配る。Inspector も広がる）。
+        .toBeGreaterThan(width >= 1100 ? width * 0.7 : width - 60);
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
@@ -221,6 +226,8 @@ for (const theme of ["light", "dark"])
       ).toBe(true);
       await menu(page, "左パネルを表示");
     }
+    // 以降は広い表示で見る（狭い表示では左は端の帯に入る）。
+    await page.setViewportSize({ width: 1280, height: 720 });
     await menu(page, "補助パネルをすべて隠す");
     await page
       .getByRole("button", { name: "表示プレビュー", exact: true })
@@ -238,9 +245,10 @@ for (const theme of ["light", "dark"])
     ).toHaveAttribute("aria-disabled", "true");
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "編集", exact: true }).click();
-    await expect(sidebar(page)).toHaveCount(0);
+    await expect(sidebar(page)).toBeHidden();
     await menu(page, "補助パネルを元の表示に戻す");
     await expect(sidebar(page)).toBeVisible();
+    await page.setViewportSize({ width: 1280, height: 720 });
     await page.reload();
     await page.getByRole("button", { name: "編集", exact: true }).click();
     await expect(sidebar(page)).toBeVisible();
