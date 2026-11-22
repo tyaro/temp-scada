@@ -906,11 +906,9 @@ callback／Promise終端／I/Oやnative registryの複製は含めない。`reco
 
 `examples/recording-wire-local-v2-cases.json`と`__fixtures__/recording-wire-local-v2-cases.ts`はNodeで配送経路を実moduleで実行する。`recording-wire-local-v2.test.ts`はforeign source／token、未配送、Observationのattemptとquery、後着、有限容量を確認する。ブラウザ境界の代表ケースも`e2e/recording-browser-boundary.spec.ts`が確認する。
 
-## 記録wire coordinator-v2（C4、test-only）
+## 記録wire coordinator-v2（削除済み）
 
-[採用設計](../design/runtime/historian-recording-coordinator-v2.md)に沿い、`recording-wire-coordinator-v2.ts`が実ledger／receiver／local-v2とtest-only portを固定scopeで束縛する。source単位の一回claim、token帰属・容量、元返信Promiseと個別transport ticketの終了、Observation queryとattempt、close後の後着回収を別に保持する。`recording-wire-local-v2.ts`のprivate source brandは同scopeでも別ledger／receiverの組合せを拒否する。test portの同期lifecycleは開始前に終了したticketを送信へ流さず、元返信やnative workerの静止を偽装しない。
-
-`examples/recording-wire-coordinator-v2-cases.json`と`__fixtures__/recording-wire-coordinator-v2-cases.ts`をNodeで実行する。`recording-wire-coordinator-v2.test.ts`はreply／taskの全順序、CallInspection、Observation pending、Attach／Control、有限容量、source再claim、再入・後着を検証する。既存`recording-async`／通常App／Tauri／native ownerはこの区切りで接続しない。ブラウザ境界の代表ケースも`e2e/recording-browser-boundary.spec.ts`が確認する。
+test-onlyのcoordinator-v2（`recording-wire-coordinator-v2.ts`、test、fixture、`examples/recording-wire-coordinator-v2-cases.json`）は、[製品owner設計](../design/runtime/historian-recording-product-owner.md) §11に従い2026-11-22に削除した（履歴はgitに残る）。
 
 ## native registryへのowner引渡し（C4、seed）
 
