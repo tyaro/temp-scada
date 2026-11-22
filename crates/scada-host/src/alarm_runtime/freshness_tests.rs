@@ -127,9 +127,9 @@ async fn saved_reread_values_apply_to_the_running_engine() {
     let mut report = runtime.reread_failure();
     wait_engine(&runtime, "the subscribed value", active).await;
     hub.rest_fail.store(true, Ordering::SeqCst);
-    // Three of the new 100 ms intervals: a reread at that interval (instead of
+    // Four of the new 100 ms intervals: a reread at that interval (instead of
     // the configured 60 s) would have failed by now.
-    tokio::time::sleep(Duration::from_millis(300)).await;
+    tokio::time::sleep(Duration::from_millis(400)).await;
     assert!(report.borrow().is_none(), "no reread is due within 60 s");
     // A shorter interval applies now: the next reread is one interval away.
     runtime
