@@ -9,7 +9,7 @@
 - ブランチの削除は、マージとは別に、明示的に許可された場合だけ行う。マージの承認は削除の承認を含まない。
 - 削除を許可されたときも、**マージ → `gh pr view --json state` で `MERGED` を確かめる → ブランチを消す**、の順に分ける。`MERGED` は削除の前提で、承認の代わりではない。`gh` が TLS handshake timeout を起こす環境では、マージが通らないままブランチを消して PR が閉じたことがある（#233）。
 - マージの前に、オーナーのレビュー結果（PR の会話欄の issue comment。再レビューを含む全件）と Codex の要約を読む。Auto-fix が Codex の「問題なし」だけを知らせてきたときも、会話欄のオーナーのコメントを必ず読む（#307 で見落とした）。
-- CI（`.github/workflows/ci.yml`）は PR と `work` への push で走る。作業ブランチへ push しただけでは走らないので、PR を作って確かめる。同じ PR へ新しいコミットを積むと、前の実行は取り消される。Windows の native ジョブは src-tauri・`src/native`・`crates/`・ツールチェーン・CI 定義の変更で走る（src-tauri は crates をすべて path で参照する）。
+- CI（`.github/workflows/ci.yml`）は PR と `work` への push で走る。作業ブランチへ push しただけでは走らないので、PR を作って確かめる。同じ PR へ新しいコミットを積むと、前の実行は取り消される。Windows の native ジョブは src-tauri・`src/native`・`crates/`・ルートの `Cargo.toml`・ツールチェーン・CI 定義の変更で走る（src-tauri は crates をすべて path で参照し、crates はルートの `[workspace.dependencies]` を継承する）。
 - 設計 PR は自動レビューが 1 件ずつ指摘して収束しにくい。Fable の通しレビューでまとめて洗う。境界の規則は最初から全入力に当てて考える。
 
 ## 整形と文書の編集

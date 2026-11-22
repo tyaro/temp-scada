@@ -56,8 +56,9 @@ jobs:
               *) docs_only=false ;;
             esac
             case "$file" in
-              # src-tauri depends on every crate by path (host pulls in the rest).
-              apps/banto-scada/src-tauri/*|apps/banto-scada/src/native/*|crates/*|rust-toolchain.toml|.github/workflows/ci.yml) native=true ;;
+              # src-tauri depends on every crate by path (host pulls in the rest),
+              # and the crates inherit the root [workspace.dependencies].
+              apps/banto-scada/src-tauri/*|apps/banto-scada/src/native/*|crates/*|Cargo.toml|rust-toolchain.toml|.github/workflows/ci.yml) native=true ;;
             esac
           done < "$RUNNER_TEMP/changed-files"
           if (( count == 0 )); then docs_only=false; fi
