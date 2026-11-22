@@ -31,6 +31,7 @@ for (const scenario of localV2Cases.scenarios)
   it(`shared local-v2 scenario: ${scenario.name}`, async () => {
     const usage = await runLocalV2Scenario(scenario);
     expect(usage.pending).toBe(0);
+    expect(usage.delivered).toBeGreaterThan(0);
   });
 
 function take<T>(

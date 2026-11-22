@@ -30,7 +30,9 @@ import {
 
 for (const scenario of coordinatorV2Cases.scenarios)
   it(`shared coordinator-v2 scenario: ${scenario.name}`, async () => {
-    expect((await runCoordinatorV2Scenario(scenario)).tracks).toBe(1);
+    const usage = await runCoordinatorV2Scenario(scenario);
+    expect(usage.tracks).toBe(1);
+    expect(usage.attempts).toBe(1);
   });
 
 function take<T>(
