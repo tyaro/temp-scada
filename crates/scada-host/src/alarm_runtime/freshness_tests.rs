@@ -127,6 +127,8 @@ async fn saved_reread_values_apply_to_the_running_engine() {
     let mut report = runtime.reread_failure();
     wait_engine(&runtime, "the subscribed value", active).await;
     hub.rest_fail.store(true, Ordering::SeqCst);
+    // Four of the new 100 ms intervals: a reread at that interval (instead of
+    // the configured 60 s) would have failed by now.
     tokio::time::sleep(Duration::from_millis(400)).await;
     assert!(report.borrow().is_none(), "no reread is due within 60 s");
     // A shorter interval applies now: the next reread is one interval away.
@@ -140,6 +142,13 @@ async fn saved_reread_values_apply_to_the_running_engine() {
         )
         .await
         .unwrap();
+    tokio::time::timeout(Duration::from_secs(10), report.wait_for(Option::is_some))
+        .await
+        .expect("a reread at the new interval")
+        .unwrap();
+    // The streak began no later than this (its failure is reported after it
+    // is counted).
+    let streak_seen = tokio::time::Instant::now();
     let streak = tokio::time::timeout(
         Duration::from_secs(10),
         report.wait_for(|failure| failure.is_some_and(|failure| failure.failures >= 4)),
@@ -149,10 +158,12 @@ async fn saved_reread_values_apply_to_the_running_engine() {
     .unwrap()
     .unwrap();
     assert!(runtime.snapshot().await.unwrap().unavailable().is_none());
-    // Make sure the streak is well past the new 300 ms limit before the
+    // Make sure the streak is past the new 300 ms limit before the
     // reconfiguration (four failures 100 ms apart can be just under it on a
-    // slow runner); the old one-hour limit keeps the Engine available.
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    // slow runner): it began before `streak_seen`, so waiting the limit plus
+    // a margin from there is enough on any runner. The old one-hour limit
+    // keeps the Engine available meanwhile.
+    tokio::time::sleep_until(streak_seen + fast().failure_limit + Duration::from_millis(100)).await;
     assert!(runtime.snapshot().await.unwrap().unavailable().is_none());
     // The streak is kept and judged again: it is already past the new
     // failure limit, so ReceiveLost begins with the reconfiguration.
@@ -214,7 +225,17 @@ async fn a_reread_from_another_catalog_generation_is_only_liveness() {
         .lock()
         .unwrap()
         .insert("PLANT.FLAG".into(), 0.0);
-    tokio::time::sleep(Duration::from_millis(600)).await;
+    // Wait for rereads instead of a fixed time, so a slow runner cannot pass
+    // without any: the third read starting means the two before it, both
+    // answered with the other revision, were handled (one reread at a time).
+    let before = hub.rest_reads.load(Ordering::SeqCst);
+    let reread = tokio::time::timeout(Duration::from_secs(10), async {
+        while hub.rest_reads.load(Ordering::SeqCst) < before + 3 {
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    })
+    .await;
+    assert!(reread.is_ok(), "no rereads were made");
     assert!(active(&runtime.snapshot().await.unwrap()));
     assert_eq!(hub.subscriptions.load(Ordering::SeqCst), 1);
     assert!(runtime.reread_failure().borrow().is_none());

@@ -46,6 +46,9 @@ pub(crate) struct Hub {
     pub(crate) rest_fail: Arc<std::sync::atomic::AtomicBool>,
     /// REST rereads report this catalog revision (another generation).
     pub(crate) rest_revision: Arc<std::sync::atomic::AtomicU64>,
+    /// REST value reads received so far (counted before the settings above
+    /// are read, so a read counted after a change sees the change).
+    pub(crate) rest_reads: Arc<AtomicUsize>,
     /// New WebSocket subscriptions are refused with 503 while set.
     pub(crate) stream_fail: Arc<std::sync::atomic::AtomicBool>,
     task: tokio::task::JoinHandle<()>,
@@ -83,6 +86,7 @@ impl Hub {
             rest_values: rest.values,
             rest_fail: rest.fail,
             rest_revision: rest.revision,
+            rest_reads: rest.reads,
             stream_fail: rest.stream_fail,
             task,
         }
@@ -116,6 +120,7 @@ struct Rest {
     values: Arc<std::sync::Mutex<std::collections::BTreeMap<String, f64>>>,
     fail: Arc<std::sync::atomic::AtomicBool>,
     revision: Arc<std::sync::atomic::AtomicU64>,
+    reads: Arc<AtomicUsize>,
     stream_fail: Arc<std::sync::atomic::AtomicBool>,
 }
 
@@ -183,6 +188,7 @@ async fn serve(
             .filter(|(name, _)| line.contains(name.as_str()))
             .cloned()
             .collect();
+        rest.reads.fetch_add(1, Ordering::SeqCst);
         if rest.fail.load(Ordering::SeqCst) {
             status = "503 test";
         }
