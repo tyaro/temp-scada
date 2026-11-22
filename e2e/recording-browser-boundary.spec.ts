@@ -330,17 +330,6 @@ test("recording / history モジュールはブラウザで代表ケースが通
             return "local-v2";
           },
         },
-        {
-          name: "coordinator-v2",
-          run: async () => {
-            const f = await load(F + "recording-wire-coordinator-v2-cases.ts");
-            const u = await f.runCoordinatorV2Scenario(
-              f.coordinatorV2Cases.scenarios[0],
-            );
-            assert(u.tracks === 1 && u.attempts === 1, "coordinator-v2 usage");
-            return "coordinator-v2";
-          },
-        },
       ];
       const done: string[] = [];
       for (const check of checks) {
@@ -362,7 +351,7 @@ test("recording / history モジュールはブラウザで代表ケースが通
     },
   );
 
-  expect(summary).toHaveLength(16);
+  expect(summary).toHaveLength(15);
   expect(remote).toEqual([]);
   expect(await downloadBytes(await downloadProject(page))).toEqual(before);
 });

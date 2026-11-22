@@ -6,7 +6,7 @@
 
 - 製品host（`apps/banto-scada/src-tauri/src/main.rs`）は`DesktopRecording::unavailable(NO_RECORDING_OWNER)`を置き、記録registryの10個のcommandは`recordingUnavailable`を返す。記録DB、Supervisor、`HistoryHost`は製品hostにない。
 - 通常Appは`historyService`・`recordingManagementService`・`recordingOperationsService`・`recordingAsyncOperations`をpropで受けるが、`NativeShell`は`readSource`と`catalogSource`だけを渡す。渡しているのはPlaywright試験の差し替えだけである。履歴・記録管理・記録操作の画面は、デスクトップでは「未接続」を表示する。
-- TSの記録wire層（`recording-wire-receiver.ts`、`recording-wire-delivery-ledger.ts`、`recording-wire-local-v2.ts`、`recording-wire-coordinator-v2.ts`）はtest-onlyで、通常Appから参照されない。通常Appが受けるのはv1の`AsyncOperationsClient`（`recording-async/coordinator.ts`が作るbrand付きの値）だけである。
+- TSの記録wire層（`recording-wire-receiver.ts`、`recording-wire-delivery-ledger.ts`、`recording-wire-local-v2.ts`。`recording-wire-coordinator-v2.ts`は2026-11-22に削除）はtest-onlyで、通常Appから参照されない。通常Appが受けるのはv1の`AsyncOperationsClient`（`recording-async/coordinator.ts`が作るbrand付きの値）だけである。
 
 ## 2. ownerを組める状態
 

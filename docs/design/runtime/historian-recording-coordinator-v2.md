@@ -1,5 +1,7 @@
 # 記録wire coordinator-v2の所有・attempt境界
 
+> 2026-11-22: test-onlyのcoordinator-v2 moduleは製品owner設計§11に従い削除した。以下は当時の設計記録である。
+
 状態: **C4の採用詳細設計。同realm・test-only rootを実装済み、製品接続は後続**。2026-11-06（日本時間）。Historianの主設計・レビューはユーザー指定のAstra。[wire host契約](historian-recording-wire-host.md)、[元call・Observation台帳](historian-recording-wire-delivery-ledger.md)、[local-v2配送](historian-recording-wire-local-v2.md)、[実Hub・S7接続計画](../../project/real-hub-connection-plan.md)を前提にする。
 
 ## 1. 対象と順序
