@@ -1676,16 +1676,27 @@ mod tests {
         assert_eq!(hidden.text_bindings(), before);
         assert_eq!(hidden.0["screens"][0]["objects"][2]["visible"], false);
     }
+    /// `examples/` の Project のサンプルはどれも読み込めて、保存し直しても同じになる。
+    /// 旧形式（legacy）は読込時の移行の後の形で往復する。サンプルを足せばこの試験に入る。
     #[test]
-    fn round_trip_preserves_project() {
-        let project = Project::from_json(SAMPLE).unwrap();
-        assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
-    }
-    #[test]
-    fn binding_sample_round_trip() {
-        let input = include_str!("../../../examples/tag-binding.project.json");
-        let project = Project::from_json(input).unwrap();
-        assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
+    fn every_sample_project_is_valid_and_round_trips() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../examples");
+        let mut names: Vec<_> = std::fs::read_dir(&dir)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+            .filter(|name| name.ends_with(".project.json"))
+            .collect();
+        names.sort();
+        assert!(names.len() >= 30, "{names:?}");
+        for name in names {
+            let source = std::fs::read_to_string(dir.join(&name)).unwrap();
+            let project = Project::from_json(&source).unwrap_or_else(|e| panic!("{name}: {e}"));
+            assert_eq!(
+                Project::from_json(&project.to_json()).unwrap(),
+                project,
+                "{name}"
+            );
+        }
     }
     #[test]
     fn image_assets_share_the_browser_contract() {
@@ -1943,24 +1954,6 @@ mod tests {
                 assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
             }
         }
-    }
-    #[test]
-    fn shape_label_sample_is_valid() {
-        let source = include_str!("../../../examples/shape-label.project.json");
-        let project = Project::from_json(source).unwrap();
-        assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
-    }
-    #[test]
-    fn alarm_value_color_sample_is_valid() {
-        let source = include_str!("../../../examples/alarm-value-color.project.json");
-        let project = Project::from_json(source).unwrap();
-        assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
-    }
-    #[test]
-    fn shape_label_flow_sample_is_valid() {
-        let source = include_str!("../../../examples/shape-label-flow.project.json");
-        let project = Project::from_json(source).unwrap();
-        assert_eq!(Project::from_json(&project.to_json()).unwrap(), project);
     }
     #[test]
     fn shape_label_shares_the_browser_contract() {
