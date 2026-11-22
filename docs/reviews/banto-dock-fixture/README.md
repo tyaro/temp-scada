@@ -26,6 +26,6 @@ IMEは実OSで未検証。blurと別pointerIdは合成イベント。key付き�
 - [SCADA guard](../../../apps/banto-scada/src/lib/designer/drafts.svelte.ts): 現在のDOM依存契約を確認する実consumer。
 - [共通浮動controller](../../../apps/banto-scada/src/lib/designer/controllers/floating-panel.svelte.ts): 単一gesture所有者、取消、keyboard、上位layerとの連携の参考。
 - [配置計算と保存値検証](../../../apps/banto-scada/src/lib/designer/floating-panel-layout.ts)と[単体テスト](../../../apps/banto-scada/src/lib/designer/floating-panel-layout.test.ts)。
-- [Inspectorのブラウザテスト](../../../e2e/inspector-floating.spec.ts)、[左右パネルのブラウザテスト](../../../e2e/sidebar-floating.spec.ts): DOM・draft、取消、保存失敗、狭幅、前面化の受入仕様。
+- [Inspectorのブラウザテスト](https://github.com/tyaro/temp-scada/blob/10f5bbc1/e2e/inspector-floating.spec.ts)、[左右パネルのブラウザテスト](https://github.com/tyaro/temp-scada/blob/10f5bbc1/e2e/sidebar-floating.spec.ts): DOM・draft、取消、保存失敗、狭幅、前面化の受入仕様（#331 D2〜D4 で skip のままだったので 2026-11-22 に削除した。リンクは削除前のコミット）。
 
 上流への移植は、SCADAのpanel ID・Project・Undoへ依存する部分をcallbackとして外す。SCADA全体のコピーやBantoからtemp-scadaへの依存は作らず、汎用契約と最小fixtureを上流自身のテストへ抽出する。

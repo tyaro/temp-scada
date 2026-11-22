@@ -27,19 +27,25 @@ it.each(cases)("shared Rust contract fixture: $name", (fixture) => {
 
 it.each(queryCases)("SQLite query result fixture: $name", (fixture) => {
   expect(validateHistoryContract(fixture.expected)).toBe("accepted");
-  expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
+  const owned = parseHistoryContract(fixture.expected);
+  expect(owned).toEqual(fixture.expected);
+  expect(owned).not.toBe(fixture.expected);
 });
 
 it.each(coverageCases)("SQLite coverage result fixture: $name", (fixture) => {
   expect(validateHistoryContract(fixture.expected)).toBe("accepted");
-  expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
+  const owned = parseHistoryContract(fixture.expected);
+  expect(owned).toEqual(fixture.expected);
+  expect(owned).not.toBe(fixture.expected);
 });
 
 it.each(minmaxCases.filter((fixture) => fixture.expected))(
   "SQLite minmax result fixture: $name",
   (fixture) => {
     expect(validateHistoryContract(fixture.expected)).toBe("accepted");
-    expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
+    const owned = parseHistoryContract(fixture.expected);
+    expect(owned).toEqual(fixture.expected);
+    expect(owned).not.toBe(fixture.expected);
   },
 );
 
@@ -64,13 +70,17 @@ it("classifies uncloneable input without forwarding an input accessor's error", 
 
 it.each(retentionCases)("SQLite retention result fixture: $name", (fixture) => {
   expect(validateHistoryContract(fixture.expected)).toBe("accepted");
-  expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
+  const owned = parseHistoryContract(fixture.expected);
+  expect(owned).toEqual(fixture.expected);
+  expect(owned).not.toBe(fixture.expected);
 });
 
 it.each(retentionJobCases)(
   "SQLite retention job result fixture: $name",
   (fixture) => {
     expect(validateHistoryContract(fixture.expected)).toBe("accepted");
-    expect(parseHistoryContract(fixture.expected)).toEqual(fixture.expected);
+    const owned = parseHistoryContract(fixture.expected);
+    expect(owned).toEqual(fixture.expected);
+    expect(owned).not.toBe(fixture.expected);
   },
 );
