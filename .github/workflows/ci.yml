@@ -1,7 +1,17 @@
 name: SCADA
-on: [push, pull_request]
+# Branch pushes are covered by their pull request; only the default
+# branch runs on push, so a PR commit is not checked twice.
+on:
+  push:
+    branches: [work]
+  pull_request:
 permissions:
   contents: read
+# A newer commit on the same PR replaces the older run. Runs on work
+# finish so every merge commit keeps a result.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -46,7 +56,8 @@ jobs:
               *) docs_only=false ;;
             esac
             case "$file" in
-              apps/banto-scada/src-tauri/*|apps/banto-scada/src/native/*|.github/workflows/ci.yml) native=true ;;
+              # src-tauri depends on every crate by path (host pulls in the rest).
+              apps/banto-scada/src-tauri/*|apps/banto-scada/src/native/*|crates/*|rust-toolchain.toml|.github/workflows/ci.yml) native=true ;;
             esac
           done < "$RUNNER_TEMP/changed-files"
           if (( count == 0 )); then docs_only=false; fi
