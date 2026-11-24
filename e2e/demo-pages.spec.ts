@@ -4,7 +4,7 @@ import { chooseTheme, mainCanvas } from "./helpers/designer";
 
 // GitHub Pages のデモ（トップページ・模擬値 feed・排水処理の Project）。
 // 入口は製品の index.html とは別の pages/*.html で、開発サーバーが同じ origin で配る。
-// `at` は模擬値の筋書きを止める秒（apps/banto-scada/src/demo/scenarios/water.ts）。
+// `at` は模擬値の筋書きを止める秒（apps/banto-scada/src/demo/scenarios/water.scenario.json）。
 const LANDING = "/pages/index.html";
 const demo = (view: string, at?: number) =>
   `/pages/demo.html?demo=water&view=${view}${at === undefined ? "" : `&at=${at}`}`;

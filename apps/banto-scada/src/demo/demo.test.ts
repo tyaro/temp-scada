@@ -16,12 +16,13 @@ import {
 } from "./registry";
 import {
   createDemoClock,
-  piecewise,
-  within,
+  demoScenarioFrom,
   type DemoClock,
   type DemoScenario,
 } from "./scenario";
-import { waterScenario } from "./scenarios/water";
+import waterScenarioJson from "./scenarios/water.scenario.json";
+
+const waterScenario = demoScenarioFrom(waterScenarioJson);
 
 // Pages のデモの契約。Project は現行の schema で読め、模擬値は製品の読取・警報・履歴の
 // 検査をそのまま通る。
@@ -76,21 +77,40 @@ describe("demo subjects", () => {
   });
 });
 
-describe("scenario helpers", () => {
-  it("interpolates between points and tests half-open ranges", () => {
-    const points = [
-      [0, 10],
-      [10, 30],
-      [20, 30],
-    ] as const;
-    expect(piecewise(points, 0)).toBe(10);
-    expect(piecewise(points, 5)).toBe(20);
-    expect(piecewise(points, 15)).toBe(30);
-    expect(within(5, [0, 5], [10, 20])).toBe(false);
-    expect(within(10, [0, 5], [10, 20])).toBe(true);
+describe("water scenario keeps the old water.ts boundaries", () => {
+  // 期待値は旧 water.ts の式から手で求めた（#390 のレビュー）。
+  // 薬注 P-201: pH = 7.3 + 1.3·sin(2π(φ−20)/180) > 7.8 → φ ∈ (31.310, 98.690)
+  // ブロワー B-302: DO = 2.3 + 0.8·sin(2πφ/90) < 2.0 → φ ∈ (50.506, 84.494) と +90
+  // 放流 P-501: 処理水槽 = 50 + 28·sin(2π(φ−40)/180) > 52 → φ ∈ (42.048, 127.952)
+  const EPOCH = 1767225600;
+  const at = (phase: number) => waterScenario.values(EPOCH + phase);
+  it.each([
+    ["WWT.P201.Run", 31.3, false],
+    ["WWT.P201.Run", 31.4, true],
+    ["WWT.P201.Run", 98.6, true],
+    ["WWT.P201.Run", 98.7, false],
+    ["WWT.B302.Run", 50.5, false],
+    ["WWT.B302.Run", 50.55, true],
+    ["WWT.B302.Run", 84.45, true],
+    ["WWT.B302.Run", 84.5, false],
+    ["WWT.B302.Run", 140.5, false],
+    ["WWT.B302.Run", 140.55, true],
+    ["WWT.P501.Run", 42, false],
+    ["WWT.P501.Run", 42.1, true],
+    ["WWT.P501.Run", 127.9, true],
+    ["WWT.P501.Run", 128, false],
+  ] as const)("%s at %s s is %s", (name, phase, expected) => {
+    expect(at(phase)[name]).toBe(expected);
   });
+
+  it("keeps the pH under its high limit (8.5) at ?at=77 as before", () => {
+    expect(at(77)["WWT.React.pH"]).toBe(8.49);
+  });
+});
+
+describe("scenario clock", () => {
   it("freezes the clock at a phase of the cycle", () => {
-    const clock = createDemoClock({ cycleSec: 180 }, 70);
+    const clock = createDemoClock(waterScenario, 70);
     expect(clock.frozen).toBe(true);
     expect((clock.nowMs() / 1000) % 180).toBe(70);
     let calls = 0;

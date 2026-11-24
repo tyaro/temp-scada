@@ -1,0 +1,10 @@
+[package]
+name = "scada-scenario"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "時刻だけで値が決まる筋書き（版つきの JSON）の読込と評価"
+
+[dependencies]
+serde_json.workspace = true
