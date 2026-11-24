@@ -82,7 +82,10 @@ async fn the_synthetic_admin_inspects_and_reaches_the_setup() {
 async fn a_viewer_inspects_but_does_not_set_up_and_no_session_does_neither() {
     let (_dir, auth, runtime) = host().await;
     let project = project();
-    auth.transition_to_operational("admin", PASSWORD, "管理者")
+    auth.users_create("chief", PASSWORD, "管理者", Role::Admin)
+        .await
+        .unwrap();
+    auth.transition_to_operational("chief", PASSWORD)
         .await
         .unwrap();
     auth.users_create("viewer", PASSWORD, "閲覧者", Role::Viewer)
@@ -126,7 +129,10 @@ async fn the_slot_is_read_by_a_viewer_and_the_stop_needs_an_admin_and_a_recordin
     // The synthetic Admin: nothing records yet.
     assert_eq!(kind(stop(&auth, &runtime).await), "not_allowed");
 
-    auth.transition_to_operational("admin", PASSWORD, "管理者")
+    auth.users_create("chief", PASSWORD, "管理者", Role::Admin)
+        .await
+        .unwrap();
+    auth.transition_to_operational("chief", PASSWORD)
         .await
         .unwrap();
     auth.users_create("viewer", PASSWORD, "閲覧者", Role::Viewer)
@@ -166,7 +172,10 @@ async fn the_resume_and_the_reconfiguration_need_an_admin_and_an_applied_plan() 
         "not_allowed"
     );
 
-    auth.transition_to_operational("admin", PASSWORD, "管理者")
+    auth.users_create("chief", PASSWORD, "管理者", Role::Admin)
+        .await
+        .unwrap();
+    auth.transition_to_operational("chief", PASSWORD)
         .await
         .unwrap();
     auth.users_create("viewer", PASSWORD, "閲覧者", Role::Viewer)
@@ -193,7 +202,7 @@ async fn the_resume_and_the_reconfiguration_need_an_admin_and_an_applied_plan() 
     auth.logout().await.unwrap();
 
     // An Admin's refusals are audited.
-    assert!(auth.login("admin", PASSWORD).await.unwrap().success);
+    assert!(auth.login("chief", PASSWORD).await.unwrap().success);
     assert_eq!(
         kind(reconfigure(&auth, &runtime, &project, None).await),
         "not_allowed"
@@ -243,7 +252,10 @@ async fn the_owner_rebind_needs_an_admin_and_an_installed_root() {
         "not_allowed"
     );
 
-    auth.transition_to_operational("admin", PASSWORD, "管理者")
+    auth.users_create("chief", PASSWORD, "管理者", Role::Admin)
+        .await
+        .unwrap();
+    auth.transition_to_operational("chief", PASSWORD)
         .await
         .unwrap();
     auth.users_create("viewer", PASSWORD, "閲覧者", Role::Viewer)
@@ -260,7 +272,7 @@ async fn the_owner_rebind_needs_an_admin_and_an_installed_root() {
         "forbidden"
     );
     auth.logout().await.unwrap();
-    assert!(auth.login("admin", PASSWORD).await.unwrap().success);
+    assert!(auth.login("chief", PASSWORD).await.unwrap().success);
     let closed = RecordingRuntime::unavailable(crate::recording_runtime::STORE_LOCKED);
     assert_eq!(
         serde_json::to_value(owner_rebind(&auth, &closed, &project).await.unwrap_err()).unwrap(),

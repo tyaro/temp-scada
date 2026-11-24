@@ -85,9 +85,18 @@ async fn initializing() -> Fixture {
 /// `operational`, with the administrator logged in.
 async fn operational() -> Fixture {
     let f = initializing().await;
+    f.auth
+        .users_create(
+            "chief",
+            PASSWORD,
+            "管理者",
+            banto_admin_services::Role::Admin,
+        )
+        .await
+        .unwrap();
     let moved = f
         .auth
-        .transition_to_operational("admin", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD)
         .await
         .unwrap();
     assert!(moved.signed_in);

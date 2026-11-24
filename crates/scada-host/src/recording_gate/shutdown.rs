@@ -205,6 +205,7 @@ impl RecordingGate {
             display_name: String::new(),
             role: Role::Admin,
             auth_epoch: 0,
+            account_uid: None,
         };
         let mut detail = json!({
             "stage": "discard",

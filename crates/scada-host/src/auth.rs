@@ -1,6 +1,6 @@
 //! Desktop authentication of the embedded SCADA host (host-gate design §2-§4).
 //!
-//! Users, settings and the audit log are Banto v7.0.0's
+//! Users, settings and the audit log are Banto v8.0.0's
 //! `banto-admin-services`; this module only owns the webview's single
 //! [`DesktopSession`] slot and re-validates it on every check, ported from
 //! Banto admin-template's `current_session` / `require_role`.
@@ -12,10 +12,10 @@
 use std::path::Path;
 use std::sync::Mutex;
 
-use banto_admin_services::audit::{AuditEntry, AuditLogService};
+use banto_admin_services::audit::{AuditActor, AuditEntry, AuditLogService};
 use banto_admin_services::settings::{AuthSettings, SettingsService};
 pub use banto_admin_services::users::UserIdentity;
-use banto_admin_services::users::{bound_username_for_audit, UsersService};
+use banto_admin_services::users::{bound_username_for_audit, ReservedUsernames, UsersService};
 pub use banto_admin_services::Role;
 pub use banto_core::BantoError;
 use banto_storage::Db;
@@ -126,6 +126,24 @@ struct AuthSlot {
     seq: u64,
 }
 
+/// Why the auth DB did not open.
+#[derive(Debug)]
+pub enum AuthOpenError {
+    /// The DB was made before Banto v8.0.0: its migration history does not
+    /// match this build's (v8.0.0 rewrote 0003 / 0005 in place and has no
+    /// data migration). It is never re-created or changed here; the user
+    /// sets it aside together with `auth-phase.json`.
+    Outdated,
+    /// Any other failure to open, migrate or read the DB.
+    Auth(BantoError),
+}
+
+impl From<BantoError> for AuthOpenError {
+    fn from(error: BantoError) -> Self {
+        Self::Auth(error)
+    }
+}
+
 pub struct HostAuth {
     users: UsersService,
     settings: SettingsService,
@@ -137,11 +155,14 @@ impl HostAuth {
     /// Open (creating if missing) the auth DB at `path`, apply the copied
     /// Banto migrations and install the initial session: the synthetic
     /// session while auth-disabled mode is on, otherwise none.
-    pub async fn open(path: impl AsRef<Path>) -> Result<Self, BantoError> {
+    pub async fn open(path: impl AsRef<Path>) -> Result<Self, AuthOpenError> {
         let db = Db::connect_sqlite(path).await?;
         migrate(&db).await?;
         let auth = Self {
-            users: UsersService::new(db.clone()),
+            // Banto's wiring: `admin` (ignoring case) is reserved by the
+            // service itself; SCADA registers no grant, so no other name.
+            users: UsersService::new(db.clone())
+                .with_reserved_usernames(ReservedUsernames::default()),
             settings: SettingsService::new(db.clone()),
             audit: AuditLogService::new(db),
             slot: Mutex::new(AuthSlot::default()),
@@ -227,19 +248,15 @@ impl HostAuth {
         match self.current().await? {
             Some(current) if current.session.role().at_least(min) => Ok(current),
             Some(current) => {
-                let identity = current.session.identity();
-                self.audit
-                    .record(AuditEntry {
-                        actor_username: Some(&identity.username),
-                        actor_role: Some(identity.role.as_str()),
-                        action: "denied",
-                        resource,
-                        entity_id: None,
-                        detail: None,
-                        origin: "tauri",
-                        result: "denied",
-                    })
-                    .await;
+                self.record(
+                    current.session.identity(),
+                    "denied",
+                    resource,
+                    None,
+                    None,
+                    "denied",
+                )
+                .await;
                 Err(BantoError::Forbidden)
             }
             None => Err(BantoError::Unauthorized),
@@ -280,13 +297,7 @@ impl HostAuth {
             self.audit
                 .record(AuditEntry {
                     actor_username: Some(&bounded),
-                    actor_role: None,
-                    action: "login_failed",
-                    resource: "auth",
-                    entity_id: None,
-                    detail: None,
-                    origin: "tauri",
-                    result: "failed",
+                    ..AuditEntry::by(None, "tauri", "login_failed", "auth", None, None, "failed")
                 })
                 .await;
             return Ok(Verified::Refused(LoginOutcome::InvalidCredentials));
@@ -470,17 +481,17 @@ impl HostAuth {
         detail: Option<serde_json::Value>,
         result: &str,
     ) {
+        let actor = audit_actor(actor);
         self.audit
-            .record(AuditEntry {
-                actor_username: Some(&actor.username),
-                actor_role: Some(actor.role.as_str()),
+            .record(AuditEntry::by(
+                Some(&actor),
+                "tauri",
                 action,
                 resource,
                 entity_id,
                 detail,
-                origin: "tauri",
                 result,
-            })
+            ))
             .await;
     }
 
@@ -607,21 +618,29 @@ impl HostAuth {
     }
 }
 
-/// Banto admin-template's SQLite migrations 0002-0013 without the demo
+/// Banto admin-template's SQLite migrations 0002-0015 without the demo
 /// `items` (0001, 0009, 0011) and attachments (0006), copied verbatim so their
 /// checksums match Banto's. 0010 adds the audit record-scope columns that
 /// `AuditLogService`'s `recordResource` / `recordId` filters read; 0012 adds
 /// the `users.version` column `UsersService` selects since Banto v7.4.0;
 /// 0013 adds the `user_permissions` table the user update reads since Banto
-/// v7.7.0 (SCADA registers no permission catalog yet).
-async fn migrate(db: &Db) -> Result<(), BantoError> {
+/// v7.7.0 (SCADA registers no permission catalog yet). 0014 adds Banto
+/// v8.0.0's `ui_settings` table and the built-in `admin` row; 0015 writes the
+/// auth mode of a new DB (no login, role Admin). v8.0.0 rewrote 0003 / 0005 in
+/// place, so an auth DB created before it fails the checksum here
+/// ([`AuthOpenError::Outdated`]; there is no data migration).
+async fn migrate(db: &Db) -> Result<(), AuthOpenError> {
     let pool = db
         .as_sqlite()
         .ok_or_else(|| BantoError::Storage("auth DB must be SQLite".to_string()))?;
     sqlx::migrate!("./migrations-sqlite")
         .run(pool)
         .await
-        .map_err(|error| BantoError::Storage(error.to_string()))
+        .map_err(|error| match error {
+            sqlx::migrate::MigrateError::VersionMismatch(_)
+            | sqlx::migrate::MigrateError::VersionMissing(_) => AuthOpenError::Outdated,
+            other => AuthOpenError::Auth(BantoError::Storage(other.to_string())),
+        })
 }
 
 fn local_session(role: Role) -> DesktopSession {
@@ -631,7 +650,28 @@ fn local_session(role: Role) -> DesktopSession {
         display_name: String::new(),
         role,
         auth_epoch: 0,
+        account_uid: None,
     })
+}
+
+/// The audit actor of `identity` (Banto v8.0.0's `actor_id` / `actor_kind`).
+/// An account (it has an `account_uid`) is Banto's account actor. A
+/// synthetic identity the host made itself (the auth-disabled `local`
+/// session, the shutdown's `host:shutdown`) has no `users` row: no
+/// `actor_id`, and its username, the channel's own word, is the kind. The
+/// auth-disabled session therefore stays `local` in `actor_username` (Banto's
+/// template attributes it to the built-in `admin` row instead; not adopted
+/// while the auth design is deferred).
+fn audit_actor(identity: &UserIdentity) -> AuditActor {
+    if identity.account_uid.is_some() {
+        return AuditActor::account(&identity.username, identity.id, identity.role.as_str());
+    }
+    AuditActor {
+        username: identity.username.clone(),
+        id: None,
+        role: identity.role.as_str().to_string(),
+        kind: identity.username.clone(),
+    }
 }
 
 fn same_binding(a: &DesktopSession, b: &DesktopSession) -> bool {

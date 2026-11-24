@@ -13,17 +13,21 @@
 //! (`RecordingRegistryRoot::quiescence().holds`). A host without a registry
 //! passes `|_| false`: there is nothing to strand.
 use banto_admin_services::settings::AuthSettings;
-use banto_admin_services::users::{UserIdentity, UserSummary};
+use banto_admin_services::users::{UserIdentity, UserKind, UserSummary};
 use scada_runtime::recording_registry::RecordingPrincipal;
 use serde_json::json;
 
 use crate::auth::{DesktopSession, HostAuth, Role};
 use crate::recording_gate::AuthChangeError;
 
-/// `users_list` (Admin).
+/// `users_list` (Admin): the accounts. Banto v8.0.0 also lists its
+/// built-in `admin` row (`kind = 'builtin'`, read-only); the SCADA screen
+/// does not handle that row yet, so the list stays the accounts it was.
 pub(crate) async fn list_users(auth: &HostAuth) -> Result<Vec<UserSummary>, AuthChangeError> {
     auth.require_role(Role::Admin, "users").await?;
-    Ok(auth.users().list_users().await?)
+    let mut users = auth.users().list_users().await?;
+    users.retain(|user| user.kind == UserKind::Account);
+    Ok(users)
 }
 
 /// `users_create` (Admin). A new account ends no session.

@@ -42,7 +42,6 @@
     "allow-auth-logout",
     "allow-auth-resolve",
     "allow-auth-change-password",
-    "allow-auth-setup",
     "allow-users-list",
     "allow-users-create",
     "allow-users-update",

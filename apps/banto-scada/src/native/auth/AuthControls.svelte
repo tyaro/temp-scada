@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { roleLabel } from "./client";
+  import { NO_ADMIN_ACCOUNT_MESSAGE, roleLabel } from "./client";
   import {
     canEditSettings,
     canManageUsers,
-    canSetupFirstAdmin,
     canTransition,
+    needsAdminAccount,
     type ActionResult,
     type AuthSession,
   } from "./session.svelte";
@@ -16,8 +16,8 @@
   // for a control placed at the right of a bar (Runtime's top bar).
   // `runtime` hides the Editor-only operations (Runtime mode design §5,
   // §10-2): the move to operation and the authentication settings, whose
-  // commands the Runtime capability rejects. It offers `auth_setup` instead,
-  // when the auth is on and no administrator exists.
+  // commands the Runtime capability rejects. Accounts are made in user
+  // management (Banto v8.0.0 has no first-run setup).
   let {
     session,
     align = "start",
@@ -38,8 +38,6 @@
 
   let username = $state("");
   let password = $state("");
-  let passwordConfirm = $state("");
-  let displayName = $state("");
   let currentPassword = $state("");
   let nextPassword = $state("");
 
@@ -48,14 +46,14 @@
   const account = $derived(
     ready?.session?.kind === "account" ? ready.session : undefined,
   );
-  /** A move that creates the first administrator asks for a name and a confirmation. */
-  const creatingAdmin = $derived(ready ? !ready.phase.hasAdmin : false);
+  /** No administrator account yet: the move cannot be pressed. */
+  const noAdmin = $derived(needsAdminAccount(view));
   const showTransition = $derived(
     !runtime &&
+      !noAdmin &&
       (ready?.phase.phase === "transitioning" ||
         (transitionOpen && canTransition(view))),
   );
-  const showSetup = $derived(runtime && canSetupFirstAdmin(view));
 
   const summary = $derived.by(() => {
     if (view.status === "loading") return "確認中";
@@ -69,8 +67,6 @@
   function clearForms() {
     username = "";
     password = "";
-    passwordConfirm = "";
-    displayName = "";
     currentPassword = "";
     nextPassword = "";
   }
@@ -97,28 +93,7 @@
 
   function transition(event: SubmitEvent) {
     event.preventDefault();
-    if (creatingAdmin && password !== passwordConfirm) {
-      result = { ok: false, message: "確認用のパスワードが一致しません。" };
-      return;
-    }
-    const name = username.trim();
-    void run(() =>
-      session.transitionToOperational(
-        name,
-        password,
-        creatingAdmin ? displayName.trim() || name : "",
-      ),
-    );
-  }
-
-  function setupAdmin(event: SubmitEvent) {
-    event.preventDefault();
-    if (password !== passwordConfirm) {
-      result = { ok: false, message: "確認用のパスワードが一致しません。" };
-      return;
-    }
-    const name = username.trim();
-    void run(() => session.setup(name, password, displayName.trim() || name));
+    void run(() => session.transitionToOperational(username.trim(), password));
   }
 
   function changePassword(event: SubmitEvent) {
@@ -201,6 +176,21 @@
         <p>ログインしていません</p>
       {/if}
 
+      {#if noAdmin && view.phase.phase !== "operational"}
+        <div class="auth-no-admin" data-auth-no-admin>
+          <p class="note" id="auth-no-admin">{NO_ADMIN_ACCOUNT_MESSAGE}</p>
+          {#if canManageUsers(view)}
+            <div class="auth-actions">
+              <button
+                type="button"
+                disabled={busy}
+                onclick={() => openDialog("users")}>利用者管理を開く…</button
+              >
+            </div>
+          {/if}
+        </div>
+      {/if}
+
       {#if view.phase.phase === "transitioning"}
         <p role="alert" class="failed">
           {runtime
@@ -211,14 +201,15 @@
         {#if runtime}
           <p class="note" data-auth-editor-only>
             運用への移行は Editor
-            で行ってください。認証無効モードの間は、最初の管理者も移行のときに作成します。
+            で行ってください。管理者のアカウントは利用者管理で作ります。
           </p>
         {:else if canTransition(view)}
-          {#if !transitionOpen}
+          {#if !transitionOpen || noAdmin}
             <div class="auth-actions">
               <button
                 type="button"
-                disabled={busy}
+                disabled={busy || noAdmin}
+                aria-describedby={noAdmin ? "auth-no-admin" : undefined}
                 onclick={() => {
                   result = undefined;
                   transitionOpen = true;
@@ -236,12 +227,10 @@
       {#if showTransition}
         <form class="auth-form" aria-label="運用への移行" onsubmit={transition}>
           <p class="note">
-            {creatingAdmin
-              ? "最初の管理者を作成し、認証無効モードをオフにします。"
-              : "管理者の資格情報を確認し、認証無効モードをオフにします。"}
+            管理者の資格情報を確認し、認証無効モードをオフにします。
             移行後は認証無効モードへ戻せません。
           </p>
-          {@render adminFields(creatingAdmin)}
+          {@render adminFields()}
           <div class="auth-actions">
             <button type="submit" disabled={busy}
               >{view.phase.phase === "transitioning"
@@ -258,22 +247,6 @@
                 }}>取消</button
               >
             {/if}
-          </div>
-        </form>
-      {:else if showSetup}
-        <form
-          class="auth-form"
-          aria-label="最初の管理者を作成"
-          onsubmit={setupAdmin}
-          data-auth-setup
-        >
-          <p class="note">
-            この端末には管理者がいません。最初の管理者を作成してログインします。運用への移行は
-            Editor で行います。
-          </p>
-          {@render adminFields(true)}
-          <div class="auth-actions">
-            <button type="submit" disabled={busy}>最初の管理者を作成</button>
           </div>
         </form>
       {:else if view.phase.phase === "operational" && !view.session}
@@ -404,9 +377,8 @@
   />
 {/if}
 
-<!-- The administrator's credentials of the move to operation and of the
-first-administrator setup; `creating` asks for a name and a confirmation. -->
-{#snippet adminFields(creating: boolean)}
+<!-- The administrator's credentials of the move to operation. -->
+{#snippet adminFields()}
   <label class="banto-field banto-field--stacked">
     <span class="banto-field-label">管理者のユーザー名</span>
     <input
@@ -417,40 +389,17 @@ first-administrator setup; `creating` asks for a name and a confirmation. -->
       required
     />
   </label>
-  {#if creating}
-    <label class="banto-field banto-field--stacked">
-      <span class="banto-field-label">表示名</span>
-      <input
-        class="banto-field-control"
-        bind:value={displayName}
-        disabled={busy}
-      />
-    </label>
-  {/if}
   <label class="banto-field banto-field--stacked">
     <span class="banto-field-label">パスワード</span>
     <input
       class="banto-field-control"
       type="password"
-      autocomplete={creating ? "new-password" : "current-password"}
+      autocomplete="current-password"
       bind:value={password}
       disabled={busy}
       required
     />
   </label>
-  {#if creating}
-    <label class="banto-field banto-field--stacked">
-      <span class="banto-field-label">パスワード（確認）</span>
-      <input
-        class="banto-field-control"
-        type="password"
-        autocomplete="new-password"
-        bind:value={passwordConfirm}
-        disabled={busy}
-        required
-      />
-    </label>
-  {/if}
 {/snippet}
 
 <style>

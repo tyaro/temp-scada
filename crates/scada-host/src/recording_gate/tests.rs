@@ -71,15 +71,26 @@ async fn initializing() -> Fixture {
     gate_in(TempDir::new()).await
 }
 
+/// The administrator `chief`, made in user management before the move to
+/// operation (Banto v8.0.0: no first-run setup).
+async fn create_admin(fixture: &Fixture) {
+    fixture
+        .auth
+        .auth()
+        .users()
+        .create_user("chief", PASSWORD, "管理者", Role::Admin)
+        .await
+        .unwrap();
+}
+
 /// `operational` with the administrator `admin` logged in and a Viewer
 /// account `viewer`.
 async fn operational() -> Fixture {
     let fixture = initializing().await;
+    create_admin(&fixture).await;
     fixture
         .auth
-        .transition_to_operational("admin", PASSWORD, "管理者", || {
-            fixture.gate.lock().is_quiescent()
-        })
+        .transition_to_operational("chief", PASSWORD, || fixture.gate.lock().is_quiescent())
         .await
         .unwrap();
     fixture
@@ -272,7 +283,7 @@ async fn operation_needs_a_session_and_the_role_of_the_command() {
     assert!(f.gate.held(LeaseRole::Mutation).is_none());
 
     f.auth.auth().logout().await;
-    let admin = login(&f.auth, "admin").await;
+    let admin = login(&f.auth, "chief").await;
     // Admin reaches the registry with the mutation session; with no
     // workflow the registry itself has nothing to cancel.
     assert!(matches!(
@@ -294,7 +305,7 @@ async fn a_new_generation_revokes_the_old_sessions_and_the_principal_continues()
     let (_, old) = f.gate.held(LeaseRole::Reconciliation).unwrap();
 
     f.auth.auth().logout().await;
-    let second = login(&f.auth, "admin").await;
+    let second = login(&f.auth, "chief").await;
     assert_ne!(second.seq, first.seq);
     // The same principal re-fetches its own attach under the new generation.
     let again = f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap();
@@ -338,7 +349,7 @@ async fn a_reply_is_withheld_when_the_generation_changes_before_it_returns() {
 
     // A user switch while the reply is on its way: the other user never
     // receives it, and is refused the same ID.
-    login(&f.auth, "admin").await;
+    login(&f.auth, "chief").await;
     let auth = f.auth.clone();
     f.gate.after_next_call(async move {
         auth.auth().logout().await;
@@ -362,7 +373,7 @@ async fn a_reply_is_withheld_when_the_generation_changes_before_it_returns() {
     // The registry kept both for their principal, which recovers them after
     // logging in again: the lease through a call inspection (design §4).
     f.auth.auth().logout().await;
-    let admin = login(&f.auth, "admin").await;
+    let admin = login(&f.auth, "chief").await;
     let recovered = f
         .gate
         .call_inspection(inspect(&f.scope, "inspect-1", withheld.as_value()))
@@ -473,7 +484,7 @@ async fn a_stale_refresh_never_revokes_the_sessions_of_a_newer_generation() {
     // again and a command issues sessions for the new generation.
     let (gate, auth, scope) = (f.gate.clone(), f.auth.clone(), f.scope.clone());
     f.gate.after_next_call(async move {
-        login(&auth, "admin").await;
+        login(&auth, "chief").await;
         gate.attach(attach(&scope, "attach-2")).await.unwrap();
     });
     assert_eq!(f.gate.refresh().await.unwrap(), None);

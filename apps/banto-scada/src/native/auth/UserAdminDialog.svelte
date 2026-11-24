@@ -221,6 +221,7 @@
         <input
           class="banto-field-control"
           autocomplete="off"
+          aria-describedby="user-create-reserved"
           bind:value={newUsername}
           disabled={busy}
           required
@@ -259,6 +260,9 @@
         </select>
       </label>
       <button type="submit" disabled={busy || !newUsername.trim()}>作成</button>
+      <p class="hint" id="user-create-reserved">
+        ユーザー名「admin」は予約されているため使えません（大文字・小文字を問いません）。
+      </p>
     </form>
     <p class="note">
       記録の変更は管理者だけが行えます。記録の変更作業が終わっていない管理者は、降格・削除できません。
@@ -314,6 +318,12 @@
     grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
     align-items: end;
     gap: 8px;
+  }
+  .create .hint {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--banto-text-muted);
+    font-size: 12px;
   }
   .create h3 {
     grid-column: 1 / -1;

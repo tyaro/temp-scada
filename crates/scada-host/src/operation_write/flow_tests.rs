@@ -18,7 +18,7 @@ use super::tests::{
     button, input, project, COMMAND_TAG, DIGEST, MODE_TAG, PROJECT_ID, PUMP, SPEED_TAG,
 };
 use super::*;
-use crate::auth_phase::AuthHost;
+use crate::auth_phase::{AuthHost, Checkpoint};
 use crate::operation_db::{OperationDb, RecordState, WriteState};
 use crate::operation_key::WriteKey;
 
@@ -367,9 +367,21 @@ impl Fixture {
         }
     }
 
-    async fn transition(&self) {
+    async fn create_admin(&self) {
         self.auth
-            .transition_to_operational("admin", "correct-horse-1", "管理者", || true)
+            .auth()
+            .users()
+            .create_user("chief", "correct-horse-1", "管理者", Role::Admin)
+            .await
+            .unwrap();
+    }
+
+    async fn transition(&self) {
+        if !self.auth.auth().users().has_admin().await.unwrap() {
+            self.create_admin().await;
+        }
+        self.auth
+            .transition_to_operational("chief", "correct-horse-1", || true)
             .await
             .unwrap();
     }
@@ -710,7 +722,7 @@ async fn mode_auth_and_phase_are_checked_first() {
     fx.transition().await;
     assert_refused(&fx, &command, reason::NOT_AUTHORIZED).await;
     let (row, _) = fx.latest("command").await.unwrap();
-    assert_eq!(row.request.user, "admin");
+    assert_eq!(row.request.user, "chief");
     assert_eq!(row.request.phase, "operational");
     fx.auth.auth().logout().await;
     assert_refused(&fx, &command, reason::NOT_AUTHORIZED).await;
@@ -779,7 +791,14 @@ async fn an_auth_change_before_the_send_starts_stops_it() {
     })
     .await;
     assert_stopped_before_sending(&fx, &result, reason::AUTH_CHANGED).await;
-    // The local session ends (auth-disabled mode off).
+    // The local session ends (auth-disabled mode off, which Banto v8.0.0
+    // allows only once an administrator exists).
+    fx.auth
+        .auth()
+        .users()
+        .create_user("chief", "correct-horse-1", "管理者", Role::Admin)
+        .await
+        .unwrap();
     let result = run_with_change_before_sending(&fx, &request, async {
         let config = fx.auth.auth().settings().auth_config().await.unwrap();
         fx.auth
@@ -1211,9 +1230,13 @@ async fn the_view_is_blocked_by_the_rules_of_the_write() {
     assert_eq!(view.slots.len(), 4);
     assert!(view.slots.iter().all(|slot| slot.latest.is_none()));
     // A transition stopped after its first step, then the operation phase.
+    fx.create_admin().await;
+    // (A wrong password is refused before step 1, so stop it there instead.)
     assert!(fx
         .auth
-        .transition_to_operational("admin", "wrong", "管理者", || true)
+        .transition_with("chief", "correct-horse-1", || true, &mut |point| {
+            point != Checkpoint::Transitioning
+        })
         .await
         .is_err());
     assert_blocked(

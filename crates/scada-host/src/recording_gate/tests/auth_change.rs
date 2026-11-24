@@ -214,7 +214,7 @@ async fn logout_revokes_and_ends_subscriptions_within_the_command() {
             .with_root(|root| root.take_state_frame(&old, &reference)),
         Err(LeaseError::Unauthorized)
     ));
-    login(&f.auth, "admin").await;
+    login(&f.auth, "chief").await;
     f.gate.attach(attach(&f.scope, "attach-2")).await.unwrap();
     assert!(!live(&f, &reference));
 }
@@ -238,15 +238,14 @@ async fn a_no_op_logout_in_auth_disabled_mode_keeps_the_current_generation() {
 #[tokio::test]
 async fn the_move_to_operation_waits_for_quiescence_and_revokes_the_synthetic_sessions() {
     let f = initializing().await;
+    create_admin(&f).await;
     let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
     let p = preflighted(&f, "transition-change").await;
     let (_, old) = f.gate.held(LeaseRole::Mutation).unwrap();
 
     // A Candidate of the synthetic principal: nothing is saved.
     assert!(matches!(
-        f.gate
-            .transition_to_operational("admin", PASSWORD, "管理者")
-            .await,
+        f.gate.transition_to_operational("chief", PASSWORD).await,
         Err(TransitionError::Busy)
     ));
     assert_eq!(f.auth.phase().await, AuthPhase::Initializing);
@@ -264,7 +263,7 @@ async fn the_move_to_operation_waits_for_quiescence_and_revokes_the_synthetic_se
     discard(&f, &p, "discard").await;
     let done = f
         .gate
-        .transition_to_operational("admin", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD)
         .await
         .unwrap();
     let admin = done.session.expect("the administrator is logged in");
@@ -297,7 +296,7 @@ async fn an_admin_with_an_unsettled_workflow_is_neither_demoted_nor_deleted() {
     let operator_id = operator.session.identity().id;
     let p = preflighted(&f, "demote-change").await;
     f.gate.logout().await;
-    login(&f.auth, "admin").await;
+    login(&f.auth, "chief").await;
     let viewer_id = f
         .auth
         .auth()
@@ -349,7 +348,7 @@ async fn an_admin_with_an_unsettled_workflow_is_neither_demoted_nor_deleted() {
     login(&f.auth, "operator").await;
     discard(&f, &p, "discard").await;
     f.gate.logout().await;
-    login(&f.auth, "admin").await;
+    login(&f.auth, "chief").await;
     f.gate
         .update_user(operator_id, "運転員", Role::Viewer)
         .await
@@ -528,7 +527,7 @@ async fn auth_changes_are_audited_by_the_acting_admin() {
     let (f, operator) = with_operator().await;
     let id = operator.session.identity().id;
     f.gate.logout().await;
-    login(&f.auth, "admin").await;
+    login(&f.auth, "chief").await;
     f.gate
         .update_user(id, "運転員", Role::Editor)
         .await
@@ -545,8 +544,8 @@ async fn auth_changes_are_audited_by_the_acting_admin() {
     assert_eq!(
         rows,
         vec![
-            ("update".into(), "users".into(), id.clone(), "admin".into()),
-            ("delete".into(), "users".into(), id, "admin".into()),
+            ("update".into(), "users".into(), id.clone(), "chief".into()),
+            ("delete".into(), "users".into(), id, "chief".into()),
         ]
     );
 }
@@ -556,7 +555,7 @@ async fn a_stale_validation_never_uses_or_ends_a_newer_generation() {
     let f = operational().await;
     let stale = f.auth.auth().current().await.unwrap().unwrap();
     f.gate.logout().await;
-    let newer = login(&f.auth, "admin").await;
+    let newer = login(&f.auth, "chief").await;
     let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
     // A call that validated the older generation reaches the state late.
     assert!(matches!(
@@ -645,6 +644,7 @@ async fn logout_waits_for_a_command_that_already_validated_the_session() {
 #[tokio::test]
 async fn the_move_to_operation_ends_the_synthetic_subscriptions_even_if_the_refresh_fails() {
     let f = initializing().await;
+    create_admin(&f).await;
     // The synthetic session fills every live subscription slot.
     let mut references = Vec::new();
     for index in 0..4 {
@@ -670,7 +670,7 @@ async fn the_move_to_operation_ends_the_synthetic_subscriptions_even_if_the_refr
     });
     let admin = f
         .gate
-        .transition_to_operational("admin", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD)
         .await
         .unwrap()
         .session

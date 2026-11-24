@@ -109,17 +109,13 @@ async function mockAuthHost(
               return { seq: ++host.seq };
             case "auth_transition_to_operational": {
               if (host.refuseTransition) throw host.refuseTransition;
-              let admin = host.accounts.find((a) => a.role === "admin");
-              if (!admin) {
-                admin = {
-                  id: host.accounts.length + 1,
-                  username: args.username,
-                  password: args.password,
-                  displayName: args.displayName,
-                  role: "admin",
-                };
-                host.accounts.push(admin);
-              } else if (admin.password !== args.password)
+              // Banto v8.0.0: only with an administrator account.
+              const admin = host.accounts.find((a) => a.role === "admin");
+              if (!admin) throw { kind: "no_admin_account" };
+              if (
+                admin.username !== args.username ||
+                admin.password !== args.password
+              )
                 throw { kind: "invalid_credentials" };
               host.disabled = false;
               host.phase = "operational";
@@ -129,6 +125,16 @@ async function mockAuthHost(
             case "users_list":
               return host.accounts.map(summary);
             case "users_create": {
+              if (String(args.username).trim().toLowerCase() === "admin")
+                throw {
+                  kind: "validation",
+                  field_errors: [
+                    {
+                      field: "username",
+                      message: "このユーザー名は予約されているため使えません",
+                    },
+                  ],
+                };
               if (host.accounts.some((a) => a.username === args.username))
                 throw {
                   kind: "validation",
@@ -190,7 +196,7 @@ async function openAuth(page: Page) {
   return page.locator(".auth-popover");
 }
 
-test("the first start moves to operation and manages users from the header", async ({
+test("the first start makes the administrator in user management, then moves to operation", async ({
   page,
 }) => {
   await mockAuthHost(page);
@@ -199,32 +205,51 @@ test("the first start moves to operation and manages users from the header", asy
   await expect(popover).toContainText("開発・初期設定");
   await expect(popover).toContainText("ログインなし（認証無効モード・管理者）");
 
-  await popover.getByRole("button", { name: "運用へ移行…" }).click();
-  const form = popover.getByRole("form", { name: "運用への移行" });
-  await form.getByLabel("管理者のユーザー名").fill("admin");
-  await form.getByLabel("表示名").fill("管理者A");
-  await form.getByLabel("パスワード", { exact: true }).fill("secret-pass");
-  await form.getByLabel("パスワード（確認）").fill("other");
-  await form.getByRole("button", { name: "運用へ移行" }).click();
-  await expect(popover).toContainText("確認用のパスワードが一致しません。");
-  expect((await authHost(page)).calls).not.toContain(
-    "auth_transition_to_operational",
-  );
-
-  await form.getByLabel("パスワード（確認）").fill("secret-pass");
-  await form.getByRole("button", { name: "運用へ移行" }).click();
+  // No administrator account yet: the move cannot be pressed, and says why.
+  await expect(
+    popover.getByRole("button", { name: "運用へ移行…" }),
+  ).toBeDisabled();
   await expect(popover).toContainText(
+    "利用者管理で管理者のアカウントを作ってから",
+  );
+  await popover.getByRole("button", { name: "利用者管理を開く…" }).click();
+  const dialog = page.getByRole("dialog", { name: "利用者管理" });
+  const create = dialog.getByRole("form", { name: "利用者の作成" });
+  await expect(create).toContainText("「admin」は予約されているため使えません");
+  await create.getByLabel("ユーザー名").fill("Admin");
+  await create.getByLabel("パスワード").fill("secret-pass");
+  await create.getByLabel("権限").selectOption("admin");
+  await create.getByRole("button", { name: "作成" }).click();
+  await expect(dialog).toContainText(
+    "このユーザー名は予約されているため使えません",
+  );
+  await create.getByLabel("ユーザー名").fill("chief");
+  await create.getByLabel("表示名").fill("管理者A");
+  await create.getByLabel("パスワード").fill("secret-pass");
+  await create.getByLabel("権限").selectOption("admin");
+  await create.getByRole("button", { name: "作成" }).click();
+  await expect(dialog).toContainText("利用者「chief」を作成しました。");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+
+  const ready = await openAuth(page);
+  await expect(ready.locator("[data-auth-no-admin]")).toHaveCount(0);
+  await ready.getByRole("button", { name: "運用へ移行…" }).click();
+  const form = ready.getByRole("form", { name: "運用への移行" });
+  await form.getByLabel("管理者のユーザー名").fill("chief");
+  await form.getByLabel("パスワード", { exact: true }).fill("secret-pass");
+  await form.getByRole("button", { name: "運用へ移行" }).click();
+  await expect(ready).toContainText(
     "運用へ移行しました。管理者としてログインしています。",
   );
-  await expect(popover).toContainText("管理者A（admin・管理者）");
+  await expect(ready).toContainText("管理者A（chief・管理者）");
   await expect(page.locator(".auth-summary-state")).toHaveText("管理者A");
+  expect((await authHost(page)).calls).not.toContain("auth_setup");
 
-  await popover.getByRole("button", { name: "利用者管理…" }).click();
-  const dialog = page.getByRole("dialog", { name: "利用者管理" });
+  await ready.getByRole("button", { name: "利用者管理…" }).click();
   await expect(
-    dialog.getByRole("cell", { name: "admin（自分）" }),
+    dialog.getByRole("cell", { name: "chief（自分）" }),
   ).toBeVisible();
-  const create = dialog.getByRole("form", { name: "利用者の作成" });
   await create.getByLabel("ユーザー名").fill("op");
   await create.getByLabel("表示名").fill("運転員");
   await create.getByLabel("パスワード").fill("op-pass-1");
@@ -299,15 +324,22 @@ test("a refused move and an unfinished move are shown with the re-run", async ({
 }) => {
   await mockAuthHost(page);
   await page.addInitScript(() => {
-    (window as any).__authHost.refuseTransition = { kind: "busy" };
+    const host = (window as any).__authHost;
+    host.refuseTransition = { kind: "busy" };
+    host.accounts.push({
+      id: 1,
+      username: "chief",
+      password: "pw",
+      displayName: "管理者",
+      role: "admin",
+    });
   });
   await page.goto("/");
   const popover = await openAuth(page);
   await popover.getByRole("button", { name: "運用へ移行…" }).click();
   const form = popover.getByRole("form", { name: "運用への移行" });
-  await form.getByLabel("管理者のユーザー名").fill("admin");
+  await form.getByLabel("管理者のユーザー名").fill("chief");
   await form.getByLabel("パスワード", { exact: true }).fill("pw");
-  await form.getByLabel("パスワード（確認）").fill("pw");
   await form.getByRole("button", { name: "運用へ移行" }).click();
   await expect(popover).toContainText("作業を破棄するか");
   await expect(popover).toContainText("開発・初期設定");
@@ -324,9 +356,8 @@ test("a refused move and an unfinished move are shown with the re-run", async ({
     (window as any).__authHost.refuseTransition = undefined;
   });
   const rerun = popover.getByRole("form", { name: "運用への移行" });
-  await rerun.getByLabel("管理者のユーザー名").fill("admin");
+  await rerun.getByLabel("管理者のユーザー名").fill("chief");
   await rerun.getByLabel("パスワード", { exact: true }).fill("pw");
-  await rerun.getByLabel("パスワード（確認）").fill("pw");
   await rerun.getByRole("button", { name: "移行を再実行" }).click();
   await expect(popover).toContainText("運用へ移行しました。");
   await expect(popover).toContainText("フェーズ: 運用");

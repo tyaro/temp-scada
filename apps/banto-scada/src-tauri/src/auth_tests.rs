@@ -81,7 +81,7 @@ fn the_auth_commands_answer_over_ipc_from_first_start_to_operation() {
     );
     assert_eq!(
         invoke(&webview, "auth_status", json!({})).unwrap(),
-        json!({"initialized": false, "viewerPublic": false})
+        json!({"viewerPublic": false})
     );
     let local = invoke(&webview, "auth_resolve", json!({})).unwrap();
     assert_eq!(local["kind"], "local");
@@ -89,15 +89,50 @@ fn the_auth_commands_answer_over_ipc_from_first_start_to_operation() {
     let refused = invoke(
         &webview,
         "auth_login",
-        json!({"username": "admin", "password": PASSWORD}),
+        json!({"username": "chief", "password": PASSWORD}),
     )
     .unwrap();
     assert_eq!(refused["success"], false);
+    // No administrator account yet: the move is refused (Banto v8.0.0).
+    assert_eq!(
+        invoke(
+            &webview,
+            "auth_transition_to_operational",
+            json!({"username": "chief", "password": PASSWORD}),
+        )
+        .unwrap_err(),
+        json!({"kind": "no_admin_account"})
+    );
+    // The first start's setup command is gone with Banto's.
+    assert!(invoke(
+        &webview,
+        "auth_setup",
+        json!({"username": "chief", "password": PASSWORD, "displayName": "管理者"}),
+    )
+    .is_err());
+    // Made in user management by the synthetic Admin; `admin` is reserved.
+    assert_eq!(
+        invoke(
+            &webview,
+            "users_create",
+            json!({"username": "Admin", "password": PASSWORD, "displayName": "",
+                "role": "admin"}),
+        )
+        .unwrap_err()["kind"],
+        "validation"
+    );
+    invoke(
+        &webview,
+        "users_create",
+        json!({"username": "chief", "password": PASSWORD, "displayName": "管理者",
+            "role": "admin"}),
+    )
+    .unwrap();
 
     let moved = invoke(
         &webview,
         "auth_transition_to_operational",
-        json!({"username": "admin", "password": PASSWORD, "displayName": "管理者"}),
+        json!({"username": "chief", "password": PASSWORD}),
     )
     .unwrap();
     assert_eq!(moved["signedIn"], true);
@@ -105,7 +140,7 @@ fn the_auth_commands_answer_over_ipc_from_first_start_to_operation() {
     assert_eq!(account["kind"], "account");
     assert_eq!(
         account["identity"],
-        json!({"id": "admin", "name": "管理者", "role": "admin"})
+        json!({"id": "chief", "name": "管理者", "role": "admin"})
     );
     assert_eq!(account["current"], moved["seq"]);
 
@@ -125,7 +160,7 @@ fn the_auth_commands_answer_over_ipc_from_first_start_to_operation() {
     let login = invoke(
         &webview,
         "auth_login",
-        json!({"username": "admin", "password": "another-horse-2"}),
+        json!({"username": "chief", "password": "another-horse-2"}),
     )
     .unwrap();
     assert_eq!(login["success"], true);
@@ -134,19 +169,10 @@ fn the_auth_commands_answer_over_ipc_from_first_start_to_operation() {
         invoke(
             &webview,
             "auth_transition_to_operational",
-            json!({"username": "admin", "password": PASSWORD, "displayName": "管理者"}),
+            json!({"username": "chief", "password": PASSWORD}),
         )
         .unwrap_err(),
         json!({"kind": "not_allowed"})
-    );
-    assert_eq!(
-        invoke(
-            &webview,
-            "auth_setup",
-            json!({"username": "other", "password": PASSWORD, "displayName": "別"}),
-        )
-        .unwrap()["success"],
-        false
     );
 }
 
@@ -184,8 +210,15 @@ fn user_management_and_auth_settings_answer_over_ipc() {
     );
     invoke(
         &webview,
+        "users_create",
+        json!({"username": "chief", "password": PASSWORD, "displayName": "管理者",
+            "role": "admin"}),
+    )
+    .unwrap();
+    invoke(
+        &webview,
         "auth_transition_to_operational",
-        json!({"username": "admin", "password": PASSWORD, "displayName": "管理者"}),
+        json!({"username": "chief", "password": PASSWORD}),
     )
     .unwrap();
 

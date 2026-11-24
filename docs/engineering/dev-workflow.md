@@ -24,6 +24,7 @@
 - banto-industrial は rev 固定（tagclient はルートの workspace、hub-bootstrap は scada-host と src-tauri）。lockfile は該当行だけ手で直し、`cargo metadata --locked` で確かめる（`cargo update -p` は無関係な windows-sys を下げた）。
 - scada-host の依存を変えたら `apps/banto-scada/src-tauri/Cargo.lock` も更新する。
 - 認証 DB の migration を含む Banto の更新を実機の DB で試す前に、認証 DB を退避する（#239 の手順。適用後はタグを戻すだけでは戻らない）。
+- Banto v8.0.0 より前に作った認証 DB（data dir の `scada-auth.sqlite3`）は v8 の build では開けない（migration の履歴が合わない。データの移行は無く、自動で作り直さない）。このときもウィンドウは開き、画面の読み取り・編集は続くが、認証と認証を要する操作（記録の変更・ACK・運用への移行など）は使えず、認証の欄に「旧い版の認証 DB」と出る。アプリを終了し、`scada-auth.sqlite3`（`-wal`・`-shm` も）と `auth-phase.json` を一緒に別の場所へ退避してから起動し直すと、新しい DB（ログインなし）で始まる。元に戻すときは、旧いバイナリと退避した DB・phase を一緒に戻す（片方だけ戻さない）。
 
 ## e2e（Playwright）
 

@@ -9,8 +9,8 @@ import {
   AuthSession,
   canEditSettings,
   canManageUsers,
-  canSetupFirstAdmin,
   canTransition,
+  needsAdminAccount,
 } from "./session.svelte";
 
 interface Account {
@@ -119,47 +119,13 @@ function fakeHost() {
           };
         host.signedIn!.password = a.newPassword as string;
         return { seq: ++host.seq };
-      case "auth_setup": {
-        // `scada_host::desktop_auth::setup`: refused in the auth-disabled
-        // mode, and only while there is no account.
-        if (host.disabled || host.accounts.length)
-          return {
-            success: false,
-            error: host.disabled
-              ? "認証無効モードではログインできません"
-              : "既に初期化されています",
-            superseded: false,
-            seq: host.seq,
-          };
-        const account: Account = {
-          id: 1,
-          username: a.username as string,
-          password: a.password as string,
-          displayName: a.displayName as string,
-          role: "admin",
-        };
-        host.accounts.push(account);
-        host.signedIn = account;
-        return {
-          success: true,
-          error: null,
-          superseded: false,
-          seq: ++host.seq,
-        };
-      }
       case "auth_transition_to_operational": {
         if (host.refuseTransition) throw host.refuseTransition;
-        let admin = host.accounts.find((x) => x.role === "admin");
-        if (!admin) {
-          admin = {
-            id: host.accounts.length + 1,
-            username: a.username as string,
-            password: a.password as string,
-            displayName: a.displayName as string,
-            role: "admin",
-          };
-          host.accounts.push(admin);
-        } else if (admin.password !== a.password)
+        // Banto v8.0.0: only with an administrator account, else refused
+        // before anything is saved.
+        const admin = host.accounts.find((x) => x.role === "admin");
+        if (!admin) throw { kind: "no_admin_account" };
+        if (admin.username !== a.username || admin.password !== a.password)
           throw { kind: "invalid_credentials" };
         host.disabled = false;
         host.phase = "operational";
@@ -170,6 +136,17 @@ function fakeHost() {
       case "users_list":
         return host.accounts.map(summary);
       case "users_create": {
+        // Banto's reserved name, ignoring case.
+        if (String(a.username).trim().toLowerCase() === "admin")
+          throw {
+            kind: "validation",
+            field_errors: [
+              {
+                field: "username",
+                message: "このユーザー名は予約されているため使えません",
+              },
+            ],
+          };
         const account = {
           id: host.accounts.length + 1,
           username: a.username as string,
@@ -239,6 +216,11 @@ describe("describeError", () => {
       describeError({ kind: "auth_unavailable", reason: "auth_db_missing" })
         .message,
     ).toContain("認証DBがありません");
+    // A DB from before Banto v8.0.0: set aside with the phase, never re-made.
+    expect(
+      describeError({ kind: "auth_unavailable", reason: "auth_db_outdated" })
+        .message,
+    ).toContain("認証DBと auth-phase.json を一緒に退避");
     expect(
       describeError({ kind: "auth_unavailable", reason: "new_reason" }).message,
     ).toContain("new_reason");
@@ -275,70 +257,67 @@ describe("AuthSession", () => {
     expect(canEditSettings(session.view)).toBe(true);
   });
 
-  it("moves to operation with the first administrator and signs in", async () => {
+  it("offers the move only after an administrator is made in user management", async () => {
     const { host, session } = fakeHost();
     await session.refresh();
-    const result = await session.transitionToOperational(
-      "admin",
+    expect(needsAdminAccount(session.view)).toBe(true);
+    const refused = await session.transitionToOperational(
+      "chief",
       "secret-pass",
-      "管理者",
+    );
+    expect(refused).toEqual({
+      ok: false,
+      message: expect.stringContaining(
+        "利用者管理で管理者のアカウントを作って",
+      ),
+    });
+    expect(session.view).toMatchObject({ phase: { phase: "initializing" } });
+
+    // `admin` is Banto's reserved name; the refusal says why.
+    await expect(
+      session.client.usersCreate("Admin", "secret-pass", "", "admin"),
+    ).rejects.toMatchObject({
+      kind: "validation",
+      message: "このユーザー名は予約されているため使えません",
+    });
+    await session.client.usersCreate("chief", "secret-pass", "管理者", "admin");
+    await session.refresh();
+    expect(needsAdminAccount(session.view)).toBe(false);
+
+    const result = await session.transitionToOperational(
+      "chief",
+      "secret-pass",
     );
     expect(result.ok).toBe(true);
     expect(
-      host.calls.find((c) => c.cmd === "auth_transition_to_operational")?.args,
-    ).toEqual({
-      username: "admin",
-      password: "secret-pass",
-      displayName: "管理者",
-    });
+      host.calls.filter((c) => c.cmd === "auth_transition_to_operational")[1]
+        ?.args,
+    ).toEqual({ username: "chief", password: "secret-pass" });
+    expect(host.calls.some((c) => c.cmd === "auth_setup")).toBe(false);
     expect(session.view).toMatchObject({
       status: "ready",
       phase: { phase: "operational", authDisabled: false, hasAdmin: true },
       session: {
         kind: "account",
         role: "admin",
-        identity: { id: "admin", name: "管理者" },
+        identity: { id: "chief", name: "管理者" },
       },
     });
     expect(canTransition(session.view)).toBe(false);
   });
 
-  it("creates the first administrator with auth_setup only while the auth is on and no admin exists", async () => {
-    const { host, session } = fakeHost();
-    await session.refresh();
-    // The auth-disabled mode: the move to operation creates the first admin.
-    expect(canSetupFirstAdmin(session.view)).toBe(false);
-    host.phase = "operational";
-    host.disabled = false;
-    await session.refresh();
-    expect(canSetupFirstAdmin(session.view)).toBe(true);
-    const result = await session.setup("admin", "secret-pass", "管理者");
-    expect(result.ok).toBe(true);
-    expect(host.calls.find((c) => c.cmd === "auth_setup")?.args).toEqual({
-      username: "admin",
-      password: "secret-pass",
-      displayName: "管理者",
-    });
-    expect(
-      host.calls.some((c) => c.cmd === "auth_transition_to_operational"),
-    ).toBe(false);
-    expect(session.view).toMatchObject({
-      status: "ready",
-      phase: { hasAdmin: true },
-      session: { kind: "account", role: "admin" },
-    });
-    expect(canSetupFirstAdmin(session.view)).toBe(false);
-    // A second setup is refused by the host and shown.
-    await session.logout();
-    const again = await session.setup("other", "pw", "");
-    expect(again).toEqual({ ok: false, message: "既に初期化されています" });
-  });
-
   it("keeps the phase and shows why when the move is refused", async () => {
     const { host, session } = fakeHost();
+    host.accounts.push({
+      id: 1,
+      username: "admin1",
+      password: "pw",
+      displayName: "管理者",
+      role: "admin",
+    });
     await session.refresh();
     host.refuseTransition = { kind: "busy" };
-    const busy = await session.transitionToOperational("admin", "pw", "");
+    const busy = await session.transitionToOperational("admin1", "pw");
     expect(busy.ok).toBe(false);
     expect(busy.message).toContain("作業を破棄するか");
     expect(session.view).toMatchObject({ phase: { phase: "initializing" } });
@@ -347,11 +326,11 @@ describe("AuthSession", () => {
     // offered whatever the session (design §6).
     host.refuseTransition = { kind: "save" };
     host.phase = "transitioning";
-    await session.transitionToOperational("admin", "pw", "");
+    await session.transitionToOperational("admin1", "pw");
     expect(session.view).toMatchObject({ phase: { phase: "transitioning" } });
     expect(canTransition(session.view)).toBe(true);
     host.refuseTransition = undefined;
-    expect((await session.transitionToOperational("admin", "pw", "")).ok).toBe(
+    expect((await session.transitionToOperational("admin1", "pw")).ok).toBe(
       true,
     );
     expect(session.view).toMatchObject({ phase: { phase: "operational" } });

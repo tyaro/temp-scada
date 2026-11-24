@@ -454,7 +454,6 @@ fn commands<R: Runtime>(builder: tauri::Builder<R>) -> tauri::Builder<R> {
             alarm::alarm_sound_test,
             auth::auth_status,
             auth::auth_phase,
-            auth::auth_setup,
             auth::auth_login,
             auth::auth_logout,
             auth::auth_resolve,

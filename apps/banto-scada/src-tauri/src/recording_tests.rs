@@ -355,10 +355,16 @@ fn the_tauri_commands_alone_run_a_workflow_to_the_original_apply_reconcile() {
 fn a_logout_ends_the_subscription_events_of_its_generation() {
     let h = host();
     let scope = &h.scope;
+    h.invoke(
+        "users_create",
+        json!({"username": "chief", "password": "correct-horse-1", "displayName": "管理者",
+            "role": "admin"}),
+    )
+    .unwrap();
     let moved = h
         .invoke(
             "auth_transition_to_operational",
-            json!({"username": "admin", "password": "correct-horse-1", "displayName": "管理者"}),
+            json!({"username": "chief", "password": "correct-horse-1"}),
         )
         .unwrap();
     let attached = h

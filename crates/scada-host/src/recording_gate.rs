@@ -1277,13 +1277,10 @@ impl RecordingGate {
         &self,
         username: &str,
         password: &str,
-        display_name: &str,
     ) -> Result<Transitioned, TransitionError> {
         let result = self
             .auth
-            .transition_to_operational(username, password, display_name, || {
-                self.lock().is_quiescent()
-            })
+            .transition_to_operational(username, password, || self.lock().is_quiescent())
             .await;
         // The administrator's session took the single slot: every earlier
         // generation (the synthetic one included) has ended, whatever a

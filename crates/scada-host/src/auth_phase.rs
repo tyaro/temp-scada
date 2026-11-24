@@ -29,7 +29,9 @@ use banto_core::BantoError;
 use serde_json::{json, Value};
 use tokio::sync::{Mutex, MutexGuard};
 
-use crate::auth::{CurrentSession, DesktopSession, HostAuth, LoginOutcome, AUTH_DB_FILE};
+use crate::auth::{
+    AuthOpenError, CurrentSession, DesktopSession, HostAuth, LoginOutcome, AUTH_DB_FILE,
+};
 use crate::durable;
 
 /// File name of the phase record inside the app data dir (design §6).
@@ -91,6 +93,9 @@ pub enum StartupError {
     AuthDbMissing(AuthPhase),
     /// The phase record could not be saved.
     Save,
+    /// The auth DB was made before Banto v8.0.0 and does not open. It is
+    /// not re-created; the user sets it aside with the phase record.
+    AuthDbOutdated,
     /// The auth DB could not be opened, migrated or configured.
     Auth(BantoError),
     /// Test fault injection only: the start stopped at this point, as a
@@ -99,13 +104,24 @@ pub enum StartupError {
     Crashed(Checkpoint),
 }
 
+impl From<AuthOpenError> for StartupError {
+    fn from(error: AuthOpenError) -> Self {
+        match error {
+            AuthOpenError::Outdated => Self::AuthDbOutdated,
+            AuthOpenError::Auth(error) => Self::Auth(error),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum TransitionError {
     /// The phase or the current session does not allow the transition:
     /// `initializing` needs auth-disabled mode on, the synthetic session
-    /// with role Admin, and either no account or an Admin account;
-    /// `operational` is already done.
+    /// with role Admin; `operational` is already done.
     NotAllowed,
+    /// No administrator account that can log in exists (create one in user
+    /// management first). Nothing was saved.
+    NoAdminAccount,
     /// The recording registry is not quiescent; nothing was saved.
     Busy,
     /// The credentials do not verify (unknown user or wrong password).
@@ -114,7 +130,7 @@ pub enum TransitionError {
     NotAdmin,
     /// The phase record could not be saved.
     Save,
-    /// The auth DB failed, or the new account was refused (validation).
+    /// The auth DB failed.
     Auth(BantoError),
     #[cfg(test)]
     Crashed(Checkpoint),
@@ -133,7 +149,7 @@ pub enum Checkpoint {
     Configured,
     /// Transition step 1: `transitioning` saved.
     Transitioning,
-    /// Transition step 2: the administrator created or verified.
+    /// Transition step 2: the administrator verified.
     AdminReady,
     /// Transition step 3: auth-disabled mode turned off.
     AuthEnabled,
@@ -232,7 +248,7 @@ impl AuthHost {
             ),
             Some(phase) if !db_exists => return Err(StartupError::AuthDbMissing(phase)),
             Some(phase) => (
-                HostAuth::open(&db_path).await.map_err(StartupError::Auth)?,
+                HostAuth::open(&db_path).await.map_err(StartupError::from)?,
                 phase,
             ),
         };
@@ -268,14 +284,19 @@ impl AuthHost {
     /// Accepted in `initializing` from the synthetic auth-disabled session
     /// with role Admin, or in `transitioning` from any session (the
     /// credentials are always verified once an administrator exists).
+    /// An administrator account that can log in must exist (made in user
+    /// management, as in Banto v8.0.0); without one the move is refused with
+    /// [`TransitionError::NoAdminAccount`] before anything is saved.
     /// `quiescent` is asked under the transition lock, before anything is
     /// saved; `false` refuses with [`TransitionError::Busy`].
     ///
+    /// The credentials and that the account is an Admin are verified first,
+    /// before anything is saved (a mistyped password leaves the phase as it
+    /// was); a resumed move verifies them again.
+    ///
     /// Steps, each saved before the next and each safe to repeat:
     /// 1. save `transitioning`;
-    /// 2. create the first administrator if none exists (only while
-    ///    auth-disabled mode is still on), else verify the credentials and
-    ///    that the account is an Admin;
+    /// 2. (the administrator is already verified);
     /// 3. turn auth-disabled mode off;
     /// 4. save `operational` (the durable completion point);
     /// 5. install the administrator's session. Turning the mode off already
@@ -284,10 +305,9 @@ impl AuthHost {
         &self,
         username: &str,
         password: &str,
-        display_name: &str,
         quiescent: impl FnOnce() -> bool,
     ) -> Result<Transitioned, TransitionError> {
-        self.transition_inner(username, password, display_name, quiescent, &mut |_| true)
+        self.transition_inner(username, password, quiescent, &mut |_| true)
             .await
     }
 
@@ -296,11 +316,10 @@ impl AuthHost {
         &self,
         username: &str,
         password: &str,
-        display_name: &str,
         quiescent: impl FnOnce() -> bool,
         faults: &mut (dyn FnMut(Checkpoint) -> bool + Send),
     ) -> Result<Transitioned, TransitionError> {
-        self.transition_inner(username, password, display_name, quiescent, faults)
+        self.transition_inner(username, password, quiescent, faults)
             .await
     }
 
@@ -308,7 +327,6 @@ impl AuthHost {
         &self,
         username: &str,
         password: &str,
-        display_name: &str,
         quiescent: impl FnOnce() -> bool,
         faults: Faults<'_>,
     ) -> Result<Transitioned, TransitionError> {
@@ -325,24 +343,37 @@ impl AuthHost {
                 if !config.disabled || !local_admin {
                     return Err(TransitionError::NotAllowed);
                 }
-                // Accounts without an administrator could neither create one
-                // (Banto creates only the very first account) nor verify one,
-                // so step 1 would leave a transition that cannot finish.
-                let users = self.auth.users();
-                let has_admin = users.has_admin().await.map_err(TransitionError::Auth)?;
-                if !has_admin
-                    && users
-                        .is_initialized()
-                        .await
-                        .map_err(TransitionError::Auth)?
-                {
-                    return Err(TransitionError::NotAllowed);
-                }
             }
             AuthPhase::Transitioning => {}
             AuthPhase::Bootstrapping | AuthPhase::Operational => {
                 return Err(TransitionError::NotAllowed)
             }
+        }
+        // Banto v8.0.0's rule for leaving the login-free mode: only with an
+        // administrator who can log in. Checked before step 1 so a refusal
+        // leaves the phase as it was; a resumed move checks it again (Banto
+        // guards the last administrator, so it holds once it held).
+        let has_admin = self
+            .auth
+            .users()
+            .has_admin()
+            .await
+            .map_err(TransitionError::Auth)?;
+        if !has_admin {
+            return Err(TransitionError::NoAdminAccount);
+        }
+        // The credentials too are checked before step 1, so a mistyped
+        // password leaves `initializing` (and the recording registry) as it
+        // was. A resumed move (`transitioning`) verifies them again here.
+        let admin = self
+            .auth
+            .users()
+            .verify(username, password)
+            .await
+            .map_err(TransitionError::Auth)?
+            .ok_or(TransitionError::InvalidCredentials)?;
+        if admin.role != Role::Admin {
+            return Err(TransitionError::NotAdmin);
         }
         if !quiescent() {
             return Err(TransitionError::Busy);
@@ -359,36 +390,6 @@ impl AuthHost {
             .auth_config()
             .await
             .map_err(TransitionError::Auth)?;
-        let has_admin = self
-            .auth
-            .users()
-            .has_admin()
-            .await
-            .map_err(TransitionError::Auth)?;
-        let admin = if !has_admin && config.disabled {
-            let created = self
-                .auth
-                .users()
-                .setup_first_user(username, password, display_name)
-                .await
-                .map_err(TransitionError::Auth)?;
-            self.auth
-                .record_ok(&created, "setup", "auth", None, None)
-                .await;
-            created
-        } else {
-            let verified = self
-                .auth
-                .users()
-                .verify(username, password)
-                .await
-                .map_err(TransitionError::Auth)?
-                .ok_or(TransitionError::InvalidCredentials)?;
-            if verified.role != Role::Admin {
-                return Err(TransitionError::NotAdmin);
-            }
-            verified
-        };
         checkpoint!(faults, Checkpoint::AdminReady, TransitionError);
 
         if config.disabled {
@@ -427,7 +428,7 @@ async fn first_start(
     phase_path: &Path,
     faults: Faults<'_>,
 ) -> Result<HostAuth, StartupError> {
-    let auth = HostAuth::open(db_path).await.map_err(StartupError::Auth)?;
+    let auth = HostAuth::open(db_path).await.map_err(StartupError::from)?;
     checkpoint!(faults, Checkpoint::Migrated, StartupError);
     let config = auth
         .settings()
