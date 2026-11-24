@@ -93,14 +93,15 @@ fn the_command_list_is_generate_handler_without_gaps_or_duplicates() {
         "a handler is registered twice"
     );
     assert_eq!(registered, unique);
-    // 56 commands before the mode, `app_mode`, the 6 `runtime_*` and
+    // 56 commands before the mode (55 since `auth_setup` went with Banto
+    // v8.0.0), `app_mode`, the 6 `runtime_*` and
     // `operation_write` and `operation_view`, the history
     // (`operation_history`), and the 4 of the write key
     // (`operation_key_*`, `operation_write_resume`) and the minimum interval
     // (`operation_min_interval_set`) and the retention
     // (`operation_retention_set`) and the record size
     // (`operation_record_size`).
-    assert_eq!(listed.len(), 73);
+    assert_eq!(listed.len(), 72);
 }
 
 #[test]
