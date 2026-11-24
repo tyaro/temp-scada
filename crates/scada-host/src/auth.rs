@@ -188,13 +188,18 @@ impl HostAuth {
     /// template is not a dependency, so the two conditions are repeated
     /// here; the auth mode was already read strictly by the caller.
     async fn check_startup(&self, config: &AuthSettings) -> Result<(), AuthOpenError> {
+        // A failed read (`Storage`: a lock, an I/O error) checked nothing and
+        // stays `Auth`; only rows found inconsistent are `Refused`.
         self.users
             .check_startup()
             .await
-            .map_err(AuthOpenError::Refused)?;
+            .map_err(|error| match error {
+                BantoError::Storage(_) => AuthOpenError::Auth(error),
+                other => AuthOpenError::Refused(other),
+            })?;
         if !config.disabled && !self.users.has_admin().await? {
             return Err(AuthOpenError::Refused(BantoError::Other(
-                "ログイン必須の設定なのに、ログインできる管理者のアカウントがありません。                 この DB は直接書き換えられた可能性があります"
+                "ログイン必須の設定なのに、ログインできる管理者のアカウントがありません。この DB は直接書き換えられた可能性があります"
                     .to_string(),
             )));
         }

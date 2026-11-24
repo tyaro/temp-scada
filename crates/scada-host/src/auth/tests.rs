@@ -283,6 +283,23 @@ async fn a_db_without_the_built_in_admin_row_is_refused() {
 }
 
 #[tokio::test]
+async fn a_users_read_that_fails_is_an_auth_error_not_a_refusal() {
+    // The check never ran (here the table cannot be read at all): this must
+    // not be reported as an edited DB to restore or set aside.
+    let db = TempDb::new();
+    drop(HostAuth::open(db.path()).await.unwrap());
+    sqlx::query("ALTER TABLE users RENAME TO users_gone")
+        .execute(&db.raw().await)
+        .await
+        .unwrap();
+    match HostAuth::open(db.path()).await {
+        Err(AuthOpenError::Auth(BantoError::Storage(_))) => {}
+        Err(other) => panic!("expected Auth(Storage), got {other:?}"),
+        Ok(_) => panic!("expected Auth(Storage), the DB opened"),
+    }
+}
+
+#[tokio::test]
 async fn an_account_named_like_the_built_in_admin_is_refused() {
     let db = TempDb::new();
     drop(HostAuth::open(db.path()).await.unwrap());
