@@ -52,22 +52,9 @@ export function canEditSettings(view: AuthView): boolean {
 }
 
 /**
- * Whether `auth_setup` can create the first administrator: the auth is on
- * (the host refuses setup in the auth-disabled mode, where the move to
- * operation creates the first administrator), no administrator exists and
- * no one is signed in. Not during an unfinished move to operation.
+ * Whether the move to operation is offered (design §6). It can be pressed
+ * only with an administrator account ({@link needsAdminAccount}).
  */
-export function canSetupFirstAdmin(view: AuthView): boolean {
-  return (
-    view.status === "ready" &&
-    view.phase.phase !== "transitioning" &&
-    !view.phase.authDisabled &&
-    !view.phase.hasAdmin &&
-    !view.session
-  );
-}
-
-/** Whether the move to operation can be started (design §6). */
 export function canTransition(view: AuthView): boolean {
   if (view.status !== "ready") return false;
   if (view.phase.phase === "transitioning") return true;
@@ -77,6 +64,15 @@ export function canTransition(view: AuthView): boolean {
     view.session?.kind === "local" &&
     view.session.role === "admin"
   );
+}
+
+/**
+ * Banto v8.0.0: leaving the login-free mode needs an administrator account
+ * that can log in. Until one is made in user management, the move is shown
+ * but cannot be pressed.
+ */
+export function needsAdminAccount(view: AuthView): boolean {
+  return view.status === "ready" && !view.phase.hasAdmin;
 }
 
 export class AuthSession {
@@ -160,29 +156,6 @@ export class AuthSession {
     });
   }
 
-  /** `auth_setup`: the first administrator, signed in on success (Runtime
-   * mode design §10-2). */
-  setup(
-    username: string,
-    password: string,
-    displayName: string,
-  ): Promise<ActionResult> {
-    return this.#act(async () => {
-      const result = await this.#client.setup(username, password, displayName);
-      if (result.success)
-        return {
-          ok: true,
-          message: "最初の管理者を作成し、ログインしました。",
-        };
-      return {
-        ok: false,
-        message: result.superseded
-          ? "別の操作でログイン状態が変わりました。状態を確認してください。"
-          : (result.error ?? "最初の管理者を作成できませんでした。"),
-      };
-    });
-  }
-
   logout(): Promise<ActionResult> {
     return this.#act(async () => {
       await this.#client.provider.logout();
@@ -206,13 +179,11 @@ export class AuthSession {
   transitionToOperational(
     username: string,
     password: string,
-    displayName: string,
   ): Promise<ActionResult> {
     return this.#act(async () => {
       const result = await this.#client.transitionToOperational(
         username,
         password,
-        displayName,
       );
       return {
         ok: true,

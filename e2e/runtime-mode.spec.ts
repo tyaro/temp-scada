@@ -13,8 +13,8 @@ interface RuntimeHostOptions {
   alarm?: "notApplied" | "otherProject" | "differs" | "same";
   /** `failOnce`: the first `runtime_read_start` fails, later ones succeed. */
   readStart?: "ok" | "failOnce";
-  /** `firstAdmin`: the auth is on, no account exists and no one is signed in. */
-  auth?: "operational" | "setup" | "transitioning" | "firstAdmin";
+  /** `setup`: initial setup with no administrator account yet. */
+  auth?: "operational" | "setup" | "transitioning";
   /** What `recording_status` answers: no applied plan, or recording. */
   recording?: "unconfigured" | "running";
   /** `blocked`: listening to `alarm_changed` fails until the test sets `alarmListenBlocked = false`. */
@@ -35,8 +35,6 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
       let nextId = 0;
       const host = {
         calls: [] as string[],
-        setups: [] as Record<string, unknown>[],
-        account: null as null | { username: string; displayName: string },
         writes: [] as Record<string, unknown>[],
         latest: null as null | Record<string, unknown>,
         /** Overrides what `operation_view` answers in `blocked` when set. */
@@ -498,25 +496,7 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                   sdk: { state: "unknown" },
                 };
               }
-              case "auth_setup":
-                host.setups.push(args!);
-                host.account = {
-                  username: args!.username,
-                  displayName: args!.displayName,
-                };
-                return {
-                  success: true,
-                  error: null,
-                  superseded: false,
-                  seq: ++host.seq,
-                };
               case "auth_phase":
-                if (options.auth === "firstAdmin")
-                  return {
-                    phase: "operational",
-                    authDisabled: false,
-                    hasAdmin: host.account !== null,
-                  };
                 return options.auth === "setup"
                   ? {
                       phase: "initializing",
@@ -535,18 +515,6 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                         hasAdmin: true,
                       };
               case "auth_resolve":
-                if (options.auth === "firstAdmin")
-                  return {
-                    identity: host.account && {
-                      id: host.account.username,
-                      name: host.account.displayName,
-                      role: "admin",
-                    },
-                    kind: host.account ? "account" : null,
-                    checked: host.seq,
-                    current: host.seq,
-                    stale: false,
-                  };
                 return {
                   identity: {
                     id: "local",
@@ -841,6 +809,16 @@ test("the Runtime authentication popover leaves the move to operation and the se
   await expect(
     popover.getByRole("button", { name: "利用者管理…" }),
   ).toBeVisible();
+  // No administrator account: made in user management (Banto v8.0.0 has no
+  // first-run setup form).
+  await expect(popover).toContainText(
+    "利用者管理で管理者のアカウントを作ってから",
+  );
+  await expect(
+    popover.getByRole("button", { name: "利用者管理を開く…" }),
+  ).toBeVisible();
+  await expect(popover.getByRole("form")).toHaveCount(0);
+  expect(await calls(page)).not.toContain("auth_setup");
 });
 
 test("a Runtime in the middle of the move asks to re-run it in Editor", async ({
@@ -1007,49 +985,6 @@ test("the top bar shows a running recording without the Editor note", async ({
   await expect(page.locator("[data-runtime-recording-note]")).toHaveCount(0);
   const used = await calls(page);
   for (const command of recordingWrites) expect(used).not.toContain(command);
-});
-
-test("a Runtime with the auth on and no administrator creates the first one with auth_setup", async ({
-  page,
-}) => {
-  await mockRuntimeHost(page, { auth: "firstAdmin" });
-  await page.goto("/runtime.html");
-  await expect(page.getByTestId("operator-frame")).toBeVisible();
-  await expect(page.locator("[data-runtime-recording]")).toContainText(
-    "記録: ログインが必要",
-  );
-  expect(await calls(page)).not.toContain("runtime_recording_context");
-
-  await page.locator(".runtime-auth summary").click();
-  const popover = page.locator(".runtime-auth .auth-popover");
-  const form = popover.getByRole("form", { name: "最初の管理者を作成" });
-  await expect(form).toBeVisible();
-  await expect(popover.getByRole("form", { name: "ログイン" })).toHaveCount(0);
-  await form.getByLabel("管理者のユーザー名").fill("admin");
-  await form.getByLabel("表示名").fill("管理者");
-  await form.getByLabel("パスワード", { exact: true }).fill("secret-pass");
-  await form.getByLabel("パスワード（確認）").fill("other-pass");
-  await form.getByRole("button", { name: "最初の管理者を作成" }).click();
-  await expect(popover).toContainText("確認用のパスワードが一致しません。");
-  expect(await calls(page)).not.toContain("auth_setup");
-
-  await form.getByLabel("パスワード（確認）").fill("secret-pass");
-  await form.getByRole("button", { name: "最初の管理者を作成" }).click();
-  await expect(popover).toContainText(
-    "最初の管理者を作成し、ログインしました。",
-  );
-  await expect(page.locator(".runtime-auth summary")).toContainText("管理者");
-  await expect(form).toHaveCount(0);
-  expect(
-    await page.evaluate(() => (window as any).__runtimeHost.setups),
-  ).toEqual([
-    { username: "admin", password: "secret-pass", displayName: "管理者" },
-  ]);
-  expect(await calls(page)).not.toContain("auth_transition_to_operational");
-  // Signed in, the recording state is read.
-  await expect(page.locator("[data-runtime-recording]")).toContainText(
-    "記録未設定",
-  );
 });
 
 test("a failed alarm subscription keeps a warning until a refresh re-subscribes, then changes arrive", async ({

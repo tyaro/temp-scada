@@ -1,7 +1,6 @@
 /**
  * The desktop auth commands of this host (host-gate design §5, §6, §9 step
- * 4-3). Session changes (login, logout, password change, first-run setup)
- * go through Banto's `createTauriAuthProvider`, which tracks the credential
+ * 4-3). Session changes (login, logout, password change) go through Banto's `createTauriAuthProvider`, which tracks the credential
  * revision. The host's own commands (`auth_phase`, the move to operation)
  * and the user-management and auth-settings commands are called directly.
  *
@@ -11,7 +10,6 @@
 import {
   createTauriAuthProvider,
   isProviderError,
-  type AuthOperationResult,
   type AuthProvider,
   type ErrorBody,
 } from "@banto/admin-core";
@@ -72,6 +70,10 @@ export class AuthCommandError extends Error {
   }
 }
 
+/** Why the move to operation cannot start yet (Banto v8.0.0's rule). */
+export const NO_ADMIN_ACCOUNT_MESSAGE =
+  "ログインできる管理者のアカウントがありません。利用者管理で管理者のアカウントを作ってから、運用へ移行してください。";
+
 const STARTUP_REASONS: Record<string, string> = {
   in_use: "認証は別のアプリが使用中です。もう一つの起動を終了してください。",
   phase_unreadable: "認証フェーズの記録を読み取れません。",
@@ -81,11 +83,14 @@ const STARTUP_REASONS: Record<string, string> = {
   auth_db_missing:
     "認証DBがありません。安全のため作り直しません。記録の変更は使えません。",
   save: "認証フェーズを保存できません。",
+  auth_db_outdated:
+    "この認証DBは旧い版のものです。読み取りと編集は使えますが、認証と認証を要する操作は使えません。アプリを終了し、認証DBと auth-phase.json を一緒に退避してください。",
   auth_db: "認証DBを開けません。",
 };
 
 const HOST_REFUSALS: Record<string, string> = {
   not_allowed: "現在の状態ではこの操作はできません。",
+  no_admin_account: NO_ADMIN_ACCOUNT_MESSAGE,
   busy: "記録の変更作業が終わっていません。作業を破棄するか、完了を待ってから実行してください。",
   invalid_credentials: "ユーザー名またはパスワードが違います。",
   not_admin: "このアカウントは管理者ではありません。",
@@ -152,17 +157,6 @@ export function describeError(raw: unknown): AuthCommandError {
 }
 
 /**
- * The args of the `login` calls that are really this host's `auth_setup`.
- * Banto v8 dropped `AuthProvider.setup`, but the host still creates its
- * first administrator with its own `auth_setup` command, which answers like
- * `auth_login` (a `LoginResult` with the slot `seq`). Sending it through the
- * provider's `login` keeps the credential revision tracking (the pending
- * command, its `seq`, the notification) the provider's own; the invoke below
- * sends those args as `auth_setup` instead of `auth_login`.
- */
-const firstAdminArgs = new WeakSet<object>();
-
-/**
  * The provider reads only Banto's error kinds. The host's own refusals
  * (`auth_unavailable`, ...) are passed on as an `Error` carrying the
  * Japanese message; the provider then treats the outcome as unknown and
@@ -170,12 +164,8 @@ const firstAdminArgs = new WeakSet<object>();
  */
 function providerInvoke(invoke: Invoke): Invoke {
   return async (cmd, args) => {
-    const target =
-      cmd === "auth_login" && args && firstAdminArgs.has(args)
-        ? "auth_setup"
-        : cmd;
     try {
-      return await invoke(target, args);
+      return await invoke(cmd, args);
     } catch (raw) {
       if (isObject(raw) && raw.kind === "auth_unavailable")
         throw new Error(describeError(raw).message);
@@ -232,20 +222,11 @@ function parseSettings(value: unknown): AuthSettings {
 export interface NativeAuthClient {
   readonly provider: AuthProvider;
   phase(): Promise<AuthPhase>;
-  /** `auth_setup` (this host's own command; Banto v8 has no
-   * `AuthProvider.setup`) through the provider's `login`, so the provider
-   * still tracks the credential revision: creates the very first account and
-   * signs in as it. The host refuses it while the auth-disabled mode is on
-   * (the first administrator is then made by the move to operation). */
-  setup(
-    username: string,
-    password: string,
-    displayName: string,
-  ): Promise<AuthOperationResult>;
+  /** Refused with `no_admin_account` until an administrator account that
+   * can log in exists (made in user management). */
   transitionToOperational(
     username: string,
     password: string,
-    displayName: string,
   ): Promise<TransitionResult>;
   usersList(): Promise<UserSummary[]>;
   usersCreate(
@@ -275,21 +256,10 @@ export function createNativeAuthClient(invoke: Invoke): NativeAuthClient {
     async phase() {
       return parsePhase(await call("auth_phase"));
     },
-    async setup(username, password, displayName) {
-      const args = { username, password, displayName };
-      firstAdminArgs.add(args);
-      try {
-        return await provider.login(args);
-      } catch (raw) {
-        // As Banto v7's `setup` did: a refusal is a failed result, not a throw.
-        return { success: false, error: describeError(raw).message };
-      }
-    },
-    async transitionToOperational(username, password, displayName) {
+    async transitionToOperational(username, password) {
       const result = await call("auth_transition_to_operational", {
         username,
         password,
-        displayName,
       });
       return { signedIn: isObject(result) && result.signedIn === true };
     },
