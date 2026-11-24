@@ -89,7 +89,7 @@ fn the_auth_commands_answer_over_ipc_from_first_start_to_operation() {
     let refused = invoke(
         &webview,
         "auth_login",
-        json!({"username": "admin", "password": PASSWORD}),
+        json!({"username": "chief", "password": PASSWORD}),
     )
     .unwrap();
     assert_eq!(refused["success"], false);
@@ -97,7 +97,7 @@ fn the_auth_commands_answer_over_ipc_from_first_start_to_operation() {
     let moved = invoke(
         &webview,
         "auth_transition_to_operational",
-        json!({"username": "admin", "password": PASSWORD, "displayName": "管理者"}),
+        json!({"username": "chief", "password": PASSWORD, "displayName": "管理者"}),
     )
     .unwrap();
     assert_eq!(moved["signedIn"], true);
@@ -105,7 +105,7 @@ fn the_auth_commands_answer_over_ipc_from_first_start_to_operation() {
     assert_eq!(account["kind"], "account");
     assert_eq!(
         account["identity"],
-        json!({"id": "admin", "name": "管理者", "role": "admin"})
+        json!({"id": "chief", "name": "管理者", "role": "admin"})
     );
     assert_eq!(account["current"], moved["seq"]);
 
@@ -125,7 +125,7 @@ fn the_auth_commands_answer_over_ipc_from_first_start_to_operation() {
     let login = invoke(
         &webview,
         "auth_login",
-        json!({"username": "admin", "password": "another-horse-2"}),
+        json!({"username": "chief", "password": "another-horse-2"}),
     )
     .unwrap();
     assert_eq!(login["success"], true);
@@ -134,7 +134,7 @@ fn the_auth_commands_answer_over_ipc_from_first_start_to_operation() {
         invoke(
             &webview,
             "auth_transition_to_operational",
-            json!({"username": "admin", "password": PASSWORD, "displayName": "管理者"}),
+            json!({"username": "chief", "password": PASSWORD, "displayName": "管理者"}),
         )
         .unwrap_err(),
         json!({"kind": "not_allowed"})
@@ -185,7 +185,7 @@ fn user_management_and_auth_settings_answer_over_ipc() {
     invoke(
         &webview,
         "auth_transition_to_operational",
-        json!({"username": "admin", "password": PASSWORD, "displayName": "管理者"}),
+        json!({"username": "chief", "password": PASSWORD, "displayName": "管理者"}),
     )
     .unwrap();
 

@@ -87,7 +87,7 @@ async fn operational() -> Fixture {
     let f = initializing().await;
     let moved = f
         .auth
-        .transition_to_operational("admin", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD, "管理者")
         .await
         .unwrap();
     assert!(moved.signed_in);

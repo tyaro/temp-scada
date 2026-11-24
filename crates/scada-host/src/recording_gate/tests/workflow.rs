@@ -366,7 +366,7 @@ async fn the_workflow_tickets_serve_only_the_principal_that_reserved_them() {
 
     // The reserving Admin continues after logging in again.
     f.auth.auth().logout().await;
-    login(&f.auth, "admin").await;
+    login(&f.auth, "chief").await;
     assert_eq!(
         f.gate.admission(p.request.clone()).await.unwrap().reply,
         p.accepted.reply
@@ -407,14 +407,14 @@ async fn the_workflow_tickets_serve_only_the_principal_that_reserved_them() {
                 "recording_workflow",
                 "admin-change",
                 "ok",
-                "admin"
+                "chief"
             ),
             row(
                 "register",
                 "recording_admission",
                 "preflight",
                 "ok",
-                "admin"
+                "chief"
             ),
             row(
                 "register",
@@ -431,7 +431,7 @@ async fn the_workflow_tickets_serve_only_the_principal_that_reserved_them() {
                 "admin2"
             ),
             row("denied", "recording_workflow_lease", "", "denied", "viewer"),
-            row("register", "recording_admission", "pause", "ok", "admin"),
+            row("register", "recording_admission", "pause", "ok", "chief"),
         ]
     );
 }
@@ -669,7 +669,7 @@ async fn the_resumption_follows_the_principal_across_logins() {
     // The same principal after a new login gets its replies back, and its
     // new generation observes the operation through them.
     f.auth.auth().logout().await;
-    login(&f.auth, "admin").await;
+    login(&f.auth, "chief").await;
     let resumption = f.gate.workflow_resumption().await.unwrap();
     let WorkflowResumption::Held { admissions, .. } = &resumption.reply else {
         panic!("no held workflow");
@@ -725,7 +725,7 @@ async fn a_withheld_admission_reply_stays_registered_for_its_principal() {
 
     // Registered and dispatched all the same, and audited once.
     f.auth.auth().logout().await;
-    let admin = login(&f.auth, "admin").await;
+    let admin = login(&f.auth, "chief").await;
     let recovered = f.gate.admission(request).await.unwrap();
     assert_eq!(recovered.seq, admin.seq);
     assert_eq!(outcome_kind(&recovered, |r| r.as_value()), "accepted");
@@ -737,14 +737,14 @@ async fn a_withheld_admission_reply_stays_registered_for_its_principal() {
                 "recording_workflow",
                 "withheld-change",
                 "ok",
-                "admin"
+                "chief"
             ),
             row(
                 "register",
                 "recording_admission",
                 "preflight",
                 "ok",
-                "admin"
+                "chief"
             ),
         ]
     );

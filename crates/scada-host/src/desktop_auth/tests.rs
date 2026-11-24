@@ -32,7 +32,7 @@ async fn first_start() -> (TempDir, DesktopAuth) {
 async fn operational() -> (TempDir, DesktopAuth) {
     let (dir, desktop) = first_start().await;
     desktop
-        .transition_to_operational("admin", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD, "管理者")
         .await
         .unwrap();
     (dir, desktop)
@@ -63,10 +63,10 @@ async fn the_first_start_serves_the_synthetic_admin_and_refuses_logins() {
         })
     );
 
-    let refused = desktop.login("admin", PASSWORD).await.unwrap();
+    let refused = desktop.login("chief", PASSWORD).await.unwrap();
     assert!(!refused.success && !refused.superseded);
     assert_eq!(refused.seq, resolved.current);
-    let refused = desktop.setup("admin", PASSWORD, "管理者").await.unwrap();
+    let refused = desktop.setup("chief", PASSWORD, "管理者").await.unwrap();
     assert!(!refused.success);
     assert!(!desktop.status().await.unwrap().initialized);
     // Logout is a no-op while the mode keeps the synthetic session.
@@ -88,7 +88,7 @@ async fn the_move_to_operation_signs_the_administrator_in() {
     let (_dir, desktop) = first_start().await;
     let before = desktop.resolve().await.unwrap().current;
     let moved = desktop
-        .transition_to_operational("admin", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD, "管理者")
         .await
         .unwrap();
     assert!(moved.signed_in);
@@ -102,7 +102,7 @@ async fn the_move_to_operation_signs_the_administrator_in() {
     assert_eq!(
         resolved.identity,
         Some(Identity {
-            id: "admin".into(),
+            id: "chief".into(),
             name: "管理者".into(),
             role: "admin".into(),
         })
@@ -112,7 +112,7 @@ async fn the_move_to_operation_signs_the_administrator_in() {
     assert_eq!(
         wire(
             &desktop
-                .transition_to_operational("admin", PASSWORD, "管理者")
+                .transition_to_operational("chief", PASSWORD, "管理者")
                 .await
                 .unwrap_err()
         ),
@@ -128,7 +128,7 @@ async fn login_logout_and_the_own_password_change_report_the_generation() {
     assert_eq!((none.identity, none.kind), (None, None));
     assert_eq!((none.checked, none.current), (out.seq, out.seq));
 
-    let wrong = desktop.login("admin", "wrong-password-0").await.unwrap();
+    let wrong = desktop.login("chief", "wrong-password-0").await.unwrap();
     assert_eq!(
         wire(&wrong),
         json!({
@@ -136,7 +136,7 @@ async fn login_logout_and_the_own_password_change_report_the_generation() {
             "superseded": false, "seq": out.seq
         })
     );
-    let login = desktop.login("admin", PASSWORD).await.unwrap();
+    let login = desktop.login("chief", PASSWORD).await.unwrap();
     assert!(login.success);
     assert_eq!(login.seq, out.seq + 1);
 
@@ -185,7 +185,7 @@ async fn a_failed_move_reports_its_kind() {
     assert_eq!(desktop.phase().await.unwrap().phase, "transitioning");
     // The re-run verifies once the administrator exists.
     desktop
-        .transition_to_operational("admin", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD, "管理者")
         .await
         .unwrap();
     assert_eq!(desktop.phase().await.unwrap().phase, "operational");
@@ -299,7 +299,7 @@ async fn an_admin_manages_users_in_banto_wire_shapes() {
         .iter()
         .map(|user| user["username"].as_str().unwrap().to_owned())
         .collect();
-    assert_eq!(names, ["admin", "viewer"]);
+    assert_eq!(names, ["chief", "viewer"]);
     let row = &listed[1];
     assert_eq!(row["displayName"], "閲覧者");
     assert!(row["createdAt"].is_string());
@@ -360,7 +360,7 @@ async fn an_admin_manages_users_in_banto_wire_shapes() {
     );
 
     desktop.logout().await.unwrap();
-    login_as(&desktop, "admin", PASSWORD).await;
+    login_as(&desktop, "chief", PASSWORD).await;
     desktop.users_delete(created.id).await.unwrap();
     assert_eq!(desktop.users_list().await.unwrap().len(), 1);
     desktop.logout().await.unwrap();
@@ -385,7 +385,7 @@ async fn resetting_the_own_password_ends_the_session_before_returning() {
     assert!(desktop.auth().auth().seq() > before.current);
     let after = desktop.resolve().await.unwrap();
     assert_eq!(after.identity, None);
-    login_as(&desktop, "admin", "reset-horse-3").await;
+    login_as(&desktop, "chief", "reset-horse-3").await;
 }
 
 #[tokio::test]
@@ -414,7 +414,7 @@ async fn the_auth_mode_is_not_switched_and_a_lowered_local_role_can_raise_itself
     assert_eq!(
         wire(
             &desktop
-                .transition_to_operational("admin", PASSWORD, "管理者")
+                .transition_to_operational("chief", PASSWORD, "管理者")
                 .await
                 .unwrap_err()
         ),
@@ -427,7 +427,7 @@ async fn the_auth_mode_is_not_switched_and_a_lowered_local_role_can_raise_itself
         "admin"
     );
     desktop
-        .transition_to_operational("admin", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD, "管理者")
         .await
         .unwrap();
     // In operation the escape hatch is gone: Admin only.

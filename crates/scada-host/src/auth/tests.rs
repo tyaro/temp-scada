@@ -40,9 +40,15 @@ async fn with_admin() -> (TempDb, HostAuth, UserIdentity) {
     let auth = HostAuth::open(db.path()).await.unwrap();
     let admin = auth
         .users()
-        .setup_first_user("admin", PASSWORD, "管理者")
+        .create_user("chief", PASSWORD, "管理者", Role::Admin)
         .await
         .unwrap();
+    // Banto v8.0.0's 0015 opens a new DB in auth-disabled mode; these tests
+    // start login-required, which needs the administrator first. Reopened so
+    // the slot starts empty at generation 0.
+    set_disabled(&auth, false, Role::Admin).await;
+    drop(auth);
+    let auth = HostAuth::open(db.path()).await.unwrap();
     (db, auth, admin)
 }
 
@@ -73,20 +79,27 @@ async fn audit_rows(db: &TempDb) -> Vec<(String, String, String)> {
 }
 
 #[tokio::test]
-async fn open_applies_banto_migrations_once_and_starts_without_a_session() {
+async fn open_applies_banto_migrations_once_and_starts_in_auth_disabled_mode() {
     let db = TempDb::new();
     let auth = HostAuth::open(db.path()).await.unwrap();
-    assert_eq!(auth.current().await.unwrap(), None);
-    assert!(!auth.users().is_initialized().await.unwrap());
+    // Banto v8.0.0's 0015: a new DB starts without login, as Admin.
+    let current = auth.current().await.unwrap().unwrap();
+    assert!(matches!(
+        current.session,
+        DesktopSession::AuthDisabledLocal(_)
+    ));
+    assert_eq!(current.session.role(), Role::Admin);
+    // The built-in `admin` row (0014) is no account.
+    assert!(!auth.has_accounts().await.unwrap());
     drop(auth);
 
-    let auth = HostAuth::open(db.path()).await.unwrap();
+    let _auth = HostAuth::open(db.path()).await.unwrap();
     let applied: Vec<i64> =
         sqlx::query_scalar("SELECT version FROM _sqlx_migrations ORDER BY version")
             .fetch_all(&db.raw().await)
             .await
             .unwrap();
-    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10, 12, 13]);
+    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10, 12, 13, 14, 15]);
     // 0010's generated record-scope columns back the audit list's
     // `recordResource` / `recordId` filters.
     let scope_columns: i64 = sqlx::query_scalar(
@@ -96,15 +109,11 @@ async fn open_applies_banto_migrations_once_and_starts_without_a_session() {
     .await
     .unwrap();
     assert_eq!(scope_columns, 2);
-    assert!(matches!(
-        auth.require_role(Role::Viewer, "recording").await,
-        Err(BantoError::Unauthorized)
-    ));
 }
 
 #[tokio::test]
-async fn opening_a_v7_0_db_keeps_its_audit_rows_and_scopes_them_by_record() {
-    // An auth DB written by the Banto v7.0.0 build: migrations up to 0008.
+async fn audit_rows_written_before_0010_are_scoped_by_record() {
+    // Rows written while only the migrations up to 0008 were applied.
     let db = TempDb::new();
     {
         let options = sqlx::sqlite::SqliteConnectOptions::new()
@@ -160,7 +169,7 @@ async fn opening_a_v7_0_db_keeps_its_audit_rows_and_scopes_them_by_record() {
             .fetch_all(&db.raw().await)
             .await
             .unwrap();
-    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10, 12, 13]);
+    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10, 12, 13, 14, 15]);
 
     let scoped = |field: &str, value: &str| banto_core::FilterState {
         field: field.to_string(),
@@ -229,120 +238,29 @@ async fn opening_a_v7_0_db_keeps_its_audit_rows_and_scopes_them_by_record() {
 }
 
 #[tokio::test]
-async fn opening_a_v7_2_db_keeps_its_users_and_starts_them_at_version_1() {
-    // An auth DB written by the Banto v7.2.0 build: migrations up to 0010,
-    // so `users` has no `version` column yet.
+async fn an_auth_db_created_before_banto_v8_is_refused() {
+    // Banto v8.0.0 rewrote 0003 / 0005 in place (no data migration), so a DB
+    // created earlier holds other checksums for them and does not open.
     let db = TempDb::new();
-    {
-        let options = sqlx::sqlite::SqliteConnectOptions::new()
-            .filename(db.path())
-            .create_if_missing(true);
-        let pool = sqlx::SqlitePool::connect_with(options).await.unwrap();
-        let mut migrator = sqlx::migrate::Migrator::new(
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations-sqlite"),
-        )
+    drop(HostAuth::open(db.path()).await.unwrap());
+    sqlx::query("UPDATE _sqlx_migrations SET checksum = X'00' WHERE version = 3")
+        .execute(&db.raw().await)
         .await
         .unwrap();
-        let old: Vec<_> = migrator
-            .migrations
-            .iter()
-            .filter(|m| m.version <= 10)
-            .cloned()
-            .collect();
-        migrator.migrations = old.into();
-        migrator.run(&pool).await.unwrap();
-        sqlx::query(
-            "INSERT INTO users (username, password_hash, display_name, role, auth_epoch)              VALUES ('operator', 'x', 'Operator', 'editor', 3)",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-        pool.close().await;
-    }
-
-    let auth = HostAuth::open(db.path()).await.unwrap();
-    let applied: Vec<i64> =
-        sqlx::query_scalar("SELECT version FROM _sqlx_migrations ORDER BY version")
-            .fetch_all(&db.raw().await)
-            .await
-            .unwrap();
-    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10, 12, 13]);
-    let users = auth.users().list_users().await.unwrap();
-    assert_eq!(users.len(), 1);
-    let user = &users[0];
-    assert_eq!(
-        (
-            user.username.as_str(),
-            user.display_name.as_str(),
-            user.role,
-            user.version
-        ),
-        ("operator", "Operator", Role::Editor, 1)
-    );
-}
-
-#[tokio::test]
-async fn opening_a_v7_6_db_adds_user_permissions_and_keeps_updates_working() {
-    // An auth DB written by the Banto v7.6.0 build: migrations up to 0012,
-    // so there is no `user_permissions` table yet. Since v7.7.0 the user
-    // update reads the stored permissions, so 0013 must be applied on open.
-    let db = TempDb::new();
-    {
-        let options = sqlx::sqlite::SqliteConnectOptions::new()
-            .filename(db.path())
-            .create_if_missing(true);
-        let pool = sqlx::SqlitePool::connect_with(options).await.unwrap();
-        let mut migrator = sqlx::migrate::Migrator::new(
-            std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations-sqlite"),
-        )
-        .await
-        .unwrap();
-        let old: Vec<_> = migrator
-            .migrations
-            .iter()
-            .filter(|m| m.version <= 12)
-            .cloned()
-            .collect();
-        migrator.migrations = old.into();
-        migrator.run(&pool).await.unwrap();
-        sqlx::query(
-            "INSERT INTO users (username, password_hash, display_name, role, auth_epoch)              VALUES ('operator', 'x', 'Operator', 'editor', 3)",
-        )
-        .execute(&pool)
-        .await
-        .unwrap();
-        pool.close().await;
-    }
-
-    let auth = HostAuth::open(db.path()).await.unwrap();
-    let applied: Vec<i64> =
-        sqlx::query_scalar("SELECT version FROM _sqlx_migrations ORDER BY version")
-            .fetch_all(&db.raw().await)
-            .await
-            .unwrap();
-    assert_eq!(applied, [2, 3, 4, 5, 7, 8, 10, 12, 13]);
-    let id = auth.users().list_users().await.unwrap()[0].id;
-    let updated = auth
-        .users()
-        .update_user(id, "運転員", Role::Viewer)
-        .await
-        .unwrap();
-    assert_eq!(
-        (updated.display_name.as_str(), updated.role, updated.version),
-        ("運転員", Role::Viewer, 2)
-    );
-    auth.users().delete_user(id, None).await.unwrap();
-    assert!(auth.users().list_users().await.unwrap().is_empty());
+    assert!(matches!(
+        HostAuth::open(db.path()).await,
+        Err(BantoError::Storage(_))
+    ));
 }
 
 #[tokio::test]
 async fn login_installs_an_account_session_bound_to_the_user_id() {
     let (db, auth, admin) = with_admin().await;
     assert_eq!(
-        auth.login("admin", "wrong-password").await.unwrap(),
+        auth.login("chief", "wrong-password").await.unwrap(),
         LoginOutcome::InvalidCredentials
     );
-    let current = login(&auth, "admin").await;
+    let current = login(&auth, "chief").await;
     assert_eq!(
         current.session.principal().as_str(),
         format!("banto-user:{}", admin.id)
@@ -429,7 +347,7 @@ async fn role_change_password_reset_and_deletion_end_the_session() {
 #[tokio::test]
 async fn a_read_failure_keeps_the_session_and_fails_only_that_check() {
     let (db, auth, _) = with_admin().await;
-    let current = login(&auth, "admin").await;
+    let current = login(&auth, "chief").await;
     let raw = db.raw().await;
     sqlx::query("ALTER TABLE users RENAME TO users_hidden")
         .execute(&raw)
@@ -448,13 +366,13 @@ async fn a_read_failure_keeps_the_session_and_fails_only_that_check() {
 #[tokio::test]
 async fn logout_ends_the_account_session_and_advances_the_generation() {
     let (db, auth, _) = with_admin().await;
-    let current = login(&auth, "admin").await;
+    let current = login(&auth, "chief").await;
     let seq = auth.logout().await;
     assert!(seq > current.seq);
     assert_eq!(auth.current().await.unwrap(), None);
     assert_eq!(audit_rows(&db).await.last().unwrap().0, "logout");
 
-    let again = login(&auth, "admin").await;
+    let again = login(&auth, "chief").await;
     assert_eq!(again.session.principal(), current.session.principal());
     assert!(again.seq > seq);
 }
@@ -465,7 +383,7 @@ async fn a_logout_during_an_initial_login_supersedes_it() {
     let seq_before = auth.seq();
     // The login reads `seq`, then awaits the auth DB; the logout of the
     // still-empty slot runs meanwhile and must win.
-    let (outcome, seq_after_logout) = tokio::join!(auth.login("admin", PASSWORD), auth.logout());
+    let (outcome, seq_after_logout) = tokio::join!(auth.login("chief", PASSWORD), auth.logout());
     assert_eq!(outcome.unwrap(), LoginOutcome::Superseded);
     assert!(seq_after_logout > seq_before);
     assert_eq!(auth.current().await.unwrap(), None);
@@ -475,6 +393,11 @@ async fn a_logout_during_an_initial_login_supersedes_it() {
 async fn auth_disabled_mode_follows_the_current_role_and_ends_when_turned_off() {
     let db = TempDb::new();
     let auth = HostAuth::open(db.path()).await.unwrap();
+    // Turning the mode off (below) needs an administrator (Banto v8.0.0).
+    auth.users()
+        .create_user("chief", PASSWORD, "管理者", Role::Admin)
+        .await
+        .unwrap();
     set_disabled(&auth, true, Role::Viewer).await;
     drop(auth);
 
@@ -486,7 +409,7 @@ async fn auth_disabled_mode_follows_the_current_role_and_ends_when_turned_off() 
     );
     assert_eq!(viewer.session.role(), Role::Viewer);
     assert_eq!(
-        auth.login("admin", PASSWORD).await.unwrap(),
+        auth.login("chief", PASSWORD).await.unwrap(),
         LoginOutcome::AuthDisabled
     );
     assert_eq!(
@@ -511,7 +434,7 @@ async fn auth_disabled_mode_follows_the_current_role_and_ends_when_turned_off() 
 #[tokio::test]
 async fn turning_auth_disabled_mode_on_replaces_a_logged_in_account() {
     let (_db, auth, _) = with_admin().await;
-    let admin = login(&auth, "admin").await;
+    let admin = login(&auth, "chief").await;
 
     let local = auth
         .set_auth_config(&AuthSettings {
@@ -538,7 +461,7 @@ async fn turning_auth_disabled_mode_on_replaces_a_logged_in_account() {
 #[tokio::test]
 async fn a_mode_change_made_outside_the_host_is_followed_on_the_next_check() {
     let (_db, auth, _) = with_admin().await;
-    let admin = login(&auth, "admin").await;
+    let admin = login(&auth, "chief").await;
     set_disabled(&auth, true, Role::Viewer).await;
     let local = auth.current().await.unwrap().unwrap();
     assert!(matches!(
@@ -559,7 +482,7 @@ async fn a_mode_change_made_outside_the_host_is_followed_on_the_next_check() {
 #[tokio::test]
 async fn a_login_racing_the_mode_turning_on_never_leaves_an_account_session() {
     let (_db, auth, _) = with_admin().await;
-    let (outcome, ()) = tokio::join!(auth.login("admin", PASSWORD), async {
+    let (outcome, ()) = tokio::join!(auth.login("chief", PASSWORD), async {
         set_disabled(&auth, true, Role::Viewer).await;
     });
     assert_eq!(outcome.unwrap(), LoginOutcome::AuthDisabled);
@@ -572,8 +495,7 @@ async fn a_login_racing_the_mode_turning_on_never_leaves_an_account_session() {
 
 #[tokio::test]
 async fn a_stale_check_never_answers_with_a_role_it_did_not_read() {
-    let db = TempDb::new();
-    let auth = HostAuth::open(db.path()).await.unwrap();
+    let (_db, auth, _admin) = with_admin().await;
     set_disabled(&auth, true, Role::Admin).await;
     let admin = auth.current().await.unwrap().unwrap();
     let stale = admin.seq - 1;
@@ -638,7 +560,7 @@ async fn a_login_whose_account_changed_during_the_password_check_does_not_succee
     // Auth-disabled mode turned on meanwhile: the synthetic session wins.
     let verified = auth
         .users()
-        .verify("admin", PASSWORD)
+        .verify("chief", PASSWORD)
         .await
         .unwrap()
         .unwrap();
@@ -662,7 +584,7 @@ async fn resolve_reports_the_generation_it_checked_and_the_one_it_left() {
         (None, 0, 0, false)
     );
 
-    let logged_in = login(&auth, "admin").await;
+    let logged_in = login(&auth, "chief").await;
     let resolved = auth.resolve().await.unwrap();
     assert_eq!(resolved.session, Some(logged_in.session));
     assert_eq!(
@@ -686,7 +608,7 @@ async fn resolve_reports_the_generation_it_checked_and_the_one_it_left() {
 #[tokio::test]
 async fn a_resolve_overtaken_by_a_re_bind_is_stale_and_writes_nothing() {
     let (_db, auth, _) = with_admin().await;
-    let logged_in = login(&auth, "admin").await;
+    let logged_in = login(&auth, "chief").await;
     // Read as of the generation before the login: the slot has moved since.
     assert_eq!(
         auth.settle(Some(logged_in.session.clone()), logged_in.seq - 1),
@@ -702,7 +624,7 @@ async fn a_resolve_overtaken_by_a_re_bind_is_stale_and_writes_nothing() {
 #[tokio::test]
 async fn changing_the_own_password_re_binds_this_session_to_the_new_epoch() {
     let (db, auth, admin) = with_admin().await;
-    let before = login(&auth, "admin").await;
+    let before = login(&auth, "chief").await;
     let seq = auth
         .change_own_password(PASSWORD, "another-horse-2")
         .await
@@ -727,8 +649,7 @@ async fn changing_the_own_password_re_binds_this_session_to_the_new_epoch() {
 
 #[tokio::test]
 async fn only_an_account_session_changes_its_own_password() {
-    let db = TempDb::new();
-    let auth = HostAuth::open(db.path()).await.unwrap();
+    let (_db, auth, _admin) = with_admin().await;
     assert!(matches!(
         auth.change_own_password(PASSWORD, "another-horse-2").await,
         Err(BantoError::Unauthorized)
@@ -743,15 +664,15 @@ async fn only_an_account_session_changes_its_own_password() {
 #[tokio::test]
 async fn a_relogin_during_the_password_change_is_not_re_bound() {
     let (_db, auth, admin) = with_admin().await;
-    let before = login(&auth, "admin").await;
+    let before = login(&auth, "chief").await;
     let validated = before.session.identity().clone();
     // A logout and a new login of the same account (same id and epoch)
     // happen while the change validated `before` runs.
     auth.logout().await;
-    let relogin = login(&auth, "admin").await;
+    let relogin = login(&auth, "chief").await;
     let new_epoch = auth
         .users()
-        .change_password("admin", PASSWORD, "another-horse-2")
+        .change_password("chief", PASSWORD, "another-horse-2")
         .await
         .unwrap();
     assert_eq!(new_epoch, admin.auth_epoch + 1);

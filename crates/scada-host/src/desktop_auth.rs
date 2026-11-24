@@ -277,10 +277,11 @@ impl DesktopAuth {
         }
     }
 
-    /// `auth_status`: whether any account exists.
+    /// `auth_status`: whether any account exists (`initialized`, kept on the
+    /// wire; Banto v8.0.0's built-in `admin` row is no account).
     pub async fn status(&self) -> Result<AuthStatusResult, CommandError> {
         Ok(AuthStatusResult {
-            initialized: self.auth().auth().users().is_initialized().await?,
+            initialized: self.auth().auth().has_accounts().await?,
             viewer_public: false,
         })
     }
@@ -408,11 +409,15 @@ impl DesktopAuth {
         if auth.settings().auth_config().await?.disabled {
             return Ok(self.login_result(LoginOutcome::AuthDisabled));
         }
-        let identity = match auth
-            .users()
-            .setup_first_user(username, password, display_name)
-            .await
-        {
+        // The check and the INSERT under the transition lock (Banto v7's
+        // `setup_first_user` made them one statement); released before the
+        // install, which takes it again.
+        let created = {
+            let _lock = self.auth().gate().await;
+            auth.create_first_admin(username, password, display_name)
+                .await
+        };
+        let identity = match created {
             Ok(identity) => identity,
             Err(error @ BantoError::Validation { .. }) => return Err(error.into()),
             Err(other) => {

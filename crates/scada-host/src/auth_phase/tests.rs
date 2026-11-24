@@ -65,7 +65,7 @@ async fn auth_config(host: &AuthHost) -> AuthSettings {
 }
 
 async fn transition(host: &AuthHost, password: &str) -> Result<Transitioned, TransitionError> {
-    host.transition_to_operational("admin", password, "管理者", || true)
+    host.transition_to_operational("chief", password, "管理者", || true)
         .await
 }
 
@@ -90,7 +90,7 @@ async fn first_start_creates_the_auth_db_with_auth_disabled_mode_on() {
     assert!(dir.db().exists());
     assert_initialized(&host, &dir).await;
     assert!(AuthPhase::Initializing.admits_registry());
-    assert!(!host.auth().users().is_initialized().await.unwrap());
+    assert!(!host.auth().has_accounts().await.unwrap());
 }
 
 #[tokio::test]
@@ -135,10 +135,15 @@ async fn an_interrupted_first_start_resumes_from_the_db_step() {
 #[tokio::test]
 async fn bootstrapping_reconfigures_whatever_the_db_holds() {
     let dir = TempDir::new();
-    // A DB left by an earlier attempt with the mode saved off.
+    // A DB left by an earlier attempt with another mode role saved (Banto
+    // v8.0.0 refuses the mode off while there is no administrator).
     let auth = HostAuth::open(dir.db()).await.unwrap();
     auth.settings()
-        .set_auth_config(&AuthSettings::default())
+        .set_auth_config(&AuthSettings {
+            disabled: true,
+            disabled_role: Role::Viewer,
+            ..AuthSettings::default()
+        })
         .await
         .unwrap();
     drop(auth);
@@ -231,7 +236,7 @@ async fn the_transition_creates_the_admin_and_ends_auth_disabled_mode() {
     let current = done.session.expect("the admin's session");
     match &current.session {
         DesktopSession::Account(identity) => {
-            assert_eq!(identity.username, "admin");
+            assert_eq!(identity.username, "chief");
             assert_eq!(identity.role, Role::Admin);
         }
         other => panic!("expected the admin account, got {other:?}"),
@@ -251,7 +256,7 @@ async fn the_transition_creates_the_admin_and_ends_auth_disabled_mode() {
     assert_eq!(host.phase().await, AuthPhase::Operational);
     assert_eq!(session(&host).await, None);
     assert!(matches!(
-        host.auth().login("admin", PASSWORD).await.unwrap(),
+        host.auth().login("chief", PASSWORD).await.unwrap(),
         LoginOutcome::LoggedIn(_)
     ));
 }
@@ -274,19 +279,24 @@ async fn the_transition_needs_the_synthetic_admin_session_in_initializing() {
         Err(TransitionError::NotAllowed)
     ));
 
-    host.auth()
-        .set_auth_config(&AuthSettings {
-            disabled: false,
-            ..config
-        })
+    // The mode saved off by a write outside the host: Banto v8.0.0 refuses
+    // it through the settings while there is no administrator.
+    let raw = sqlx::SqlitePool::connect_with(
+        sqlx::sqlite::SqliteConnectOptions::new().filename(dir.db()),
+    )
+    .await
+    .unwrap();
+    sqlx::query("UPDATE settings SET value = 'false' WHERE key = 'auth.disabled'")
+        .execute(&raw)
         .await
         .unwrap();
+    assert!(!auth_config(&host).await.disabled);
     assert!(matches!(
         transition(&host, PASSWORD).await,
         Err(TransitionError::NotAllowed)
     ));
     assert_eq!(dir.saved_phase(), phase_json("initializing"));
-    assert!(!host.auth().users().is_initialized().await.unwrap());
+    assert!(!host.auth().has_accounts().await.unwrap());
 }
 
 #[tokio::test]
@@ -294,12 +304,12 @@ async fn a_busy_registry_refuses_the_transition_without_saving() {
     let dir = TempDir::new();
     let host = AuthHost::start(&dir.0).await.unwrap();
     let refused = host
-        .transition_to_operational("admin", PASSWORD, "管理者", || false)
+        .transition_to_operational("chief", PASSWORD, "管理者", || false)
         .await;
     assert!(matches!(refused, Err(TransitionError::Busy)));
     assert_eq!(host.phase().await, AuthPhase::Initializing);
     assert_eq!(dir.saved_phase(), phase_json("initializing"));
-    assert!(!host.auth().users().is_initialized().await.unwrap());
+    assert!(!host.auth().has_accounts().await.unwrap());
     assert!(auth_config(&host).await.disabled);
 }
 
@@ -328,7 +338,7 @@ async fn an_existing_admin_is_verified_instead_of_created() {
     let host = AuthHost::start(&dir.0).await.unwrap();
     host.auth()
         .users()
-        .setup_first_user("admin", PASSWORD, "管理者")
+        .create_user("chief", PASSWORD, "管理者", Role::Admin)
         .await
         .unwrap();
     host.auth()
@@ -365,7 +375,7 @@ async fn an_interrupted_transition_resumes_after_a_restart() {
         let dir = TempDir::new();
         let host = AuthHost::start(&dir.0).await.unwrap();
         let crashed = host
-            .transition_with("admin", PASSWORD, "管理者", || true, &mut crash_at(stop))
+            .transition_with("chief", PASSWORD, "管理者", || true, &mut crash_at(stop))
             .await;
         assert!(
             matches!(crashed, Err(TransitionError::Crashed(point)) if point == stop),
@@ -387,7 +397,7 @@ async fn an_interrupted_transition_resumes_after_a_restart() {
             );
         }
         let busy = host
-            .transition_to_operational("admin", PASSWORD, "管理者", || false)
+            .transition_to_operational("chief", PASSWORD, "管理者", || false)
             .await;
         assert!(matches!(busy, Err(TransitionError::Busy)), "{stop:?}");
 
@@ -395,8 +405,12 @@ async fn an_interrupted_transition_resumes_after_a_restart() {
         assert!(done.session.is_some(), "{stop:?}");
         assert_eq!(dir.saved_phase(), phase_json("operational"));
         assert!(!auth_config(&host).await.disabled);
+        let accounts = host.auth().users().list_users().await.unwrap();
         assert_eq!(
-            host.auth().users().list_users().await.unwrap().len(),
+            accounts
+                .iter()
+                .filter(|user| user.kind == banto_admin_services::users::UserKind::Account)
+                .count(),
             1,
             "{stop:?}"
         );
@@ -409,7 +423,7 @@ async fn a_crash_after_the_completion_point_leads_to_a_normal_login() {
     let host = AuthHost::start(&dir.0).await.unwrap();
     let crashed = host
         .transition_with(
-            "admin",
+            "chief",
             PASSWORD,
             "管理者",
             || true,
@@ -430,7 +444,7 @@ async fn a_crash_after_the_completion_point_leads_to_a_normal_login() {
         Err(TransitionError::NotAllowed)
     ));
     assert!(matches!(
-        host.auth().login("admin", PASSWORD).await.unwrap(),
+        host.auth().login("chief", PASSWORD).await.unwrap(),
         LoginOutcome::LoggedIn(_)
     ));
 }
@@ -441,7 +455,7 @@ async fn accounts_without_an_admin_refuse_the_transition_before_step_one() {
     let host = AuthHost::start(&dir.0).await.unwrap();
     host.auth()
         .users()
-        .setup_first_user("first", PASSWORD, "")
+        .create_user("first", PASSWORD, "", Role::Admin)
         .await
         .unwrap();
     // Banto keeps the last admin; only an outside write removes it.
@@ -450,7 +464,7 @@ async fn accounts_without_an_admin_refuse_the_transition_before_step_one() {
     )
     .await
     .unwrap();
-    sqlx::query("UPDATE users SET role = 'viewer'")
+    sqlx::query("UPDATE users SET role = 'viewer' WHERE kind = 'account'")
         .execute(&raw)
         .await
         .unwrap();

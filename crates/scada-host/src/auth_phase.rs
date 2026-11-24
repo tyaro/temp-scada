@@ -326,13 +326,18 @@ impl AuthHost {
                     return Err(TransitionError::NotAllowed);
                 }
                 // Accounts without an administrator could neither create one
-                // (Banto creates only the very first account) nor verify one,
-                // so step 1 would leave a transition that cannot finish.
-                let users = self.auth.users();
-                let has_admin = users.has_admin().await.map_err(TransitionError::Auth)?;
+                // (only the very first account is created here) nor verify
+                // one, so step 1 would leave a transition that cannot finish.
+                let has_admin = self
+                    .auth
+                    .users()
+                    .has_admin()
+                    .await
+                    .map_err(TransitionError::Auth)?;
                 if !has_admin
-                    && users
-                        .is_initialized()
+                    && self
+                        .auth
+                        .has_accounts()
                         .await
                         .map_err(TransitionError::Auth)?
                 {
@@ -366,10 +371,10 @@ impl AuthHost {
             .await
             .map_err(TransitionError::Auth)?;
         let admin = if !has_admin && config.disabled {
+            // Under the phase lock, which every account change takes.
             let created = self
                 .auth
-                .users()
-                .setup_first_user(username, password, display_name)
+                .create_first_admin(username, password, display_name)
                 .await
                 .map_err(TransitionError::Auth)?;
             self.auth

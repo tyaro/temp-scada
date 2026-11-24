@@ -358,7 +358,7 @@ fn a_logout_ends_the_subscription_events_of_its_generation() {
     let moved = h
         .invoke(
             "auth_transition_to_operational",
-            json!({"username": "admin", "password": "correct-horse-1", "displayName": "管理者"}),
+            json!({"username": "chief", "password": "correct-horse-1", "displayName": "管理者"}),
         )
         .unwrap();
     let attached = h

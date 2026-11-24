@@ -459,7 +459,7 @@ fn the_write_key_commands_need_an_admin_in_operation() {
     let auth = app.state::<crate::auth::AuthState>();
     let host = auth.get().unwrap();
     tauri::async_runtime::block_on(async {
-        host.transition_to_operational("admin", "Passw0rd!Passw0rd", "管理者")
+        host.transition_to_operational("chief", "Passw0rd!Passw0rd", "管理者")
             .await
             .unwrap();
         host.logout().await.unwrap();
@@ -543,7 +543,7 @@ fn a_key_change_waiting_while_the_admin_logs_out_changes_nothing() {
         };
         tauri::async_runtime::block_on(async {
             // The move signs the new Admin in.
-            host.transition_to_operational("admin", "Passw0rd!Passw0rd", "管理者")
+            host.transition_to_operational("chief", "Passw0rd!Passw0rd", "管理者")
                 .await
                 .unwrap();
             log.key_registered(1_000, &key).await.unwrap();
