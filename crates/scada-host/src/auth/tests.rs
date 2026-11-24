@@ -89,8 +89,8 @@ async fn open_applies_banto_migrations_once_and_starts_in_auth_disabled_mode() {
         DesktopSession::AuthDisabledLocal(_)
     ));
     assert_eq!(current.session.role(), Role::Admin);
-    // The built-in `admin` row (0014) is no account.
-    assert!(!auth.has_accounts().await.unwrap());
+    // The built-in `admin` row (0014) is no administrator who can log in.
+    assert!(!auth.users().has_admin().await.unwrap());
     drop(auth);
 
     let _auth = HostAuth::open(db.path()).await.unwrap();
@@ -249,8 +249,28 @@ async fn an_auth_db_created_before_banto_v8_is_refused() {
         .unwrap();
     assert!(matches!(
         HostAuth::open(db.path()).await,
-        Err(BantoError::Storage(_))
+        Err(AuthOpenError::Outdated)
     ));
+}
+
+#[tokio::test]
+async fn the_reserved_name_admin_is_refused_ignoring_case() {
+    // Banto v8.0.0 reserves the built-in `admin` for account names.
+    let db = TempDb::new();
+    let auth = HostAuth::open(db.path()).await.unwrap();
+    for name in ["admin", "Admin", "ADMIN"] {
+        let refused = auth
+            .users()
+            .create_user(name, PASSWORD, "", Role::Admin)
+            .await;
+        assert!(
+            matches!(&refused, Err(BantoError::Validation { field_errors })
+                if field_errors[0].field == "username"),
+            "{name}: {refused:?}"
+        );
+    }
+    assert!(!auth.users().has_admin().await.unwrap());
+    drop(db);
 }
 
 #[tokio::test]

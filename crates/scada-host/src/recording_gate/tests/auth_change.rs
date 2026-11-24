@@ -238,15 +238,14 @@ async fn a_no_op_logout_in_auth_disabled_mode_keeps_the_current_generation() {
 #[tokio::test]
 async fn the_move_to_operation_waits_for_quiescence_and_revokes_the_synthetic_sessions() {
     let f = initializing().await;
+    create_admin(&f).await;
     let reference = subscription_ref(&f.gate.attach(attach(&f.scope, "attach-1")).await.unwrap());
     let p = preflighted(&f, "transition-change").await;
     let (_, old) = f.gate.held(LeaseRole::Mutation).unwrap();
 
     // A Candidate of the synthetic principal: nothing is saved.
     assert!(matches!(
-        f.gate
-            .transition_to_operational("chief", PASSWORD, "管理者")
-            .await,
+        f.gate.transition_to_operational("chief", PASSWORD).await,
         Err(TransitionError::Busy)
     ));
     assert_eq!(f.auth.phase().await, AuthPhase::Initializing);
@@ -264,7 +263,7 @@ async fn the_move_to_operation_waits_for_quiescence_and_revokes_the_synthetic_se
     discard(&f, &p, "discard").await;
     let done = f
         .gate
-        .transition_to_operational("chief", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD)
         .await
         .unwrap();
     let admin = done.session.expect("the administrator is logged in");
@@ -645,6 +644,7 @@ async fn logout_waits_for_a_command_that_already_validated_the_session() {
 #[tokio::test]
 async fn the_move_to_operation_ends_the_synthetic_subscriptions_even_if_the_refresh_fails() {
     let f = initializing().await;
+    create_admin(&f).await;
     // The synthetic session fills every live subscription slot.
     let mut references = Vec::new();
     for index in 0..4 {
@@ -670,7 +670,7 @@ async fn the_move_to_operation_ends_the_synthetic_subscriptions_even_if_the_refr
     });
     let admin = f
         .gate
-        .transition_to_operational("chief", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD)
         .await
         .unwrap()
         .session

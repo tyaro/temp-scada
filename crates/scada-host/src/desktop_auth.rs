@@ -50,8 +50,8 @@ pub enum CommandError {
     /// `{"kind": "auth_unavailable", "reason": ...}`.
     Unavailable(&'static str),
     /// A refusal of this host's own: `{"kind": ...}`.
-    /// `auth_transition_to_operational`: `not_allowed`, `busy`,
-    /// `invalid_credentials`, `not_admin` or `save`. User management and
+    /// `auth_transition_to_operational`: `not_allowed`, `no_admin_account`,
+    /// `busy`, `invalid_credentials`, `not_admin` or `save`. User management and
     /// `auth_config_apply`: `not_allowed` (the auth mode is switched only by
     /// the move to operation) or `busy` (the registry holds unsettled work
     /// of the principal the change would end; nothing was changed).
@@ -92,6 +92,7 @@ impl From<TransitionError> for CommandError {
     fn from(error: TransitionError) -> Self {
         match error {
             TransitionError::NotAllowed => Self::Refused("not_allowed"),
+            TransitionError::NoAdminAccount => Self::Refused("no_admin_account"),
             TransitionError::Busy => Self::Refused("busy"),
             TransitionError::InvalidCredentials => Self::Refused("invalid_credentials"),
             TransitionError::NotAdmin => Self::Refused("not_admin"),
@@ -112,6 +113,7 @@ pub fn startup_reason(error: &StartupError) -> &'static str {
         StartupError::PhaseLost => "phase_lost",
         StartupError::AuthDbMissing(_) => "auth_db_missing",
         StartupError::Save => "save",
+        StartupError::AuthDbOutdated => "auth_db_outdated",
         StartupError::Auth(_) => "auth_db",
         #[cfg(test)]
         StartupError::Crashed(_) => "crashed",
@@ -122,7 +124,6 @@ pub fn startup_reason(error: &StartupError) -> &'static str {
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthStatusResult {
-    pub initialized: bool,
     /// Always `false` in the desktop window (Banto's).
     pub viewer_public: bool,
 }
@@ -138,7 +139,7 @@ pub struct AuthPhaseResult {
     pub has_admin: bool,
 }
 
-/// `auth_login` and `auth_setup`.
+/// `auth_login`.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct LoginResult {
     pub success: bool,
@@ -277,11 +278,10 @@ impl DesktopAuth {
         }
     }
 
-    /// `auth_status`: whether any account exists (`initialized`, kept on the
-    /// wire; Banto v8.0.0's built-in `admin` row is no account).
+    /// `auth_status`: Banto v8.0.0's desktop answer (no `initialized`; the
+    /// first-run setup is gone).
     pub async fn status(&self) -> Result<AuthStatusResult, CommandError> {
         Ok(AuthStatusResult {
-            initialized: self.auth().auth().has_accounts().await?,
             viewer_public: false,
         })
     }
@@ -394,52 +394,6 @@ impl DesktopAuth {
         Ok(self.login_result(outcome))
     }
 
-    /// `auth_setup`: create the very first account and log in as it. Banto
-    /// refuses it while auth-disabled mode is on, so on this host the first
-    /// administrator is made by the move to operation instead (design §6);
-    /// this stays for `createTauriAuthProvider`'s `setup()`.
-    pub async fn setup(
-        &self,
-        username: &str,
-        password: &str,
-        display_name: &str,
-    ) -> Result<LoginResult, CommandError> {
-        let auth = self.auth().auth();
-        let seq_at_entry = auth.seq();
-        if auth.settings().auth_config().await?.disabled {
-            return Ok(self.login_result(LoginOutcome::AuthDisabled));
-        }
-        // The check and the INSERT under the transition lock (Banto v7's
-        // `setup_first_user` made them one statement); released before the
-        // install, which takes it again.
-        let created = {
-            let _lock = self.auth().gate().await;
-            auth.create_first_admin(username, password, display_name)
-                .await
-        };
-        let identity = match created {
-            Ok(identity) => identity,
-            Err(error @ BantoError::Validation { .. }) => return Err(error.into()),
-            Err(other) => {
-                return Ok(LoginResult {
-                    success: false,
-                    error: Some(other.to_string()),
-                    superseded: false,
-                    seq: auth.seq(),
-                })
-            }
-        };
-        auth.record_ok(&identity, "setup", "auth", None, None).await;
-        let outcome = match self.gate() {
-            Some(gate) => gate.install_account(seq_at_entry, identity).await?,
-            None => {
-                let _lock = self.auth().gate().await;
-                auth.install_login(seq_at_entry, identity).await?
-            }
-        };
-        Ok(self.login_result(outcome))
-    }
-
     /// `auth_logout`: the generation after it. A no-op in auth-disabled mode.
     pub async fn logout(&self) -> Result<LogoutResult, CommandError> {
         let seq = match self.gate() {
@@ -502,17 +456,13 @@ impl DesktopAuth {
         &self,
         username: &str,
         password: &str,
-        display_name: &str,
     ) -> Result<TransitionResult, CommandError> {
         let Transitioned { session } = match self.gate() {
-            Some(gate) => {
-                gate.transition_to_operational(username, password, display_name)
-                    .await?
-            }
+            Some(gate) => gate.transition_to_operational(username, password).await?,
             // No registry: nothing can be left unsettled.
             None => {
                 self.auth()
-                    .transition_to_operational(username, password, display_name, || true)
+                    .transition_to_operational(username, password, || true)
                     .await?
             }
         };

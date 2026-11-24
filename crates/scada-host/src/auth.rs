@@ -15,7 +15,7 @@ use std::sync::Mutex;
 use banto_admin_services::audit::{AuditActor, AuditEntry, AuditLogService};
 use banto_admin_services::settings::{AuthSettings, SettingsService};
 pub use banto_admin_services::users::UserIdentity;
-use banto_admin_services::users::{bound_username_for_audit, UserKind, UsersService};
+use banto_admin_services::users::{bound_username_for_audit, ReservedUsernames, UsersService};
 pub use banto_admin_services::Role;
 pub use banto_core::BantoError;
 use banto_storage::Db;
@@ -126,6 +126,24 @@ struct AuthSlot {
     seq: u64,
 }
 
+/// Why the auth DB did not open.
+#[derive(Debug)]
+pub enum AuthOpenError {
+    /// The DB was made before Banto v8.0.0: its migration history does not
+    /// match this build's (v8.0.0 rewrote 0003 / 0005 in place and has no
+    /// data migration). It is never re-created or changed here; the user
+    /// sets it aside together with `auth-phase.json`.
+    Outdated,
+    /// Any other failure to open, migrate or read the DB.
+    Auth(BantoError),
+}
+
+impl From<BantoError> for AuthOpenError {
+    fn from(error: BantoError) -> Self {
+        Self::Auth(error)
+    }
+}
+
 pub struct HostAuth {
     users: UsersService,
     settings: SettingsService,
@@ -137,11 +155,14 @@ impl HostAuth {
     /// Open (creating if missing) the auth DB at `path`, apply the copied
     /// Banto migrations and install the initial session: the synthetic
     /// session while auth-disabled mode is on, otherwise none.
-    pub async fn open(path: impl AsRef<Path>) -> Result<Self, BantoError> {
+    pub async fn open(path: impl AsRef<Path>) -> Result<Self, AuthOpenError> {
         let db = Db::connect_sqlite(path).await?;
         migrate(&db).await?;
         let auth = Self {
-            users: UsersService::new(db.clone()),
+            // Banto's wiring: `admin` (ignoring case) is reserved by the
+            // service itself; SCADA registers no grant, so no other name.
+            users: UsersService::new(db.clone())
+                .with_reserved_usernames(ReservedUsernames::default()),
             settings: SettingsService::new(db.clone()),
             audit: AuditLogService::new(db),
             slot: Mutex::new(AuthSlot::default()),
@@ -474,40 +495,6 @@ impl HostAuth {
             .await;
     }
 
-    /// Whether any account (`users.kind = 'account'`) exists. Banto v8.0.0
-    /// removed `UsersService::is_initialized` ("any `users` row"); its new
-    /// baseline always holds the one built-in `admin` row, so counting the
-    /// account rows is what "initialized" meant before (Banto v7's
-    /// `setup_first_user` created the first row only while there was none).
-    pub async fn has_accounts(&self) -> Result<bool, BantoError> {
-        Ok(self
-            .users
-            .list_users()
-            .await?
-            .iter()
-            .any(|user| user.kind == UserKind::Account))
-    }
-
-    /// Create the very first account as an Admin, the SCADA flows' stand-in
-    /// for Banto v7's `setup_first_user` (removed in v8.0.0): refused with
-    /// the same error once any account exists. The check and the INSERT are
-    /// two statements, so the caller holds the transition lock
-    /// ([`crate::auth_phase::AuthHost::gate`]) that every account change
-    /// on this host runs under.
-    pub(crate) async fn create_first_admin(
-        &self,
-        username: &str,
-        password: &str,
-        display_name: &str,
-    ) -> Result<UserIdentity, BantoError> {
-        if self.has_accounts().await? {
-            return Err(BantoError::Other("既に初期化されています".to_string()));
-        }
-        self.users
-            .create_user(username, password, display_name, Role::Admin)
-            .await
-    }
-
     /// Move the session validated at `validated` to the account's new epoch
     /// after its own password change, and return the slot generation. Only
     /// that session: a logout and a new login of the same account meanwhile
@@ -640,16 +627,20 @@ impl HostAuth {
 /// v7.7.0 (SCADA registers no permission catalog yet). 0014 adds Banto
 /// v8.0.0's `ui_settings` table and the built-in `admin` row; 0015 writes the
 /// auth mode of a new DB (no login, role Admin). v8.0.0 rewrote 0003 / 0005 in
-/// place, so an auth DB created before it fails the checksum here and has to
-/// be re-created (there is no data migration).
-async fn migrate(db: &Db) -> Result<(), BantoError> {
+/// place, so an auth DB created before it fails the checksum here
+/// ([`AuthOpenError::Outdated`]; there is no data migration).
+async fn migrate(db: &Db) -> Result<(), AuthOpenError> {
     let pool = db
         .as_sqlite()
         .ok_or_else(|| BantoError::Storage("auth DB must be SQLite".to_string()))?;
     sqlx::migrate!("./migrations-sqlite")
         .run(pool)
         .await
-        .map_err(|error| BantoError::Storage(error.to_string()))
+        .map_err(|error| match error {
+            sqlx::migrate::MigrateError::VersionMismatch(_)
+            | sqlx::migrate::MigrateError::VersionMissing(_) => AuthOpenError::Outdated,
+            other => AuthOpenError::Auth(BantoError::Storage(other.to_string())),
+        })
 }
 
 fn local_session(role: Role) -> DesktopSession {

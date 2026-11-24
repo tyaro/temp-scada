@@ -57,7 +57,6 @@ pub const BOTH: &[&str] = &[
     "auth_logout",
     "auth_resolve",
     "auth_change_password",
-    "auth_setup",
     "users_list",
     "users_create",
     "users_update",

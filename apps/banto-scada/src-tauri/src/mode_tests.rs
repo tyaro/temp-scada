@@ -347,7 +347,7 @@ fn editor_only_calls() -> Vec<(&'static str, Value)> {
         ("recording_control", json!({"request": request})),
         (
             "auth_transition_to_operational",
-            json!({"username": "chief", "password": "Passw0rd!Passw0rd", "displayName": "管理者"}),
+            json!({"username": "chief", "password": "Passw0rd!Passw0rd"}),
         ),
         (
             "auth_config_apply",

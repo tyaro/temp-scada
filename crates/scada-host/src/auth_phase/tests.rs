@@ -65,8 +65,16 @@ async fn auth_config(host: &AuthHost) -> AuthSettings {
 }
 
 async fn transition(host: &AuthHost, password: &str) -> Result<Transitioned, TransitionError> {
-    host.transition_to_operational("chief", password, "管理者", || true)
+    host.transition_to_operational("chief", password, || true)
         .await
+}
+
+/// The administrator made in user management by the synthetic Admin
+/// session, as Banto v8.0.0 has it (no first-run setup).
+async fn create_admin(host: &AuthHost) {
+    crate::user_admin::create_user(host.auth(), "chief", PASSWORD, "管理者", Role::Admin)
+        .await
+        .unwrap();
 }
 
 async fn assert_initialized(host: &AuthHost, dir: &TempDir) {
@@ -90,7 +98,7 @@ async fn first_start_creates_the_auth_db_with_auth_disabled_mode_on() {
     assert!(dir.db().exists());
     assert_initialized(&host, &dir).await;
     assert!(AuthPhase::Initializing.admits_registry());
-    assert!(!host.auth().has_accounts().await.unwrap());
+    assert!(!host.auth().users().has_admin().await.unwrap());
 }
 
 #[tokio::test]
@@ -227,9 +235,30 @@ async fn one_host_per_data_dir() {
 }
 
 #[tokio::test]
-async fn the_transition_creates_the_admin_and_ends_auth_disabled_mode() {
+async fn without_an_admin_account_the_transition_is_refused_before_step_one() {
     let dir = TempDir::new();
     let host = AuthHost::start(&dir.0).await.unwrap();
+    assert!(matches!(
+        transition(&host, PASSWORD).await,
+        Err(TransitionError::NoAdminAccount)
+    ));
+    // Nothing was saved and no account was created.
+    assert_initialized(&host, &dir).await;
+    assert!(host
+        .auth()
+        .users()
+        .list_users()
+        .await
+        .unwrap()
+        .iter()
+        .all(|user| user.kind != banto_admin_services::users::UserKind::Account));
+}
+
+#[tokio::test]
+async fn the_transition_verifies_an_admin_made_in_user_management() {
+    let dir = TempDir::new();
+    let host = AuthHost::start(&dir.0).await.unwrap();
+    create_admin(&host).await;
     let local_seq = host.auth().seq();
 
     let done = transition(&host, PASSWORD).await.unwrap();
@@ -296,20 +325,19 @@ async fn the_transition_needs_the_synthetic_admin_session_in_initializing() {
         Err(TransitionError::NotAllowed)
     ));
     assert_eq!(dir.saved_phase(), phase_json("initializing"));
-    assert!(!host.auth().has_accounts().await.unwrap());
 }
 
 #[tokio::test]
 async fn a_busy_registry_refuses_the_transition_without_saving() {
     let dir = TempDir::new();
     let host = AuthHost::start(&dir.0).await.unwrap();
+    create_admin(&host).await;
     let refused = host
-        .transition_to_operational("chief", PASSWORD, "管理者", || false)
+        .transition_to_operational("chief", PASSWORD, || false)
         .await;
     assert!(matches!(refused, Err(TransitionError::Busy)));
     assert_eq!(host.phase().await, AuthPhase::Initializing);
     assert_eq!(dir.saved_phase(), phase_json("initializing"));
-    assert!(!host.auth().has_accounts().await.unwrap());
     assert!(auth_config(&host).await.disabled);
 }
 
@@ -317,6 +345,7 @@ async fn a_busy_registry_refuses_the_transition_without_saving() {
 async fn the_transition_waits_for_the_gate_and_the_gate_sees_its_phase() {
     let dir = TempDir::new();
     let host = AuthHost::start(&dir.0).await.unwrap();
+    create_admin(&host).await;
     let gate = host.gate().await;
     assert_eq!(gate.phase(), AuthPhase::Initializing);
     let blocked =
@@ -333,14 +362,10 @@ async fn the_transition_waits_for_the_gate_and_the_gate_sees_its_phase() {
 }
 
 #[tokio::test]
-async fn an_existing_admin_is_verified_instead_of_created() {
+async fn wrong_or_non_admin_credentials_are_refused_after_step_one() {
     let dir = TempDir::new();
     let host = AuthHost::start(&dir.0).await.unwrap();
-    host.auth()
-        .users()
-        .create_user("chief", PASSWORD, "管理者", Role::Admin)
-        .await
-        .unwrap();
+    create_admin(&host).await;
     host.auth()
         .users()
         .create_user("viewer", PASSWORD, "閲覧者", Role::Viewer)
@@ -352,7 +377,7 @@ async fn an_existing_admin_is_verified_instead_of_created() {
         Err(TransitionError::InvalidCredentials)
     ));
     assert!(matches!(
-        host.transition_to_operational("viewer", PASSWORD, "", || true)
+        host.transition_to_operational("viewer", PASSWORD, || true)
             .await,
         Err(TransitionError::NotAdmin)
     ));
@@ -374,8 +399,9 @@ async fn an_interrupted_transition_resumes_after_a_restart() {
     ] {
         let dir = TempDir::new();
         let host = AuthHost::start(&dir.0).await.unwrap();
+        create_admin(&host).await;
         let crashed = host
-            .transition_with("chief", PASSWORD, "管理者", || true, &mut crash_at(stop))
+            .transition_with("chief", PASSWORD, || true, &mut crash_at(stop))
             .await;
         assert!(
             matches!(crashed, Err(TransitionError::Crashed(point)) if point == stop),
@@ -386,18 +412,16 @@ async fn an_interrupted_transition_resumes_after_a_restart() {
         let host = AuthHost::start(&dir.0).await.unwrap();
         assert_eq!(host.phase().await, AuthPhase::Transitioning, "{stop:?}");
         assert_eq!(dir.saved_phase(), phase_json("transitioning"));
-        if stop != Checkpoint::Transitioning {
-            // The administrator exists: the credentials must verify.
-            assert!(
-                matches!(
-                    transition(&host, "wrong-password-1").await,
-                    Err(TransitionError::InvalidCredentials)
-                ),
-                "{stop:?}"
-            );
-        }
+        // The resumed move verifies the credentials again.
+        assert!(
+            matches!(
+                transition(&host, "wrong-password-1").await,
+                Err(TransitionError::InvalidCredentials)
+            ),
+            "{stop:?}"
+        );
         let busy = host
-            .transition_to_operational("chief", PASSWORD, "管理者", || false)
+            .transition_to_operational("chief", PASSWORD, || false)
             .await;
         assert!(matches!(busy, Err(TransitionError::Busy)), "{stop:?}");
 
@@ -421,11 +445,11 @@ async fn an_interrupted_transition_resumes_after_a_restart() {
 async fn a_crash_after_the_completion_point_leads_to_a_normal_login() {
     let dir = TempDir::new();
     let host = AuthHost::start(&dir.0).await.unwrap();
+    create_admin(&host).await;
     let crashed = host
         .transition_with(
             "chief",
             PASSWORD,
-            "管理者",
             || true,
             &mut crash_at(Checkpoint::Operational),
         )
@@ -471,7 +495,7 @@ async fn accounts_without_an_admin_refuse_the_transition_before_step_one() {
 
     assert!(matches!(
         transition(&host, PASSWORD).await,
-        Err(TransitionError::NotAllowed)
+        Err(TransitionError::NoAdminAccount)
     ));
     assert_eq!(dir.saved_phase(), phase_json("initializing"));
     assert!(auth_config(&host).await.disabled);

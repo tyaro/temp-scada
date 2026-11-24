@@ -367,9 +367,21 @@ impl Fixture {
         }
     }
 
-    async fn transition(&self) {
+    async fn create_admin(&self) {
         self.auth
-            .transition_to_operational("chief", "correct-horse-1", "管理者", || true)
+            .auth()
+            .users()
+            .create_user("chief", "correct-horse-1", "管理者", Role::Admin)
+            .await
+            .unwrap();
+    }
+
+    async fn transition(&self) {
+        if !self.auth.auth().users().has_admin().await.unwrap() {
+            self.create_admin().await;
+        }
+        self.auth
+            .transition_to_operational("chief", "correct-horse-1", || true)
             .await
             .unwrap();
     }
@@ -1218,9 +1230,10 @@ async fn the_view_is_blocked_by_the_rules_of_the_write() {
     assert_eq!(view.slots.len(), 4);
     assert!(view.slots.iter().all(|slot| slot.latest.is_none()));
     // A transition stopped after its first step, then the operation phase.
+    fx.create_admin().await;
     assert!(fx
         .auth
-        .transition_to_operational("chief", "wrong", "管理者", || true)
+        .transition_to_operational("chief", "wrong", || true)
         .await
         .is_err());
     assert_blocked(

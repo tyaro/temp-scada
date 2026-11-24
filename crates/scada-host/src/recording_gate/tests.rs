@@ -71,15 +71,26 @@ async fn initializing() -> Fixture {
     gate_in(TempDir::new()).await
 }
 
+/// The administrator `chief`, made in user management before the move to
+/// operation (Banto v8.0.0: no first-run setup).
+async fn create_admin(fixture: &Fixture) {
+    fixture
+        .auth
+        .auth()
+        .users()
+        .create_user("chief", PASSWORD, "管理者", Role::Admin)
+        .await
+        .unwrap();
+}
+
 /// `operational` with the administrator `admin` logged in and a Viewer
 /// account `viewer`.
 async fn operational() -> Fixture {
     let fixture = initializing().await;
+    create_admin(&fixture).await;
     fixture
         .auth
-        .transition_to_operational("chief", PASSWORD, "管理者", || {
-            fixture.gate.lock().is_quiescent()
-        })
+        .transition_to_operational("chief", PASSWORD, || fixture.gate.lock().is_quiescent())
         .await
         .unwrap();
     fixture

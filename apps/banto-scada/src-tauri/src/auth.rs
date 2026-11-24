@@ -87,19 +87,6 @@ pub async fn auth_phase(state: State<'_, AuthState>) -> Result<AuthPhaseResult, 
 }
 
 #[tauri::command]
-pub async fn auth_setup(
-    state: State<'_, AuthState>,
-    username: String,
-    password: String,
-    display_name: String,
-) -> Result<LoginResult, CommandError> {
-    state
-        .get()?
-        .setup(&username, &password, &display_name)
-        .await
-}
-
-#[tauri::command]
 pub async fn auth_login(
     state: State<'_, AuthState>,
     username: String,
@@ -136,12 +123,11 @@ pub async fn auth_transition_to_operational(
     state: State<'_, AuthState>,
     username: String,
     password: String,
-    display_name: String,
 ) -> Result<TransitionResult, Guarded<CommandError>> {
     mode.require_editor()?;
     Ok(state
         .get()?
-        .transition_to_operational(&username, &password, &display_name)
+        .transition_to_operational(&username, &password)
         .await?)
 }
 

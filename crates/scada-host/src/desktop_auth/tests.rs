@@ -29,10 +29,20 @@ async fn first_start() -> (TempDir, DesktopAuth) {
     (dir, DesktopAuth::new(auth))
 }
 
+/// The administrator made in user management by the synthetic Admin
+/// session (Banto v8.0.0: no first-run setup).
+async fn create_admin(desktop: &DesktopAuth) {
+    desktop
+        .users_create("chief", PASSWORD, "管理者", Role::Admin)
+        .await
+        .unwrap();
+}
+
 async fn operational() -> (TempDir, DesktopAuth) {
     let (dir, desktop) = first_start().await;
+    create_admin(&desktop).await;
     desktop
-        .transition_to_operational("chief", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD)
         .await
         .unwrap();
     (dir, desktop)
@@ -51,7 +61,7 @@ async fn the_first_start_serves_the_synthetic_admin_and_refuses_logins() {
     );
     assert_eq!(
         wire(&desktop.status().await.unwrap()),
-        json!({"initialized": false, "viewerPublic": false})
+        json!({"viewerPublic": false})
     );
     let resolved = desktop.resolve().await.unwrap();
     assert_eq!(
@@ -66,9 +76,6 @@ async fn the_first_start_serves_the_synthetic_admin_and_refuses_logins() {
     let refused = desktop.login("chief", PASSWORD).await.unwrap();
     assert!(!refused.success && !refused.superseded);
     assert_eq!(refused.seq, resolved.current);
-    let refused = desktop.setup("chief", PASSWORD, "管理者").await.unwrap();
-    assert!(!refused.success);
-    assert!(!desktop.status().await.unwrap().initialized);
     // Logout is a no-op while the mode keeps the synthetic session.
     assert_eq!(desktop.logout().await.unwrap().seq, resolved.current);
     // The synthetic session owns no password.
@@ -84,11 +91,39 @@ async fn the_first_start_serves_the_synthetic_admin_and_refuses_logins() {
 }
 
 #[tokio::test]
-async fn the_move_to_operation_signs_the_administrator_in() {
+async fn the_move_to_operation_needs_an_admin_made_in_user_management() {
     let (_dir, desktop) = first_start().await;
+    // No administrator account: refused, the phase unchanged.
+    assert_eq!(
+        wire(
+            &desktop
+                .transition_to_operational("chief", PASSWORD)
+                .await
+                .unwrap_err()
+        ),
+        json!({"kind": "no_admin_account"})
+    );
+    assert_eq!(
+        wire(&desktop.phase().await.unwrap()),
+        json!({"phase": "initializing", "authDisabled": true, "hasAdmin": false})
+    );
+    // `admin` is Banto's reserved name, ignoring case.
+    for name in ["admin", "Admin"] {
+        assert_eq!(
+            wire(
+                &desktop
+                    .users_create(name, PASSWORD, "", Role::Admin)
+                    .await
+                    .unwrap_err()
+            )["kind"],
+            "validation"
+        );
+    }
+    create_admin(&desktop).await;
+    assert!(desktop.phase().await.unwrap().has_admin);
     let before = desktop.resolve().await.unwrap().current;
     let moved = desktop
-        .transition_to_operational("chief", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD)
         .await
         .unwrap();
     assert!(moved.signed_in);
@@ -112,7 +147,7 @@ async fn the_move_to_operation_signs_the_administrator_in() {
     assert_eq!(
         wire(
             &desktop
-                .transition_to_operational("chief", PASSWORD, "管理者")
+                .transition_to_operational("chief", PASSWORD)
                 .await
                 .unwrap_err()
         ),
@@ -158,34 +193,26 @@ async fn login_logout_and_the_own_password_change_report_the_generation() {
         )["kind"],
         "validation"
     );
-    assert!(desktop.status().await.unwrap().initialized);
-    // The account exists, so Banto's first-account setup is refused.
-    assert!(
-        !desktop
-            .setup("other", PASSWORD, "別")
-            .await
-            .unwrap()
-            .success
-    );
 }
 
 #[tokio::test]
 async fn a_failed_move_reports_its_kind() {
     let (_dir, desktop) = first_start().await;
-    // Banto's username validation: a field error, nothing saved.
+    create_admin(&desktop).await;
+    // Unknown credentials are refused after step 1.
     assert_eq!(
         wire(
             &desktop
-                .transition_to_operational("", PASSWORD, "管理者")
+                .transition_to_operational("", PASSWORD)
                 .await
                 .unwrap_err()
-        )["kind"],
-        "validation"
+        ),
+        json!({"kind": "invalid_credentials"})
     );
     assert_eq!(desktop.phase().await.unwrap().phase, "transitioning");
     // The re-run verifies once the administrator exists.
     desktop
-        .transition_to_operational("chief", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD)
         .await
         .unwrap();
     assert_eq!(desktop.phase().await.unwrap().phase, "operational");
@@ -200,8 +227,18 @@ fn errors_serialize_as_banto_error_bodies() {
         json!({"kind": "auth_unavailable", "reason": "phase_lost"})
     );
     assert_eq!(
+        wire(&CommandError::Unavailable(startup_reason(
+            &StartupError::AuthDbOutdated
+        ))),
+        json!({"kind": "auth_unavailable", "reason": "auth_db_outdated"})
+    );
+    assert_eq!(
         wire(&CommandError::from(TransitionError::Busy)),
         json!({"kind": "busy"})
+    );
+    assert_eq!(
+        wire(&CommandError::from(TransitionError::NoAdminAccount)),
+        json!({"kind": "no_admin_account"})
     );
     assert_eq!(
         wire(&CommandError::from(BantoError::Unauthorized)),
@@ -229,11 +266,10 @@ fn every_command_future_is_send(desktop: &DesktopAuth) {
     send(desktop.status());
     send(desktop.phase());
     send(desktop.login("", ""));
-    send(desktop.setup("", "", ""));
     send(desktop.logout());
     send(desktop.resolve());
     send(desktop.change_password("", ""));
-    send(desktop.transition_to_operational("", "", ""));
+    send(desktop.transition_to_operational("", ""));
     send(desktop.users_list());
     send(desktop.users_create("", "", "", Role::Viewer));
     send(desktop.users_update(0, "", Role::Viewer));
@@ -414,7 +450,7 @@ async fn the_auth_mode_is_not_switched_and_a_lowered_local_role_can_raise_itself
     assert_eq!(
         wire(
             &desktop
-                .transition_to_operational("chief", PASSWORD, "管理者")
+                .transition_to_operational("chief", PASSWORD)
                 .await
                 .unwrap_err()
         ),
@@ -426,8 +462,9 @@ async fn the_auth_mode_is_not_switched_and_a_lowered_local_role_can_raise_itself
         desktop.resolve().await.unwrap().identity.unwrap().role,
         "admin"
     );
+    create_admin(&desktop).await;
     desktop
-        .transition_to_operational("chief", PASSWORD, "管理者")
+        .transition_to_operational("chief", PASSWORD)
         .await
         .unwrap();
     // In operation the escape hatch is gone: Admin only.
