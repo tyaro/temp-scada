@@ -456,7 +456,12 @@ const SCALES: [f64; 10] = [1.0, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9];
 /// 0.5 を 0 から遠い方へ丸める。
 fn round_to(value: f64, digits: u32) -> f64 {
     let scale = SCALES[digits as usize];
-    let rounded = (value.abs() * scale).round() / scale;
+    let scaled = value.abs() * scale;
+    // 桁へ寄せた中間の値が有限でなければ、丸めずに返す（有限の値を無限にしない）。
+    if !scaled.is_finite() {
+        return value;
+    }
+    let rounded = scaled.round() / scale;
     if value < 0.0 {
         -rounded
     } else {

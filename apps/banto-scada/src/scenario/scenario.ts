@@ -286,7 +286,10 @@ function modulo(value: number, divisor: number): number {
 function roundTo(value: number, digits: number): number {
   const scale = 10 ** digits;
   // 正の数では Math.round の同点（+∞ 側）と 0 から遠い方が一致する。
-  const rounded = Math.round(Math.abs(value) * scale) / scale;
+  const scaled = Math.abs(value) * scale;
+  // 桁へ寄せた中間の値が有限でなければ、丸めずに返す（有限の値を無限にしない）。
+  if (!Number.isFinite(scaled)) return value;
+  const rounded = Math.round(scaled) / scale;
   return value < 0 ? -rounded : rounded;
 }
 

@@ -15,13 +15,13 @@
         },
         {
           "amplitude": 0.6,
-          "periodSec": 7.5701,
-          "shiftSec": -2.0482
+          "periodSec": 7.570102779734442,
+          "shiftSec": -2.0481927710843375
         },
         {
           "amplitude": 0.4,
-          "periodSec": 2.72,
-          "shiftSec": -0.3896
+          "periodSec": 2.7199936394716824,
+          "shiftSec": -0.38961038961038963
         }
       ],
       "digits": 1
@@ -57,13 +57,13 @@
       "waves": [
         {
           "amplitude": 0.24,
-          "periodSec": 7.5701,
-          "shiftSec": -4.0964
+          "periodSec": 7.570102779734442,
+          "shiftSec": -4.096385542168675
         },
         {
-          "amplitude": 0.16,
-          "periodSec": 2.72,
-          "shiftSec": -0.7792
+          "amplitude": 0.16000000000000003,
+          "periodSec": 2.7199936394716824,
+          "shiftSec": -0.7792207792207793
         }
       ],
       "digits": 1
@@ -94,13 +94,13 @@
       "waves": [
         {
           "amplitude": 0.24,
-          "periodSec": 7.5701,
-          "shiftSec": -6.1446
+          "periodSec": 7.570102779734442,
+          "shiftSec": -6.144578313253012
         },
         {
-          "amplitude": 0.16,
-          "periodSec": 2.72,
-          "shiftSec": -1.1688
+          "amplitude": 0.16000000000000003,
+          "periodSec": 2.7199936394716824,
+          "shiftSec": -1.1688311688311688
         }
       ],
       "digits": 1
@@ -130,13 +130,13 @@
       "waves": [
         {
           "amplitude": 0.72,
-          "periodSec": 7.5701,
-          "shiftSec": -8.1928
+          "periodSec": 7.570102779734442,
+          "shiftSec": -8.19277108433735
         },
         {
           "amplitude": 0.48,
-          "periodSec": 2.72,
-          "shiftSec": -1.5584
+          "periodSec": 2.7199936394716824,
+          "shiftSec": -1.5584415584415585
         }
       ],
       "points": [
@@ -159,13 +159,13 @@
       "waves": [
         {
           "amplitude": 0.0024,
-          "periodSec": 7.5701,
-          "shiftSec": -10.241
+          "periodSec": 7.570102779734442,
+          "shiftSec": -10.240963855421688
         },
         {
           "amplitude": 0.0016,
-          "periodSec": 2.72,
-          "shiftSec": -1.9481
+          "periodSec": 2.7199936394716824,
+          "shiftSec": -1.948051948051948
         }
       ],
       "points": [
@@ -232,13 +232,13 @@
         },
         {
           "amplitude": 0.012,
-          "periodSec": 7.5701,
-          "shiftSec": -12.2892
+          "periodSec": 7.570102779734442,
+          "shiftSec": -12.289156626506024
         },
         {
           "amplitude": 0.008,
-          "periodSec": 2.72,
-          "shiftSec": -2.3377
+          "periodSec": 2.7199936394716824,
+          "shiftSec": -2.3376623376623376
         }
       ],
       "digits": 2
@@ -265,13 +265,13 @@
         },
         {
           "amplitude": 0.024,
-          "periodSec": 7.5701,
-          "shiftSec": -14.3373
+          "periodSec": 7.570102779734442,
+          "shiftSec": -14.337349397590362
         },
         {
           "amplitude": 0.016,
-          "periodSec": 2.72,
-          "shiftSec": -2.7273
+          "periodSec": 2.7199936394716824,
+          "shiftSec": -2.727272727272727
         }
       ],
       "digits": 2
@@ -300,25 +300,25 @@
       "waves": [
         {
           "amplitude": 0.18,
-          "periodSec": 7.5701,
-          "shiftSec": -16.3855
+          "periodSec": 7.570102779734442,
+          "shiftSec": -16.3855421686747
         },
         {
           "amplitude": 0.12,
-          "periodSec": 2.72,
-          "shiftSec": -3.1169
+          "periodSec": 2.7199936394716824,
+          "shiftSec": -3.116883116883117
         }
       ],
       "points": [
         [0, 12.4],
-        [51, 12.4],
-        [51, 24.6],
-        [85, 24.6],
-        [85, 12.4],
-        [141, 12.4],
-        [141, 24.6],
-        [175, 24.6],
-        [175, 12.4],
+        [50.50607820926054, 12.4],
+        [50.50607820926054, 24.6],
+        [84.49392179073946, 24.6],
+        [84.49392179073946, 12.4],
+        [140.50607820926052, 12.4],
+        [140.50607820926052, 24.6],
+        [174.49392179073948, 24.6],
+        [174.49392179073948, 12.4],
         [180, 12.4]
       ],
       "digits": 1
@@ -357,13 +357,13 @@
       "waves": [
         {
           "amplitude": 0.18,
-          "periodSec": 7.5701,
-          "shiftSec": -18.4337
+          "periodSec": 7.570102779734442,
+          "shiftSec": -18.433734939759034
         },
         {
           "amplitude": 0.12,
-          "periodSec": 2.72,
-          "shiftSec": -3.5065
+          "periodSec": 2.7199936394716824,
+          "shiftSec": -3.506493506493506
         }
       ],
       "digits": 1
@@ -390,13 +390,13 @@
         },
         {
           "amplitude": 0.048,
-          "periodSec": 7.5701,
-          "shiftSec": -20.4819
+          "periodSec": 7.570102779734442,
+          "shiftSec": -20.481927710843376
         },
         {
           "amplitude": 0.032,
-          "periodSec": 2.72,
-          "shiftSec": -3.8961
+          "periodSec": 2.7199936394716824,
+          "shiftSec": -3.896103896103896
         }
       ],
       "digits": 2
@@ -415,14 +415,14 @@
       "base": 64,
       "waves": [
         {
-          "amplitude": 0.9,
-          "periodSec": 7.5701,
-          "shiftSec": -22.5301
+          "amplitude": 0.8999999999999999,
+          "periodSec": 7.570102779734442,
+          "shiftSec": -22.53012048192771
         },
         {
-          "amplitude": 0.6,
-          "periodSec": 2.72,
-          "shiftSec": -4.2857
+          "amplitude": 0.6000000000000001,
+          "periodSec": 2.7199936394716824,
+          "shiftSec": -4.285714285714286
         }
       ],
       "digits": 1
@@ -484,24 +484,24 @@
       }
     },
     {
-      "atSec": 31,
-      "durationSec": 68,
+      "atSec": 31.309932474020215,
+      "durationSec": 67.38013505195957,
       "values": {
         "WWT.P201.State": 1,
         "WWT.P201.Run": true
       }
     },
     {
-      "atSec": 51,
-      "durationSec": 34,
+      "atSec": 50.50607820926054,
+      "durationSec": 33.98784358147893,
       "values": {
         "WWT.B302.State": 1,
         "WWT.B302.Run": true
       }
     },
     {
-      "atSec": 141,
-      "durationSec": 34,
+      "atSec": 140.50607820926052,
+      "durationSec": 33.987843581478955,
       "values": {
         "WWT.B302.State": 1,
         "WWT.B302.Run": true
@@ -536,16 +536,16 @@
       }
     },
     {
-      "atSec": 42,
-      "durationSec": 86,
+      "atSec": 42.04802187907617,
+      "durationSec": 85.90395624184765,
       "values": {
         "WWT.P501.State": 1,
         "WWT.P501.Run": true
       }
     },
     {
-      "atSec": 128,
-      "durationSec": 94,
+      "atSec": 127.95197812092383,
+      "durationSec": 94.09604375815235,
       "values": {
         "WWT.Out.Flow": 0
       }

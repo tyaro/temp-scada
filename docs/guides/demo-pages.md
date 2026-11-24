@@ -70,6 +70,8 @@ Project は [`examples/demo-water.project.json`](../../examples/demo-water.proje
 
 pH は 55〜75 秒ごろに H（8.5）を越え、薬注ポンプが動く。溶存酸素が下がるとブロワー 2 号が動く。
 
+2026-11-24 に筋書きを `water.ts` から JSON へ移した（#389）。揺らぎの波と、薬注・ブロワー 2 号・放流ポンプが切り替わる位相は、旧い式と同じ値を小数まで書いた（`demo.test.ts` が境界の秒と `at=77` の pH 8.49 を固定する）。旧版との差は 2 つだけ。運転時間・積算は起点を `epochSec`（2026-01-01）にしたので数値が変わった。原水槽の液位は丸めの方法（旧は `toFixed`、新は 0.5 を 0 から遠い方へ）の違いで、一巡 3600 点のうち約 1 % で 0.1 ずれる。
+
 ![編集モード（ライト）](../assets/demo/water-edit-light.png)
 
 ![編集モード（ダーク）](../assets/demo/water-edit-dark.png)
