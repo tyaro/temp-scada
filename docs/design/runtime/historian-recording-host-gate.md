@@ -42,6 +42,7 @@
 認証DBのschemaは、Banto admin-templateのSQLite migrationのうちSCADAが使うものを`crates/scada-host/migrations-sqlite/`へそのままコピーし、`HostAuth::open`が起動のたびに未適用のものを当てる（2026-11-17時点で0002〜0005・0007・0008・0010。itemsの0001・0009と添付の0006は使わない）。
 
 - **v8.0.0より前のDB**（2026-11-24）: v8.0.0は0003・0005を書き換えたので、それより前の認証DBは開けない。hostは自動で作り直さず、起動の理由`auth_db_outdated`で認証・記録のcommandを断る（読み取り・編集は続く）。利用者はアプリを終了し、認証DBと`auth-phase.json`を一緒に退避する。
+- **起動時の検査**（2026-11-24）: `HostAuth::open`はmigrationの後、Banto admin-templateの`startup::check(&db, Wiring::Desktop)`と同じ条件を確かめる（`UsersService::check_startup`で組み込みの`admin`の行がちょうど1つ・予約名と同じ名前のアカウントが無いこと、ログイン必須のときはログインできる管理者のアカウントがあること）。テンプレートは依存に入れないので、条件をhostに写している。通らないDBは直接書き換えたときだけ生じ、hostは直さず、起動の理由`auth_db_refused`で認証・記録のcommandを断る（読み取り・編集は続く。Bantoの文言は標準エラーへ出す）。利用者はバックアップから戻すか、認証DBと`auth-phase.json`を一緒に退避する。
 - **戻せない**: migrationを当てた後は、`_sqlx_migrations`に新しい番号が残る。旧版のbuildはその番号を知らないので、起動時のmigration検証で認証DBを拒否する。依存やアプリを戻すだけでは旧版へ戻れない。
 - **更新前の退避**: migrationが増える更新（Bantoの版上げを含む）を運用中のPCへ入れる前に、アプリを止めて、data dirの`scada-auth.sqlite3`を`-wal`・`-shm`と一緒に別名へ複写して残す。旧版へ戻すときもアプリを止めてから、旧版のアプリと、この複写を一緒に戻す。DB本体と`-wal`・`-shm`は同じ複写の組で置き換え、別の時点のものを混ぜない（複写に`-wal`・`-shm`が無ければ、残っている`-wal`・`-shm`は消す）。複写の後に記録された利用者・設定・監査の変更は失われる。
 - **試験**: 旧版の形のDB（0008まで）に監査行を入れてから開き、行が残ることと、0010の`recordResource`・`recordId`の絞り込みを確かめる（`crates/scada-host/src/auth/tests.rs`の`opening_a_v7_0_db_keeps_its_audit_rows_and_scopes_them_by_record`）。

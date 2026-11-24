@@ -221,6 +221,11 @@ describe("describeError", () => {
       describeError({ kind: "auth_unavailable", reason: "auth_db_outdated" })
         .message,
     ).toContain("認証DBと auth-phase.json を一緒に退避");
+    // Fails Banto's startup check (a direct edit): nothing is repaired.
+    expect(
+      describeError({ kind: "auth_unavailable", reason: "auth_db_refused" })
+        .message,
+    ).toContain("起動時の検査に通りません");
     expect(
       describeError({ kind: "auth_unavailable", reason: "new_reason" }).message,
     ).toContain("new_reason");

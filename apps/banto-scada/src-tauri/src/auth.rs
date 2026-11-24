@@ -45,6 +45,9 @@ impl AuthState {
             }
             Err(error) => {
                 let reason = startup_reason(&error);
+                // The UI shows the reason; the cause (Banto's message for a
+                // refused startup check) goes to the console.
+                eprintln!("[banto-scada] auth did not start ({reason}): {error:?}");
                 (Self(Err(reason)), DesktopRecording::unavailable(reason))
             }
         }
