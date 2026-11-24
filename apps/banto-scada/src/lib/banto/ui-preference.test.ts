@@ -9,21 +9,23 @@ function heldProvider(stored: Record<string, string> = {}) {
   let inflight = 0;
   let maxInflight = 0;
   let getFails = false;
+  let revision = 0;
   const provider: UiSettingsProvider = {
     async get(key) {
       if (getFails) throw new Error("blocked");
-      return stored[key] ?? null;
+      const value = stored[key] ?? null;
+      return { value, revision: value === null ? "0" : `r${revision}` };
     },
     set(key, value) {
       sent.push(value);
       inflight++;
       maxInflight = Math.max(maxInflight, inflight);
-      return new Promise<void>((resolve, reject) => {
+      return new Promise<{ revision: string }>((resolve, reject) => {
         pending.push({
           resolve: () => {
             inflight--;
             stored[key] = value;
-            resolve();
+            resolve({ revision: `r${++revision}` });
           },
           reject: (e) => {
             inflight--;
@@ -31,6 +33,10 @@ function heldProvider(stored: Record<string, string> = {}) {
           },
         });
       });
+    },
+    async remove(key) {
+      delete stored[key];
+      return { revision: "0" };
     },
   };
   return {
@@ -110,12 +116,16 @@ describe("createUiPreference", () => {
     const sent: string[] = [];
     const provider: UiSettingsProvider = {
       async get() {
-        return null;
+        return { value: null, revision: "0" };
       },
       async set(_key, value) {
         sent.push(value);
         const outcome = outcomes.shift() ?? "ok";
         if (outcome !== "ok") throw outcome;
+        return { revision: `r${sent.length}` };
+      },
+      async remove() {
+        return { revision: "0" };
       },
     };
     return { provider, sent };

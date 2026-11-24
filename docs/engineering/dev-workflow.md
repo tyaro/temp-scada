@@ -57,7 +57,7 @@
 - Rust: `source scripts/cloud-env.sh; export CARGO_INCREMENTAL=0` の後、`cargo test -p scada-host` など。
 - src-tauri: 一時の `apps/banto-scada/src-tauri/icons/icon.png`（32x32 の PNG を python で生成。コミット前に消す）を置き、`cargo test --locked`・`cargo clippy --locked --all-targets`（2 分を超えるので background で実行）。
 - TS: scratchpad の `nm/` に `{}` の package.json を置き、`npm install --legacy-peer-deps svelte@5.57.2 svelte-check@4.7.7 typescript@6.0.3 vite@8.3.4 vitest@5.0.5 @sveltejs/vite-plugin-svelte@7.3.1 @tauri-apps/api@2.12.1 ajv@8.20.0 fflate@0.8.3 prettier@3.9.10 prettier-plugin-svelte@4.1.1 @playwright/test@1.63.0`。
-  - Banto の clone（`git clone --depth 1 --branch v7.10.0 https://github.com/tyaro/banto.git`）から `packages/{admin-core,ui,theme}` などを `nm/node_modules/@banto/` へ copy し、`apps/banto-scada/node_modules` をそこへ symlink する。
+  - Banto の clone（`git clone --depth 1 --branch v8.0.0 https://github.com/tyaro/banto.git`）から `packages/{admin-core,ui,theme}` などを `nm/node_modules/@banto/` へ copy し、`apps/banto-scada/node_modules` をそこへ symlink する。
   - トレンドの共通部品は banto-industrial の clone（`--branch trend-v0.1.0`）から `packages/trend` を `nm/node_modules/@banto-industrial/trend` へ、その依存の `@banto/charts` は Banto `v7.8.0` の `packages/charts` から copy する（#359）。
   - vitest 5 では `vi.fn().mockRejectedValue` が reject を未処理扱いにして試験が落ちる。reject を返す invoke は手書きの関数にする。
 - e2e: ルートの `node_modules/{@playwright/test,playwright,playwright-core}` へ symlink し、`apps/banto-scada` で `vite --host 127.0.0.1 --port 5173` を起動して、`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/opt/pw-browsers/chromium-1243/chrome-linux64/chrome node node_modules/@playwright/test/cli.js test <spec> --trace off`。初回は vite の起動が遅いので、最初の操作の poll は長め（30 秒）にする。
