@@ -230,5 +230,6 @@ docs/
 - [Bantoへの共通機能引渡し](reviews/banto-contribution-handoff.md)：Issue・実装／テスト資産・受入候補
 - [Bantoへの還元候補と採用境界](reviews/banto-contribution-candidates.md)：追加候補・TreeViewとの差分・優先順位
 - [Hub／ChronoGazerとの保存・参照検証・編集履歴の調査](reviews/cross-app-document-history-research.md)
+- [警報サーバーの決定（banto-industrial#725）の影響](reviews/alarm-server-decision-impact-2026-11-25.md)：2026-11-25 の洗い出し。設計の変更は凍結明け
 - [再現fixture](reviews/banto-dock-fixture/README.md)
 - [Industrial設計スナップショット](upstream/industrial/README.md)：出典・固定commitは開発計画を参照
