@@ -232,6 +232,12 @@ fn errors_serialize_as_banto_error_bodies() {
         json!({"kind": "auth_unavailable", "reason": "auth_db_outdated"})
     );
     assert_eq!(
+        wire(&CommandError::Unavailable(startup_reason(
+            &StartupError::AuthDbRefused(BantoError::Other("edited".to_string()))
+        ))),
+        json!({"kind": "auth_unavailable", "reason": "auth_db_refused"})
+    );
+    assert_eq!(
         wire(&CommandError::from(TransitionError::Busy)),
         json!({"kind": "busy"})
     );

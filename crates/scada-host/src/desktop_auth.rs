@@ -114,6 +114,7 @@ pub fn startup_reason(error: &StartupError) -> &'static str {
         StartupError::AuthDbMissing(_) => "auth_db_missing",
         StartupError::Save => "save",
         StartupError::AuthDbOutdated => "auth_db_outdated",
+        StartupError::AuthDbRefused(_) => "auth_db_refused",
         StartupError::Auth(_) => "auth_db",
         #[cfg(test)]
         StartupError::Crashed(_) => "crashed",

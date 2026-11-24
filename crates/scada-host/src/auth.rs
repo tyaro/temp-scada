@@ -134,6 +134,12 @@ pub enum AuthOpenError {
     /// data migration). It is never re-created or changed here; the user
     /// sets it aside together with `auth-phase.json`.
     Outdated,
+    /// The DB opened but fails Banto's startup check (`startup::check` of
+    /// the admin template, `Wiring::Desktop`): not exactly one built-in
+    /// `admin` row, an account with a reserved name, or login required
+    /// without an administrator account that can log in. Only a direct edit
+    /// of the DB gets here; nothing is repaired. The message is Banto's.
+    Refused(BantoError),
     /// Any other failure to open, migrate or read the DB.
     Auth(BantoError),
 }
@@ -168,10 +174,36 @@ impl HostAuth {
             slot: Mutex::new(AuthSlot::default()),
         };
         let config = auth.settings.auth_config().await?;
+        auth.check_startup(&config).await?;
         if config.disabled {
             auth.lock().session = Some(local_session(config.disabled_role));
         }
         Ok(auth)
+    }
+
+    /// Banto v8.0.0's startup check for the desktop wiring (the admin
+    /// template's `startup::check(&db, Wiring::Desktop)`, ADR-0034 §2/§4/§6),
+    /// over this host's services: `UsersService::check_startup` and, when
+    /// login is required, an administrator account that can log in. The
+    /// template is not a dependency, so the two conditions are repeated
+    /// here; the auth mode was already read strictly by the caller.
+    async fn check_startup(&self, config: &AuthSettings) -> Result<(), AuthOpenError> {
+        // A failed read (`Storage`: a lock, an I/O error) checked nothing and
+        // stays `Auth`; only rows found inconsistent are `Refused`.
+        self.users
+            .check_startup()
+            .await
+            .map_err(|error| match error {
+                BantoError::Storage(_) => AuthOpenError::Auth(error),
+                other => AuthOpenError::Refused(other),
+            })?;
+        if !config.disabled && !self.users.has_admin().await? {
+            return Err(AuthOpenError::Refused(BantoError::Other(
+                "ログイン必須の設定なのに、ログインできる管理者のアカウントがありません。この DB は直接書き換えられた可能性があります"
+                    .to_string(),
+            )));
+        }
+        Ok(())
     }
 
     pub fn users(&self) -> &UsersService {

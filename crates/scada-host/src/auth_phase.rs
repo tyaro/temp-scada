@@ -96,6 +96,9 @@ pub enum StartupError {
     /// The auth DB was made before Banto v8.0.0 and does not open. It is
     /// not re-created; the user sets it aside with the phase record.
     AuthDbOutdated,
+    /// The auth DB fails Banto's startup check (a direct edit of the DB).
+    /// Nothing is repaired; the user restores a backup or sets it aside.
+    AuthDbRefused(BantoError),
     /// The auth DB could not be opened, migrated or configured.
     Auth(BantoError),
     /// Test fault injection only: the start stopped at this point, as a
@@ -108,6 +111,7 @@ impl From<AuthOpenError> for StartupError {
     fn from(error: AuthOpenError) -> Self {
         match error {
             AuthOpenError::Outdated => Self::AuthDbOutdated,
+            AuthOpenError::Refused(error) => Self::AuthDbRefused(error),
             AuthOpenError::Auth(error) => Self::Auth(error),
         }
     }

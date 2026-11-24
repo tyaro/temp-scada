@@ -85,6 +85,8 @@ const STARTUP_REASONS: Record<string, string> = {
   save: "認証フェーズを保存できません。",
   auth_db_outdated:
     "この認証DBは旧い版のものです。読み取りと編集は使えますが、認証と認証を要する操作は使えません。アプリを終了し、認証DBと auth-phase.json を一緒に退避してください。",
+  auth_db_refused:
+    "認証DBが起動時の検査に通りません（直接書き換えられた可能性があります）。読み取りと編集は使えますが、認証と認証を要する操作は使えません。アプリを終了し、バックアップから戻すか、認証DBと auth-phase.json を一緒に退避してください。",
   auth_db: "認証DBを開けません。",
 };
 

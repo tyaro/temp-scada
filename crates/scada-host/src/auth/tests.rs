@@ -253,6 +253,77 @@ async fn an_auth_db_created_before_banto_v8_is_refused() {
     ));
 }
 
+/// Open `db` after `edit` was run on it directly; the open must be refused
+/// by Banto's startup check with a message containing `needle`.
+async fn refused_after(db: &TempDb, edit: &str, needle: &str) {
+    sqlx::raw_sql(sqlx::AssertSqlSafe(edit.to_owned()))
+        .execute(&db.raw().await)
+        .await
+        .unwrap();
+    match HostAuth::open(db.path()).await {
+        Err(AuthOpenError::Refused(error)) => {
+            let message = error.to_string();
+            assert!(message.contains(needle), "{message}");
+        }
+        Err(other) => panic!("expected Refused, got {other:?}"),
+        Ok(_) => panic!("expected Refused, the DB opened"),
+    }
+}
+
+#[tokio::test]
+async fn a_db_without_the_built_in_admin_row_is_refused() {
+    let db = TempDb::new();
+    drop(HostAuth::open(db.path()).await.unwrap());
+    refused_after(
+        &db,
+        "DELETE FROM users WHERE kind = 'builtin'",
+        "admin の行がありません",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn a_users_read_that_fails_is_an_auth_error_not_a_refusal() {
+    // The check never ran (here the table cannot be read at all): this must
+    // not be reported as an edited DB to restore or set aside.
+    let db = TempDb::new();
+    drop(HostAuth::open(db.path()).await.unwrap());
+    sqlx::query("ALTER TABLE users RENAME TO users_gone")
+        .execute(&db.raw().await)
+        .await
+        .unwrap();
+    match HostAuth::open(db.path()).await {
+        Err(AuthOpenError::Auth(BantoError::Storage(_))) => {}
+        Err(other) => panic!("expected Auth(Storage), got {other:?}"),
+        Ok(_) => panic!("expected Auth(Storage), the DB opened"),
+    }
+}
+
+#[tokio::test]
+async fn an_account_named_like_the_built_in_admin_is_refused() {
+    let db = TempDb::new();
+    drop(HostAuth::open(db.path()).await.unwrap());
+    refused_after(
+        &db,
+        "INSERT INTO users (username, password_hash, display_name, role, kind, account_uid) \
+         VALUES ('Admin', 'x', '', 'viewer', 'account', 'uid-admin')",
+        "同じ名前のアカウント",
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn login_required_without_an_admin_account_is_refused() {
+    let (db, auth, admin) = with_admin().await;
+    drop(auth);
+    refused_after(
+        &db,
+        &format!("DELETE FROM users WHERE id = {}", admin.id),
+        "ログインできる管理者のアカウントがありません",
+    )
+    .await;
+}
+
 #[tokio::test]
 async fn the_reserved_name_admin_is_refused_ignoring_case() {
     // Banto v8.0.0 reserves the built-in `admin` for account names.
