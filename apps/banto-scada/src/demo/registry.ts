@@ -1,4 +1,4 @@
-import type { DemoScenario } from "./scenario";
+import { demoScenarioFrom, type DemoScenario } from "./scenario";
 
 /** トップページと入口が共有する題材の一覧。題材を足すときはここへ 1 件加える。 */
 export interface DemoSubject {
@@ -31,7 +31,10 @@ export const DEMO_SUBJECTS: readonly DemoSubject[] = [
       "3 分で一巡します。流入が増えて原水槽の液位が上がり、予備ポンプが起動、上限の警報が出て、送水で液位が下がります。途中で予備ポンプが故障します。",
     project: async () =>
       (await import("../../../../examples/demo-water.project.json")).default,
-    scenario: async () => (await import("./scenarios/water")).waterScenario,
+    scenario: async () =>
+      demoScenarioFrom(
+        (await import("./scenarios/water.scenario.json")).default,
+      ),
   },
 ];
 

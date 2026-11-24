@@ -32,8 +32,8 @@
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `apps/banto-scada/pages/`                      | Pages 用の `index.html`・`demo.html`                                                                  |
 | `apps/banto-scada/src/demo/registry.ts`        | 題材の一覧（トップページと入口が共有）と URL の読み方                                                 |
-| `apps/banto-scada/src/demo/scenario.ts`        | 筋書きの型（時刻だけで決まる値）・時計（`at` で止める）・補助                                         |
-| `apps/banto-scada/src/demo/scenarios/`         | 題材ごとの筋書き                                                                                      |
+| `apps/banto-scada/src/demo/scenario.ts`        | 筋書きの型（時刻だけで決まる値）・時計（`at` で止める）・版つきの JSON の筋書きからの変換             |
+| `apps/banto-scada/src/demo/scenarios/`         | 題材ごとの筋書き（[筋書きの形](../design/runtime/scenario-format.md)の JSON）                         |
 | `apps/banto-scada/src/demo/read-source.ts`     | 模擬値の読取 source。Project が読むタグ・slot を筋書きの値で満たし、製品の表示 DTO で渡す             |
 | `apps/banto-scada/src/demo/alarm-feed.ts`      | 模擬の警報 feed。Project の警報の定義を筋書きの値で評価し、発生・復帰・確認と履歴をブラウザの中で持つ |
 | `apps/banto-scada/src/demo/history-service.ts` | 模擬の履歴 service。保存トレンドの pen を系列にし、筋書きを過去の時刻で評価して応答を作る             |
@@ -43,7 +43,7 @@
 | `scripts/demo-projects/`                       | デモ用 Project の生成スクリプト                                                                       |
 
 - `App` には起動時の Project と表示を受ける prop `startup` を足した（`{ project, view }`。起動時に一度だけ読む）。無いときは従来どおり最小サンプルを表示プレビューで開く。
-- 筋書きは時刻（UNIX 秒）だけで値が決まる関数にしてある。現在値・警報・履歴トレンドが同じ筋書きを共有し、どの時刻の履歴も作れる。
+- 筋書きは時刻（UNIX 秒）だけで値が決まる。形は版つきの JSON（[筋書きの形](../design/runtime/scenario-format.md)）で、評価部は TypeScript と Rust の両方にあり、同じ時刻には同じ値を出す。現在値・警報・履歴トレンドが同じ筋書きを共有し、どの時刻の履歴も作れる。
 - 値の出所は `internal` にしている（Hub・PLC の値ではない）。`simulation` にすると製品の表示が全部の値に「SIM ·」を前置し、書式の見え方を確かめにくいため。模擬値であることは上記の 3 か所で示す。
 - 筋書きに無いタグは「未解決」のままにし、値を作らない。編集モードで足したタグ結合は「-- · 未解決」と出る。
 - 警報の遅延（onDelay・offDelay）は評価しない。ブザーは鳴らさない。警報の定義を編集しても、模擬の評価は起動時の定義のまま（製品の「適用」に当たる操作が無い）。
@@ -55,7 +55,7 @@
 
 ## 題材 1 排水処理設備（`water`）
 
-Project は [`examples/demo-water.project.json`](../../examples/demo-water.project.json)、筋書きは `apps/banto-scada/src/demo/scenarios/water.ts`。
+Project は [`examples/demo-water.project.json`](../../examples/demo-water.project.json)、筋書きは `apps/banto-scada/src/demo/scenarios/water.scenario.json`。
 
 - 画面: 全体フロー・原水ポンプ場・計測一覧と、運転表示のヘッダー（画面切替ボタン・時計・最新の警報の帯）・フッター。
 - 表現: 配管の矢印・分岐の点・交差のまたぎ（返送汚泥が空気の立ち上がりをまたぐ）、破線の薬品配管、槽の液位（縦・横）、数値の書式、機器（ポンプ・ブロワー・バルブ）の多値の状態色と状態の文字、bit のタグで色が変わる配管と文字、しきい値の警報の小札、表、履歴トレンドの札。
@@ -95,7 +95,7 @@ cargo run --locked -p scada-model -- validate examples/demo-water.project.json
 ## 題材を足す
 
 1. `scripts/demo-projects/` に題材の生成スクリプトを足し、`build.mjs` の出力へ加える。
-2. `apps/banto-scada/src/demo/scenarios/` に筋書きを足す。タグ名は Project と合わせる。
+2. `apps/banto-scada/src/demo/scenarios/` に筋書きの JSON を足す。タグ名は Project と合わせる。しきい値をまたぐ機器の状態（例: 液位が下がったらポンプを止める）は、またぐ時刻を出来事に書き下す。
 3. `apps/banto-scada/src/demo/registry.ts` の `DEMO_SUBJECTS` へ 1 件加える（トップページに入口が出る）。
 4. `apps/banto-scada/src/demo/demo.test.ts` の `SUBJECTS` と、`e2e/demo-pages.spec.ts` に題材の検証を足す。
 5. `.github/workflows/ci.yml` の `validate` に Project を足す。

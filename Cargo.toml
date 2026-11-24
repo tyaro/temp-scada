@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/scada-model", "crates/scada-runtime", "crates/scada-historian", "crates/scada-host", "crates/scada-alarm"]
+members = ["crates/scada-model", "crates/scada-runtime", "crates/scada-historian", "crates/scada-host", "crates/scada-alarm", "crates/scada-scenario"]
 exclude = ["apps/banto-scada/src-tauri"]
 
 [workspace.package]

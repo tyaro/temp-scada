@@ -1,5 +1,5 @@
 // 排水処理設備のデモ Project（架空の設備）。タグ名は
-// apps/banto-scada/src/demo/scenarios/water.ts の筋書きと対応する。
+// apps/banto-scada/src/demo/scenarios/water.scenario.json の筋書きと対応する。
 import {
   Canvas,
   boolDisplay,

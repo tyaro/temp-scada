@@ -16,12 +16,13 @@ import {
 } from "./registry";
 import {
   createDemoClock,
-  piecewise,
-  within,
+  demoScenarioFrom,
   type DemoClock,
   type DemoScenario,
 } from "./scenario";
-import { waterScenario } from "./scenarios/water";
+import waterScenarioJson from "./scenarios/water.scenario.json";
+
+const waterScenario = demoScenarioFrom(waterScenarioJson);
 
 // Pages のデモの契約。Project は現行の schema で読め、模擬値は製品の読取・警報・履歴の
 // 検査をそのまま通る。
@@ -76,21 +77,9 @@ describe("demo subjects", () => {
   });
 });
 
-describe("scenario helpers", () => {
-  it("interpolates between points and tests half-open ranges", () => {
-    const points = [
-      [0, 10],
-      [10, 30],
-      [20, 30],
-    ] as const;
-    expect(piecewise(points, 0)).toBe(10);
-    expect(piecewise(points, 5)).toBe(20);
-    expect(piecewise(points, 15)).toBe(30);
-    expect(within(5, [0, 5], [10, 20])).toBe(false);
-    expect(within(10, [0, 5], [10, 20])).toBe(true);
-  });
+describe("scenario clock", () => {
   it("freezes the clock at a phase of the cycle", () => {
-    const clock = createDemoClock({ cycleSec: 180 }, 70);
+    const clock = createDemoClock(waterScenario, 70);
     expect(clock.frozen).toBe(true);
     expect((clock.nowMs() / 1000) % 180).toBe(70);
     let calls = 0;
