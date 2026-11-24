@@ -37,6 +37,7 @@
 - 時間に頼る試験は、CI の遅さで境界をまたがないよう、判定の前に十分なゆとりを取る。vitest（node）では `$effect` が動かないので、scope の失効は e2e で確かめる。
 - ローカルの webServer は `reuseExistingServer`（CI では再利用しない）。別フォルダの vite が 5173 にいるとそのコードで試験が走る。使い回しの dev server が、rebase の途中で一時的に消えたファイルの import 失敗を覚えたままになることもある。そのときは別のポートで vite を起こし、`PLAYWRIGHT_BASE_URL` で走らせる。
 - Playwright が vite を毎回起こすと、最初の `goto` が 30 秒で時間切れになることがある。`pnpm dev` を先に起こして使い回す（ローカルだけ）。
+- CI の 4 シャードは、Playwright の `--shard`（本数で分ける）ではなく、`scripts/e2e-shard.mjs` がファイルの所要時間（`e2e/shard-durations.json`）で分ける。新しい spec は表に無くても中央値で数えるので漏れない。偏りが目立ってきたら、各シャードのログを `gh run view --job <id> --log > <file>` で落とし、`node scripts/e2e-shard.mjs --update <file>...` で表を作り直す。
 
 ## 不安定な試験と CI
 
