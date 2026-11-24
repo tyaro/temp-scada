@@ -18,9 +18,15 @@ const root = path.resolve(import.meta.dirname, "..");
 const e2eDir = path.join(root, "e2e");
 const tablePath = path.join(e2eDir, "shard-durations.json");
 
+// Playwright's default testMatch, applied to every file under testDir.
+const specPattern = /\.(spec|test)\.[cm]?[jt]sx?$/;
+
+// Paths relative to e2e/ with "/" separators, so they match the table keys and
+// the reporter output on every platform.
 function specFiles() {
-  return readdirSync(e2eDir)
-    .filter((name) => name.endsWith(".spec.ts"))
+  return readdirSync(e2eDir, { recursive: true })
+    .map((name) => name.split(path.sep).join("/"))
+    .filter((name) => specPattern.test(name))
     .sort();
 }
 
@@ -67,10 +73,10 @@ function update(logs) {
   for (const log of logs) {
     const totals = new Map();
     for (const line of readFileSync(log, "utf8").split("\n")) {
-      const match = /[✓✘]\s+\d+ e2e\/([^:]+\.spec\.ts):.*\(([^)]+)\)\s*$/.exec(
+      const match = /[✓✘]\s+\d+ e2e\/([^:]+):\d+:\d+ .*\(([^)]+)\)\s*$/.exec(
         line,
       );
-      if (!match) continue;
+      if (!match || !specPattern.test(match[1])) continue;
       const seconds = parseSeconds(match[2]);
       if (Number.isNaN(seconds)) continue;
       totals.set(match[1], (totals.get(match[1]) ?? 0) + seconds);
