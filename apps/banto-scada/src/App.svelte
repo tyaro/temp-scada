@@ -237,6 +237,7 @@
     createDockState,
     type DockCapabilities,
     type DockGestureKind,
+    type DockLayout,
     type DockPanelChange,
   } from "@banto/dock-svelte";
   import {
@@ -245,7 +246,9 @@
     DESIGNER_PANE_TITLES,
     designerDockLayout,
     keepDesignerPaneWidths,
+    pinDesignerDefaultPlaces,
     withDesignerPaneWidths,
+    withDesignerRootSizes,
   } from "./lib/designer/dock-layout";
   import { createDesignerDock } from "./lib/designer/controllers/designer-dock.svelte";
   // Screen settings live in the unselected Inspector (UX §5.5(b)); a reveal
@@ -406,6 +409,7 @@
     leftWidth: untrack(() => leftWidth),
     rightWidth: untrack(() => rightWidth),
   });
+  pinDesignerDefaultPlaces(designerDockState, designerInitialLayout);
   const designerDock = createDesignerDock(designerDockState, {
     get mode() {
       return mode;
@@ -610,6 +614,7 @@
     showMinimap = DEFAULT_PANEL_LAYOUT.minimap;
     showRulers = DEFAULT_PANEL_LAYOUT.rulers;
     previousPanels = null;
+    previousPaneSizes = null;
     void resetDesignerLayoutPreferences();
     report("success", "パネルの表示とサイズを標準に戻しました。", {
       toast: true,
@@ -626,6 +631,8 @@
     references: boolean;
   };
   let previousPanels = $state<AuxVisibility | null>(null);
+  /** 「補助パネルをすべて隠す」の前の dock の配置（戻すときに分割の幅を合わせ直す）。 */
+  let previousPaneSizes: DockLayout | null = null;
   let sidebarPanel = $state<HTMLElement>();
   /** 表に出ている左のパネル（Project を優先）。 */
   function frontSidebarPane(): HTMLElement | undefined {
@@ -650,6 +657,7 @@
   ) {
     canvasWorkspace?.preparePanelResize();
     previousPanels = null;
+    previousPaneSizes = null;
     const changes: Promise<unknown>[] = [];
     if (patch.sidebar !== undefined)
       changes.push(designerDock.setSidebar(patch.sidebar));
@@ -675,6 +683,7 @@
               .querySelector<HTMLButtonElement>("[data-permanent-menu]")
               ?.focus();
         });
+    return Promise.all(changes);
   }
   function setInspectorVisibility(visible: boolean, focus = false) {
     if (visible && focus) {
@@ -717,14 +726,26 @@
     }
     const current = panelVisibility();
     const restore = previousPanels;
-    if (restore) setAuxPanelVisibility(restore);
+    const sizes = previousPaneSizes;
+    if (restore)
+      void setAuxPanelVisibility(restore).then(() => {
+        // Banto v8 は隠した pane を 1 つずつ既定の場所へ戻し、後から戻した pane の分だけ
+        // 先に戻した pane の幅を縮める。まとめて隠す前の分割の幅に合わせ直す。
+        if (sizes && !designerNarrow && !designerGesture)
+          designerDockState.layout = withDesignerRootSizes(
+            designerDockState.layout,
+            sizes,
+          );
+      });
     else if (Object.values(current).some(Boolean)) {
+      const before = designerDockState.layout;
       setAuxPanelVisibility({
         sidebar: false,
         inspector: false,
         references: false,
       });
       previousPanels = current;
+      previousPaneSizes = designerNarrow ? null : before;
     } else
       setAuxPanelVisibility({
         sidebar: true,

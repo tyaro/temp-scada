@@ -152,6 +152,17 @@ export function describeError(raw: unknown): AuthCommandError {
 }
 
 /**
+ * The args of the `login` calls that are really this host's `auth_setup`.
+ * Banto v8 dropped `AuthProvider.setup`, but the host still creates its
+ * first administrator with its own `auth_setup` command, which answers like
+ * `auth_login` (a `LoginResult` with the slot `seq`). Sending it through the
+ * provider's `login` keeps the credential revision tracking (the pending
+ * command, its `seq`, the notification) the provider's own; the invoke below
+ * sends those args as `auth_setup` instead of `auth_login`.
+ */
+const firstAdminArgs = new WeakSet<object>();
+
+/**
  * The provider reads only Banto's error kinds. The host's own refusals
  * (`auth_unavailable`, ...) are passed on as an `Error` carrying the
  * Japanese message; the provider then treats the outcome as unknown and
@@ -159,8 +170,12 @@ export function describeError(raw: unknown): AuthCommandError {
  */
 function providerInvoke(invoke: Invoke): Invoke {
   return async (cmd, args) => {
+    const target =
+      cmd === "auth_login" && args && firstAdminArgs.has(args)
+        ? "auth_setup"
+        : cmd;
     try {
-      return await invoke(cmd, args);
+      return await invoke(target, args);
     } catch (raw) {
       if (isObject(raw) && raw.kind === "auth_unavailable")
         throw new Error(describeError(raw).message);
@@ -217,7 +232,9 @@ function parseSettings(value: unknown): AuthSettings {
 export interface NativeAuthClient {
   readonly provider: AuthProvider;
   phase(): Promise<AuthPhase>;
-  /** `auth_setup` through the provider: creates the very first account and
+  /** `auth_setup` (this host's own command; Banto v8 has no
+   * `AuthProvider.setup`) through the provider's `login`, so the provider
+   * still tracks the credential revision: creates the very first account and
    * signs in as it. The host refuses it while the auth-disabled mode is on
    * (the first administrator is then made by the move to operation). */
   setup(
@@ -259,9 +276,14 @@ export function createNativeAuthClient(invoke: Invoke): NativeAuthClient {
       return parsePhase(await call("auth_phase"));
     },
     async setup(username, password, displayName) {
-      if (!provider.setup)
-        throw new AuthCommandError(undefined, "最初の管理者を作成できません。");
-      return provider.setup({ username, password, displayName });
+      const args = { username, password, displayName };
+      firstAdminArgs.add(args);
+      try {
+        return await provider.login(args);
+      } catch (raw) {
+        // As Banto v7's `setup` did: a refusal is a failed result, not a throw.
+        return { success: false, error: describeError(raw).message };
+      }
     },
     async transitionToOperational(username, password, displayName) {
       const result = await call("auth_transition_to_operational", {

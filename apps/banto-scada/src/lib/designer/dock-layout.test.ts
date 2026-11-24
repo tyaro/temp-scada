@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { createDockState, type DockLayout } from "@banto/dock-svelte";
 import {
   designerDockLayout,
   frontLeftPanes,
   keepDesignerPaneWidths,
+  pinDesignerDefaultPlaces,
   withDesignerPaneWidths,
+  withDesignerRootSizes,
 } from "./dock-layout";
 
 describe("designerDockLayout", () => {
@@ -86,5 +89,44 @@ describe("designerDockLayout", () => {
     expect(narrow[1]).toBeCloseTo(320);
     expect(narrow[0] / narrow[2]).toBeCloseTo(240 / 288);
     expect(keepDesignerPaneWidths(layout, 1920, 1920)).toBe(layout);
+  });
+
+  it("まとめて隠す前と同じ区画の並びなら、根の分割の幅を前の値に合わせる", () => {
+    const before = designerDockLayout({
+      hostWidth: 1920,
+      leftWidth: 240,
+      rightWidth: 288,
+    });
+    const after = designerDockLayout({
+      hostWidth: 1920,
+      leftWidth: 200,
+      rightWidth: 288,
+    });
+    const fixed = withDesignerRootSizes(after, before);
+    expect(fixed.docked).toEqual(before.docked);
+    // 区画の pane が違えば（Inspector が戻っていない）そのまま。
+    const root = after.docked;
+    if (root?.type !== "split") throw new Error("split expected");
+    const withoutRight: DockLayout = {
+      ...after,
+      docked: {
+        ...root,
+        children: root.children.slice(0, 2),
+        sizes: [0.2, 0.8],
+      },
+    };
+    expect(withDesignerRootSizes(withoutRight, before)).toBe(withoutRight);
+  });
+
+  it("隠した pane を戻す既定の場所は Designer の既定の配置に固定する", () => {
+    const layout = designerDockLayout({
+      hostWidth: 1280,
+      leftWidth: 240,
+      rightWidth: 288,
+    });
+    const dock = createDockState();
+    pinDesignerDefaultPlaces(dock, layout);
+    dock.defaultLayout = null;
+    expect(dock.defaultLayout).toBe(layout);
   });
 });
