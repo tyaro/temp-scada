@@ -52,7 +52,11 @@
       "format": "banto-scenario",
       "version": 1,
       "cycleSec": 60,
-      "signals": { "A": { "base": 1 } }
+      "signals": {
+        "A": {
+          "base": 1
+        }
+      }
     }
   },
   {
@@ -61,7 +65,12 @@
       "format": "banto-scenario",
       "version": 1,
       "cycleSec": 60,
-      "signals": { "A": { "kind": "bit", "base": 1 } }
+      "signals": {
+        "A": {
+          "kind": "bit",
+          "base": 1
+        }
+      }
     }
   },
   {
@@ -70,7 +79,14 @@
       "format": "banto-scenario",
       "version": 1,
       "cycleSec": 60,
-      "signals": { "A": { "like": "B" }, "B": { "like": "A" } }
+      "signals": {
+        "A": {
+          "like": "B"
+        },
+        "B": {
+          "like": "A"
+        }
+      }
     }
   },
   {
@@ -79,7 +95,11 @@
       "format": "banto-scenario",
       "version": 1,
       "cycleSec": 60,
-      "signals": { "A": { "like": "Z" } }
+      "signals": {
+        "A": {
+          "like": "Z"
+        }
+      }
     }
   },
   {
@@ -89,8 +109,13 @@
       "version": 1,
       "cycleSec": 60,
       "signals": {
-        "A": { "kind": "bit" },
-        "B": { "like": "A", "kind": "number" }
+        "A": {
+          "kind": "bit"
+        },
+        "B": {
+          "like": "A",
+          "kind": "number"
+        }
       }
     }
   },
@@ -135,7 +160,15 @@
       "version": 1,
       "cycleSec": 60,
       "signals": {
-        "A": { "kind": "number", "waves": [{ "amplitude": 1, "periodSec": 0 }] }
+        "A": {
+          "kind": "number",
+          "waves": [
+            {
+              "amplitude": 1,
+              "periodSec": 0
+            }
+          ]
+        }
       }
     }
   },
@@ -145,7 +178,12 @@
       "format": "banto-scenario",
       "version": 1,
       "cycleSec": 60,
-      "signals": { "A": { "kind": "number", "digits": 10 } }
+      "signals": {
+        "A": {
+          "kind": "number",
+          "digits": 10
+        }
+      }
     }
   },
   {
@@ -154,7 +192,12 @@
       "format": "banto-scenario",
       "version": 1,
       "cycleSec": 60,
-      "signals": { "A": { "kind": "number", "digits": 1.5 } }
+      "signals": {
+        "A": {
+          "kind": "number",
+          "digits": 1.5
+        }
+      }
     }
   },
   {
@@ -163,7 +206,13 @@
       "format": "banto-scenario",
       "version": 1,
       "cycleSec": 60,
-      "signals": { "A": { "kind": "bit", "periodSec": 4, "onSec": 5 } }
+      "signals": {
+        "A": {
+          "kind": "bit",
+          "periodSec": 4,
+          "onSec": 5
+        }
+      }
     }
   },
   {
@@ -173,7 +222,15 @@
       "version": 1,
       "cycleSec": 60,
       "signals": {},
-      "events": [{ "atSec": 0, "durationSec": 1, "values": { "Z": 1 } }]
+      "events": [
+        {
+          "atSec": 0,
+          "durationSec": 1,
+          "values": {
+            "Z": 1
+          }
+        }
+      ]
     }
   },
   {
@@ -182,8 +239,20 @@
       "format": "banto-scenario",
       "version": 1,
       "cycleSec": 60,
-      "signals": { "A": { "kind": "bit" } },
-      "events": [{ "atSec": 0, "durationSec": 1, "values": { "A": 1 } }]
+      "signals": {
+        "A": {
+          "kind": "bit"
+        }
+      },
+      "events": [
+        {
+          "atSec": 0,
+          "durationSec": 1,
+          "values": {
+            "A": 1
+          }
+        }
+      ]
     }
   },
   {
@@ -193,7 +262,13 @@
       "version": 1,
       "cycleSec": 60,
       "signals": {},
-      "events": [{ "atSec": 0, "durationSec": 61, "values": {} }]
+      "events": [
+        {
+          "atSec": 0,
+          "durationSec": 61,
+          "values": {}
+        }
+      ]
     }
   },
   {
@@ -203,7 +278,110 @@
       "version": 1,
       "cycleSec": 60,
       "signals": {},
-      "events": [{ "atSec": 60, "durationSec": 1, "values": {} }]
+      "events": [
+        {
+          "atSec": 60,
+          "durationSec": 1,
+          "values": {}
+        }
+      ]
+    }
+  },
+  {
+    "name": "波が null",
+    "scenario": {
+      "format": "banto-scenario",
+      "version": 1,
+      "cycleSec": 60,
+      "signals": {
+        "A": {
+          "kind": "number",
+          "waves": null
+        }
+      }
+    }
+  },
+  {
+    "name": "点列が null",
+    "scenario": {
+      "format": "banto-scenario",
+      "version": 1,
+      "cycleSec": 60,
+      "signals": {
+        "A": {
+          "kind": "number",
+          "points": null
+        }
+      }
+    }
+  },
+  {
+    "name": "ビットの値が null",
+    "scenario": {
+      "format": "banto-scenario",
+      "version": 1,
+      "cycleSec": 60,
+      "signals": {
+        "A": {
+          "kind": "bit",
+          "value": null
+        }
+      }
+    }
+  },
+  {
+    "name": "基準値が null",
+    "scenario": {
+      "format": "banto-scenario",
+      "version": 1,
+      "cycleSec": 60,
+      "signals": {
+        "A": {
+          "kind": "number",
+          "base": null
+        }
+      }
+    }
+  },
+  {
+    "name": "出来事が null",
+    "scenario": {
+      "format": "banto-scenario",
+      "version": 1,
+      "cycleSec": 60,
+      "signals": {},
+      "events": null
+    }
+  },
+  {
+    "name": "出来事が宣言していない toString を指す",
+    "scenario": {
+      "format": "banto-scenario",
+      "version": 1,
+      "cycleSec": 60,
+      "signals": {},
+      "events": [
+        {
+          "atSec": 0,
+          "durationSec": 1,
+          "values": {
+            "toString": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "like が宣言していない constructor を指す",
+    "scenario": {
+      "format": "banto-scenario",
+      "version": 1,
+      "cycleSec": 60,
+      "signals": {
+        "A": {
+          "like": "constructor"
+        }
+      }
     }
   }
 ]

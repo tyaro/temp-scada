@@ -65,6 +65,12 @@ export class ScenarioError extends Error {
 
 type Json = Record<string, unknown>;
 
+/**
+ * 原型を持たない辞書。信号の名前が `__proto__`・`toString` でも、ふつうの名前と同じに扱う
+ * （Rust の BTreeMap と揃える）。
+ */
+const dictionary = <T>(): Record<string, T> => Object.create(null);
+
 const isObject = (value: unknown): value is Json =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -110,10 +116,10 @@ const BIT_KEYS = [
 
 function readNumber(raw: Json, where: string, cycleSec: number): NumberSignal {
   onlyKeys(raw, where, NUMBER_KEYS);
-  const waves = raw.waves ?? [];
+  const waves = raw.waves === undefined ? [] : raw.waves;
   if (!Array.isArray(waves))
     throw new ScenarioError(`${where}.waves: 配列が要る`);
-  const points = raw.points ?? [];
+  const points = raw.points === undefined ? [] : raw.points;
   if (!Array.isArray(points))
     throw new ScenarioError(`${where}.points: 配列が要る`);
   const pairs = points.map((point, index): [number, number] => {
@@ -165,7 +171,7 @@ function readNumber(raw: Json, where: string, cycleSec: number): NumberSignal {
 
 function readBit(raw: Json, where: string): BitSignal {
   onlyKeys(raw, where, BIT_KEYS);
-  const value = raw.value ?? false;
+  const value = raw.value === undefined ? false : raw.value;
   if (typeof value !== "boolean")
     throw new ScenarioError(`${where}.value: true・false が要る`);
   const periodSec = finite(raw, "periodSec", where, 0);
@@ -192,7 +198,7 @@ function resolveLike(
   const raw = raws[name];
   if (!isObject(raw)) throw new ScenarioError(`signals.${name}: 物が要る`);
   if (raw.like === undefined) return raw;
-  if (typeof raw.like !== "string" || !(raw.like in raws))
+  if (typeof raw.like !== "string" || !Object.hasOwn(raws, raw.like))
     throw new ScenarioError(`signals.${name}.like: 無い信号`);
   if (trail.includes(raw.like))
     throw new ScenarioError(`signals.${name}.like: 循環している`);
@@ -230,7 +236,7 @@ export function parseScenario(json: unknown): Scenario {
   }
   if (!isObject(json.signals)) throw new ScenarioError("signals: 物が要る");
   const raws = json.signals;
-  const signals: Record<string, ScenarioSignal> = {};
+  const signals = dictionary<ScenarioSignal>();
   for (const name of Object.keys(raws)) {
     if (name === "") throw new ScenarioError("signals: 空の名前");
     const raw = resolveLike(raws, name);
@@ -239,7 +245,7 @@ export function parseScenario(json: unknown): Scenario {
     else if (raw.kind === "bit") signals[name] = readBit(raw, where);
     else throw new ScenarioError(`${where}.kind: "number"・"bit" が要る`);
   }
-  const rawEvents = json.events ?? [];
+  const rawEvents = json.events === undefined ? [] : json.events;
   if (!Array.isArray(rawEvents)) throw new ScenarioError("events: 配列が要る");
   const events = rawEvents.map((event, index): ScenarioEvent => {
     const where = `events[${index}]`;
@@ -253,9 +259,9 @@ export function parseScenario(json: unknown): Scenario {
       throw new ScenarioError(`${where}.durationSec: 周期以下`);
     if (!isObject(event.values))
       throw new ScenarioError(`${where}.values: 物が要る`);
-    const values: Record<string, ScenarioValue> = {};
+    const values = dictionary<ScenarioValue>();
     for (const [name, value] of Object.entries(event.values)) {
-      const signal = signals[name];
+      const signal = Object.hasOwn(signals, name) ? signals[name] : undefined;
       if (!signal) throw new ScenarioError(`${where}.values.${name}: 無い信号`);
       const ok =
         signal.kind === "bit"
@@ -335,7 +341,7 @@ export function evaluateScenario(
   scenario: Scenario,
   tSec: number,
 ): Record<string, ScenarioValue> {
-  const values: Record<string, ScenarioValue> = {};
+  const values = dictionary<ScenarioValue>();
   for (const [name, signal] of Object.entries(scenario.signals))
     values[name] =
       signal.kind === "number"

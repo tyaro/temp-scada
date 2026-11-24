@@ -70,7 +70,7 @@
 
 出来事は、周期の中の秒 `atSec`（0 以上・周期未満）から `durationSec`（正・周期以下）の間、`values` の信号を固定の値に置き換える。周期の終わりをまたいでもよい（`atSec + durationSec > cycleSec`）。重なる出来事は、配列で後のものが勝つ。値の種類は信号と同じ（数値の信号に数、ビットの信号に true・false）。出来事の値は丸めない。
 
-知らない項目、範囲を外れた数、無い信号への参照は、読込の誤りにする（TypeScript は `ScenarioError`、Rust は `ScenarioError`）。
+知らない項目、範囲を外れた数、無い信号への参照、省略できる項目に書いた `null` は、読込の誤りにする（`null` は省略と同じに扱わない）。誤りは TypeScript・Rust とも `ScenarioError`。信号の名前は `__proto__`・`toString` のような名前でもほかと同じに扱う（TypeScript は原型を持たない辞書に入れる。`names.json` が確かめる）。
 
 ## 言語の間の一致
 
