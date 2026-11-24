@@ -633,6 +633,8 @@
   let previousPanels = $state<AuxVisibility | null>(null);
   /** 「補助パネルをすべて隠す」の前の dock の配置（戻すときに分割の幅を合わせ直す）。 */
   let previousPaneSizes: DockLayout | null = null;
+  /** `previousPaneSizes` を記録したときの Designer の幅（戻すとき今の幅へ換算する）。 */
+  let previousPaneHostWidth = 0;
   let sidebarPanel = $state<HTMLElement>();
   /** 表に出ている左のパネル（Project を優先）。 */
   function frontSidebarPane(): HTMLElement | undefined {
@@ -735,6 +737,7 @@
           designerDockState.layout = withDesignerRootSizes(
             designerDockState.layout,
             sizes,
+            { from: previousPaneHostWidth, to: designerHostWidth },
           );
       });
     else if (Object.values(current).some(Boolean)) {
@@ -746,6 +749,7 @@
       });
       previousPanels = current;
       previousPaneSizes = designerNarrow ? null : before;
+      previousPaneHostWidth = designerHostWidth;
     } else
       setAuxPanelVisibility({
         sidebar: true,

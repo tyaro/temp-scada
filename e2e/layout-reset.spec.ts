@@ -217,6 +217,33 @@ for (const zoom of ["0.25", "1", "4", "fit"])
     }
     await expect(button(page, "元に戻す")).toBeDisabled();
   });
+test("restoring hidden regions after the window width changed keeps the side panes at their px", async ({
+  page,
+}) => {
+  await start(page);
+  const widths = async () => ({
+    left: (await sidebar(page).boundingBox())?.width ?? 0,
+    right: (await inspector(page).boundingBox())?.width ?? 0,
+  });
+  const before = await widths();
+  expect(before.left).toBeGreaterThan(0);
+  expect(before.right).toBeGreaterThan(0);
+  await menu(page, "補助パネルをすべて隠す");
+  await expect(sidebar(page)).toBeHidden();
+  await page.setViewportSize({ width: 1500, height: 1080 });
+  await menu(page, "補助パネルを元の表示に戻す");
+  await expect(sidebar(page)).toBeVisible();
+  await expect(inspector(page)).toBeVisible();
+  await expect
+    .poll(async () => {
+      const after = await widths();
+      return Math.max(
+        Math.abs(after.left - before.left),
+        Math.abs(after.right - before.right),
+      );
+    })
+    .toBeLessThanOrEqual(2);
+});
 test("failed preference writes leave the restored layout usable and report one warning", async ({
   page,
 }) => {

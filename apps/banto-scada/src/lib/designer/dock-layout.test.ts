@@ -118,6 +118,31 @@ describe("designerDockLayout", () => {
     expect(withDesignerRootSizes(withoutRight, before)).toBe(withoutRight);
   });
 
+  it("隠している間に幅が変わっても、戻すと左右の区画は隠す前の px に戻る", () => {
+    const options = { leftWidth: 240, rightWidth: 288 };
+    const before = designerDockLayout({ hostWidth: 1920, ...options });
+    // 戻した直後の配置（比率は隠す前と違う）。幅は 1500 に変わっている。
+    const after = designerDockLayout({
+      hostWidth: 1500,
+      leftWidth: 200,
+      rightWidth: 288,
+    });
+    const fixed = withDesignerRootSizes(after, before, {
+      from: 1920,
+      to: 1500,
+    }).docked;
+    const old = before.docked;
+    if (fixed?.type !== "split" || old?.type !== "split")
+      throw new Error("split expected");
+    const px = (sizes: number[], width: number) =>
+      sizes.map((size) => size * width);
+    const [fl, , fr] = px(fixed.sizes, 1500);
+    const [ol, , or] = px(old.sizes, 1920);
+    expect(fl).toBeCloseTo(ol, 5);
+    expect(fr).toBeCloseTo(or, 5);
+    expect(fixed.sizes.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 5);
+  });
+
   it("隠した pane を戻す既定の場所は Designer の既定の配置に固定する", () => {
     const layout = designerDockLayout({
       hostWidth: 1280,

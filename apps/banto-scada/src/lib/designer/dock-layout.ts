@@ -153,11 +153,13 @@ function paneIds(node: DockNode): string {
  * 「補助パネルを元の表示に戻す」: 根の横の分割の幅を `before`（まとめて隠す前の配置）に
  * 合わせ直す。Banto v8 は隠した pane を 1 つずつ戻し、後から戻した pane の分だけ先に
  * 戻した pane を縮めるので、そのままでは左の幅が変わる。根の分割の区画の並びと各区画の
- * pane が `before` と同じときだけ幅を写し、違えばそのまま返す。
+ * pane が `before` と同じときだけ幅を写し、違えばそのまま返す。隠している間に窓の幅が
+ * 変わったときは `widths`（隠す前の幅と今の幅）で換算し、左右の区画を隠す前の px に戻す。
  */
 export function withDesignerRootSizes(
   layout: DockLayout,
   before: DockLayout,
+  widths?: { from: number; to: number },
 ): DockLayout {
   const root = layout.docked;
   const old = before.docked;
@@ -171,7 +173,10 @@ export function withDesignerRootSizes(
     )
   )
     return layout;
-  return { ...layout, docked: { ...root, sizes: [...old.sizes] } };
+  const copied = { ...layout, docked: { ...root, sizes: [...old.sizes] } };
+  return widths
+    ? keepDesignerPaneWidths(copied, widths.from, widths.to)
+    : copied;
 }
 
 /**
