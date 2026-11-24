@@ -199,7 +199,7 @@ async fn login_logout_and_the_own_password_change_report_the_generation() {
 async fn a_failed_move_reports_its_kind() {
     let (_dir, desktop) = first_start().await;
     create_admin(&desktop).await;
-    // Unknown credentials are refused after step 1.
+    // Unknown credentials are refused before step 1.
     assert_eq!(
         wire(
             &desktop
@@ -209,8 +209,7 @@ async fn a_failed_move_reports_its_kind() {
         ),
         json!({"kind": "invalid_credentials"})
     );
-    assert_eq!(desktop.phase().await.unwrap().phase, "transitioning");
-    // The re-run verifies once the administrator exists.
+    assert_eq!(desktop.phase().await.unwrap().phase, "initializing");
     desktop
         .transition_to_operational("chief", PASSWORD)
         .await

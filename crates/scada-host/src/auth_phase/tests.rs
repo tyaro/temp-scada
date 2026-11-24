@@ -362,7 +362,7 @@ async fn the_transition_waits_for_the_gate_and_the_gate_sees_its_phase() {
 }
 
 #[tokio::test]
-async fn wrong_or_non_admin_credentials_are_refused_after_step_one() {
+async fn wrong_or_non_admin_credentials_are_refused_before_step_one() {
     let dir = TempDir::new();
     let host = AuthHost::start(&dir.0).await.unwrap();
     create_admin(&host).await;
@@ -381,10 +381,11 @@ async fn wrong_or_non_admin_credentials_are_refused_after_step_one() {
             .await,
         Err(TransitionError::NotAdmin)
     ));
-    // Step 1 is saved before the credentials are checked.
-    assert_eq!(host.phase().await, AuthPhase::Transitioning);
-    assert!(!AuthPhase::Transitioning.admits_registry());
-    assert!(auth_config(&host).await.disabled);
+    // The credentials are checked before step 1: a mistyped password or a
+    // non-admin account leaves `initializing`, so the recording registry
+    // stays usable.
+    assert_initialized(&host, &dir).await;
+    assert!(host.phase().await.admits_registry());
 
     transition(&host, PASSWORD).await.unwrap();
     assert_eq!(host.phase().await, AuthPhase::Operational);

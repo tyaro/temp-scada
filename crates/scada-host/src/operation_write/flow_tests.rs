@@ -18,7 +18,7 @@ use super::tests::{
     button, input, project, COMMAND_TAG, DIGEST, MODE_TAG, PROJECT_ID, PUMP, SPEED_TAG,
 };
 use super::*;
-use crate::auth_phase::AuthHost;
+use crate::auth_phase::{AuthHost, Checkpoint};
 use crate::operation_db::{OperationDb, RecordState, WriteState};
 use crate::operation_key::WriteKey;
 
@@ -1231,9 +1231,12 @@ async fn the_view_is_blocked_by_the_rules_of_the_write() {
     assert!(view.slots.iter().all(|slot| slot.latest.is_none()));
     // A transition stopped after its first step, then the operation phase.
     fx.create_admin().await;
+    // (A wrong password is refused before step 1, so stop it there instead.)
     assert!(fx
         .auth
-        .transition_to_operational("chief", "wrong", || true)
+        .transition_with("chief", "correct-horse-1", || true, &mut |point| {
+            point != Checkpoint::Transitioning
+        })
         .await
         .is_err());
     assert_blocked(

@@ -178,11 +178,11 @@ desktop sessionを捨てたとき、またはroleが変わったときは、そ�
   - フェーズが`transitioning`（移行の途中）である。認証無効モードのon／offと現在のsessionは問わない。管理者がいれば、資格情報の照合を必ず通す。
 - **確定の順序**: 各段階は、前の段階の保存が成功してから進む。どの段階も、二度実行しても同じ結果になる。
   1. `auth-phase.json`を`transitioning`にする。以後の失敗や強制終了は、すべてこの状態から再開する。
-  2. 渡された資格情報を`verify`で照合し、そのアカウントがAdminであることを確かめる。（2026-11-24、Banto v8.0.0に合わせて移行の中での管理者の作成と`auth_setup`をやめた。ログインできる管理者のアカウントはユーザー管理で作り、それが無いときは段階1の前に`no_admin_account`で断り、`auth-phase.json`を変えない。`transitioning`からの再開でも同じ確認をする。予約名`admin`（大小を問わない）は作れない。）
+  2. 渡された資格情報を`verify`で照合し、そのアカウントがAdminであることを確かめる。（2026-11-24、Banto v8.0.0に合わせて移行の中での管理者の作成と`auth_setup`をやめた。ログインできる管理者のアカウントはユーザー管理で作り、それが無いときは段階1の前に`no_admin_account`で断り、`auth-phase.json`を変えない。`transitioning`からの再開でも同じ確認をする。予約名`admin`（大小を問わない）は作れない。同日のレビューで、資格情報とAdminの照合も段階1の前に行うようにした。パスワードの打ち間違いや管理者でないアカウントでは`initializing`のまま残り、記録registryも使える。`transitioning`からの再開では、ここで改めて照合する。）
   3. `auth.disabled=false`を保存する。
   4. `auth-phase.json`を`operational`にする。
   5. そのアカウントのdesktop sessionを入れ、`banto-local:auth-disabled`の全registry sessionを失効させる（§4）。
-- **途中で失敗した場合**: 1より前の失敗では`initializing`のまま残る。1の後から4の保存が終わるまでの失敗や強制終了では`transitioning`が残る。再起動後も同じcommandを管理者の資格情報で呼べば、2の照合から続きを完了できる。
+- **途中で失敗した場合**: 1より前の失敗（管理者がいない・資格情報の不一致・Adminでない・未静止）では`initializing`のまま残る。1の後から4の保存が終わるまでの失敗や強制終了では`transitioning`が残る。再起動後も同じcommandを管理者の資格情報で呼べば、2の照合から続きを完了できる。
 - **移行の完了点**: 4の`operational`の保存を、移行の永続的な完了点とする。4の後に終了したり返信を失ったりしても、移行はやり直さない。再起動後は`operational`・認証有効・管理者ありの状態で起動し、通常のログインへ進む。5のsession導入は、そのログインで行われる。5の失効対象は旧processのメモリ上のsessionだけで、再起動でrootごと消えている。返信を失ったUIは、`auth_status`とフェーズを読み直して通常のログイン画面へ進む。
 - **`transitioning`の間**: 記録registryの入口はすべて拒否する。認証無効モードがonのままでも、`AuthDisabledLocal`のsessionへregistry sessionを発行しない。UIは移行の再実行を促す。
 - **移行の確認**: 管理者の存在は、ブラウザの保存値でなくbackendで確認する。

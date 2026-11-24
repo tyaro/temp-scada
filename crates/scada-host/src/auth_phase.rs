@@ -290,9 +290,13 @@ impl AuthHost {
     /// `quiescent` is asked under the transition lock, before anything is
     /// saved; `false` refuses with [`TransitionError::Busy`].
     ///
+    /// The credentials and that the account is an Admin are verified first,
+    /// before anything is saved (a mistyped password leaves the phase as it
+    /// was); a resumed move verifies them again.
+    ///
     /// Steps, each saved before the next and each safe to repeat:
     /// 1. save `transitioning`;
-    /// 2. verify the credentials and that the account is an Admin;
+    /// 2. (the administrator is already verified);
     /// 3. turn auth-disabled mode off;
     /// 4. save `operational` (the durable completion point);
     /// 5. install the administrator's session. Turning the mode off already
@@ -358,6 +362,19 @@ impl AuthHost {
         if !has_admin {
             return Err(TransitionError::NoAdminAccount);
         }
+        // The credentials too are checked before step 1, so a mistyped
+        // password leaves `initializing` (and the recording registry) as it
+        // was. A resumed move (`transitioning`) verifies them again here.
+        let admin = self
+            .auth
+            .users()
+            .verify(username, password)
+            .await
+            .map_err(TransitionError::Auth)?
+            .ok_or(TransitionError::InvalidCredentials)?;
+        if admin.role != Role::Admin {
+            return Err(TransitionError::NotAdmin);
+        }
         if !quiescent() {
             return Err(TransitionError::Busy);
         }
@@ -373,16 +390,6 @@ impl AuthHost {
             .auth_config()
             .await
             .map_err(TransitionError::Auth)?;
-        let admin = self
-            .auth
-            .users()
-            .verify(username, password)
-            .await
-            .map_err(TransitionError::Auth)?
-            .ok_or(TransitionError::InvalidCredentials)?;
-        if admin.role != Role::Admin {
-            return Err(TransitionError::NotAdmin);
-        }
         checkpoint!(faults, Checkpoint::AdminReady, TransitionError);
 
         if config.disabled {
