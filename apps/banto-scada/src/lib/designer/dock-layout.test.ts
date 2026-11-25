@@ -1,12 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { createDockState, type DockLayout } from "@banto/dock-svelte";
 import {
   designerDockLayout,
   frontLeftPanes,
   keepDesignerPaneWidths,
-  pinDesignerDefaultPlaces,
   withDesignerPaneWidths,
-  withDesignerRootSizes,
 } from "./dock-layout";
 
 describe("designerDockLayout", () => {
@@ -89,69 +86,5 @@ describe("designerDockLayout", () => {
     expect(narrow[1]).toBeCloseTo(320);
     expect(narrow[0] / narrow[2]).toBeCloseTo(240 / 288);
     expect(keepDesignerPaneWidths(layout, 1920, 1920)).toBe(layout);
-  });
-
-  it("まとめて隠す前と同じ区画の並びなら、根の分割の幅を前の値に合わせる", () => {
-    const before = designerDockLayout({
-      hostWidth: 1920,
-      leftWidth: 240,
-      rightWidth: 288,
-    });
-    const after = designerDockLayout({
-      hostWidth: 1920,
-      leftWidth: 200,
-      rightWidth: 288,
-    });
-    const fixed = withDesignerRootSizes(after, before);
-    expect(fixed.docked).toEqual(before.docked);
-    // 区画の pane が違えば（Inspector が戻っていない）そのまま。
-    const root = after.docked;
-    if (root?.type !== "split") throw new Error("split expected");
-    const withoutRight: DockLayout = {
-      ...after,
-      docked: {
-        ...root,
-        children: root.children.slice(0, 2),
-        sizes: [0.2, 0.8],
-      },
-    };
-    expect(withDesignerRootSizes(withoutRight, before)).toBe(withoutRight);
-  });
-
-  it("隠している間に幅が変わっても、戻すと左右の区画は隠す前の px に戻る", () => {
-    const options = { leftWidth: 240, rightWidth: 288 };
-    const before = designerDockLayout({ hostWidth: 1920, ...options });
-    // 戻した直後の配置（比率は隠す前と違う）。幅は 1500 に変わっている。
-    const after = designerDockLayout({
-      hostWidth: 1500,
-      leftWidth: 200,
-      rightWidth: 288,
-    });
-    const fixed = withDesignerRootSizes(after, before, {
-      from: 1920,
-      to: 1500,
-    }).docked;
-    const old = before.docked;
-    if (fixed?.type !== "split" || old?.type !== "split")
-      throw new Error("split expected");
-    const px = (sizes: number[], width: number) =>
-      sizes.map((size) => size * width);
-    const [fl, , fr] = px(fixed.sizes, 1500);
-    const [ol, , or] = px(old.sizes, 1920);
-    expect(fl).toBeCloseTo(ol, 5);
-    expect(fr).toBeCloseTo(or, 5);
-    expect(fixed.sizes.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 5);
-  });
-
-  it("隠した pane を戻す既定の場所は Designer の既定の配置に固定する", () => {
-    const layout = designerDockLayout({
-      hostWidth: 1280,
-      leftWidth: 240,
-      rightWidth: 288,
-    });
-    const dock = createDockState();
-    pinDesignerDefaultPlaces(dock, layout);
-    dock.defaultLayout = null;
-    expect(dock.defaultLayout).toBe(layout);
   });
 });

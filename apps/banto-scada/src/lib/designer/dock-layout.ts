@@ -4,29 +4,7 @@ import {
   type DockLayout,
   type DockNode,
   type DockPanelNode,
-  type DockState,
 } from "@banto/dock-svelte";
-
-/**
- * 隠した pane を出し直す場所（`dock.defaultLayout`）を Designer の既定の配置に固定する。
- *
- * Banto v8（#782 PR5）から、隠した pane は隠した場所ではなく `defaultLayout` の場所へ
- * 戻る。`ThreePaneDock` は自分の既定（追加の pane を `initial` の端へ 1 つずつ並べる）を
- * 何度も入れ直すので、そのままではレイヤー・部品が左のタブの組へ戻らず、左の端に
- * 別の区画として積まれる。Designer の pane は固定なので、既定の場所は `layout`
- * （`designerDockLayout` の結果）のまま変えず、`ThreePaneDock` の書き込みは捨てる。
- */
-export function pinDesignerDefaultPlaces(
-  dock: DockState,
-  layout: DockLayout,
-): void {
-  Object.defineProperty(dock, "defaultLayout", {
-    configurable: true,
-    enumerable: true,
-    get: () => layout,
-    set: () => {},
-  });
-}
 
 /**
  * Designer の枠（#331 D2）。`ThreePaneDock` の左 = Project、中央 = 画面プレビュー、
@@ -142,41 +120,6 @@ export function frontLeftPanes(layout: DockLayout): DesignerLeftPane[] {
 function containsPane(node: DockNode, id: string): boolean {
   if (node.type === "panel") return node.id === id;
   return node.children.some((child) => containsPane(child, id));
-}
-
-function paneIds(node: DockNode): string {
-  if (node.type === "panel") return node.id;
-  return node.children.map(paneIds).sort().join(",");
-}
-
-/**
- * 「補助パネルを元の表示に戻す」: 根の横の分割の幅を `before`（まとめて隠す前の配置）に
- * 合わせ直す。Banto v8 は隠した pane を 1 つずつ戻し、後から戻した pane の分だけ先に
- * 戻した pane を縮めるので、そのままでは左の幅が変わる。根の分割の区画の並びと各区画の
- * pane が `before` と同じときだけ幅を写し、違えばそのまま返す。隠している間に窓の幅が
- * 変わったときは `widths`（隠す前の幅と今の幅）で換算し、左右の区画を隠す前の px に戻す。
- */
-export function withDesignerRootSizes(
-  layout: DockLayout,
-  before: DockLayout,
-  widths?: { from: number; to: number },
-): DockLayout {
-  const root = layout.docked;
-  const old = before.docked;
-  if (
-    root?.type !== "split" ||
-    old?.type !== "split" ||
-    root.direction !== old.direction ||
-    root.children.length !== old.children.length ||
-    root.children.some(
-      (child, index) => paneIds(child) !== paneIds(old.children[index]),
-    )
-  )
-    return layout;
-  const copied = { ...layout, docked: { ...root, sizes: [...old.sizes] } };
-  return widths
-    ? keepDesignerPaneWidths(copied, widths.from, widths.to)
-    : copied;
 }
 
 /**
