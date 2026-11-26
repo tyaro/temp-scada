@@ -14,7 +14,7 @@
     "benchmark:editor": "node --expose-gc scripts/benchmark-editor.mjs"
   },
   "dependencies": {
-    "@banto-industrial/trend": "github:tyaro/banto-industrial#trend-v0.1.0&path:packages/trend",
+    "@banto-industrial/trend": "github:tyaro/banto-industrial#trend-v0.2.0&path:packages/trend",
     "@banto/admin-core": "github:tyaro/banto#v9.0.0&path:packages/admin-core",
     "@banto/dock-svelte": "github:tyaro/banto#v9.0.0&path:packages/dock-svelte",
     "@banto/image-assets": "github:tyaro/banto#v9.0.0&path:packages/image-assets",
