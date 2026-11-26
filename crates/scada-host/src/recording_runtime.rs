@@ -12,6 +12,7 @@
 //! ([`RecordingRuntime::inspect`]) and the first setup and start
 //! ([`RecordingRuntime::initial_setup`]).
 use crate::durable;
+use crate::live_trend::{LiveFeed, LivePump, LIVE_SERIES_LIMIT};
 use banto_tagclient::RestClient;
 use scada_historian::store::evidence::PlanRef;
 use scada_historian::store::query::{CancellationToken, QueryControl, QueryError};
@@ -291,6 +292,8 @@ struct Ready {
     /// The recording status of the Supervisor lent to an installed root.
     lent: std::sync::Mutex<Option<StatusWatch>>,
     runs: std::sync::Mutex<inspection::RunRefs>,
+    /// The live delivery: the tap of every Supervisor of this store.
+    live: std::sync::Arc<LiveFeed>,
 }
 
 type StatusWatch = tokio::sync::watch::Receiver<
@@ -374,6 +377,52 @@ impl RecordingRuntime {
                 .map(|identity| context_series(identity, live))
                 .collect::<Vec<_>>(),
         })))
+    }
+
+    /// Subscribes the live delivery (historian-live-trend §3.2) of
+    /// `request.seriesIds` of the HistoryContext `request.contextId` of
+    /// `request.historianNamespace` for `project`, replacing the earlier
+    /// subscription. Errors: why the store is unavailable, `noContext` (no
+    /// HistoryContext for the Project), `staleContext` (another context or
+    /// namespace: read the context again), `invalidRequest`.
+    pub fn live_start(&self, project: &Project, request: &Value) -> Result<LivePump, &'static str> {
+        let ready = self.state.as_ref().map_err(|reason| *reason)?;
+        let catalog = ready.catalog.lock().unwrap_or_else(|e| e.into_inner());
+        let catalog = catalog
+            .as_ref()
+            .filter(|c| project.recording_plan_id() == Some(c.plan_id.as_str()))
+            .ok_or("noContext")?;
+        let context_id = format!("applied:{}", catalog.applied_revision);
+        let (Some(asked_context), Some(namespace), Some(ids)) = (
+            request["contextId"].as_str(),
+            request["historianNamespace"].as_str(),
+            request["seriesIds"].as_array(),
+        ) else {
+            return Err("invalidRequest");
+        };
+        if asked_context != context_id || namespace != ready.identity.historian_namespace {
+            return Err("staleContext");
+        }
+        let mut series = std::collections::BTreeSet::new();
+        for id in ids {
+            let id = id.as_str().ok_or("invalidRequest")?;
+            if !catalog.series.iter().any(|s| s.series_id == id) || !series.insert(id.to_owned()) {
+                return Err("invalidRequest");
+            }
+        }
+        if series.is_empty() || series.len() > LIVE_SERIES_LIMIT {
+            return Err("invalidRequest");
+        }
+        Ok(ready
+            .live
+            .subscribe(&context_id, catalog.plan.clone(), series))
+    }
+
+    /// Ends the live subscription `subscription_id`, if it is the current one.
+    pub fn live_stop(&self, subscription_id: &str) {
+        if let Ok(ready) = &self.state {
+            ready.live.unsubscribe(subscription_id);
+        }
     }
 
     /// Runs one H1 history query (`start_query` → `join_query`) and returns
@@ -584,6 +633,7 @@ impl RecordingRuntime {
         };
         let mut supervisor =
             RecordingSupervisor::try_new(store).map_err(|_| SetupFailure::StoreFailed)?;
+        supervisor.set_commit_tap(ready.live.clone());
         let result = match saved {
             Ok(catalog) => {
                 if let Some(catalog) = catalog {
@@ -795,8 +845,11 @@ fn open_locked(data_dir: &Path, deployment_id: &str) -> Result<Ready, &'static s
         HistoryCatalog::from_state(store.recording_plan_state(&control).map_err(store_reason)?);
     // The History host's reader first; the Supervisor takes the other one.
     let reader = store.reader().map_err(store_reason)?;
-    let supervisor = RecordingSupervisor::try_new(store).map_err(|e| store_reason(e.error))?;
+    let mut supervisor = RecordingSupervisor::try_new(store).map_err(|e| store_reason(e.error))?;
+    let live = LiveFeed::new();
+    supervisor.set_commit_tap(live.clone());
     Ok(Ready {
+        live,
         data_dir: data_dir.to_owned(),
         lent: std::sync::Mutex::default(),
         identity,

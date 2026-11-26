@@ -56,6 +56,10 @@ impl RecordingSupervisor {
             resume_prepared: self.resume.pending(),
         }
     }
+    /// The live tap of the runs started after this call.
+    pub fn set_commit_tap(&mut self, tap: Arc<dyn super::CommitTap>) {
+        self.host.set_commit_tap(tap);
+    }
     pub fn recording_watch(&self) -> watch::Receiver<Arc<RecordingHostStatus>> {
         self.host.state_watch()
     }

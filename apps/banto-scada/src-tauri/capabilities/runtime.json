@@ -11,6 +11,7 @@
     "allow-runtime-hub-connect",
     "allow-runtime-read-start",
     "allow-runtime-history-context",
+    "allow-runtime-history-live-start",
     "allow-runtime-recording-context",
     "allow-runtime-alarm-status",
     "allow-operation-write",
@@ -50,6 +51,7 @@
     "allow-auth-config-get",
     "allow-history-query",
     "allow-history-cancel",
+    "allow-history-live-stop",
     "allow-recording-status",
     "allow-recording-slot"
   ]

@@ -16,7 +16,8 @@ use tokio::sync::Notify;
 use tokio::{runtime::Handle, sync::watch};
 
 use super::{
-    RecordingCompletion, RecordingHostStatus, RecordingPhase, RecordingProgress, RecordingRun,
+    CommitTap, RecordingCompletion, RecordingHostStatus, RecordingPhase, RecordingProgress,
+    RecordingRun,
 };
 use crate::recorder_source::SdkRecorderSource;
 
@@ -37,6 +38,7 @@ pub(super) struct Worker {
     pub cancel: CancellationToken,
     pub status: watch::Sender<Arc<RecordingHostStatus>>,
     pub run: RecordingRun,
+    pub commit_tap: Option<Arc<dyn CommitTap>>,
     #[cfg(test)]
     pub shutdown_gate: Option<Arc<TestShutdownGate>>,
 }
@@ -78,6 +80,7 @@ impl Worker {
             cancel,
             status,
             run,
+            commit_tap,
             #[cfg(test)]
             shutdown_gate,
         } = self;
@@ -86,6 +89,8 @@ impl Worker {
         let mut activation_receipt = None;
         // A stop before this worker starts need not create a database session.
         if !cancel.is_cancelled() {
+            let session = config.session.clone();
+            let plan = config.plan.clone();
             let started = match start {
                 Start::Manual => Recorder::start(&mut store, config, &mut clock).map(|r| (r, None)),
                 Start::Managed { binding, control } => {
@@ -96,14 +101,29 @@ impl Worker {
             match started {
                 Ok((mut recorder, receipt)) => {
                     activation_receipt = receipt;
+                    if let Some(tap) = &commit_tap {
+                        tap.begin(&session, &plan);
+                    }
                     loop {
-                        let report = recorder.step(&mut store, &mut source, &mut clock, &cancel);
+                        let report = match &commit_tap {
+                            Some(tap) => recorder.step_with_commit(
+                                &mut store,
+                                &mut source,
+                                &mut clock,
+                                &cancel,
+                                &mut |tick| tap.committed(tick),
+                            ),
+                            None => recorder.step(&mut store, &mut source, &mut clock, &cancel),
+                        };
                         let finished = report.state == RecorderState::Stopped;
                         publish_report(&status, &run, &report);
                         last_report = Some(report);
                         if finished {
                             break;
                         }
+                    }
+                    if let Some(tap) = &commit_tap {
+                        tap.end(&session.session_id);
                     }
                 }
                 Err(error) => {

@@ -11,6 +11,7 @@ pub mod auth_phase;
 pub mod desktop_auth;
 pub mod desktop_recording;
 mod durable;
+pub mod live_trend;
 pub mod operation_db;
 pub mod operation_key;
 pub mod operation_write;

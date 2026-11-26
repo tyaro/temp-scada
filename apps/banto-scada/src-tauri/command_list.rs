@@ -15,6 +15,7 @@ pub const EDITOR_ONLY: &[&str] = &[
     "hub_catalog",
     "hub_read_start",
     "history_context",
+    "history_live_start",
     "recording_context",
     "recording_initial_setup",
     "recording_reconfigure",
@@ -65,6 +66,7 @@ pub const BOTH: &[&str] = &[
     "auth_config_get",
     "history_query",
     "history_cancel",
+    "history_live_stop",
     "recording_status",
     "recording_slot",
 ];
@@ -76,6 +78,7 @@ pub const RUNTIME_ONLY: &[&str] = &[
     "runtime_hub_connect",
     "runtime_read_start",
     "runtime_history_context",
+    "runtime_history_live_start",
     "runtime_recording_context",
     "runtime_alarm_status",
     "operation_write",

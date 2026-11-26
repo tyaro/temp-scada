@@ -51,6 +51,9 @@ pub(crate) struct Hub {
     pub(crate) rest_reads: Arc<AtomicUsize>,
     /// New WebSocket subscriptions are refused with 503 while set.
     pub(crate) stream_fail: Arc<std::sync::atomic::AtomicBool>,
+    /// While set, the tags are recreated under the same names (new stable
+    /// IDs) and the open subscriptions are closed, so the SDK rebinds.
+    pub(crate) recreated: Arc<std::sync::atomic::AtomicBool>,
     task: tokio::task::JoinHandle<()>,
 }
 
@@ -88,6 +91,7 @@ impl Hub {
             rest_revision: rest.revision,
             rest_reads: rest.reads,
             stream_fail: rest.stream_fail,
+            recreated: rest.recreated,
             task,
         }
     }
@@ -122,6 +126,7 @@ struct Rest {
     revision: Arc<std::sync::atomic::AtomicU64>,
     reads: Arc<AtomicUsize>,
     stream_fail: Arc<std::sync::atomic::AtomicBool>,
+    recreated: Arc<std::sync::atomic::AtomicBool>,
 }
 
 fn rows(tags: &[(String, String)]) -> Vec<Value> {
@@ -164,13 +169,15 @@ async fn serve(
     }
     let text = String::from_utf8_lossy(&head[..seen]).to_string();
     let mut status = "200 test";
+    let recreated = rest.recreated.load(Ordering::SeqCst);
     let body = if text.starts_with("GET /api/v1/tags ") {
         let catalog: Vec<Value> = tags
             .iter()
             .enumerate()
             .map(|(i, (name, kind))| {
                 json!({
-                "external_name": name, "tag_key": name, "ids": [1, 2, i + 1],
+                "external_name": name, "tag_key": name,
+                "ids": [1, 2, i + 1 + if recreated { 100 } else { 0 }],
                 "connection": "PLC01", "group": "Fast", "name": name, "address": "D100",
                 "data_type": kind, "unit": if kind == "bit" { None } else { Some("%") },
                 "decimals": 1, "period_ms": 100, "enabled": true, "writable": false,
@@ -215,7 +222,18 @@ Connection: close
         let Ok(mut socket) = tokio_tungstenite::accept_async(stream).await else {
             return;
         };
-        while let Some(Ok(message)) = socket.next().await {
+        loop {
+            let message = tokio::select! {
+                message = socket.next() => message,
+                () = async {
+                    while !rest.recreated.load(Ordering::SeqCst) || recreated {
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                    }
+                } => return,
+            };
+            let Some(Ok(message)) = message else {
+                return;
+            };
             let Ok(text) = message.to_text() else {
                 continue;
             };
@@ -248,7 +266,6 @@ Connection: close
                 return;
             }
         }
-        return;
     };
     let mut discard = vec![0u8; seen];
     let _ = stream.read_exact(&mut discard).await;
@@ -628,5 +645,6 @@ async fn an_inspection_answers_only_its_own_context() {
     );
 }
 
+mod live;
 mod owner;
 mod resume;
