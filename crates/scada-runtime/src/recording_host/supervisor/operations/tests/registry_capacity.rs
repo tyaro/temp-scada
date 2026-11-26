@@ -434,8 +434,9 @@ async fn registry_same_id_lease_and_dispatch_wait_keep_the_original_deadline() {
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, dir) =
         ready_apply_registry(epoch, BUDGET_MS).await;
-    // The lease was issued inside `ready_apply_registry`, so its deadline is before this.
-    let deadline = Instant::now() + Duration::from_millis(BUDGET_MS);
+    // The lease was issued inside `ready_apply_registry`; every later step compares the
+    // saved deadline itself, so a loaded machine cannot hide a moved deadline.
+    let deadline = root.test_lease_deadline("apply-lease").unwrap();
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let before = sqlite_applied_revision(&dir.0);
@@ -449,6 +450,7 @@ async fn registry_same_id_lease_and_dispatch_wait_keep_the_original_deadline() {
     let original = root
         .issue_apply_lease(&mutation, &workflow, &pause, "apply:ready", request.clone())
         .unwrap();
+    assert_eq!(root.test_lease_deadline("apply-lease"), Some(deadline));
 
     // A delayed re-fetch returns the original reply; the deadline is not extended.
     tokio::time::sleep(Duration::from_millis(100)).await;
@@ -457,6 +459,7 @@ async fn registry_same_id_lease_and_dispatch_wait_keep_the_original_deadline() {
             .unwrap(),
         original
     );
+    assert_eq!(root.test_lease_deadline("apply-lease"), Some(deadline));
     // Same lease ID with another budget, the same admission under another lease ID, and the
     // read role are refused without issuing anything.
     let leases = root.test_lease_count(LeaseRole::Mutation);
@@ -507,6 +510,7 @@ async fn registry_same_id_lease_and_dispatch_wait_keep_the_original_deadline() {
     );
     assert_eq!(root.test_lease_count(LeaseRole::Mutation), leases);
     assert_eq!(root.test_lease_count(LeaseRole::Reconciliation), 0);
+    assert_eq!(root.test_lease_deadline("apply-lease"), Some(deadline));
 
     // Registered before the deadline, dispatched after it: rejected, native never called.
     let ticket = match root
