@@ -27,7 +27,7 @@
   5. 権限: Banto に、ロールとは別にユーザーへ付ける `equipment.operate`・`alarm.ack` を足す（tyaro/banto#697、2026-11-19 時点で open）。Admin も既定では持たない。判定は SCADA の host（Rust）で行う。
 - banto-tagclient（#1202 後の main）: `write_tag(name, value, WriteOptions)` は成功で `WriteReceipt { audit_id: Option<i64>, correlation_id }` を返す（応答の本文が読めないときも成功で、`audit_id` は無い）。誤りは `ErrorKind` だけを持ち、HTTP の status・`error` コード・`audit_id` は返さない。分類は次のとおり（`write.rs` の `classify_write_failure`）。
   - 401 → `Unauthorized`。403 `key_tripped` → `KeyTripped`、ほかの 403 → `WriteForbidden`。503 `writes_disabled`・`collection_not_running` → `WriteUnavailable`、ほかの 503 → `WriteUncertain`。
-  - 404・409・422・429・501 と **502 `write_failed`** → `WriteRejected`（送る前の拒否と、送って失敗が同じ種別になる）。
+  - 404・409・422・429・501 と **502 `write_failed`** → `WriteRejected`（送る前の拒否と、送って失敗が同じ種別になる）。（2026-11-26 の main `99b0b9c3` では 502 `write_failed` は `WriteFailed` に分かれ、誤りに Hub の `code`・`audit_id`・`correlation_id` が載る。§5）
   - 502 `write_uncertain`・code の無い 502・500 `internal`・504・ほかの 5xx・送信後の時間切れや切断 → `WriteUncertain`。
   - 500 `audit_write_failed`・接続できない → `Transport`。3xx → `InvalidEndpoint`。2xx 以外で上に無いもの → `Transport`。
   - 送る前の検査: `InvalidWriteOptions`（相関 ID・申告の形）、`InvalidTagSelection`（名前）。
@@ -142,19 +142,19 @@ O2a の確認（2026-11-19、banto-industrial `v0.3.0-alpha.2` = `c0ac5206`）: 
 
 `outcome` は記録と画面で同じ語を使う。
 
-| `outcome`   | 起きる場合                                                                                                                         | 小窓の表示                                         |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `ok`        | `Ok(WriteReceipt)`                                                                                                                 | 「書込みました」。読み戻しの値を並べて出す         |
-| `refused`   | §4 の 2〜8 で SCADA が止めた                                                                                                       | 理由の文と「送っていません」                       |
-| `not_sent`  | `Unauthorized`・`WriteForbidden`・`WriteUnavailable`・`Transport`・`InvalidEndpoint`・`InvalidWriteOptions`・`InvalidTagSelection` | 理由の文と「書込み先へは送られていません」         |
-| `stopped`   | `KeyTripped`（Hub が書き用キーを止めた）                                                                                           | 「この端末の書込みは停止中」（§7）                 |
-| `failed`    | `WriteRejected`                                                                                                                    | 「書込みは成立していません」（送ったかは問わない） |
-| `uncertain` | `WriteUncertain`、上に無い `ErrorKind`（将来の種別を含む）、記録の確定前に host が落ちた                                           | 「書けたか分かりません。現在値を確かめてください」 |
+| `outcome`   | 起きる場合                                                                                                                                          | 小窓の表示                                         |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `ok`        | `Ok(WriteReceipt)`                                                                                                                                  | 「書込みました」。読み戻しの値を並べて出す         |
+| `refused`   | §4 の 2〜8 で SCADA が止めた                                                                                                                        | 理由の文と「送っていません」                       |
+| `not_sent`  | `Unauthorized`・`WriteForbidden`・`WriteUnavailable`・`WriteRejected`・`Transport`・`InvalidEndpoint`・`InvalidWriteOptions`・`InvalidTagSelection` | 理由の文と「書込み先へは送られていません」         |
+| `stopped`   | `KeyTripped`（Hub が書き用キーを止めた）                                                                                                            | 「この端末の書込みは停止中」（§7）                 |
+| `failed`    | `WriteFailed`（502 `write_failed`）                                                                                                                 | 「書込みは成立していません」（送ったかは問わない） |
+| `uncertain` | `WriteUncertain`、上に無い `ErrorKind`（将来の種別を含む）、記録の確定前に host が落ちた                                                            | 「書けたか分かりません。現在値を確かめてください」 |
 
-- `WriteRejected` は、送る前の拒否（404・409・422・429・501）と、送って失敗（502 `write_failed`）を分けられない。どちらも書込みは成立していないので、表示は「成立していません」に統一し、「送っていません」とは書かない。分けたい場合は上流へ種別の分割を求める（§12）。§4 の検査で 404（`unresolved`）・409（`tag_disabled`）・422（`out_of_range`）の多くは送る前に止まる。
+- banto-industrial#1293（#1344、2026-11-26 に取り込み）で種別が分かれた。`WriteRejected` は送る前の拒否（404・409・422・429・501）だけになり `not_sent`。502 `write_failed` は `WriteFailed` になり `failed`。Hub は機器のセッションが無いときなど送らずに `write_failed` を返すこともあるので、`failed` は「成立していません」と出し、「送って失敗」とは書かない。§4 の検査で 404（`unresolved`）・409（`tag_disabled`）・422（`out_of_range`）の多くは送る前に止まる。
 - `not_sent` の `Transport` は、接続できない場合と 500 `audit_write_failed` の両方で、どちらも書込み先へ送っていない。
 - 理由のコードは、`refused` では §4 の語、それ以外では `ErrorKind::as_str()` をそのまま記録する。画面の日本語はコードから引き、知らないコードは「不明な理由（コード）」と出す。
-- `audit_id` は成功のときだけ得られる（誤りは持たない）。成功でも応答の本文が読めなければ無い。
+- `audit_id` は成功のときと、Hub が監査の行を書いた後に失敗したとき（誤りの本文の `audit_id`、#1293）に得られる。応答の本文が読めなければ無い。Hub の誤りの `code`（`rate_limited` など）は記録しない。`reason` は `ErrorKind::as_str()` のまま（語彙を固定するため）。
 - 成功は「設備が運転した」ではない。小窓は、書いた値と slot の購読値（品質つき）を並べて出し、読み戻しを待つ表示や一致の判定はしない（PLC が書き戻すことがある）。運転状態は機器の状態の slot で見る。
 - 購読値が不良・未接続・更新停止のときも書込みは止めない（停止の指令を送れなくしないため、§11-5）。確認の小窓に現在値の品質を出す。
 - **SCADA の停止の指令は、安全停止の手段ではない**。SCADA からの書込みは、記録 DB の故障（§10）・Hub や通信の断・書き用キーの停止・権限やフェーズで送れないことがある。設備の安全停止は、非常停止回路・PLC のインターロックなど SCADA の外の手段で確保する前提とし、この設計はその代わりを目指さない。
@@ -197,20 +197,20 @@ O2a の確認（2026-11-19、banto-industrial `v0.3.0-alpha.2` = `c0ac5206`）: 
 
 host の SQLite（端末に 1 つのファイル `operations.db`。警報 DB と同じ開き方の規則。Project をまたいで残し、行に Project を持つ）に、要求 1 件を 1 行で残す。置き場は端末のデータフォルダーの直下（`alarm-terminal.json` の隣）とする。警報 DB の `alarms` フォルダーは、端末が中の `.db` をすべて警報 DB として世代番号を読むので、そこには置かない（O2b-1 で確定）。
 
-| 列                                       | 中身                                                    |
-| ---------------------------------------- | ------------------------------------------------------- |
-| `id`                                     | UUID v7。Hub への `correlation_id`                      |
-| `requested_at_ms`・`finished_at_ms`      | 受付と結果確定の時刻（未確定の間は NULL）。差が所要時間 |
-| `user`・`phase`                          | 利用者名（「未ログイン」を含む）とフェーズ              |
-| `hub_endpoint`                           | 送り先の Hub の識別                                     |
-| `project_id`・`project_digest`           | 適用中の Project                                        |
-| `screen_id`・`object_id`                 | 押した配置（§4 の 3 で確かめたもの）                    |
-| `equipment_id`・`equipment_code`・`slot` | 対象の機器と slot                                       |
-| `tag`                                    | 解決した外部名（解決前に止めたときは NULL）             |
-| `value`                                  | 書こうとした値（JSON）。入力のときは入力の文字列も      |
-| `outcome`・`reason`                      | §5 の語と理由のコード                                   |
-| `repeat_count`                           | §7 の集約でまとめた件数（既定 1）                       |
-| `audit_id`                               | Hub の監査行の id（成功で得られたときだけ）             |
+| 列                                       | 中身                                                      |
+| ---------------------------------------- | --------------------------------------------------------- |
+| `id`                                     | UUID v7。Hub への `correlation_id`                        |
+| `requested_at_ms`・`finished_at_ms`      | 受付と結果確定の時刻（未確定の間は NULL）。差が所要時間   |
+| `user`・`phase`                          | 利用者名（「未ログイン」を含む）とフェーズ                |
+| `hub_endpoint`                           | 送り先の Hub の識別                                       |
+| `project_id`・`project_digest`           | 適用中の Project                                          |
+| `screen_id`・`object_id`                 | 押した配置（§4 の 3 で確かめたもの）                      |
+| `equipment_id`・`equipment_code`・`slot` | 対象の機器と slot                                         |
+| `tag`                                    | 解決した外部名（解決前に止めたときは NULL）               |
+| `value`                                  | 書こうとした値（JSON）。入力のときは入力の文字列も        |
+| `outcome`・`reason`                      | §5 の語と理由のコード                                     |
+| `repeat_count`                           | §7 の集約でまとめた件数（既定 1）                         |
+| `audit_id`                               | Hub の監査行の id（成功か、監査の後の失敗で得られたとき） |
 
 - 送信の後に結果を記録の行に書けなかったときは、画面には実際の結果と「記録に失敗」を返し、行は `pending` のまま残す。起動時に `pending` の行は `uncertain`（理由 `interrupted`）に直す（送信中に落ちた場合と同じ扱い）。
 - host は、いま送信中の行の id（端末で高々 1 つ）と、送信を終えたが結果を記録できなかった行の id と結果（このプロセスの間だけ）を持つ。記録を読んで返すとき、`pending` の行は、送信中の id なら `sending`、記録できなかった行なら `unrecorded`（結果があれば添える）、どちらでもなければ `unrecorded`（前のプロセスの行）として返す。webview は `pending` を自分で「送信中」と解釈しない。記録できなかった結果は、次に記録へ書けたときにその行へ書き直す（再送はしない）。
@@ -245,7 +245,7 @@ host の SQLite（端末に 1 つのファイル `operations.db`。警報 DB と
 - 利用者が描く Faceplate 定義（上流 §7.4、開発計画の Core v1 残りの 5）。
 - interlock・permissive の表示、操作理由の入力、二人承認。
 - 設備・画面ごとの操作権限（banto#697 の後で SCADA 側に足す）。
-- 上流への求め: tagclient の `WriteRejected` を送る前の拒否と送って失敗（502 `write_failed`）に分ける、誤りに `audit_id` を持たせる、Hub の版・能力を取る手段（§11-8 で無いと分かった場合）。
+- 上流への求め: Hub の版・能力を取る手段（§11-8 で無いと分かった場合）。種別の分割と誤りの `audit_id` は banto-industrial#1293 で入り、2026-11-26 に取り込んだ。
 - 実行記録を Hub の監査と並べて見る画面、CSV の書出し。
 - 常時実行の Action（v1.1 S10b）と SCADA server core への移設。
 

@@ -20,6 +20,8 @@ O2a（2026-11-19）: banto-industrial を `v0.3.0-alpha.2`（`c0ac5206`。#1201�
 
 O2b-1（2026-11-19）: host に実行記録 `operations.db`（端末のデータフォルダーの直下、要求 1 件を 1 行）を足した。行は送る前に `pending` で書き、§5 の区分（`ok`・`refused`・`not_sent`・`stopped`・`failed`・`uncertain`）で 1 回だけ確定する。tagclient の誤りの種別から区分への対応表、起動時に前のプロセスの `pending` を `uncertain`（`interrupted`）に直すこと、端末で送信中を 1 つにする予約（`busy`）、結果を記録できなかった行を `unrecorded` として出し次に書けたときに書き直すこと（再送はしない）を持つ。まだ `operation_write` も Tauri の command も無く、Hub へは書かない。
 
+上流の Hub の起票 3 件の取り込み（2026-11-26）: banto-industrial を main `99b0b9c3`（v0.3.0-alpha.4 の後、タグなし）へ上げた。#1293（#1344）で tagclient の `WriteRejected` が送る前の拒否だけになり、502 `write_failed` が `WriteFailed` に分かれたので、`classify_write_error` を `WriteRejected` → `not_sent`、`WriteFailed` → `failed` に直し、誤りの `audit_id` も記録へ残す（設計 §5）。#1294（#1345）の Live 中の ping は tagclient の中で閉じていてコード変更なし。#1295（#1349）の `HubStatus.hub_id` はまだ使わない（警報の接続先の識別、`alarm-stage3-design.md` §5.2 を直すときに使う）。実 Hub（このPCは 0.3.0-alpha.1）での確認は未実施。
+
 Hub の書込み契約の確認（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) §11-8）: banto-industrial を `v0.3.0-alpha.3`（`6a08efbb`。#1224 の `capabilities` を含む）へ上げた（lock は banto-industrial の 2 件だけ）。`operation_write`・`operation_view` は読み用キーで `GET /api/v1/status` を取り、`write_contract_v1` が無い・取れないときは `hub_unsupported`。書き用キー（O2c）が無いので、契約のある Hub でも `no_write_key` で送らない。実 Hub（このPCは 0.3.0-alpha.1）での確認は未実施。
 
 O2c-1（2026-11-20、[設計](../design/runtime/operation-stage3-design.md) §7）: 同じ中身の拒否を、その slot の最新の行へ 60 秒の内はまとめ、`repeat_count` で数えるようにした（`OperationLog::refuse`）。小窓の照会はまだ件数を出さない。書込み状態・最小間隔・書き用キー（O2c-2〜4）は未実装。

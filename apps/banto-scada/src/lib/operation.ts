@@ -303,7 +303,9 @@ const reasonTexts: Record<string, string> = {
   write_forbidden: "Hub がこのタグへの書込みを許していません",
   write_unavailable: "Hub が書込みを受け付けられない状態です",
   write_rejected: "Hub が書込みを断りました",
-  write_uncertain: "書込みの応答を受け取れませんでした",
+  write_failed: "Hub が書込みを成立させられませんでした",
+  // Hub の 502 `write_uncertain`（監査 ID つきもある）と、時間切れ・切断の両方。
+  write_uncertain: "書込みの結果を確定できませんでした",
   invalid_write_options: "書込みの指定が正しくありません",
   key_revoked: "キーが取り消されています",
   key_expired: "キーの期限が切れています",

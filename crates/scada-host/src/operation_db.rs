@@ -112,11 +112,13 @@ impl Outcome {
     }
 }
 
-/// The outcome of a `write_tag` error (§5). `WriteRejected` mixes a refusal
-/// before sending with a 502 `write_failed`, so it is `failed` ("not
-/// effected"), never "not sent". A kind this table does not know, including
-/// one a later tagclient adds, is `uncertain` (fail-closed: the operator
-/// checks the current value).
+/// The outcome of a `write_tag` error (§5). `WriteRejected` is a refusal
+/// before sending (404・409・422・429・501), so it is `not_sent`.
+/// `WriteFailed` (502 `write_failed`) is `failed`: not effected, but the Hub
+/// does not say whether it reached the device, so it is never "not sent"
+/// (banto-industrial#1293). A kind this table does not know, including one a
+/// later tagclient adds, is `uncertain` (fail-closed: the operator checks the
+/// current value).
 pub fn classify_write_error(kind: ErrorKind) -> Outcome {
     match kind {
         ErrorKind::Unauthorized
@@ -125,9 +127,10 @@ pub fn classify_write_error(kind: ErrorKind) -> Outcome {
         | ErrorKind::Transport
         | ErrorKind::InvalidEndpoint
         | ErrorKind::InvalidWriteOptions
-        | ErrorKind::InvalidTagSelection => Outcome::NotSent,
+        | ErrorKind::InvalidTagSelection
+        | ErrorKind::WriteRejected => Outcome::NotSent,
         ErrorKind::KeyTripped => Outcome::Stopped,
-        ErrorKind::WriteRejected => Outcome::Failed,
+        ErrorKind::WriteFailed => Outcome::Failed,
         _ => Outcome::Uncertain,
     }
 }
@@ -161,6 +164,8 @@ pub struct Finish {
     pub outcome: Outcome,
     /// A §4 refusal code, or `ErrorKind::as_str()` for a Hub error.
     pub reason: Option<String>,
+    /// The Hub's audit row: on success, or on an error the Hub answered after
+    /// writing it.
     pub audit_id: Option<i64>,
     pub finished_at_ms: i64,
 }
@@ -181,7 +186,8 @@ impl Finish {
             Err(error) => Self {
                 outcome: classify_write_error(error.kind()),
                 reason: Some(error.kind().as_str().into()),
-                audit_id: None,
+                // The Hub's audit row when it failed after writing it (#1293).
+                audit_id: error.write_detail().and_then(|detail| detail.audit_id()),
                 finished_at_ms,
             },
         }
