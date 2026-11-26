@@ -26,7 +26,7 @@ async fn registry_cancel_notifies_an_in_flight_apply_once_and_keeps_its_reply_af
     let epoch = "epoch-cancel-apply";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let operation = admission.as_value()["action"]["operation"].clone();
@@ -133,7 +133,7 @@ async fn registry_cancel_reports_pause_join_not_supported_without_withdrawing_th
     let epoch = "epoch-cancel-pause";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, preflight, pause_admission, _dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let pause = match root
@@ -218,7 +218,7 @@ async fn registry_cancel_is_role_principal_scope_and_capacity_bound() {
     let epoch = "epoch-cancel-auth";
     let scope = registry_scope(epoch);
     let (mut root, mutation, _workflow, preflight, _pause, _dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let reference = handle_request(
         &root
@@ -292,7 +292,7 @@ async fn registry_cancel_reaches_a_read_without_touching_the_original_apply() {
     let epoch = "epoch-cancel-read";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let operation = admission.as_value()["action"]["operation"].clone();
@@ -317,7 +317,7 @@ async fn registry_cancel_reaches_a_read_without_touching_the_original_apply() {
                 "read-lease",
                 "read-admission",
                 "reconciliation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();

@@ -24,6 +24,20 @@ use std::{
 };
 use tokio_tungstenite::tungstenite::Message;
 
+/// Lease budget for tests that do not exercise expiry: the schema's maximum, so a
+/// debug build sharing the CPU with the other tests cannot run out of it between
+/// issuing the lease and using it. Expiry tests keep their own short budgets.
+const ROOMY_LEASE_MS: u64 = 10_000;
+
+/// Budget for a lease a test lets run out in real time: long enough for the steps that need
+/// it still live on a loaded machine. The test then sleeps `SHORT_LEASE_MS + 50` to pass it.
+const SHORT_LEASE_MS: u64 = 1_500;
+
+/// A time past any `ROOMY_LEASE_MS` lease issued so far (for the `*_at` expiry checks).
+fn after_roomy_deadline() -> Instant {
+    Instant::now() + Duration::from_millis(ROOMY_LEASE_MS + 1_000)
+}
+
 mod registry_call_inspection;
 mod registry_cancel;
 mod registry_capacity;
@@ -268,7 +282,7 @@ async fn ready_pause_registry(
                 "preflight-lease",
                 "preflight-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -360,7 +374,7 @@ async fn ready_discard_candidate_registry(
                 "preflight-lease",
                 "preflight-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -409,7 +423,7 @@ async fn ready_apply_registry(
     crate::recording_host::retention::tests::Directory,
 ) {
     let (mut root, session, workflow, preflight, pause_admission, dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let pause = match root
         .register_pause_join(&session, &workflow, &preflight, pause_admission)
         .unwrap()
@@ -477,7 +491,7 @@ fn sqlite_applied_revision(directory: &Path) -> i64 {
 #[tokio::test]
 async fn registry_apply_admission_consumes_lease_and_dispatches_one_native_commit() {
     let (mut root, session, workflow, pause, admission, dir) =
-        ready_apply_registry("epoch-apply-dispatch", 1000).await;
+        ready_apply_registry("epoch-apply-dispatch", ROOMY_LEASE_MS).await;
     let bob = root.test_session("bob", LeaseRole::Mutation);
     let mut wrong = admission.as_value().clone();
     wrong["action"]["operation"]["operationId"] = json!("other:apply");
@@ -534,7 +548,7 @@ async fn registry_apply_admission_consumes_lease_and_dispatches_one_native_commi
             &workflow,
             &pause,
             admission.clone(),
-            Instant::now() + Duration::from_secs(2),
+            after_roomy_deadline(),
         )
         .unwrap(),
         ApplyRegistration::Existing(_)
@@ -645,7 +659,7 @@ async fn registry_apply_admission_keeps_unknown_after_projection_or_native_panic
         ),
     ] {
         let (mut root, session, workflow, pause, admission, dir) =
-            ready_apply_registry(epoch, 1000).await;
+            ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
         let client = root.test_native_client();
         let before = sqlite_applied_revision(&dir.0);
         let used_before = client.shared.core.lock().unwrap().registry.used.len();
@@ -701,7 +715,7 @@ async fn registry_apply_admission_distinguishes_committed_loss_from_failed_write
         ("epoch-apply-full", driver::TestFault::Full, false),
     ] {
         let (mut root, session, workflow, pause, admission, dir) =
-            ready_apply_registry(epoch, 1000).await;
+            ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
         let client = root.test_native_client();
         let before = sqlite_applied_revision(&dir.0);
         let used_before = client.shared.core.lock().unwrap().registry.used.len();
@@ -753,7 +767,7 @@ async fn registry_apply_admission_distinguishes_committed_loss_from_failed_write
 #[tokio::test]
 async fn registry_apply_admission_commit_then_panic_preserves_unknown_quiescence() {
     let (mut root, session, workflow, pause, admission, dir) =
-        ready_apply_registry("epoch-apply-commit-panic", 1000).await;
+        ready_apply_registry("epoch-apply-commit-panic", ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let before = sqlite_applied_revision(&dir.0);
     let used_before = client.shared.core.lock().unwrap().registry.used.len();
@@ -798,7 +812,7 @@ async fn registry_apply_admission_commit_then_panic_preserves_unknown_quiescence
 #[tokio::test]
 async fn registry_apply_admission_typed_native_rejection_does_not_claim_apply_id() {
     let (mut root, session, workflow, pause, admission, dir) =
-        ready_apply_registry("epoch-apply-rejection", 1000).await;
+        ready_apply_registry("epoch-apply-rejection", ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let before = sqlite_applied_revision(&dir.0);
     let used_before = client.shared.core.lock().unwrap().registry.used.len();
@@ -1518,7 +1532,7 @@ async fn registry_dispatches_registered_preflight_once_and_recovers_original_rep
                 "dispatch-lease",
                 "dispatch-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -1630,7 +1644,7 @@ async fn registry_native_typed_rejection_is_saved_without_a_handle() {
                 "rejection-lease",
                 "rejection-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -1690,7 +1704,13 @@ async fn registry_uncertain_native_or_projection_panic_never_redispatches() {
             .issue_preflight_lease(
                 &session,
                 &workflow,
-                registry_lease(&scope, "panic-lease", "panic-admission", "mutation", 1000),
+                registry_lease(
+                    &scope,
+                    "panic-lease",
+                    "panic-admission",
+                    "mutation",
+                    ROOMY_LEASE_MS,
+                ),
             )
             .unwrap();
         let ticket = match root
@@ -1885,7 +1905,7 @@ async fn registry_inspection_can_prove_saved_handle_after_projection_panic() {
                     "panic-inspection-lease",
                     "panic-inspection-admission",
                     "mutation",
-                    1000,
+                    ROOMY_LEASE_MS,
                 ),
             )
             .unwrap();
@@ -1961,7 +1981,7 @@ async fn registry_inspection_capacity_failure_does_not_bind_id_or_spend_read_byt
                 "capacity-lease",
                 "capacity-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -2026,7 +2046,7 @@ async fn registry_pause_admission_dispatches_one_native_join_and_keeps_original_
                 "preflight-lease",
                 "preflight-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -2068,7 +2088,13 @@ async fn registry_pause_admission_dispatches_one_native_join_and_keeps_original_
             &workflow,
             &preflight,
             "pause:dispatch",
-            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 1000),
+            registry_lease(
+                &scope,
+                "pause-lease",
+                "pause-admission",
+                "mutation",
+                ROOMY_LEASE_MS,
+            ),
         )
         .unwrap();
     let admission = registry_pause_admission(
@@ -2116,7 +2142,7 @@ async fn registry_pause_admission_dispatches_one_native_join_and_keeps_original_
             &workflow,
             &preflight,
             admission.clone(),
-            Instant::now() + Duration::from_secs(3)
+            after_roomy_deadline()
         )
         .unwrap(),
         PauseRegistration::Existing(_)
@@ -2209,7 +2235,7 @@ async fn registry_pause_admission_dispatches_one_native_join_and_keeps_original_
         other_preflight,
         other_admission,
         _other_dir,
-    ) = ready_pause_registry("other-root-apply", 1000).await;
+    ) = ready_pause_registry("other-root-apply", ROOMY_LEASE_MS).await;
     let other_ticket = match other_root
         .register_pause_join(
             &other_session,
@@ -2373,7 +2399,7 @@ async fn registry_pause_admission_expires_before_registration_or_native_call() {
 #[tokio::test]
 async fn registry_pause_admission_keeps_unknown_and_real_handle_after_projection_failure() {
     let (mut root, session, workflow, preflight, admission, _dir) =
-        ready_pause_registry("epoch-pause-unknown", 1000).await;
+        ready_pause_registry("epoch-pause-unknown", ROOMY_LEASE_MS).await;
     let ticket = match root
         .register_pause_join(&session, &workflow, &preflight, admission)
         .unwrap()
@@ -2408,13 +2434,19 @@ async fn registry_pause_admission_keeps_unknown_and_real_handle_after_projection
             &workflow,
             &ticket,
             "apply:unknown",
-            registry_lease(&scope, "apply-lease", "apply-admission", "mutation", 1000)
+            registry_lease(
+                &scope,
+                "apply-lease",
+                "apply-admission",
+                "mutation",
+                ROOMY_LEASE_MS
+            )
         ),
         Err(LeaseError::Busy)
     ));
 
     let (mut root, session, workflow, preflight, admission, _dir) =
-        ready_pause_registry("epoch-pause-after-call-panic", 1000).await;
+        ready_pause_registry("epoch-pause-after-call-panic", ROOMY_LEASE_MS).await;
     let ticket = match root
         .register_pause_join(&session, &workflow, &preflight, admission)
         .unwrap()
@@ -2533,7 +2565,7 @@ async fn registry_pause_join_waits_for_running_worker_cleanup_after_lease_expiry
                 "preflight-lease",
                 "preflight-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -2605,7 +2637,13 @@ async fn registry_pause_join_waits_for_running_worker_cleanup_after_lease_expiry
     assert!(root.test_native_client().state().phase == OperationsPhase::Pausing);
     assert!(frames.borrow().stop_requested);
     assert!(root.pause_completion(&session, &ticket).unwrap().is_none());
-    let apply_request = registry_lease(&scope, "apply-lease", "apply-admission", "mutation", 1000);
+    let apply_request = registry_lease(
+        &scope,
+        "apply-lease",
+        "apply-admission",
+        "mutation",
+        ROOMY_LEASE_MS,
+    );
     assert!(matches!(
         root.issue_apply_lease(
             &session,
@@ -2687,7 +2725,7 @@ async fn registry_pause_lease_binds_confirmed_candidate_without_stopping_native(
                 "preflight-lease",
                 "preflight-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -2767,7 +2805,7 @@ async fn registry_pause_lease_binds_confirmed_candidate_without_stopping_native(
             "preflight-lease",
             "preflight-admission",
             "mutation",
-            1000,
+            ROOMY_LEASE_MS,
         ),
         registry_lease(
             &scope,
@@ -2907,7 +2945,7 @@ async fn registry_pause_lease_requires_recovered_acceptance_and_real_candidate()
                 "recovered-preflight-lease",
                 "recovered-preflight",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -2927,7 +2965,7 @@ async fn registry_pause_lease_requires_recovered_acceptance_and_real_candidate()
         "recovered-pause-lease",
         "recovered-pause",
         "mutation",
-        1000,
+        ROOMY_LEASE_MS,
     );
     assert!(matches!(
         root.issue_pause_join_lease(
@@ -3046,7 +3084,7 @@ async fn registry_pause_lease_requires_recovered_acceptance_and_real_candidate()
             "recovered-apply-lease",
             "recovered-apply",
             "mutation",
-            1000,
+            ROOMY_LEASE_MS,
         ),
     )
     .unwrap();
@@ -3082,7 +3120,7 @@ async fn registry_pause_lease_waits_for_the_original_handle_completion() {
                 "pending-preflight-lease",
                 "pending-preflight",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -3114,7 +3152,7 @@ async fn registry_pause_lease_waits_for_the_original_handle_completion() {
         "pending-pause-lease",
         "pending-pause",
         "mutation",
-        1000,
+        ROOMY_LEASE_MS,
     );
     assert!(matches!(
         root.issue_pause_join_lease(
@@ -3917,7 +3955,7 @@ async fn registry_reconciliation_reads_only_the_saved_original_apply_once() {
         ),
     ] {
         let (mut root, mutation, workflow, pause, apply, _dir) =
-            ready_apply_registry(epoch, 1000).await;
+            ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
         let client = root.test_native_client();
         let apply_ticket = match root
             .register_apply(&mutation, &workflow, &pause, apply.clone())
@@ -3949,7 +3987,7 @@ async fn registry_reconciliation_reads_only_the_saved_original_apply_once() {
                     "read-lease",
                     "read-admission",
                     "reconciliation",
-                    1000,
+                    ROOMY_LEASE_MS,
                 ),
             )
             .unwrap();
@@ -4042,7 +4080,7 @@ async fn registry_reconciliation_reads_only_the_saved_original_apply_once() {
 async fn registry_reconciliation_expiry_and_one_byte_short_keep_read_lease_unconsumed() {
     let epoch = "epoch-reconcile-limits";
     let (mut root, mutation, workflow, pause, apply, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let apply_ticket = match root
         .register_apply(&mutation, &workflow, &pause, apply.clone())
@@ -4074,7 +4112,7 @@ async fn registry_reconciliation_expiry_and_one_byte_short_keep_read_lease_uncon
                 "read-lease",
                 "read-admission",
                 "reconciliation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -4110,7 +4148,7 @@ async fn registry_reconciliation_expiry_and_one_byte_short_keep_read_lease_uncon
             &workflow,
             &apply_ticket,
             admission.clone(),
-            Instant::now() + Duration::from_secs(2)
+            after_roomy_deadline()
         ),
         Err(LeaseError::Expired)
     ));
@@ -4127,7 +4165,7 @@ async fn registry_reconciliation_expiry_and_one_byte_short_keep_read_lease_uncon
 async fn registry_reconciliation_uses_saved_handle_after_original_reply_projection_failure() {
     let epoch = "epoch-reconcile-unknown-apply";
     let (mut root, mutation, workflow, pause, apply, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let apply_ticket = match root
         .register_apply(&mutation, &workflow, &pause, apply.clone())
@@ -4165,7 +4203,7 @@ async fn registry_reconciliation_uses_saved_handle_after_original_reply_projecti
                 "read-lease",
                 "read-admission",
                 "reconciliation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -4218,7 +4256,7 @@ async fn registry_reconciliation_uses_saved_handle_after_original_reply_projecti
 async fn registry_reconciliation_worker_panic_remains_read_uncertain() {
     let epoch = "epoch-reconcile-worker-panic";
     let (mut root, mutation, workflow, pause, apply, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let apply_ticket = match root
         .register_apply(&mutation, &workflow, &pause, apply.clone())
@@ -4250,7 +4288,7 @@ async fn registry_reconciliation_worker_panic_remains_read_uncertain() {
                 "read-lease",
                 "read-admission",
                 "reconciliation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -4304,7 +4342,7 @@ async fn registry_reconciliation_worker_panic_remains_read_uncertain() {
 async fn registry_reconciliation_accepts_later_native_recovery_latch() {
     let epoch = "epoch-reconcile-later-latch";
     let (mut root, mutation, workflow, pause, apply, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let apply_ticket = match root
         .register_apply(&mutation, &workflow, &pause, apply.clone())
@@ -4337,7 +4375,7 @@ async fn registry_reconciliation_accepts_later_native_recovery_latch() {
                 "read-lease",
                 "read-admission",
                 "reconciliation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -4410,7 +4448,7 @@ async fn registry_reconciliation_accepts_later_native_recovery_latch() {
 async fn registry_reconciliation_rejects_unfinished_apply_and_foreign_ticket() {
     let epoch = "epoch-reconcile-source-gate";
     let (mut root, mutation, workflow, pause, apply, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let apply_ticket = match root
         .register_apply(&mutation, &workflow, &pause, apply.clone())
         .unwrap()
@@ -4428,7 +4466,7 @@ async fn registry_reconciliation_rejects_unfinished_apply_and_foreign_ticket() {
                 "read-lease",
                 "read-admission",
                 "reconciliation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -4448,7 +4486,7 @@ async fn registry_reconciliation_rejects_unfinished_apply_and_foreign_ticket() {
     ));
     assert_eq!(root.test_lease_consumed("read-lease"), Some(false));
     let (mut foreign_root, foreign_mutation, foreign_workflow, foreign_pause, foreign_apply, _dir) =
-        ready_apply_registry("epoch-reconcile-foreign", 1000).await;
+        ready_apply_registry("epoch-reconcile-foreign", ROOMY_LEASE_MS).await;
     let foreign_ticket = match foreign_root
         .register_apply(
             &foreign_mutation,
@@ -4472,7 +4510,7 @@ async fn registry_reconciliation_rejects_unfinished_apply_and_foreign_ticket() {
 async fn registry_discard_candidate_after_expired_pause_lease_is_one_native_call() {
     let epoch = "epoch-discard-candidate";
     let (mut root, session, workflow, preflight, pause_admission, dir) =
-        ready_pause_registry(epoch, 100).await;
+        ready_pause_registry(epoch, SHORT_LEASE_MS).await;
     let client = root.test_native_client();
     let before = sqlite_applied_revision(&dir.0);
     let scope = registry_scope(epoch);
@@ -4481,13 +4519,13 @@ async fn registry_discard_candidate_after_expired_pause_lease_is_one_native_call
         "discard-lease",
         "discard-admission",
         "mutation",
-        1000,
+        ROOMY_LEASE_MS,
     );
     assert!(matches!(
         root.issue_discard_lease(&session, &workflow, &preflight, discard_lease.clone()),
         Err(LeaseError::Busy)
     ));
-    tokio::time::sleep(Duration::from_millis(150)).await;
+    tokio::time::sleep(Duration::from_millis(SHORT_LEASE_MS + 50)).await;
     let change = change("pause-ready");
     let lease = root
         .issue_discard_lease(&session, &workflow, &preflight, discard_lease)
@@ -4553,7 +4591,7 @@ async fn registry_discard_candidate_after_expired_pause_lease_is_one_native_call
 async fn registry_discard_paused_candidate_does_not_resume_or_apply() {
     let epoch = "epoch-discard-paused";
     let (mut root, session, workflow, preflight, pause_admission, dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let before = sqlite_applied_revision(&dir.0);
     let pause = match root
@@ -4589,7 +4627,7 @@ async fn registry_discard_paused_candidate_does_not_resume_or_apply() {
                 "discard-lease",
                 "discard-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -4604,7 +4642,7 @@ async fn registry_discard_paused_candidate_does_not_resume_or_apply() {
                 "apply-blocked-lease",
                 "apply-blocked-admission",
                 "mutation",
-                1000
+                ROOMY_LEASE_MS
             )
         ),
         Err(LeaseError::Busy)
@@ -4641,7 +4679,8 @@ async fn registry_discard_paused_candidate_does_not_resume_or_apply() {
 #[tokio::test]
 async fn registry_discard_after_typed_apply_rejection_keeps_both_original_replies() {
     let epoch = "epoch-discard-rejected-apply";
-    let (mut root, session, workflow, pause, apply, dir) = ready_apply_registry(epoch, 1000).await;
+    let (mut root, session, workflow, pause, apply, dir) =
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let before = sqlite_applied_revision(&dir.0);
     let apply_ticket = match root
@@ -4678,7 +4717,7 @@ async fn registry_discard_after_typed_apply_rejection_keeps_both_original_replie
                 "discard-lease",
                 "discard-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -4731,7 +4770,7 @@ async fn registry_discard_lost_response_keeps_unknown_even_after_native_idle() {
                 "discard-lease",
                 "discard-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -4791,7 +4830,13 @@ async fn registry_discard_recovered_preflight_unknown_allows_handoff() {
         .issue_preflight_lease(
             &mutation,
             &workflow,
-            registry_lease(&scope, "preflight-lease", "preflight", "mutation", 1000),
+            registry_lease(
+                &scope,
+                "preflight-lease",
+                "preflight",
+                "mutation",
+                ROOMY_LEASE_MS,
+            ),
         )
         .unwrap();
     let original = registry_preflight(&scope, &change, "preflight", &preflight_lease);
@@ -4830,7 +4875,13 @@ async fn registry_discard_recovered_preflight_unknown_allows_handoff() {
             &mutation,
             &workflow,
             &preflight,
-            registry_lease(&scope, "discard-lease", "discard", "mutation", 1000),
+            registry_lease(
+                &scope,
+                "discard-lease",
+                "discard",
+                "mutation",
+                ROOMY_LEASE_MS,
+            ),
         )
         .unwrap();
     let admission = registry_discard_admission(
@@ -4876,7 +4927,7 @@ async fn registry_discard_lease_blocks_new_pause_and_expired_registration_is_ato
         "discard-lease",
         "discard-admission",
         "mutation",
-        1000,
+        ROOMY_LEASE_MS,
     );
     let lease = root
         .issue_discard_lease(&session, &workflow, &preflight, lease_request.clone())
@@ -4892,7 +4943,13 @@ async fn registry_discard_lease_blocks_new_pause_and_expired_registration_is_ato
             &workflow,
             &preflight,
             "pause:blocked",
-            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 1000)
+            registry_lease(
+                &scope,
+                "pause-lease",
+                "pause-admission",
+                "mutation",
+                ROOMY_LEASE_MS
+            )
         ),
         Err(LeaseError::Busy)
     ));
@@ -4911,7 +4968,7 @@ async fn registry_discard_lease_blocks_new_pause_and_expired_registration_is_ato
             &workflow,
             &preflight,
             admission.clone(),
-            Instant::now() + Duration::from_secs(2)
+            after_roomy_deadline()
         ),
         Err(LeaseError::Expired)
     ));
@@ -4931,7 +4988,13 @@ async fn registry_discard_lease_blocks_new_pause_and_expired_registration_is_ato
             &workflow,
             &preflight,
             "pause:blocked",
-            registry_lease(&scope, "pause-lease", "pause-admission", "mutation", 1000)
+            registry_lease(
+                &scope,
+                "pause-lease",
+                "pause-admission",
+                "mutation",
+                ROOMY_LEASE_MS
+            )
         ),
         Err(LeaseError::Busy)
     ));
@@ -4947,7 +5010,8 @@ async fn registry_discard_lease_blocks_new_pause_and_expired_registration_is_ato
 #[tokio::test]
 async fn registry_discard_after_expired_apply_lease_preserves_paused_candidate() {
     let epoch = "epoch-discard-expired-apply";
-    let (mut root, session, workflow, _pause, apply, dir) = ready_apply_registry(epoch, 100).await;
+    let (mut root, session, workflow, _pause, apply, dir) =
+        ready_apply_registry(epoch, SHORT_LEASE_MS).await;
     let client = root.test_native_client();
     let preflight = root.test_preflight_ticket(&session, &workflow);
     let scope = registry_scope(epoch);
@@ -4957,13 +5021,13 @@ async fn registry_discard_after_expired_apply_lease_preserves_paused_candidate()
         "discard-lease",
         "discard-admission",
         "mutation",
-        1000,
+        ROOMY_LEASE_MS,
     );
     assert!(matches!(
         root.issue_discard_lease(&session, &workflow, &preflight, request.clone()),
         Err(LeaseError::Busy)
     ));
-    tokio::time::sleep(Duration::from_millis(150)).await;
+    tokio::time::sleep(Duration::from_millis(SHORT_LEASE_MS + 50)).await;
     let lease = root
         .issue_discard_lease(&session, &workflow, &preflight, request)
         .unwrap();
@@ -5012,7 +5076,7 @@ async fn registry_discard_dispatch_deadline_does_not_call_native() {
                 "discard-lease",
                 "discard-admission",
                 "mutation",
-                100,
+                SHORT_LEASE_MS,
             ),
         )
         .unwrap();
@@ -5032,7 +5096,7 @@ async fn registry_discard_dispatch_deadline_does_not_call_native() {
         DiscardRegistration::Registered(ticket) => ticket,
         _ => panic!("new discard"),
     };
-    tokio::time::sleep(Duration::from_millis(150)).await;
+    tokio::time::sleep(Duration::from_millis(SHORT_LEASE_MS + 50)).await;
     let reply = root.dispatch_discard(&session, &ticket).unwrap();
     assert_eq!(reply.as_value()["outcome"]["kind"], "rejected");
     assert_eq!(reply.as_value()["outcome"]["error"], "deadlineExceeded");
@@ -5135,7 +5199,7 @@ async fn registry_discard_running_candidate_keeps_the_recorder_running() {
                 "preflight-lease",
                 "preflight-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -5181,7 +5245,7 @@ async fn registry_discard_running_candidate_keeps_the_recorder_running() {
                 "discard-lease",
                 "discard-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();

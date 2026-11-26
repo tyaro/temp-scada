@@ -24,7 +24,7 @@ pub(super) fn read_admission(
                 &format!("read-lease:{suffix}"),
                 &admission_id,
                 "reconciliation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -64,7 +64,8 @@ pub(super) async fn failed_apply(
     RecordingAdmissionReply,
     crate::recording_host::retention::tests::Directory,
 ) {
-    let (mut root, mutation, workflow, pause, apply, dir) = ready_apply_registry(epoch, 1000).await;
+    let (mut root, mutation, workflow, pause, apply, dir) =
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let ticket = match root
         .register_apply(&mutation, &workflow, &pause, apply.clone())

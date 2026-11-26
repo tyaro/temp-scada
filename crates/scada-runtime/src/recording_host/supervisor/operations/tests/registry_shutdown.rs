@@ -9,7 +9,7 @@ async fn registry_shutdown_settles_an_undispatched_pause_and_drains_only_through
     let epoch = "epoch-shutdown-undispatched";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, preflight, pause_admission, dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let pause = match root
@@ -47,7 +47,7 @@ async fn registry_shutdown_settles_an_undispatched_pause_and_drains_only_through
             &format!("lease:{role}"),
             &format!("admission:{role}"),
             role,
-            1000,
+            ROOMY_LEASE_MS,
         );
         assert!(matches!(
             root.issue_lease(session, lease),
@@ -64,7 +64,13 @@ async fn registry_shutdown_settles_an_undispatched_pause_and_drains_only_through
             &mutation,
             &workflow,
             &preflight,
-            registry_lease(&scope, "drain-lease", "drain-admission", "mutation", 1000),
+            registry_lease(
+                &scope,
+                "drain-lease",
+                "drain-admission",
+                "mutation",
+                ROOMY_LEASE_MS,
+            ),
         )
         .unwrap();
     let admission = registry_discard_admission(
@@ -102,7 +108,7 @@ async fn registry_shutdown_keeps_monitoring_an_accepted_apply_until_handoff() {
     let epoch = "epoch-shutdown-monitor";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let operation = admission.as_value()["action"]["operation"].clone();
@@ -188,7 +194,7 @@ async fn registry_shutdown_keeps_monitoring_an_accepted_apply_until_handoff() {
                 "lease:after-close",
                 "admission:after-close",
                 "mutation",
-                1000
+                ROOMY_LEASE_MS
             ),
         ),
         Err(LeaseError::Closed)

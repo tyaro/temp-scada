@@ -428,17 +428,29 @@ async fn registry_maximum_id_discard_saves_its_original_reply_within_its_reserva
 /// a registered apply that waited past that deadline never reaches native.
 #[tokio::test]
 async fn registry_same_id_lease_and_dispatch_wait_keep_the_original_deadline() {
+    // Long enough that the steps before registration never outlast it on a loaded machine.
+    const BUDGET_MS: u64 = 3_000;
     let epoch = "epoch-deadline-scenario";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, dir) =
-        ready_apply_registry(epoch, 300).await;
+        ready_apply_registry(epoch, BUDGET_MS).await;
+    // The lease was issued inside `ready_apply_registry`; every later step compares the
+    // saved deadline itself, so a loaded machine cannot hide a moved deadline.
+    let deadline = root.test_lease_deadline("apply-lease").unwrap();
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let before = sqlite_applied_revision(&dir.0);
-    let request = registry_lease(&scope, "apply-lease", "apply-admission", "mutation", 300);
+    let request = registry_lease(
+        &scope,
+        "apply-lease",
+        "apply-admission",
+        "mutation",
+        BUDGET_MS,
+    );
     let original = root
         .issue_apply_lease(&mutation, &workflow, &pause, "apply:ready", request.clone())
         .unwrap();
+    assert_eq!(root.test_lease_deadline("apply-lease"), Some(deadline));
 
     // A delayed re-fetch returns the original reply; the deadline is not extended.
     tokio::time::sleep(Duration::from_millis(100)).await;
@@ -447,6 +459,7 @@ async fn registry_same_id_lease_and_dispatch_wait_keep_the_original_deadline() {
             .unwrap(),
         original
     );
+    assert_eq!(root.test_lease_deadline("apply-lease"), Some(deadline));
     // Same lease ID with another budget, the same admission under another lease ID, and the
     // read role are refused without issuing anything.
     let leases = root.test_lease_count(LeaseRole::Mutation);
@@ -456,7 +469,13 @@ async fn registry_same_id_lease_and_dispatch_wait_keep_the_original_deadline() {
             &workflow,
             &pause,
             "apply:ready",
-            registry_lease(&scope, "apply-lease", "apply-admission", "mutation", 299)
+            registry_lease(
+                &scope,
+                "apply-lease",
+                "apply-admission",
+                "mutation",
+                BUDGET_MS - 1
+            )
         ),
         Err(LeaseError::ProtocolViolation)
     ));
@@ -466,7 +485,13 @@ async fn registry_same_id_lease_and_dispatch_wait_keep_the_original_deadline() {
             &workflow,
             &pause,
             "apply:ready",
-            registry_lease(&scope, "apply-lease-2", "apply-admission", "mutation", 300)
+            registry_lease(
+                &scope,
+                "apply-lease-2",
+                "apply-admission",
+                "mutation",
+                BUDGET_MS
+            )
         ),
         Err(LeaseError::ProtocolViolation)
     ));
@@ -478,13 +503,14 @@ async fn registry_same_id_lease_and_dispatch_wait_keep_the_original_deadline() {
                 "apply-lease",
                 "apply-admission",
                 "reconciliation",
-                300
+                BUDGET_MS
             )
         ),
         Err(LeaseError::Forbidden)
     );
     assert_eq!(root.test_lease_count(LeaseRole::Mutation), leases);
     assert_eq!(root.test_lease_count(LeaseRole::Reconciliation), 0);
+    assert_eq!(root.test_lease_deadline("apply-lease"), Some(deadline));
 
     // Registered before the deadline, dispatched after it: rejected, native never called.
     let ticket = match root
@@ -495,7 +521,7 @@ async fn registry_same_id_lease_and_dispatch_wait_keep_the_original_deadline() {
         _ => panic!("new apply"),
     };
     assert_eq!(root.test_lease_consumed("apply-lease"), Some(true));
-    tokio::time::sleep(Duration::from_millis(250)).await;
+    tokio::time::sleep_until((deadline + Duration::from_millis(50)).into()).await;
     let reply = root.dispatch_apply(&mutation, &ticket).unwrap();
     assert_eq!(reply.as_value()["outcome"]["kind"], "rejected");
     assert_eq!(reply.as_value()["outcome"]["error"], "deadlineExceeded");
@@ -660,7 +686,7 @@ fn lease_add<'a>(
                 &format!("lease:{s}"),
                 &format!("admission:{s}"),
                 role,
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .map(drop)

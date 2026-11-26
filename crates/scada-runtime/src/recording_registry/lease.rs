@@ -377,6 +377,12 @@ impl RecordingRegistryRoot {
         self.leases.get(lease_id).map(|lease| lease.consumed)
     }
 
+    /// The saved deadline of a lease (a same-ID re-fetch must not move it).
+    #[cfg(test)]
+    pub(crate) fn test_lease_deadline(&self, lease_id: &str) -> Option<Instant> {
+        self.leases.get(lease_id).map(|lease| lease.deadline)
+    }
+
     pub fn issue_lease(
         &mut self,
         session: &RecordingRegistrySession,

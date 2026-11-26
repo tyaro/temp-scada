@@ -108,7 +108,13 @@ async fn registry_issuer_issues_principal_bound_sessions_for_its_own_root_only()
     let again = root.reserve_workflow(&renewed, change.clone()).unwrap();
     assert_eq!(again.sequence(), workflow.sequence());
     assert_eq!(again.change_id(), workflow.change_id());
-    let lease = registry_lease(&scope, "issuer-lease", "issuer-admission", "mutation", 1000);
+    let lease = registry_lease(
+        &scope,
+        "issuer-lease",
+        "issuer-admission",
+        "mutation",
+        ROOMY_LEASE_MS,
+    );
     assert!(root
         .issue_preflight_lease(&renewed, &workflow, lease)
         .is_ok());
@@ -150,7 +156,7 @@ async fn registry_quiescence_reports_unsettled_workflows_without_changing_anythi
         .issue_preflight_lease(
             &session,
             &workflow,
-            registry_lease(&scope, "q-lease", "q-admission", "mutation", 1000),
+            registry_lease(&scope, "q-lease", "q-admission", "mutation", ROOMY_LEASE_MS),
         )
         .unwrap();
     let request = registry_preflight(&scope, &change, "q-admission", &lease);
@@ -197,7 +203,7 @@ async fn registry_quiescence_reports_unsettled_workflows_without_changing_anythi
 async fn registry_quiescence_follows_apply_from_registration_to_confirmed_completion() {
     let epoch = "epoch-quiescence-apply";
     let (mut root, session, workflow, pause, admission, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     // `ready_apply_registry` reserved the workflow as "alice", so other principals are free.
     let paused = root.quiescence();
     assert!(!paused.is_quiescent());
@@ -247,7 +253,7 @@ async fn registry_demoted_admin_recovers_a_lost_apply_reply_with_a_read_session(
     let epoch = "epoch-demoted";
     let scope = registry_scope(epoch);
     let (mut root, _alice, workflow, pause, admission, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     // The helper's sessions belong to "alice"; the host issues by principal string alike.
     let admin = root.test_session("alice", LeaseRole::Mutation);
     let admin_read = root.test_session("alice", LeaseRole::Reconciliation);
