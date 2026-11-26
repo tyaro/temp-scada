@@ -73,6 +73,14 @@ pub enum LiveEvent {
         series_ids: Vec<String>,
         reason: LiveBreakReason,
     },
+    /// A recording of another plan or revision began: this subscription's
+    /// context is no longer the applied one and nothing more comes for it.
+    /// The client reads the HistoryContext again and subscribes anew.
+    #[serde(rename_all = "camelCase")]
+    ContextChanged {
+        subscription_id: String,
+        context_id: String,
+    },
 }
 
 /// The live feed of one recording store: at most one subscription (one
@@ -106,6 +114,8 @@ struct Subscription {
     /// the queue's (newer) rest.
     overflowed: BTreeSet<String>,
     last_epoch: Option<String>,
+    /// `ContextChanged` was queued: sent once.
+    stale: bool,
 }
 
 impl Subscription {
@@ -116,6 +126,9 @@ impl Subscription {
                     .overflowed
                     .extend(items.into_iter().map(|item| item.series_id)),
                 Some(LiveEvent::Break { series_ids, .. }) => self.overflowed.extend(series_ids),
+                // The last event a subscription gets (nothing is queued
+                // after it), so an overflow never drops it.
+                Some(LiveEvent::ContextChanged { .. }) => {}
                 None => break,
             }
         }
@@ -134,6 +147,9 @@ impl Subscription {
 
     /// The old session's items go: a session break covers them.
     fn end_session(&mut self) {
+        if self.stale {
+            return;
+        }
         self.queue.clear();
         self.overflowed.clear();
         self.last_epoch = None;
@@ -195,6 +211,7 @@ impl LiveFeed {
             queue: VecDeque::new(),
             overflowed: BTreeSet::new(),
             last_epoch: None,
+            stale: false,
         });
         drop(inner);
         let wake = self.wake.subscribe();
@@ -242,9 +259,17 @@ impl CommitTap for LiveFeed {
                 .map(|m| (m.series_id.clone(), m.segment_id.clone()))
                 .collect(),
         });
-        if replaced {
-            if let Some(subscription) = inner.subscription.as_mut() {
+        if let Some(subscription) = inner.subscription.as_mut() {
+            if replaced {
                 subscription.end_session();
+            }
+            if subscription.plan != *plan && !subscription.stale {
+                subscription.stale = true;
+                let event = LiveEvent::ContextChanged {
+                    subscription_id: subscription.id.clone(),
+                    context_id: subscription.context_id.clone(),
+                };
+                subscription.push(event);
             }
         }
         drop(inner);

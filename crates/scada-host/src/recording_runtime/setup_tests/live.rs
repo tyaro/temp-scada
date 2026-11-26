@@ -93,6 +93,7 @@ async fn the_recorded_ticks_are_delivered_and_a_recreated_tag_ends_the_line() {
                 }
             }
             LiveEvent::Break { .. } => panic!("no break while recording"),
+            event @ LiveEvent::ContextChanged { .. } => panic!("{event:?}"),
         }
     }
     let LiveEvent::Batch {
@@ -162,6 +163,7 @@ async fn the_recorded_ticks_are_delivered_and_a_recreated_tag_ends_the_line() {
                 series_ids, reason, ..
             } => break (series_ids, reason),
             LiveEvent::Batch { session_id: s, .. } => assert_eq!(s, session_id),
+            event @ LiveEvent::ContextChanged { .. } => panic!("{event:?}"),
         }
     };
     assert_eq!(broken.1, LiveBreakReason::Session);

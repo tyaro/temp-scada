@@ -69,6 +69,8 @@ pub fn history_cancel(runtime: State<'_, RecordingRuntime>, call_id: String) {
 /// §3.2): each committed tick of the recorder, as a batch, and break marks,
 /// emitted as `scada:live-trend` to the calling webview until
 /// `history_live_stop`, a later start (which replaces it), or a failed emit.
+/// A recording of another plan or revision sends it `contextChanged` once:
+/// read the context again and start anew.
 /// `request`: `{contextId, historianNamespace, seriesIds}` of the
 /// HistoryContext. Returns `{subscriptionId}`. Errors: `invalid_project`,
 /// why the recording DB is unavailable, `noContext`, `staleContext` (read

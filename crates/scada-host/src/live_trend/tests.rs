@@ -99,7 +99,7 @@ fn batch_sequences(events: &[LiveEvent]) -> Vec<u64> {
         .iter()
         .filter_map(|e| match e {
             LiveEvent::Batch { sequence, .. } => Some(*sequence),
-            LiveEvent::Break { .. } => None,
+            _ => None,
         })
         .collect()
 }
@@ -111,7 +111,7 @@ fn breaks(events: &[LiveEvent]) -> Vec<(Vec<String>, LiveBreakReason)> {
             LiveEvent::Break {
                 series_ids, reason, ..
             } => Some((series_ids.clone(), *reason)),
-            LiveEvent::Batch { .. } => None,
+            _ => None,
         })
         .collect()
 }
@@ -245,6 +245,74 @@ fn a_session_change_drops_the_old_items_and_breaks_every_series() {
     assert_eq!(batch_sequences(&events), Vec::<u64>::new());
     assert_eq!(breaks(&events).len(), 1);
     assert_eq!(breaks(&events)[0].1, LiveBreakReason::Session);
+}
+
+/// The owner's order on #401: subscribe revision A; consume its stop and
+/// read A again; apply and record revision B. The old subscription learns
+/// its context changed (and gets nothing of B), and a new one on B delivers.
+#[test]
+fn a_recording_of_another_revision_tells_the_old_subscription_its_context_changed() {
+    let feed = LiveFeed::new();
+    let a = plan();
+    let b = PlanRef {
+        plan_id: "plan-a".into(),
+        revision: 2,
+    };
+    feed.begin(&spec("s1"), &a);
+    let old = feed.subscribe("applied:1", a.clone(), series(&["series-0"]));
+    feed.committed(&tick("s1", 1, "e"));
+    assert_eq!(batch_sequences(&drain(&feed, &old)), [1]);
+    feed.end("s1");
+    assert_eq!(breaks(&drain(&feed, &old))[0].1, LiveBreakReason::Session);
+    // Read A again: still a subscription of A while nothing records.
+    let old = feed.subscribe("applied:1", a, series(&["series-0"]));
+    assert_eq!(drain(&feed, &old), []);
+
+    feed.begin(&spec("s2"), &b);
+    feed.committed(&tick("s2", 1, "e"));
+    feed.end("s2");
+    assert_eq!(
+        drain(&feed, &old),
+        [LiveEvent::ContextChanged {
+            subscription_id: old.subscription_id().into(),
+            context_id: "applied:1".into(),
+        }]
+    );
+
+    let new = feed.subscribe("applied:2", b.clone(), series(&["series-0"]));
+    feed.begin(&spec("s3"), &b);
+    feed.committed(&tick("s3", 1, "e"));
+    let events = drain(&feed, &new);
+    assert!(matches!(
+        &events[..],
+        [LiveEvent::Batch { context_id, session_id, .. }] if context_id == "applied:2" && session_id == "s3"
+    ));
+}
+
+/// `ContextChanged` survives an overflow: nothing is queued after it.
+#[test]
+fn a_context_change_is_never_dropped_by_an_overflow() {
+    let feed = LiveFeed::new();
+    feed.begin(&spec("s1"), &plan());
+    let pump = feed.subscribe("applied:1", plan(), series(&["series-0"]));
+    for sequence in 1..=(LIVE_QUEUE_LIMIT as u64 + 5) {
+        feed.committed(&tick("s1", sequence, "e"));
+    }
+    let other = PlanRef {
+        plan_id: "plan-b".into(),
+        revision: 1,
+    };
+    feed.begin(&spec("s2"), &other);
+    for sequence in 1..=(LIVE_QUEUE_LIMIT as u64 + 5) {
+        feed.committed(&tick("s2", sequence, "e"));
+    }
+    feed.end("s2");
+    let events = drain(&feed, &pump);
+    assert!(matches!(
+        events.last(),
+        Some(LiveEvent::ContextChanged { .. })
+    ));
+    assert_eq!(batch_sequences(&events), Vec::<u64>::new());
 }
 
 #[test]
@@ -499,7 +567,7 @@ fn the_delivered_items_are_the_committed_records_and_confirm_the_history() {
         .iter()
         .filter_map(|e| match e {
             LiveEvent::Batch { items, .. } => Some(items[0].t_ms),
-            LiveEvent::Break { .. } => None,
+            _ => None,
         })
         .collect();
     assert_eq!(

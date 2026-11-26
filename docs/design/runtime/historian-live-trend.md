@@ -124,6 +124,7 @@ Recording host ── context（namespace・contextId・系列ごとの live の
   - **配送は commit が成功した tick だけ**にする（host 側の確定の根拠。commit は記録 session の中で `sequence` の順に進むので、`sequence` が `s` の件を受けた後に始めた H1 の照会は、同じ session の `s` 以前をすべて読める）。commit が失敗した tick は配送せず途切れの印を送る。表示は commit の間隔ぶん遅れる。
   - 配送は tick ごとにまとめた batch に `sequence` を付ける。配送は記録を止めない（受け手が遅くても Recorder の tick を待たせない）。キューが溢れたら古い件を黙って捨てず、捨てた系列に途切れの印を送る（画面は `liveBreak`）。
   - 記録の session が変わった（停止・再開・新しい apply）ときは、旧 session の件を捨て、全系列に途切れの印を送る。
+  - 購読と違う計画・revision の記録が始まった（停止を受けて旧 context を取り直した後に別の revision を apply して再開した、など）ときは、旧い購読に **`contextChanged`** を 1 回送り、以後その購読には何も送らない。画面は context を取り直し、新しい `contextId` で購読し直す（#401 のレビュー）。旧い計画の件は送らない絞り込みは変えない。
 - 画面は batch の件を系列ごとに `liveAppend`（1 件ずつ受ける API。同じ tick の複数の系列は `liveAppendAll`）で積み、§2.2 の件数の上限で包む。状態は不変なので `$state.raw` に載せる。`sampleIntervalMs` は対応の `periodMs` を渡す。
 
 ### 3.3 履歴（`hybridData`・`createBoundaryLoader`）
