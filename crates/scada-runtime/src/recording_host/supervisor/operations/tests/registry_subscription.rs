@@ -51,7 +51,7 @@ async fn registry_subscription_fixes_attach_snapshot_and_slots_later_revisions()
     let epoch = "epoch-subscribe-chain";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, preflight, pause_admission, _dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let preflight_reply = root
@@ -165,7 +165,7 @@ async fn registry_subscription_detach_frees_only_the_slot_and_is_principal_bound
     let epoch = "epoch-subscribe-detach";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, preflight, pause_admission, _dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let mut references = Vec::new();
@@ -327,7 +327,7 @@ async fn registry_subscription_unknown_admission_head_keeps_fixed_replies() {
                 "unknown-lease",
                 "unknown-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -603,7 +603,7 @@ async fn registry_subscription_discloses_workflow_evidence_only_to_its_principal
                 "principal-lease",
                 "principal-admission",
                 "mutation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();

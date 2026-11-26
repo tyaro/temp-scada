@@ -61,7 +61,7 @@ async fn registry_observation_completes_the_chain_on_saved_native_handles() {
     let epoch = "epoch-observe-chain";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, preflight, pause_admission, dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let preflight_reply = root
@@ -154,7 +154,13 @@ async fn registry_observation_completes_the_chain_on_saved_native_handles() {
             &workflow,
             &pause,
             "apply:observed",
-            registry_lease(&scope, "apply-lease", "apply-admission", "mutation", 1000),
+            registry_lease(
+                &scope,
+                "apply-lease",
+                "apply-admission",
+                "mutation",
+                ROOMY_LEASE_MS,
+            ),
         )
         .unwrap();
     let apply_admission = registry_apply_admission(
@@ -225,7 +231,7 @@ async fn registry_observation_is_read_role_principal_and_scope_bound() {
     let epoch = "epoch-observe-auth";
     let scope = registry_scope(epoch);
     let (mut root, mutation, _workflow, preflight, _pause, _dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let operation = handle_request(
         &root
@@ -279,7 +285,7 @@ async fn registry_observation_bounds_pending_slots_and_admits_terminal_ids() {
     let epoch = "epoch-observe-slots";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, preflight, pause_admission, _dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let pause = match root
@@ -356,7 +362,7 @@ async fn registry_observation_separates_rejection_unknown_reply_and_failed_compl
     let epoch = "epoch-observe-rejected";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let operation = admission.as_value()["action"]["operation"].clone();
@@ -386,7 +392,7 @@ async fn registry_observation_separates_rejection_unknown_reply_and_failed_compl
     let epoch = "epoch-observe-panic";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let operation = admission.as_value()["action"]["operation"].clone();
     let ticket = match root
@@ -422,7 +428,7 @@ async fn registry_observation_separates_rejection_unknown_reply_and_failed_compl
     let epoch = "epoch-observe-unknown";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let operation = admission.as_value()["action"]["operation"].clone();
     let ticket = match root
@@ -450,7 +456,7 @@ async fn registry_observation_separates_rejection_unknown_reply_and_failed_compl
     let epoch = "epoch-observe-failed";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let operation = admission.as_value()["action"]["operation"].clone();
@@ -475,7 +481,7 @@ async fn registry_observation_separates_rejection_unknown_reply_and_failed_compl
                 "read-lease",
                 "read-admission",
                 "reconciliation",
-                1000,
+                ROOMY_LEASE_MS,
             ),
         )
         .unwrap();
@@ -546,7 +552,7 @@ async fn registry_observation_reads_not_dispatched_completion_after_acceptance()
     let epoch = "epoch-observe-not-dispatched-apply";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, dir) =
-        ready_apply_registry(epoch, 200).await;
+        ready_apply_registry(epoch, SHORT_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let operation = admission.as_value()["action"]["operation"].clone();
@@ -568,7 +574,7 @@ async fn registry_observation_reads_not_dispatched_completion_after_acceptance()
         outcome(&root.observe_result(&read, observation.clone()).unwrap())["kind"],
         "pending"
     );
-    tokio::time::sleep(Duration::from_millis(250)).await;
+    tokio::time::sleep(Duration::from_millis(SHORT_LEASE_MS + 50)).await;
     gate.release.notify_one();
     let failed = observe_terminal(&mut root, &read, observation.clone()).await;
     let result = &outcome(&failed)["result"];
@@ -610,7 +616,7 @@ async fn registry_observation_reads_not_dispatched_completion_after_acceptance()
     let epoch = "epoch-observe-not-dispatched-pause";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, preflight, pause_admission, _dir) =
-        ready_pause_registry(epoch, 200).await;
+        ready_pause_registry(epoch, SHORT_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let pause = match root
@@ -625,7 +631,7 @@ async fn registry_observation_reads_not_dispatched_completion_after_acceptance()
     let accepted = root.dispatch_pause_join(&mutation, &pause).unwrap();
     assert_eq!(accepted.as_value()["outcome"]["kind"], "accepted");
     gate.entered.notified().await;
-    tokio::time::sleep(Duration::from_millis(250)).await;
+    tokio::time::sleep(Duration::from_millis(SHORT_LEASE_MS + 50)).await;
     gate.release.notify_one();
     let observation = operation_observation(&scope, "observe:nd-pause", &handle_request(&accepted));
     let failed = observe_terminal(&mut root, &read, observation.clone()).await;

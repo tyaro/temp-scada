@@ -27,7 +27,7 @@ async fn registry_call_inspection_never_dispatches_and_recovers_the_original_rep
     let epoch = "epoch-call-apply";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let before = sqlite_applied_revision(&dir.0);
     let original = admission.as_value().clone();
@@ -37,7 +37,13 @@ async fn registry_call_inspection_never_dispatches_and_recovers_the_original_rep
     let not_found = root.inspect_call(&mutation, unseen.clone()).unwrap();
     assert_eq!(*outcome(&not_found), json!({"kind":"notFound"}));
     assert_eq!(not_found.as_value()["request"], *unseen.as_value());
-    let lease = registry_lease(&scope, "call:never-leased", "call:never", "mutation", 1000);
+    let lease = registry_lease(
+        &scope,
+        "call:never-leased",
+        "call:never",
+        "mutation",
+        ROOMY_LEASE_MS,
+    );
     assert_eq!(
         *outcome(
             &root
@@ -145,7 +151,7 @@ async fn registry_call_inspection_keeps_an_unknown_original_after_accepted_knowl
         "call-unknown-lease",
         "call-unknown-admission",
         "mutation",
-        1000,
+        ROOMY_LEASE_MS,
     );
     let lease = root
         .issue_preflight_lease(&mutation, &workflow, lease_request.clone())
@@ -235,7 +241,7 @@ async fn registry_call_inspection_recovers_lost_cancel_attach_and_control_acks()
     let epoch = "epoch-call-acks";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, preflight, pause_admission, _dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let candidate = handle_request(
         &root
@@ -320,7 +326,7 @@ async fn registry_call_inspection_is_role_principal_scope_and_capacity_bound() {
     let epoch = "epoch-call-auth";
     let scope = registry_scope(epoch);
     let (mut root, mutation, _workflow, preflight, _pause, _dir) =
-        ready_pause_registry(epoch, 1000).await;
+        ready_pause_registry(epoch, ROOMY_LEASE_MS).await;
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let bob = root.test_session("bob", LeaseRole::Mutation);
     let original = root
@@ -349,7 +355,7 @@ async fn registry_call_inspection_is_role_principal_scope_and_capacity_bound() {
         "preflight-lease",
         "preflight-admission",
         "mutation",
-        1000,
+        ROOMY_LEASE_MS,
     );
     let bob_lease = inspect(&scope, "call:bob-lease", lease.as_value());
     assert!(matches!(

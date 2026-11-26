@@ -25,14 +25,20 @@ async fn registry_discard_lease_expired_unregistered_is_reissued_under_new_ids_o
     let (mut root, session, workflow, preflight, accepted, _dir) =
         ready_discard_candidate_registry(epoch).await;
     let client = root.test_native_client();
-    let first_request = registry_lease(&scope, "discard-lease-1", "discard-1", "mutation", 100);
+    let first_request = registry_lease(
+        &scope,
+        "discard-lease-1",
+        "discard-1",
+        "mutation",
+        SHORT_LEASE_MS,
+    );
     let first = root
         .issue_discard_lease(&session, &workflow, &preflight, first_request.clone())
         .unwrap();
     let bytes = root.test_used_bytes(LeaseRole::Mutation);
     let revisions = root.test_reserved_revisions();
     let leases = root.test_lease_count(LeaseRole::Mutation);
-    tokio::time::sleep(Duration::from_millis(150)).await;
+    tokio::time::sleep(Duration::from_millis(SHORT_LEASE_MS + 50)).await;
 
     // The same IDs re-fetch the saved reply without extending it; its registration is Expired.
     assert_eq!(
@@ -51,12 +57,24 @@ async fn registry_discard_lease_expired_unregistered_is_reissued_under_new_ids_o
             &session,
             &workflow,
             &preflight,
-            registry_lease(&scope, "discard-lease-x", "discard-1", "mutation", 1000)
+            registry_lease(
+                &scope,
+                "discard-lease-x",
+                "discard-1",
+                "mutation",
+                ROOMY_LEASE_MS
+            )
         ),
         Err(LeaseError::ProtocolViolation)
     ));
 
-    let second_request = registry_lease(&scope, "discard-lease-2", "discard-2", "mutation", 1000);
+    let second_request = registry_lease(
+        &scope,
+        "discard-lease-2",
+        "discard-2",
+        "mutation",
+        ROOMY_LEASE_MS,
+    );
     let second = root
         .issue_discard_lease(&session, &workflow, &preflight, second_request.clone())
         .unwrap();
@@ -74,7 +92,13 @@ async fn registry_discard_lease_expired_unregistered_is_reissued_under_new_ids_o
             &session,
             &workflow,
             &preflight,
-            registry_lease(&scope, "discard-lease-3", "discard-3", "mutation", 1000)
+            registry_lease(
+                &scope,
+                "discard-lease-3",
+                "discard-3",
+                "mutation",
+                ROOMY_LEASE_MS
+            )
         ),
         Err(LeaseError::ProtocolViolation)
     ));
@@ -122,7 +146,13 @@ async fn registry_discard_lease_registered_then_expired_is_never_reissued() {
             &session,
             &workflow,
             &preflight,
-            registry_lease(&scope, "discard-lease-1", "discard-1", "mutation", 100),
+            registry_lease(
+                &scope,
+                "discard-lease-1",
+                "discard-1",
+                "mutation",
+                SHORT_LEASE_MS,
+            ),
         )
         .unwrap();
     let admission = discard_admission_for(epoch, "discard-1", &lease, &accepted);
@@ -131,13 +161,19 @@ async fn registry_discard_lease_registered_then_expired_is_never_reissued() {
             .unwrap(),
         DiscardRegistration::Registered(_)
     ));
-    tokio::time::sleep(Duration::from_millis(150)).await;
+    tokio::time::sleep(Duration::from_millis(SHORT_LEASE_MS + 50)).await;
     assert!(matches!(
         root.issue_discard_lease(
             &session,
             &workflow,
             &preflight,
-            registry_lease(&scope, "discard-lease-2", "discard-2", "mutation", 1000)
+            registry_lease(
+                &scope,
+                "discard-lease-2",
+                "discard-2",
+                "mutation",
+                ROOMY_LEASE_MS
+            )
         ),
         Err(LeaseError::ProtocolViolation)
     ));

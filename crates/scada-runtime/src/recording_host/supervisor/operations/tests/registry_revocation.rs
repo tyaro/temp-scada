@@ -25,7 +25,7 @@ async fn registry_revocation_rejects_the_grant_and_keeps_monitoring_an_accepted_
     let epoch = "epoch-revoke-monitor";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let read = root.test_session("alice", LeaseRole::Reconciliation);
     let operation = admission.as_value()["action"]["operation"].clone();
@@ -66,7 +66,7 @@ async fn registry_revocation_rejects_the_grant_and_keeps_monitoring_an_accepted_
                     "lease:revoked",
                     "admission:revoked",
                     "mutation",
-                    1000
+                    ROOMY_LEASE_MS
                 )
             ),
             Err(LeaseError::Unauthorized)
@@ -181,8 +181,15 @@ async fn registry_revocation_rejects_the_grant_and_keeps_monitoring_an_accepted_
     .unwrap();
     let foreign_mutation = other.test_session("alice", LeaseRole::Mutation);
     let foreign_read = other.test_session("alice", LeaseRole::Reconciliation);
-    let closed_lease =
-        || registry_lease(&scope, "lease:closed", "admission:closed", "mutation", 1000);
+    let closed_lease = || {
+        registry_lease(
+            &scope,
+            "lease:closed",
+            "admission:closed",
+            "mutation",
+            ROOMY_LEASE_MS,
+        )
+    };
     for (session, expected) in [
         (&mutation, LeaseError::Unauthorized),
         (&foreign_mutation, LeaseError::Forbidden),
@@ -231,7 +238,7 @@ async fn registry_revocation_never_dispatches_a_registered_admission_for_the_rev
     let epoch = "epoch-revoke-undispatched";
     let scope = registry_scope(epoch);
     let (mut root, mutation, workflow, pause, admission, _dir) =
-        ready_apply_registry(epoch, 1000).await;
+        ready_apply_registry(epoch, ROOMY_LEASE_MS).await;
     let client = root.test_native_client();
     let ticket = match root
         .register_apply(&mutation, &workflow, &pause, admission)
@@ -269,7 +276,13 @@ async fn registry_revocation_never_dispatches_a_registered_admission_for_the_rev
     assert_eq!(
         root.issue_lease(
             &mutation,
-            registry_lease(&scope, "lease:after", "admission:after", "mutation", 1000)
+            registry_lease(
+                &scope,
+                "lease:after",
+                "admission:after",
+                "mutation",
+                ROOMY_LEASE_MS
+            )
         ),
         Err(LeaseError::Unauthorized)
     );
