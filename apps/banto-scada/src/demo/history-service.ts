@@ -157,13 +157,18 @@ export function createDemoHistoryService(
       },
     },
     context: {
-      version: 2,
+      version: 3,
       kind: "historyContext",
       contextId: "demo",
       historianNamespace: trends[0].historianNamespace,
       projectId: project.manifest.projectId,
       projectRevision: project.manifest.projectRevision,
-      series: [...labels].map(([seriesId, label]) => ({ seriesId, label })),
+      // The browser demo delivers no live data: its trends stay static.
+      series: [...labels].map(([seriesId, label]) => ({
+        seriesId,
+        label,
+        liveUnavailable: "recorderStopped",
+      })),
     },
   };
 }

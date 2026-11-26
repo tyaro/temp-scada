@@ -17,15 +17,19 @@ const definition = {
 };
 const saved = { ...project, trends: [definition] };
 const context = (): HistoryContext => ({
-  version: 2,
+  version: 3,
   kind: "historyContext",
   contextId: "context:1",
   projectId: project.manifest.projectId,
   projectRevision: project.manifest.projectRevision,
   historianNamespace: definition.historianNamespace,
   series: [
-    { seriesId: "series:a", label: "一覧の過去名ではない" },
-    { seriesId: "series:b", label: "一覧" },
+    {
+      seriesId: "series:a",
+      label: "一覧の過去名ではない",
+      liveUnavailable: "recorderStopped",
+    },
+    { seriesId: "series:b", label: "一覧", liveUnavailable: "recorderStopped" },
   ],
 });
 const source = {
@@ -33,7 +37,7 @@ const source = {
     throw Error("not queried");
   },
 };
-it("accepts, owns and freezes v2 without aliasing caller declaration", () => {
+it("accepts, owns and freezes v3 without aliasing caller declaration", () => {
   const input = context();
   const result = historyContext({ source, context: input }, project);
   expect(result.phase).toBe("ready");
@@ -45,17 +49,17 @@ it("accepts, owns and freezes v2 without aliasing caller declaration", () => {
 it.each([
   ["missing namespace", (c: any) => delete c.historianNamespace],
   ["invalid namespace", (c: any) => (c.historianNamespace = "archive/invalid")],
-  ["unknown version", (c: any) => (c.version = 3)],
-  ["v1 cannot carry namespace", (c: any) => (c.version = 1)],
+  ["unknown version", (c: any) => (c.version = 4)],
+  ["an earlier version", (c: any) => (c.version = 2)],
   ["extra field", (c: any) => (c.url = "not a namespace")],
-])("rejects invalid v2 context: %s", (_, change) => {
+])("rejects invalid v3 context: %s", (_, change) => {
   const input = context();
   change(input);
   expect(historyContext({ source, context: input }, project).phase).toBe(
     "invalid",
   );
 });
-it("keeps Project revision mismatch gate for v2", () => {
+it("keeps Project revision mismatch gate for v3", () => {
   expect(
     historyContext(
       {
@@ -78,12 +82,9 @@ it("resolves an owned definition preserving pen order, color case and alias spac
 it("requires namespace and all IDs, never labels or list order", () => {
   const c = context();
   expect(
-    historyPresetDefinition(saved, { ...c, version: 1 }, definition.id).issue,
-  ).toContain("保存Trend");
-  expect(
     historyPresetDefinition(
       saved,
-      { ...c, version: 2, historianNamespace: "archive:other" },
+      { ...c, historianNamespace: "archive:other" },
       definition.id,
     ).issue,
   ).toContain("namespace");

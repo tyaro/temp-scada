@@ -142,6 +142,28 @@ fn the_history_commands_answer_over_ipc_on_a_new_store() {
 }
 
 #[test]
+fn the_history_context_answers_v3_over_ipc() {
+    let dir = TempDir::new();
+    scada_host::recording_runtime::test_support::seed_applied_plan(&dir.0);
+    let (_app, webview) = app(RecordingRuntime::start(&dir.0, "deployment-a"));
+    let context = invoke(
+        &webview,
+        "history_context",
+        json!({"projectJson": project_json()}),
+    )
+    .unwrap();
+    assert_eq!(context["version"], 3);
+    assert_eq!(context["kind"], "historyContext");
+    assert_eq!(context["contextId"], "applied:1");
+    // The seeded plan is disabled and no recorder runs: no live mapping.
+    assert_eq!(
+        context["series"],
+        json!([{"seriesId": "series-0", "label": "Line1.Temperature",
+            "liveUnavailable": "recorderStopped"}])
+    );
+}
+
+#[test]
 fn an_unavailable_store_answers_every_history_command_with_its_reason() {
     let (_app, webview) = app(RecordingRuntime::unavailable(NO_DATA_DIR));
     assert_eq!(

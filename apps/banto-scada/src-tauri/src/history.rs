@@ -1,5 +1,6 @@
 //! The history commands of the desktop host (product-owner design §7.1): the
-//! HistoryContext v2 of the applied plan, and one H1 query at a time through
+//! HistoryContext v3 of the applied plan (with each series' live mapping,
+//! historian-live-trend §1.3), and one H1 query at a time through
 //! the History host. Reading history needs no sign-in, like the Hub reads.
 use crate::app_mode::AppMode;
 use crate::runtime::StartupProject;
@@ -8,8 +9,11 @@ use scada_model::Project;
 use serde_json::Value;
 use tauri::State;
 
-/// The HistoryContext v2 for the Project, or `null` when the recording DB has
+/// The HistoryContext v3 for the Project, or `null` when the recording DB has
 /// no applied plan for its recording plan (the UI then shows History offline).
+/// Each series has `live` (segment, value type, unit, period) while the
+/// recorder records the applied plan, or `liveUnavailable: recorderStopped`;
+/// never the Hub endpoint, credentials, SDK run or activation pin.
 /// Errors: `invalid_project`, or why the recording DB is unavailable.
 #[tauri::command]
 pub fn history_context(

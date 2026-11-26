@@ -13,15 +13,16 @@
 //! ([`RecordingRuntime::initial_setup`]).
 use crate::durable;
 use banto_tagclient::RestClient;
+use scada_historian::store::evidence::PlanRef;
 use scada_historian::store::query::{CancellationToken, QueryControl, QueryError};
 use scada_historian::store::recording_plan::{RecordingMapping, RecordingPlanState};
-use scada_historian::store::{SqliteStore, StoreError, StoreIdentity};
+use scada_historian::store::{IdentityDescriptor, SqliteStore, StoreError, StoreIdentity};
 use scada_model::recording_management::{RecordingInspectionRequest, RecordingInspectionResponse};
 use scada_model::recording_plan::validate_recording_plan;
 use scada_model::Project;
 use scada_runtime::history_host::{HistoryHost, HistoryHostError, HistoryPhase};
 use scada_runtime::recording_host::RecordingSupervisor;
-use scada_runtime::recording_host::{RecordingPhase, ResumeResolution};
+use scada_runtime::recording_host::{RecordingHostStatus, RecordingPhase, ResumeResolution};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::VecDeque;
@@ -124,12 +125,19 @@ fn h1_id(value: &str) -> bool {
 struct HistoryCatalog {
     plan_id: String,
     applied_revision: u64,
-    series: Vec<(String, String)>,
+    /// The applied plan's reference: a running recorder of this plan carries
+    /// the same one in its status.
+    plan: PlanRef,
+    /// Whether the applied plan is enabled and resolved its own mapping. A
+    /// disabled plan lists the registered mapping's series, never live.
+    recordable: bool,
+    series: Vec<IdentityDescriptor>,
 }
 
 impl HistoryCatalog {
     fn from_state(state: RecordingPlanState) -> Option<Self> {
         let applied = state.applied?;
+        let recordable = applied.receipt.enabled && applied.resolution.is_some();
         // A disabled plan resolves no mapping; its series are those of the
         // registered mapping, which earlier runs recorded.
         let mapping: RecordingMapping = match applied.resolution {
@@ -139,11 +147,46 @@ impl HistoryCatalog {
         Some(Self {
             plan_id: applied.receipt.desired_plan_id,
             applied_revision: applied.receipt.applied_revision,
-            series: mapping
-                .members
-                .into_iter()
-                .map(|m| (m.identity.series_id, m.identity.external_name))
-                .collect(),
+            plan: applied.receipt.plan,
+            recordable,
+            series: mapping.members.into_iter().map(|m| m.identity).collect(),
+        })
+    }
+
+    /// Whether `status` is a recorder recording this plan now (design
+    /// historian-live-trend §1.4): only `Running`, of the same plan, with no
+    /// stop requested. Anything else (idle, starting, stopping, failed or
+    /// blocked activation, another plan) is `recorderStopped`.
+    fn live(&self, status: Option<&RecordingHostStatus>) -> bool {
+        self.recordable
+            && status.is_some_and(|status| {
+                status.phase == RecordingPhase::Running
+                    && !status.stop_requested
+                    && status.plan.as_ref() == Some(&self.plan)
+            })
+    }
+}
+
+/// One series of the HistoryContext v3: its live mapping while the recorder
+/// records it, `liveUnavailable` otherwise. Only identity, type, unit and
+/// period; never the Hub endpoint, credentials, SDK run or activation pin.
+fn context_series(identity: &IdentityDescriptor, live: bool) -> Value {
+    if live {
+        json!({
+            "seriesId": identity.series_id,
+            "label": identity.external_name,
+            "live": {
+                "segmentId": identity.segment_id,
+                "valueType": identity.value_type,
+                "unit": identity.unit,
+                "periodMs": identity.period_ms,
+            },
+        })
+    } else {
+        json!({
+            "seriesId": identity.series_id,
+            "label": identity.external_name,
+            "liveUnavailable": "recorderStopped",
         })
     }
 }
@@ -304,9 +347,12 @@ impl RecordingRuntime {
         self.state.as_ref().ok().map(|ready| &ready.identity)
     }
 
-    /// The HistoryContext v2 for `project` (design §7.1), or `None` when the
-    /// store has no applied plan or the Project's recording plan is another
-    /// one: the UI then gets no History service and shows it as offline.
+    /// The HistoryContext v3 for `project` (design §7.1, historian-live-trend
+    /// §1.3), or `None` when the store has no applied plan or the Project's
+    /// recording plan is another one: the UI then gets no History service and
+    /// shows it as offline. Each series carries its live mapping (segment,
+    /// value type, unit, period) while the recorder records the applied plan,
+    /// or `liveUnavailable: recorderStopped`, as of this call.
     pub fn history_context(&self, project: &Project) -> Result<Option<Value>, &'static str> {
         let ready = self.state.as_ref().map_err(|reason| *reason)?;
         let catalog = ready.catalog.lock().unwrap_or_else(|e| e.into_inner());
@@ -316,17 +362,17 @@ impl RecordingRuntime {
         if project.recording_plan_id() != Some(catalog.plan_id.as_str()) {
             return Ok(None);
         }
+        let live = catalog.live(recorder_status(ready).as_deref());
         Ok(Some(json!({
-            "version": 2,
+            "version": 3,
             "kind": "historyContext",
             "contextId": format!("applied:{}", catalog.applied_revision),
             "historianNamespace": ready.identity.historian_namespace,
             "projectId": project.id(),
             "projectRevision": project.revision(),
-            "series": catalog.series.iter().map(|(series_id, label)| json!({
-                "seriesId": series_id,
-                "label": label,
-            })).collect::<Vec<_>>(),
+            "series": catalog.series.iter()
+                .map(|identity| context_series(identity, live))
+                .collect::<Vec<_>>(),
         })))
     }
 
@@ -681,6 +727,18 @@ async fn start(
     }
 }
 
+/// The recorder's status as of now: the installed root's, or the held
+/// Supervisor's. `None` while an operation holds the Supervisor (a setup,
+/// resume or stop in progress): the recording is then treated as stopped,
+/// and the UI reads the context again after the operation.
+fn recorder_status(ready: &Ready) -> Option<std::sync::Arc<RecordingHostStatus>> {
+    if let Some(watch) = lock(&ready.lent).as_ref() {
+        return Some(watch.borrow().clone());
+    }
+    let slot = ready.supervisor.try_lock().ok()?;
+    slot.as_ref().map(|supervisor| supervisor.state().recording)
+}
+
 fn lock<T>(mutex: &std::sync::Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|e| e.into_inner())
 }
@@ -762,5 +820,7 @@ fn store_reason(error: StoreError) -> &'static str {
 
 #[cfg(test)]
 pub(crate) mod setup_tests;
+#[cfg(any(test, feature = "test-support"))]
+pub mod test_support;
 #[cfg(test)]
 mod tests;

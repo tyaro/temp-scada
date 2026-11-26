@@ -6,12 +6,13 @@
     "version",
     "kind",
     "contextId",
+    "historianNamespace",
     "projectId",
     "projectRevision",
     "series"
   ],
   "properties": {
-    "version": { "enum": [1, 2] },
+    "version": { "const": 3 },
     "historianNamespace": { "$ref": "#/$defs/id" },
     "kind": { "const": "historyContext" },
     "contextId": { "$ref": "#/$defs/id" },
@@ -30,24 +31,37 @@
         "required": ["seriesId", "label"],
         "properties": {
           "seriesId": { "$ref": "#/$defs/id" },
-          "label": { "type": "string", "minLength": 1, "maxLength": 512 }
-        }
+          "label": { "type": "string", "minLength": 1, "maxLength": 512 },
+          "live": { "$ref": "#/$defs/live" },
+          "liveUnavailable": { "enum": ["recorderStopped"] }
+        },
+        "oneOf": [
+          { "required": ["live"], "not": { "required": ["liveUnavailable"] } },
+          { "required": ["liveUnavailable"], "not": { "required": ["live"] } }
+        ]
       }
     }
   },
-  "oneOf": [
-    {
-      "properties": { "version": { "const": 1 } },
-      "not": { "required": ["historianNamespace"] }
-    },
-    {
-      "properties": { "version": { "const": 2 } },
-      "required": ["historianNamespace"]
-    }
-  ],
   "$defs": {
     "id": {
       "$ref": "https://temp-scada.invalid/schema/history-contract-v1.json#/$defs/id"
+    },
+    "live": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["segmentId", "valueType", "unit", "periodMs"],
+      "properties": {
+        "segmentId": { "$ref": "#/$defs/id" },
+        "valueType": {
+          "$ref": "https://temp-scada.invalid/schema/history-contract-v1.json#/$defs/identity/properties/valueType"
+        },
+        "unit": {
+          "$ref": "https://temp-scada.invalid/schema/history-contract-v1.json#/$defs/identity/properties/unit"
+        },
+        "periodMs": {
+          "$ref": "https://temp-scada.invalid/schema/history-contract-v1.json#/$defs/identity/properties/periodMs"
+        }
+      }
     }
   }
 }

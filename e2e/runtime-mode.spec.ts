@@ -386,13 +386,19 @@ async function mockRuntimeHost(page: Page, options: RuntimeHostOptions = {}) {
                 };
               case "runtime_history_context":
                 return {
-                  version: 2,
+                  version: 3,
                   kind: "historyContext",
                   contextId: "applied:1",
                   historianNamespace: "historian:test",
                   projectId: options.projectId,
                   projectRevision: 1,
-                  series: [{ seriesId: "number", label: "温度" }],
+                  series: [
+                    {
+                      seriesId: "number",
+                      label: "温度",
+                      liveUnavailable: "recorderStopped",
+                    },
+                  ],
                 };
               case "history_query": {
                 const result = structuredClone(historyResult);

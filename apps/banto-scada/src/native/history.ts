@@ -79,7 +79,7 @@ export const runtimeHistoryContext: HistoryContextRequest = () => [
 /**
  * Keeps the History service of the current Project: on each change of the
  * Project's ID, revision or recording plan, it asks the host for the
- * HistoryContext v2 (`request`, `history_context` by default) and publishes a
+ * HistoryContext v3 (`request`, `history_context` by default) and publishes a
  * new service, or none while the reply is pending, when the recording DB has
  * no applied plan for this Project, or when the host cannot answer. Replies to
  * an earlier Project are dropped.

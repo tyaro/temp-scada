@@ -54,14 +54,14 @@ async function inject(
       const project=${JSON.stringify(project)};
       let notify=()=>{};
       const track=createSubscriber(update=>{notify=update;return ()=>{};});
-      const context={version:2,kind:"historyContext",contextId:"context:1",historianNamespace:"archive:a",
+      const context={version:3,kind:"historyContext",contextId:"context:1",historianNamespace:"archive:a",
         projectId:project.manifest.projectId,projectRevision:project.manifest.projectRevision,
-        series:[{seriesId:"bool",label:"一覧状態"},{seriesId:"unknown",label:"一覧旧系列"},{seriesId:"number",label:"一覧温度"}],...${JSON.stringify(patch)}};
+        series:[{seriesId:"bool",label:"一覧状態",liveUnavailable:"recorderStopped"},{seriesId:"unknown",label:"一覧旧系列",liveUnavailable:"recorderStopped"},{seriesId:"number",label:"一覧温度",liveUnavailable:"recorderStopped"}],...${JSON.stringify(patch)}};
       const h=window.__savedHistory={calls:[],active:0,maxActive:0};
       const source={query(query,{signal}){h.active++;h.maxActive=Math.max(h.maxActive,h.active);
         return new Promise(resolve=>h.calls.push({query,signal,resolve:value=>{h.active--;resolve(value);}}));}};
       let service={source,context};
-      h.replace=patch=>{const next={...structuredClone(context),...patch};if(next.version===1)delete next.historianNamespace;service={source,context:next};notify();};
+      h.replace=patch=>{const next={...structuredClone(context),...patch};service={source,context:next};notify();};
       h.reply=index=>{const call=h.calls[index],result=structuredClone((call.query.mode==="raw"?rawCases:minmaxCases)[0].expected);
         result.query=structuredClone(call.query);result.series=call.query.seriesIds.map(id=>result.series.find(row=>row.seriesId===id));call.resolve(result);};
       mount(App,{target:document.getElementById("app"),props:{get historyService(){track();return service;}}});
@@ -223,33 +223,28 @@ for (const theme of ["light", "dark"] as const)
   });
 for (const [label, patch, message] of [
   [
-    "v1",
-    { version: 1, historianNamespace: undefined },
-    "この接続は保存Trendの系列対応を提供していません",
-  ],
-  [
     "different namespace",
     { historianNamespace: "archive:other" },
     "namespaceが一致しません",
   ],
   [
     "missing pen",
-    { series: [{ seriesId: "number", label: "温度" }] },
+    {
+      series: [
+        {
+          seriesId: "number",
+          label: "温度",
+          liveUnavailable: "recorderStopped",
+        },
+      ],
+    },
     "全系列が接続先の一覧にありません",
   ],
 ] as const)
   test(`unresolved ${label} preset never queries or silently loses a pen`, async ({
     page,
   }) => {
-    // v1 must omit namespace entirely, so replace the injected source after start.
-    await start(page, fixture(), label === "v1" ? {} : patch);
-    if (label === "v1")
-      await page.evaluate(() => {
-        (window as any).__savedHistory.replace({
-          version: 1,
-          historianNamespace: undefined,
-        });
-      });
+    await start(page, fixture(), patch);
     await openMain(page);
     await expect(dialog(page)).toContainText(message);
     await dialog(page)
