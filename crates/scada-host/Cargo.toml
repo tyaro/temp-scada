@@ -18,11 +18,11 @@ zip = { version = "=4.6.1", default-features = false, features = ["deflate-flate
 scada-runtime = { path = "../scada-runtime" }
 uuid = { version = "1", features = ["v4", "v7"] }
 getrandom = "0.3"
-# Banto v9.0.0 (tag commit). The admin services own users / settings / audit;
+# Banto v9.1.1 (tag commit). The admin services own users / settings / audit;
 # the host only re-validates the desktop session and maps roles.
-banto-admin-services = { git = "https://github.com/tyaro/banto.git", rev = "5c98a35ff6b91018e093c763157b3edbb4110bb6" }
-banto-core = { git = "https://github.com/tyaro/banto.git", rev = "5c98a35ff6b91018e093c763157b3edbb4110bb6" }
-banto-storage = { git = "https://github.com/tyaro/banto.git", rev = "5c98a35ff6b91018e093c763157b3edbb4110bb6", features = ["sqlite"] }
+banto-admin-services = { git = "https://github.com/tyaro/banto.git", rev = "c9c72ab4273a12b8b5dad3174c65748af5033851" }
+banto-core = { git = "https://github.com/tyaro/banto.git", rev = "c9c72ab4273a12b8b5dad3174c65748af5033851" }
+banto-storage = { git = "https://github.com/tyaro/banto.git", rev = "c9c72ab4273a12b8b5dad3174c65748af5033851", features = ["sqlite"] }
 tokio.workspace = true
 sqlx = { version = "0.9", default-features = false, features = ["runtime-tokio", "sqlite", "macros", "migrate"] }
 
