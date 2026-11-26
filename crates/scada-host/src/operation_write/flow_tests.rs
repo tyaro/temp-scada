@@ -573,6 +573,24 @@ async fn a_hub_error_after_its_audit_row_keeps_the_audit_id() {
 }
 
 #[tokio::test]
+async fn an_uncertain_answer_with_an_audit_row_keeps_the_audit_id() {
+    // A 502 `write_uncertain` is a real Hub answer and may carry the audit row;
+    // it stays `uncertain` (unlike a time-out, which has no id).
+    let fx = Fixture::new().await;
+    fx.hub.reply(Reply::Status(
+        502,
+        r#"{"error":"write_uncertain","audit_id":78}"#,
+    ));
+    let result = fx.run(&button("command", 0, json!(true))).await;
+    assert_eq!(result.outcome, Outcome::Uncertain);
+    assert_eq!(result.reason, kind(ErrorKind::WriteUncertain));
+    assert_eq!(result.audit_id, Some(78));
+    let finish = fx.finished("command").await;
+    assert_eq!(finish.outcome, Outcome::Uncertain);
+    assert_eq!(finish.audit_id, Some(78));
+}
+
+#[tokio::test]
 async fn a_write_that_runs_out_of_time_is_uncertain() {
     // Short against a Hub that never answers: no timing boundary is crossed.
     let fx = Fixture::with_write_timeout(Duration::from_millis(300)).await;
@@ -580,7 +598,11 @@ async fn a_write_that_runs_out_of_time_is_uncertain() {
     let result = fx.run(&button("command", 0, json!(true))).await;
     assert_eq!(result.outcome, Outcome::Uncertain);
     assert_eq!(result.reason, kind(ErrorKind::WriteUncertain));
-    assert_eq!(fx.finished("command").await.outcome, Outcome::Uncertain);
+    // No answer, so no audit row to point at.
+    assert_eq!(result.audit_id, None);
+    let finish = fx.finished("command").await;
+    assert_eq!(finish.outcome, Outcome::Uncertain);
+    assert_eq!(finish.audit_id, None);
 }
 
 #[tokio::test]
