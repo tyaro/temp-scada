@@ -13,8 +13,8 @@ publish = false
 serde_json = { version = "1", features = ["float_roundtrip"] }
 jsonschema = { version = "0.33", default-features = false }
 
-# banto-industrial v0.3.0-alpha.3 (tag commit; the tag is an annotated tag, no release).
+# banto-industrial main 99b0b9c3 (v0.3.0-alpha.4 + #1344・#1345・#1349; no tag yet).
 # Same rev in crates/scada-host and apps/banto-scada/src-tauri.
-banto-tagclient = { git = "https://github.com/tyaro/banto-industrial.git", rev = "6a08efbb76b50e6094f88f6dc91c46b8c4a8ecc3" }
+banto-tagclient = { git = "https://github.com/tyaro/banto-industrial.git", rev = "99b0b9c35a069aa7513e2f3e611b281a5b68b2a6" }
 serde = { version = "1", features = ["derive"] }
 tokio = { version = "1", features = ["macros", "rt", "net", "sync", "time", "io-util"] }

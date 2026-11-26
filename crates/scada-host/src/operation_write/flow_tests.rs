@@ -473,38 +473,38 @@ async fn each_hub_answer_finishes_with_the_outcome_of_section_5() {
         (
             404,
             r#"{"error":"unknown_tag"}"#,
-            Outcome::Failed,
+            Outcome::NotSent,
             WriteRejected,
         ),
         (
             409,
             r#"{"error":"tag_disabled"}"#,
-            Outcome::Failed,
+            Outcome::NotSent,
             WriteRejected,
         ),
         (
             422,
             r#"{"error":"out_of_range"}"#,
-            Outcome::Failed,
+            Outcome::NotSent,
             WriteRejected,
         ),
         (
             429,
             r#"{"error":"rate_limited"}"#,
-            Outcome::Failed,
+            Outcome::NotSent,
             WriteRejected,
         ),
         (
             501,
             r#"{"error":"not_implemented"}"#,
-            Outcome::Failed,
+            Outcome::NotSent,
             WriteRejected,
         ),
         (
             502,
             r#"{"error":"write_failed"}"#,
             Outcome::Failed,
-            WriteRejected,
+            WriteFailed,
         ),
         (
             502,
@@ -552,6 +552,24 @@ async fn each_hub_answer_finishes_with_the_outcome_of_section_5() {
             .await
             .unwrap();
     }
+}
+
+#[tokio::test]
+async fn a_hub_error_after_its_audit_row_keeps_the_audit_id() {
+    // banto-industrial#1293: the Hub reports the audit row it wrote before
+    // failing; the record and the answer keep it, the outcome stays `failed`.
+    let fx = Fixture::new().await;
+    fx.hub.reply(Reply::Status(
+        502,
+        r#"{"error":"write_failed","audit_id":77}"#,
+    ));
+    let result = fx.run(&button("command", 0, json!(true))).await;
+    assert_eq!(result.outcome, Outcome::Failed);
+    assert_eq!(result.reason, kind(ErrorKind::WriteFailed));
+    assert_eq!(result.audit_id, Some(77));
+    let finish = fx.finished("command").await;
+    assert_eq!(finish.outcome, Outcome::Failed);
+    assert_eq!(finish.audit_id, Some(77));
 }
 
 #[tokio::test]

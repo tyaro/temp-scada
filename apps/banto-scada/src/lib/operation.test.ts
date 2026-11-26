@@ -252,6 +252,7 @@ it("has a text for every host reason code and names an unknown code", async () =
     "write_forbidden",
     "write_unavailable",
     "write_rejected",
+    "write_failed",
     "write_uncertain",
     "invalid_write_options",
     "key_revoked",

@@ -85,13 +85,15 @@ fn write_errors_map_to_the_design_outcomes() {
         InvalidEndpoint,
         InvalidWriteOptions,
         InvalidTagSelection,
+        // Refused before sending (404・409・422・429・501).
+        WriteRejected,
     ] {
         assert_eq!(classify_write_error(kind), Outcome::NotSent, "{kind:?}");
     }
     assert_eq!(classify_write_error(KeyTripped), Outcome::Stopped);
-    // Refused before sending and a 502 `write_failed` share the kind: "not
-    // effected", never "not sent".
-    assert_eq!(classify_write_error(WriteRejected), Outcome::Failed);
+    // 502 `write_failed`: not effected, but whether it was sent is not known,
+    // so never "not sent".
+    assert_eq!(classify_write_error(WriteFailed), Outcome::Failed);
     // Time-outs, cuts and any kind the table does not name: the operator
     // checks the current value.
     for kind in [WriteUncertain, ProtocolError, KeyRevoked, Stopped] {

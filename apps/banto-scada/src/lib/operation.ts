@@ -303,6 +303,7 @@ const reasonTexts: Record<string, string> = {
   write_forbidden: "Hub がこのタグへの書込みを許していません",
   write_unavailable: "Hub が書込みを受け付けられない状態です",
   write_rejected: "Hub が書込みを断りました",
+  write_failed: "Hub が書込みを成立させられませんでした",
   write_uncertain: "書込みの応答を受け取れませんでした",
   invalid_write_options: "書込みの指定が正しくありません",
   key_revoked: "キーが取り消されています",

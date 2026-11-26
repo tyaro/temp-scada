@@ -26,7 +26,7 @@ windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Media_A
 
 [dev-dependencies]
 tauri = { version = "2", features = ["test"] }
-banto-hub-bootstrap = { git = "https://github.com/tyaro/banto-industrial.git", rev = "6a08efbb76b50e6094f88f6dc91c46b8c4a8ecc3" }
+banto-hub-bootstrap = { git = "https://github.com/tyaro/banto-industrial.git", rev = "99b0b9c35a069aa7513e2f3e611b281a5b68b2a6" }
 tokio = { version = "1", features = ["net", "io-util", "time"] }
 tokio-tungstenite = "0.29"
 futures-util = "0.3"
