@@ -12,14 +12,25 @@ import {
 const project = parseProject(JSON.stringify(sample));
 function context(): HistoryContext {
   return {
-    version: 1,
+    version: 3,
     kind: "historyContext",
     contextId: "context:1",
+    historianNamespace: "archive:main",
     projectId: project.manifest.projectId,
     projectRevision: project.manifest.projectRevision,
     series: Array.from({ length: 10 }, (_, i) => ({
       seriesId: `history:${i}`,
       label: `温度 ${i}`,
+      ...(i === 1
+        ? {
+            live: {
+              segmentId: "segment:1",
+              valueType: "number" as const,
+              unit: "℃",
+              periodMs: 1000,
+            },
+          }
+        : { liveUnavailable: "recorderStopped" as const }),
     })),
   };
 }
@@ -47,8 +58,21 @@ it("owns and freezes context without mutating caller input; no implicit series m
   expect(result.context.series[0]).toEqual({
     seriesId: "history:0",
     label: "温度 0",
+    liveUnavailable: "recorderStopped",
+  });
+  // The live mapping is kept as the host sent it (historian-live-trend §1.3).
+  expect(result.context.series[1]).toEqual({
+    seriesId: "history:1",
+    label: "温度 1",
+    live: {
+      segmentId: "segment:1",
+      valueType: "number",
+      unit: "℃",
+      periodMs: 1000,
+    },
   });
   expect(Object.isFrozen(result.context.series[0])).toBe(true);
+  expect(Object.isFrozen(result.context.series[1].live)).toBe(true);
   expect(Object.isFrozen(input)).toBe(false);
 });
 it("distinguishes offline, empty selection snapshot and Project mismatch", () => {
@@ -72,6 +96,38 @@ describe("finite strict selection context", () => {
       (c: any): unknown => (c.series[0].externalName = "not an ID mapping"),
     ],
     ["missing field", (c: any): unknown => delete c.projectId],
+    ["missing namespace", (c: any): unknown => delete c.historianNamespace],
+    ["an earlier version", (c: any): unknown => (c.version = 2)],
+    [
+      "both live and liveUnavailable",
+      (c: any): unknown => (c.series[1].liveUnavailable = "recorderStopped"),
+    ],
+    [
+      "neither live nor liveUnavailable",
+      (c: any): unknown => delete c.series[0].liveUnavailable,
+    ],
+    [
+      "unknown unavailable reason",
+      (c: any): unknown => (c.series[0].liveUnavailable = "identityPending"),
+    ],
+    [
+      "unknown live field",
+      (c: any): unknown => (c.series[1].live.endpoint = "http://hub"),
+    ],
+    ["missing unit", (c: any): unknown => delete c.series[1].live.unit],
+    [
+      "long unit",
+      (c: any): unknown => (c.series[1].live.unit = "u".repeat(65)),
+    ],
+    [
+      "unknown value type",
+      (c: any): unknown => (c.series[1].live.valueType = "string"),
+    ],
+    ["short period", (c: any): unknown => (c.series[1].live.periodMs = 99)],
+    [
+      "invalid segment ID",
+      (c: any): unknown => (c.series[1].live.segmentId = "id@invalid"),
+    ],
     [
       "unsafe revision",
       (c: any): unknown => (c.projectRevision = Number.MAX_SAFE_INTEGER + 1),
@@ -85,6 +141,7 @@ describe("finite strict selection context", () => {
         (c.series = Array.from({ length: 257 }, (_, i) => ({
           seriesId: `id:${i}`,
           label: "label",
+          liveUnavailable: "recorderStopped",
         }))),
     ],
     ["large body", (c: any): unknown => (c.extra = "x".repeat(1024 * 1024))],
@@ -116,6 +173,12 @@ describe("finite strict selection context", () => {
     input.series = Array.from({ length: 256 }, (_, i) => ({
       seriesId: `id:${i}`,
       label: "😀".repeat(512),
+      live: {
+        segmentId: `segment:${i}`,
+        valueType: "bool",
+        unit: i % 2 ? null : "u".repeat(64),
+        periodMs: i % 2 ? 100 : 3_600_000,
+      },
     }));
     expect(check(input).phase).toBe("ready");
   });

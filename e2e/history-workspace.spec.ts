@@ -28,9 +28,9 @@ async function inject(page: Page) {
       const { HistorySourceError } = await import("/src/lib/history/presentation.ts");
       let notify = () => {};
       const track = createSubscriber(update => {notify = update; return () => {};});
-      const context = {version:1,kind:"historyContext",contextId:"context:1",
+      const context = {version:3,kind:"historyContext",contextId:"context:1",historianNamespace:"archive:a",
         projectId:sample.manifest.projectId,projectRevision:sample.manifest.projectRevision,
-        series:[{seriesId:"bool",label:"状態"},{seriesId:"unknown",label:"旧系列"},{seriesId:"number",label:"温度"}]};
+        series:[{seriesId:"bool",label:"状態",liveUnavailable:"recorderStopped"},{seriesId:"unknown",label:"旧系列",liveUnavailable:"recorderStopped"},{seriesId:"number",label:"温度",liveUnavailable:"recorderStopped"}]};
       const h = window.__historyHarness = {calls:[],active:0,maxActive:0};
       const source = {query(query,{signal}) {
         h.active++; h.maxActive = Math.max(h.maxActive,h.active);

@@ -381,3 +381,147 @@ async fn a_disabled_registry_apply_is_reconfigured_by_taking_the_root_back() {
     assert_eq!(resume_installed(&o).await, 2);
     wait_points(&o.runtime, &o.project, 1).await;
 }
+
+/// The live mapping of each series (historian-live-trend §1.3), by label.
+fn live(runtime: &RecordingRuntime, project: &Project) -> Vec<(String, Value)> {
+    let context = runtime.history_context(project).unwrap().unwrap();
+    assert_eq!(context["version"], 3);
+    let mut series: Vec<_> = context["series"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|s| {
+            let live = s.get("live").cloned();
+            let unavailable = s.get("liveUnavailable").cloned();
+            // Exactly one of the two.
+            assert!(live.is_some() != unavailable.is_some(), "{s}");
+            (
+                s["label"].as_str().unwrap().to_owned(),
+                live.unwrap_or_else(|| unavailable.unwrap()),
+            )
+        })
+        .collect();
+    series.sort_by(|a, b| a.0.cmp(&b.0));
+    series
+}
+
+fn all_stopped(runtime: &RecordingRuntime, project: &Project) -> bool {
+    let series = live(runtime, project);
+    !series.is_empty() && series.iter().all(|(_, l)| l == "recorderStopped")
+}
+
+/// The applied identities the runtime holds, by external name.
+fn identities(runtime: &RecordingRuntime) -> Vec<scada_historian::store::IdentityDescriptor> {
+    let ready = runtime.state.as_ref().unwrap();
+    let mut series = lock(&ready.catalog).as_ref().unwrap().series.clone();
+    series.sort_by(|a, b| a.external_name.cmp(&b.external_name));
+    series
+}
+
+fn assert_mapped(runtime: &RecordingRuntime, project: &Project) {
+    let series = live(runtime, project);
+    let identities = identities(runtime);
+    assert_eq!(series.len(), 2);
+    for ((label, live), identity) in series.iter().zip(&identities) {
+        assert_eq!(label, &identity.external_name);
+        assert_eq!(
+            live,
+            &json!({"segmentId": identity.segment_id, "valueType": identity.value_type,
+                "unit": identity.unit, "periodMs": 100}),
+            "{label}"
+        );
+        let wanted = if label == LEVEL { "number" } else { "bool" };
+        assert_eq!(live["valueType"], wanted);
+    }
+}
+
+#[tokio::test]
+async fn a_running_plan_maps_each_series_to_its_recorded_segment() {
+    // The Supervisor held by the runtime (no root installed).
+    let dir = TempDir::new();
+    let hub = Hub::new(&both()).await;
+    let runtime = RecordingRuntime::start(&dir.0, "deployment-a");
+    let project = project(Some(plan(true)));
+    let phase = runtime
+        .initial_setup(&project, hub.client(), hub.client())
+        .await
+        .unwrap();
+    assert_eq!(phase, "running");
+    assert_mapped(&runtime, &project);
+
+    // And the installed root's recording.
+    let o = owned().await;
+    assert_mapped(&o.runtime, &o.project);
+    let context = o.runtime.history_context(&o.project).unwrap().unwrap();
+    assert_eq!(context["contextId"], "applied:1");
+    // Only identity, type, unit and period: no endpoint, credentials, SDK
+    // run, Hub instance or activation pin.
+    let text = context.to_string();
+    for identity in identities(&o.runtime) {
+        assert!(!text.contains(&identity.hub_instance_id));
+        assert!(!text.contains(&identity.incarnation_id));
+    }
+    for leaked in [
+        o._hub.url.as_str(),
+        KEY,
+        "activation",
+        "hubInstance",
+        "runId",
+        "pin",
+    ] {
+        assert!(!text.contains(leaked), "{leaked} in {text}");
+    }
+    for s in context["series"].as_array().unwrap() {
+        let mut keys: Vec<_> = s.as_object().unwrap().keys().cloned().collect();
+        keys.sort();
+        assert_eq!(keys, ["label", "live", "seriesId"]);
+    }
+}
+
+#[tokio::test]
+async fn a_stopped_recorder_reports_every_series_as_recorder_stopped() {
+    let o = owned().await;
+    let before = series(&o.runtime, &o.project);
+    stop(&o).await;
+    assert!(all_stopped(&o.runtime, &o.project));
+    // The same applied plan and series: only the live mapping goes.
+    let context = o.runtime.history_context(&o.project).unwrap().unwrap();
+    assert_eq!(context["contextId"], "applied:1");
+    assert_eq!(series(&o.runtime, &o.project), before);
+    // A resume records again and maps again.
+    resume_installed(&o).await;
+    assert_mapped(&o.runtime, &o.project);
+}
+
+#[tokio::test]
+async fn a_disabled_or_unactivated_plan_has_no_live_mapping_until_it_records() {
+    let o = owned().await;
+    stop(&o).await;
+    let before = series(&o.runtime, &o.project);
+    let mut disabled = plan(false);
+    disabled["revision"] = json!(2);
+    let project2 = project(Some(disabled.clone()));
+    reconfigure(&o, &project2, None).await.unwrap();
+    // A disabled plan still lists the registered mapping's series.
+    let context = o.runtime.history_context(&project2).unwrap().unwrap();
+    assert_eq!(context["contextId"], "applied:2");
+    assert_eq!(series(&o.runtime, &project2), before);
+    assert!(all_stopped(&o.runtime, &project2));
+
+    // Enabled and applied, but not activated: still stopped, new context.
+    disabled["enabled"] = json!(true);
+    disabled["revision"] = json!(3);
+    let project3 = project(Some(disabled));
+    reconfigure(&o, &project3, None).await.unwrap();
+    let context = o.runtime.history_context(&project3).unwrap().unwrap();
+    assert_eq!(context["contextId"], "applied:3");
+    assert!(all_stopped(&o.runtime, &project3));
+
+    // Recording the new revision maps its series.
+    resume_installed(&o).await;
+    assert_eq!(
+        o.runtime.history_context(&project3).unwrap().unwrap()["contextId"],
+        "applied:3"
+    );
+    assert_mapped(&o.runtime, &project3);
+}

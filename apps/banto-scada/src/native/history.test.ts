@@ -111,7 +111,7 @@ it.each([
 });
 
 it("asks the host for a context only when the Project's key changes", async () => {
-  const context = { version: 2, kind: "historyContext" };
+  const context = { version: 3, kind: "historyContext" };
   invoke.mockResolvedValue(context);
   const published: (HistoryService | undefined)[] = [];
   const history = createNativeHistory(invoke, (s) => published.push(s));
@@ -136,7 +136,7 @@ it("asks the host for a context only when the Project's key changes", async () =
 });
 
 it("asks Runtime's context without a Project (runtime_history_context)", async () => {
-  const context = { version: 2, kind: "historyContext" };
+  const context = { version: 3, kind: "historyContext" };
   invoke.mockResolvedValue(context);
   const published: (HistoryService | undefined)[] = [];
   const history = createNativeHistory(
@@ -165,7 +165,7 @@ it("publishes no service for a null context, a host error, an earlier Project or
   const history = createNativeHistory(host, (s) => published.push(s));
   history.update(project(1, "plan-a"));
   history.update(project(2, "plan-a"));
-  replies[0].resolve({ version: 2 });
+  replies[0].resolve({ version: 3 });
   replies[1].resolve(null);
   await settle();
   expect(published).toEqual([undefined, undefined]);
@@ -177,7 +177,7 @@ it("publishes no service for a null context, a host error, an earlier Project or
 
   history.update(project(4, "plan-a"));
   history.dispose();
-  replies[3].resolve({ version: 2 });
+  replies[3].resolve({ version: 3 });
   await settle();
   expect(published).toHaveLength(4);
   history.update(project(5, "plan-a"));
@@ -186,7 +186,7 @@ it("publishes no service for a null context, a host error, an earlier Project or
 });
 
 it("refreshes only the current Project's context", async () => {
-  const context = { version: 2, kind: "historyContext" };
+  const context = { version: 3, kind: "historyContext" };
   invoke.mockResolvedValue(context);
   const published: (HistoryService | undefined)[] = [];
   const history = createNativeHistory(invoke, (s) => published.push(s));

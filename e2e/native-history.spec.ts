@@ -66,13 +66,19 @@ async function mockNativeHost(page: Page) {
             // The host answers only for the plan the recording DB applied.
             if (project.recordingPlan?.planId !== "plan-a") return null;
             return {
-              version: 2,
+              version: 3,
               kind: "historyContext",
               contextId: "applied:1",
               historianNamespace: "historian:test",
               projectId: project.manifest.projectId,
               projectRevision: project.manifest.projectRevision,
-              series: [{ seriesId: "number", label: "温度" }],
+              series: [
+                {
+                  seriesId: "number",
+                  label: "温度",
+                  liveUnavailable: "recorderStopped",
+                },
+              ],
             };
           }
           if (command === "history_query")

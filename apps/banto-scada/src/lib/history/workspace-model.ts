@@ -14,15 +14,27 @@ export interface HistoryService {
   source: HistorySource;
   context: unknown;
 }
-interface HistoryContextFields {
+/** How a series' live data maps: the segment the host records now. */
+export interface HistoryLiveMapping {
+  segmentId: string;
+  valueType: "number" | "bool";
+  unit: string | null;
+  periodMs: number;
+}
+/** Exactly one of `live` / `liveUnavailable` (historian-live-trend §1.3). */
+export type HistoryContextSeries = { seriesId: string; label: string } & (
+  | { live: HistoryLiveMapping; liveUnavailable?: never }
+  | { liveUnavailable: "recorderStopped"; live?: never }
+);
+export interface HistoryContext {
+  version: 3;
   kind: "historyContext";
   contextId: string;
+  historianNamespace: string;
   projectId: string;
   projectRevision: number;
-  series: { seriesId: string; label: string }[];
+  series: HistoryContextSeries[];
 }
-export type HistoryContext = HistoryContextFields &
-  ({ version: 1 } | { version: 2; historianNamespace: string });
 /** Fresh identity for every explicit open, including the same definition. */
 export interface HistoryPreset {
   definitionId: string;
@@ -167,8 +179,6 @@ export function historyPresetDefinition(
   } catch {
     return { issue: "保存トレンド定義を確認できません" };
   }
-  if (context.version !== 2)
-    return { issue: "この接続は保存Trendの系列対応を提供していません" };
   if (context.historianNamespace !== definition.historianNamespace)
     return { issue: "保存トレンドと接続先のnamespaceが一致しません" };
   const ids = new Set(context.series.map((row) => row.seriesId));
