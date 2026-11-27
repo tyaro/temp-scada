@@ -183,8 +183,9 @@ impl RecordingRuntime {
         else {
             return Err(SetupFailure::StoreFailed);
         };
-        let supervisor =
+        let mut supervisor =
             RecordingSupervisor::try_new(store).map_err(|_| SetupFailure::StoreFailed)?;
+        supervisor.set_commit_tap(ready.live.clone());
         *slot = Some(supervisor);
         update_catalog(ready, saved).map(|()| Reconfigured {
             changed: true,

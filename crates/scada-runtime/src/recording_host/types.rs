@@ -8,9 +8,20 @@ use scada_historian::{
     },
     store::{
         evidence::{GapReceipt, PlanRef},
-        CommitReceipt,
+        CommitReceipt, SessionSpec, Tick,
     },
 };
+
+/// A live tap on the recorder (historian-live-trend §3.2): the worker calls
+/// it on its own thread, inside the tick, so each call must return at once
+/// (no I/O, no waiting on a receiver). `begin` follows a started session,
+/// `committed` each tick whose commit succeeded (the stored tick), and `end`
+/// the session's last step, however it stopped (a failed commit stops it).
+pub trait CommitTap: Send + Sync {
+    fn begin(&self, session: &SessionSpec, plan: &PlanRef);
+    fn committed(&self, tick: &Tick);
+    fn end(&self, session_id: &str);
+}
 
 /// Opaque process-local owner identity; never serialize or persist this token.
 #[derive(Clone)]

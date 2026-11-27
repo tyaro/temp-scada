@@ -187,3 +187,82 @@ fn an_unavailable_store_answers_every_history_command_with_its_reason() {
         Ok(Value::Null)
     );
 }
+
+#[test]
+fn the_live_commands_subscribe_and_stop_over_ipc() {
+    let dir = TempDir::new();
+    scada_host::recording_runtime::test_support::seed_applied_plan(&dir.0);
+    let (_app, webview) = app(RecordingRuntime::start(&dir.0, "deployment-a"));
+    let context = invoke(
+        &webview,
+        "history_context",
+        json!({"projectJson": project_json()}),
+    )
+    .unwrap();
+    let request = |context_id: &str| {
+        json!({"contextId": context_id, "historianNamespace": context["historianNamespace"],
+            "seriesIds": ["series-0"]})
+    };
+    let start = |request: Value| {
+        invoke(
+            &webview,
+            "history_live_start",
+            json!({"projectJson": project_json(), "request": request}),
+        )
+    };
+    // A subscription needs no running recorder: its batches begin with one.
+    let started = start(request("applied:1")).unwrap();
+    assert_eq!(started, json!({"subscriptionId": "live:1"}));
+    assert_eq!(start(request("applied:2")), Err(json!("staleContext")));
+    let mut unknown = request("applied:1");
+    unknown["seriesIds"] = json!(["series-9"]);
+    assert_eq!(start(unknown), Err(json!("invalidRequest")));
+    assert_eq!(start(json!({})), Err(json!("invalidRequest")));
+    let mut other = serde_json::from_str::<Value>(&project_json()).unwrap();
+    other["recordingPlan"]["planId"] = json!("plan-b");
+    assert_eq!(
+        invoke(
+            &webview,
+            "history_live_start",
+            json!({"projectJson": other.to_string(), "request": request("applied:1")}),
+        ),
+        Err(json!("noContext"))
+    );
+    assert_eq!(
+        invoke(
+            &webview,
+            "history_live_start",
+            json!({"projectJson": "{}", "request": request("applied:1")}),
+        ),
+        Err(json!("invalid_project"))
+    );
+    assert_eq!(
+        invoke(
+            &webview,
+            "history_live_stop",
+            json!({"subscriptionId": "live:1"})
+        ),
+        Ok(Value::Null)
+    );
+}
+
+#[test]
+fn an_unavailable_store_refuses_the_live_start_with_its_reason() {
+    let (_app, webview) = app(RecordingRuntime::unavailable(NO_DATA_DIR));
+    assert_eq!(
+        invoke(
+            &webview,
+            "history_live_start",
+            json!({"projectJson": project_json(), "request": {}}),
+        ),
+        Err(json!("no_data_dir"))
+    );
+    assert_eq!(
+        invoke(
+            &webview,
+            "history_live_stop",
+            json!({"subscriptionId": "x"})
+        ),
+        Ok(Value::Null)
+    );
+}

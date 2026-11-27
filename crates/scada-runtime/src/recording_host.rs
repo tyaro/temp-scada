@@ -47,6 +47,7 @@ pub struct RecordingHost {
     retention: retention::RetentionOwner,
     last_clock_epoch: Option<String>,
     plan_turn: plan_turn::PlanOwner,
+    commit_tap: Option<Arc<dyn CommitTap>>,
     #[cfg(test)]
     shutdown_gate: Option<Arc<worker::TestShutdownGate>>,
 }
@@ -75,6 +76,7 @@ impl RecordingHost {
             retention: retention::RetentionOwner::default(),
             last_clock_epoch: None,
             plan_turn: plan_turn::PlanOwner::default(),
+            commit_tap: None,
             #[cfg(test)]
             shutdown_gate: None,
         }
@@ -88,6 +90,11 @@ impl RecordingHost {
 
     pub fn state(&self) -> Arc<RecordingHostStatus> {
         self.status.borrow().clone()
+    }
+
+    /// The live tap of the runs started after this call.
+    pub fn set_commit_tap(&mut self, tap: Arc<dyn CommitTap>) {
+        self.commit_tap = Some(tap);
     }
     pub fn state_watch(&self) -> watch::Receiver<Arc<RecordingHostStatus>> {
         self.status.subscribe()
@@ -209,6 +216,7 @@ impl RecordingHost {
             cancel: worker_cancel,
             status,
             run: worker_run,
+            commit_tap: self.commit_tap.clone(),
             #[cfg(test)]
             shutdown_gate: self.shutdown_gate.take(),
         };

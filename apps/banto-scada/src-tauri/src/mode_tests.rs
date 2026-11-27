@@ -100,8 +100,10 @@ fn the_command_list_is_generate_handler_without_gaps_or_duplicates() {
     // (`operation_key_*`, `operation_write_resume`) and the minimum interval
     // (`operation_min_interval_set`) and the retention
     // (`operation_retention_set`) and the record size
-    // (`operation_record_size`).
-    assert_eq!(listed.len(), 72);
+    // (`operation_record_size`), and the live trend's 3
+    // (`history_live_start`, `runtime_history_live_start`,
+    // `history_live_stop`).
+    assert_eq!(listed.len(), 75);
 }
 
 #[test]
@@ -323,6 +325,10 @@ fn editor_only_calls() -> Vec<(&'static str, Value)> {
             json!({"projectJson": project, "subscriptionId": "s"}),
         ),
         ("history_context", json!({"projectJson": project})),
+        (
+            "history_live_start",
+            json!({"projectJson": project, "request": request}),
+        ),
         ("recording_context", json!({"projectJson": project})),
         ("recording_initial_setup", json!({"projectJson": project})),
         ("recording_reconfigure", json!({"projectJson": project})),
@@ -507,13 +513,15 @@ fn sha256_hex(bytes: &[u8]) -> String {
     scada_host::alarm_project::file_hash(bytes)
 }
 
-/// The arguments of every Runtime-only command: none but the subscription.
+/// The arguments of every Runtime-only command: none but the subscription
+/// or request.
 fn runtime_only_calls() -> Vec<(&'static str, Value)> {
     let calls = vec![
         ("runtime_project", json!({})),
         ("runtime_hub_connect", json!({})),
         ("runtime_read_start", json!({"subscriptionId": "s"})),
         ("runtime_history_context", json!({})),
+        ("runtime_history_live_start", json!({"request": {}})),
         ("runtime_recording_context", json!({})),
         ("runtime_alarm_status", json!({})),
         (

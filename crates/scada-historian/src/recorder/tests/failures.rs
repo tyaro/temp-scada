@@ -213,12 +213,16 @@ fn gap_commit_survives_a_later_real_full_without_claiming_a_tick_and_reopen_inte
     let mut clock = FakeClock::new();
     let mut source = Latest::new(&clock);
     let mut recorder = Recorder::start(&mut store, config(None), &mut clock).unwrap();
-    recorder.step(
+    // The live tap sees the committed tick only, never the failed one.
+    let mut handed = Vec::new();
+    recorder.step_with_commit(
         &mut store,
         &mut source,
         &mut clock,
         &CancellationToken::default(),
+        &mut |tick| handed.push(tick.sequence),
     );
+    assert_eq!(handed, [1]);
     clock.advance(3500);
     connection(&store).execute_batch("CREATE TABLE recorder_pressure(value BLOB); CREATE TEMP TRIGGER recorder_full AFTER INSERT ON observations BEGIN INSERT INTO recorder_pressure VALUES(zeroblob(1048576)); END;").unwrap();
     let max: i64 = connection(&store)
@@ -230,12 +234,14 @@ fn gap_commit_survives_a_later_real_full_without_claiming_a_tick_and_reopen_inte
     connection(&store)
         .pragma_update(None, "max_page_count", pages)
         .unwrap();
-    let report = recorder.step(
+    let report = recorder.step_with_commit(
         &mut store,
         &mut source,
         &mut clock,
         &CancellationToken::default(),
+        &mut |tick| handed.push(tick.sequence),
     );
+    assert_eq!(handed, [1]);
     assert!(report.gap_receipt.is_some());
     assert!(report.tick_receipt.is_none());
     assert!(

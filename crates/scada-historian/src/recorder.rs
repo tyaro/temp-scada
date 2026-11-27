@@ -78,6 +78,32 @@ impl Recorder {
         clock: &mut impl RecorderClock,
         cancel: &CancellationToken,
     ) -> RecorderReport {
+        self.step_observed(store, source, clock, cancel, None)
+    }
+
+    /// `step`, also handing `committed` the tick it committed, exactly as
+    /// stored, after `append_tick` succeeded (never a tick whose commit
+    /// failed: that stops the recorder). For a live tap; keep it short, it
+    /// runs inside the tick.
+    pub fn step_with_commit(
+        &mut self,
+        store: &mut SqliteStore,
+        source: &mut impl SnapshotSource,
+        clock: &mut impl RecorderClock,
+        cancel: &CancellationToken,
+        committed: &mut dyn FnMut(&Tick),
+    ) -> RecorderReport {
+        self.step_observed(store, source, clock, cancel, Some(committed))
+    }
+
+    fn step_observed(
+        &mut self,
+        store: &mut SqliteStore,
+        source: &mut impl SnapshotSource,
+        clock: &mut impl RecorderClock,
+        cancel: &CancellationToken,
+        committed: Option<&mut dyn FnMut(&Tick)>,
+    ) -> RecorderReport {
         let mut report = self.report();
         if self.stopped {
             report.already_stopped = true;
@@ -186,11 +212,15 @@ impl Recorder {
                 return self.finish(store, StopCause::Cancelled, Some(observed), report);
             }
         }
+        let copy = committed.is_some().then(|| tick.clone());
         match store.append_tick(tick) {
             Ok(receipt) => {
                 self.counters.committed_ticks = sequence;
                 self.last_sample_ms = Some(observed.wall_time_ms);
                 report.tick_receipt = Some(receipt);
+                if let (Some(committed), Some(tick)) = (committed, copy) {
+                    committed(&tick);
+                }
             }
             Err(error) => return self.finish(store, StopCause::Store(error), None, report),
         }

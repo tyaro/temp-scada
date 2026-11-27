@@ -4,10 +4,11 @@
 //! the History host. Reading history needs no sign-in, like the Hub reads.
 use crate::app_mode::AppMode;
 use crate::runtime::StartupProject;
+use scada_host::live_trend::{LivePump, LIVE_TREND_EVENT};
 use scada_host::recording_runtime::RecordingRuntime;
 use scada_model::Project;
-use serde_json::Value;
-use tauri::State;
+use serde_json::{json, Value};
+use tauri::{AppHandle, Emitter, EventTarget, Runtime, State, Webview};
 
 /// The HistoryContext v3 for the Project, or `null` when the recording DB has
 /// no applied plan for its recording plan (the UI then shows History offline).
@@ -62,4 +63,63 @@ pub async fn history_query(
 #[tauri::command]
 pub fn history_cancel(runtime: State<'_, RecordingRuntime>, call_id: String) {
     runtime.history_cancel(&call_id);
+}
+
+/// Subscribes the live delivery of the Project's series (historian-live-trend
+/// §3.2): each committed tick of the recorder, as a batch, and break marks,
+/// emitted as `scada:live-trend` to the calling webview until
+/// `history_live_stop`, a later start (which replaces it), or a failed emit.
+/// A recording of another plan or revision sends it `contextChanged` once:
+/// read the context again and start anew.
+/// `request`: `{contextId, historianNamespace, seriesIds}` of the
+/// HistoryContext. Returns `{subscriptionId}`. Errors: `invalid_project`,
+/// why the recording DB is unavailable, `noContext`, `staleContext` (read
+/// the context again), `invalidRequest`.
+#[tauri::command]
+pub fn history_live_start<R: Runtime>(
+    app: AppHandle<R>,
+    webview: Webview<R>,
+    mode: State<'_, AppMode>,
+    runtime: State<'_, RecordingRuntime>,
+    project_json: String,
+    request: Value,
+) -> Result<Value, String> {
+    mode.require_editor()?;
+    let project = Project::from_json(&project_json).map_err(|_| "invalid_project".to_owned())?;
+    let pump = runtime.live_start(&project, &request)?;
+    Ok(spawn_pump(app, &webview, pump))
+}
+
+/// `runtime_history_live_start`: `history_live_start` for the startup
+/// Project. Errors: `projectUnavailable`, and those of `history_live_start`.
+#[tauri::command]
+pub fn runtime_history_live_start<R: Runtime>(
+    app: AppHandle<R>,
+    webview: Webview<R>,
+    mode: State<'_, AppMode>,
+    startup: State<'_, StartupProject>,
+    runtime: State<'_, RecordingRuntime>,
+    request: Value,
+) -> Result<Value, String> {
+    mode.require_runtime()?;
+    let pump = runtime.live_start(startup.project()?, &request)?;
+    Ok(spawn_pump(app, &webview, pump))
+}
+
+/// Ends the live subscription `subscriptionId`; a replaced or ended one is
+/// left as it is.
+#[tauri::command]
+pub fn history_live_stop(runtime: State<'_, RecordingRuntime>, subscription_id: String) {
+    runtime.live_stop(&subscription_id);
+}
+
+fn spawn_pump<R: Runtime>(app: AppHandle<R>, webview: &Webview<R>, pump: LivePump) -> Value {
+    let reply = json!({"subscriptionId": pump.subscription_id()});
+    // The webview only: `labeled` would also reach the listeners of the
+    // window and webview window of the same label.
+    let target = EventTarget::webview(webview.label());
+    tauri::async_runtime::spawn(
+        pump.run(move |event| app.emit_to(target.clone(), LIVE_TREND_EVENT, event).is_ok()),
+    );
+    reply
 }

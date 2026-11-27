@@ -15,6 +15,7 @@
     "allow-hub-catalog",
     "allow-hub-read-start",
     "allow-history-context",
+    "allow-history-live-start",
     "allow-recording-context",
     "allow-recording-initial-setup",
     "allow-recording-reconfigure",
@@ -61,6 +62,7 @@
     "allow-auth-config-get",
     "allow-history-query",
     "allow-history-cancel",
+    "allow-history-live-stop",
     "allow-recording-status",
     "allow-recording-slot"
   ]
